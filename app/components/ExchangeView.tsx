@@ -5,7 +5,6 @@ import { ArrowRightLeft, DollarSign, Repeat2 } from 'lucide-react-native';
 const ExchangeView = () => {
   return (
     <View className="bg-gray-100 p-4 rounded-xl shadow-sm">
-      <Text className="text-2xl font-bold mb-4 text-gray-800">Token Exchange Hub</Text>
 
       {/* Exchange Overview Card */}
       <View className="bg-white rounded-xl shadow-lg p-5 mb-4">

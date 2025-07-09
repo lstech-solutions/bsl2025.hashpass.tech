@@ -5,8 +5,6 @@ import { Star, Gift, Award } from 'lucide-react-native';
 const LoyaltyDashboard = () => {
   return (
     <View className="bg-gray-100 p-4 rounded-xl shadow-sm">
-      <Text className="text-2xl font-bold mb-4 text-gray-800">Your Loyalty Status</Text>
-
       {/* Current Tier Card */}
       <View className="bg-white rounded-xl shadow-lg p-5 mb-4 items-center">
         <Star size={48} color="#f59e0b" fill="#f59e0b" />

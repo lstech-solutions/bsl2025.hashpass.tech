@@ -9,7 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web --clear",
     "test": "jest --watchAll",
-    "dev": "expo start --web",
+    "dev": "expo start --web --clear",
     "build:web": "npm run prebuild && expo export -p web",
     "prebuild": "rm -rf dist ",
     "lint": "expo lint",
@@ -55,7 +55,8 @@
     "react-native-svg": "^15.11.2",
     "react-native-web": "^0.20.0",
     "react-native-webview": "13.13.5",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "twrnc": "^4.9.1"
   },
   "engines": {
     "node": "22.17.0"

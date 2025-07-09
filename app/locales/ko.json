@@ -1,0 +1,13 @@
+{
+  "welcome": "HashPass에 오신 것을 환영합니다",
+  "tagline": "블록체인 보상 및 커뮤니티 로열티 포인트가 있는 티켓팅의 미래",
+  "digitalWallet": "디지털 티켓 지갑",
+  "walletDesc": "블록체인으로 검증된 티켓에 접근하세요",
+  "loyalty": "로열티 대시보드",
+  "loyaltyDesc": "포인트와 토큰 보상을 추적하세요",
+  "events": "이벤트 탐색",
+  "eventsDesc": "다가오는 이벤트를 찾고 토큰을 획득하세요",
+  "exchange": "토큰 교환",
+  "exchangeDesc": "포인트를 암호화폐로 전환하세요",
+  "getStarted": "시작하기"
+}

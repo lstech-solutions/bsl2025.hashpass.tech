@@ -1,0 +1,13 @@
+{
+  "welcome": "Welcome to HashPass",
+  "tagline": "The future of ticketing with blockchain rewards and community loyalty points",
+  "digitalWallet": "Digital Ticket Wallet",
+  "walletDesc": "Access your secure blockchain-verified tickets",
+  "loyalty": "Loyalty Dashboard",
+  "loyaltyDesc": "Track your points and token rewards",
+  "events": "Event Discovery",
+  "eventsDesc": "Find upcoming events and earn tokens",
+  "exchange": "Token Exchange",
+  "exchangeDesc": "Convert points to cryptocurrency",
+  "getStarted": "Get Started"
+}

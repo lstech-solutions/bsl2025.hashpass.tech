@@ -1,0 +1,19 @@
+[build]
+  command = "npm run build:web"
+  functions = "netlify/functions"
+  publish = "dist/client"
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/server"
+  status = 200 # CRITICAL FIX: Changed from 404 to 200 for successful SSR content delivery
+
+[functions]
+  # Include everything to ensure dynamic routes can be used.
+  included_files = ["dist/server/**/*"]
+
+[[headers]]
+  for = "/dist/server/_expo/functions/*"
+  [headers.values]
+    # Set to 60 seconds as an example.
+    "Cache-Control" = "public, max-age=60, s-maxage=60"

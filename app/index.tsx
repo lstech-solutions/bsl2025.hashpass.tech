@@ -1,50 +1,25 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, Animated, TouchableOpacity } from 'react-native'; // Added TouchableOpacity
+import { View, Text, Image, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { supabase } from '../lib/supabase';
-import type { Session } from '@supabase/supabase-js';
+import { useAuth } from '../hooks/useAuth';
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 export default function HomeScreen() {
-  const [session, setSession] = useState<Session | null>(null);
+  const { user } = useAuth();
   const [userName, setUserName] = useState<string | null>(null);
 
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Get current session
-    const getSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (data?.session) {
-        setSession(data.session);
-        setUserName(
-          data.session.user.email || data.session.user.user_metadata?.full_name || data.session.user.id
-        );
-      } else {
-        setSession(null);
-        setUserName(null);
-      }
-    };
-    getSession();
-
-    // Subscribe to session changes
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      if (session && session.user) {
-        setUserName(
-          session.user.email || session.user.user_metadata?.full_name || session.user.id
-        );
-      } else {
-        setUserName(null);
-      }
-    });
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
+    if (user) {
+      setUserName(user.email || user.user_metadata?.full_name || user.id);
+    } else {
+      setUserName(null);
+    }
+  }, [user]);
 
   // Animations with Easing functions for smoother transitions
   // Header opacity fades out as user scrolls down

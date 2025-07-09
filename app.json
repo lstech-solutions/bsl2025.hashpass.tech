@@ -28,11 +28,41 @@
       "permissions": [
         "android.permission.CAMERA"
       ]
-    },
+    }, 
     "web": {
       "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "server",
+      "favicon": "./assets/images/favicon.png",
+      "themeColor": "#1D9BF0",
+      "backgroundColor": "#000000",
+      "startUrl": "/?utm_source=web_app_manifest",
+      "shortName": "HashPass",
+      "lang": "en",
+      "scope": "/",
+      "display": "standalone",
+      "orientation": "portrait-primary",
+      "preferRelatedApplications": false,
+      "dangerouslyAllowInsecureHttpRequests": false,
+      "serviceWorker": {
+        "source": "/sw.js",
+        "scope": "/"
+      },
+      "meta": {
+        "apple-mobile-web-app-capable": "yes",
+        "apple-mobile-web-app-status-bar-style": "default",
+        "apple-mobile-web-app-title": "HashPass",
+        "mobile-web-app-capable": "yes",
+        "msapplication-TileColor": "#1D9BF0",
+        "msapplication-tap-highlight": "no"
+      },
+      "build": {
+        "babel": {
+          "include": [
+            "@babel/plugin-proposal-export-namespace-from",
+            "react-native-reanimated/plugin"
+          ]
+        }
+      }
     },
     "plugins": [
       "expo-router"

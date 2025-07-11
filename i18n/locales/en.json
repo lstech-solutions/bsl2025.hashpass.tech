@@ -1,0 +1,60 @@
+{
+  "auth": {
+    "title": "Welcome to",
+    "subtitle": "Sign in to unlock your digital life.",
+    "signInWithGoogle": "Sign in with Google",
+    "privacy": {
+      "text": "By signing in, you agree to our",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy"
+    }
+  },  
+  "index": {
+    "tagline": "YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS",
+    "unlockPotential": "Unlock Your Potential",
+    "features": {
+      "secure": {
+        "title": "Secure & Private",
+        "description": "Your data is encrypted and protected with industry-leading security protocols. We prioritize your privacy above all else."
+      },
+      "management": {
+        "title": "Effortless Management",
+        "description": "Organize all your digital credentials, loyalty cards, and communities in one intuitive place."
+      },
+        "sync": {
+        "title": "Cross-Platform Sync",
+        "description": "Access your data across all your devices with our secure cloud sync. Your information is always up to date, everywhere."
+      }
+    },
+    "welcomeBack": "Welcome back!",
+    "goToApp": "Go to App",
+    "readyToSimplify": "Ready to Simplify Your Digital Life?",
+    "getStartedNow": "Get Started Now",
+    "trustedByThousands": "Trusted by Thousands",
+    "testimonials": [
+      {
+        "text": "\"HASHPASS has revolutionized how I manage my online accounts. It's secure, fast, and incredibly easy to use!\"",
+        "author": "- Alex P., Tech Enthusiast"
+      },
+      {
+        "text": "\"Finally, a digital wallet that I can truly trust. The peace of mind is priceless.\"",
+        "author": "- Sarah L., Small Business Owner"
+      }
+    ],
+    "copyright": " 2025 HASHPASS™ All rights reserved.",
+    "cta": {
+      "title": "Ready to get started?",
+      "subtitle": "Join thousands of users who trust HASHPASS with their digital life.",
+      "startNow": "Start Now"
+    }
+  },
+  "digitalWallet": "Digital Ticket Wallet",
+  "walletDesc": "Access your secure blockchain-verified tickets",
+  "loyalty": "Loyalty Dashboard",
+  "loyaltyDesc": "Track your points and token rewards",
+  "events": "Event Discovery",
+  "eventsDesc": "Find upcoming events and earn tokens",
+  "exchange": "Token Exchange",
+  "exchangeDesc": "Convert points to cryptocurrency",
+  "getStarted": "Get Started"
+}

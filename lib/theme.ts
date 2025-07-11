@@ -20,6 +20,7 @@ export interface ThemeColors {
     disabled: string;
     onSurface: string;
     onSurfaceVariant: string;
+    textSecondary: string; // Alias for secondary for backward compatibility
   };
   error: {
     main: string;
@@ -61,6 +62,7 @@ const baseColors = {
   text: {
     primary: '#1A1A1A', // Darker for better readability
     secondary: '#4A4A4A',
+    textSecondary: '#4A4A4A', // Alias for secondary
     disabled: '#A0A0A0',
   },
   error: {
@@ -126,6 +128,7 @@ export const darkColors: ThemeColors = {
   text: {
     primary: '#FFFFFF',
     secondary: 'rgba(255, 255, 255, 0.7)',
+    textSecondary: 'rgba(255, 255, 255, 0.7)',
     disabled: 'rgba(255, 255, 255, 0.5)',
     onSurface: '#FFFFFF',
     onSurfaceVariant: 'rgba(255, 255, 255, 0.7)'

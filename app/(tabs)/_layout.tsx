@@ -37,18 +37,18 @@ export default function Layout() {
   const { colors } = useTheme();
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <StatusBar 
-        barStyle={colors.background === '#121212' ? 'light-content' : 'dark-content'} 
-        backgroundColor={colors.background}
+        barStyle={colors.background.default === '#121212' ? 'light-content' : 'dark-content'} 
+        backgroundColor={colors.background.default}
       />
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: colors.tabBarActive,
-          tabBarInactiveTintColor: colors.tabBarInactive,
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.text.primary,
           tabBarStyle: {
-            backgroundColor: colors.tabBar,
+            backgroundColor: colors.background.default,
             borderTopWidth: 0,
             height: 60,
             paddingBottom: 0,

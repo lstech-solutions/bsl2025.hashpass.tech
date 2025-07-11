@@ -1,0 +1,60 @@
+{
+  "auth": {
+    "title": "Bienvenido a",
+    "subtitle": "Inicia sesión para desbloquear tu vida digital.",
+    "signInWithGoogle": "Iniciar sesión con Google",
+    "privacy": {
+      "text": "Al iniciar sesión, aceptas nuestros",
+      "terms": "Términos de Servicio",
+      "privacy": "Política de Privacidad"
+    }
+  },
+  "index": {
+    "tagline": "TU EVENTO - TU COMUNIDAD - TUS BENEFICIOS",
+    "unlockPotential": "Desbloquea tu Potencial",
+    "features": {
+      "secure": {
+        "title": "Seguro y Privado",
+        "description": "Tus datos están encriptados y protegidos con protocolos de seguridad líderes en la industria. Tu privacidad es nuestra máxima prioridad."
+      },
+      "management": {
+        "title": "Gestión Sin Esfuerzo",
+        "description": "Organiza todas tus credenciales digitales, tarjetas de fidelización y comunidades en un solo lugar intuitivo."
+      },
+      "sync": {
+        "title": "Sincronización Multiplataforma",
+        "description": "Accede a tus datos en todos tus dispositivos con nuestra sincronización segura en la nube. Tu información siempre está actualizada en todas partes."
+      }
+    },
+    "welcomeBack": "¡Bienvenido de nuevo!",
+    "goToApp": "Ir a la Aplicación",
+    "readyToSimplify": "¿Listo para simplificar tu vida digital?",
+    "getStartedNow": "Comenzar Ahora",
+    "trustedByThousands": "Con la confianza de miles",
+    "testimonials": [
+      {
+        "text": "\"HASHPASS ha revolucionado cómo gestiono mis cuentas en línea. ¡Es seguro, rápido e increíblemente fácil de usar!\"",
+        "author": "- Alex P., Entusiasta de la Tecnología"
+      },
+      {
+        "text": "\"Finalmente, una billetera digital en la que realmente puedo confiar. La tranquilidad no tiene precio.\"",
+        "author": "- Sarah L., Pequeña Empresaria"
+      }
+    ],
+    "copyright": " 2025 HASHPASS™ Todos los derechos reservados.",
+    "cta": {
+      "title": "¿Listo para comenzar?",
+      "subtitle": "Únete a miles de usuarios que confían en HASHPASS con su vida digital.",
+      "startNow": "Comenzar Ahora"
+    }
+  },
+  "digitalWallet": "Billetera de Entradas Digital",
+  "walletDesc": "Accede a tus entradas verificadas por blockchain",
+  "loyalty": "Panel de Fidelización",
+  "loyaltyDesc": "Sigue tus puntos y recompensas de tokens",
+  "events": "Descubrimiento de Eventos",
+  "eventsDesc": "Encuentra próximos eventos y gana tokens",
+  "exchange": "Intercambio de Tokens",
+  "exchangeDesc": "Convierte puntos en criptomonedas",
+  "getStarted": "Comenzar"
+}

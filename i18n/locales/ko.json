@@ -1,0 +1,60 @@
+{
+  "auth": {
+    "title": "환영합니다",
+    "subtitle": "디지털 라이프를 잠금 해제하기 위해 로그인하세요.",
+    "signInWithGoogle": "Google로 로그인",
+    "privacy": {
+      "text": "로그인하면",
+      "terms": "서비스 이용약관",
+      "privacy": "개인정보보호정책"
+    }
+  },
+  "index": {
+    "tagline": "당신의 이벤트 - 당신의 커뮤니티 - 당신의 혜택",
+    "unlockPotential": "당신의 잠재력을 발휘하세요",
+    "features": {
+      "secure": {
+        "title": "안전하고 프라이빗한",
+        "description": "귀하의 데이터는 업계 최고 수준의 보안 프로토콜로 암호화되어 보호됩니다. 우리는 무엇보다도 귀하의 개인정보 보호를 최우선으로 합니다."
+      },
+      "management": {
+        "title": "쉬운 관리",
+        "description": "디지털 자격 증명, 멤버십 카드, 중요한 커뮤니티를 직관적인 한 곳에서 관리하세요."
+      },
+      "sync": {
+        "title": "크로스 플랫폼 동기화",
+        "description": "안전한 클라우드 동기화로 모든 기기에서 데이터에 접근하세요. 어디서나 항상 최신 정보를 유지할 수 있습니다."
+      }
+    },
+    "welcomeBack": "다시 오신 것을 환영합니다!",
+    "goToApp": "앱으로 이동",
+    "readyToSimplify": "디지털 라이프를 간편하게 만들어보시겠어요?",
+    "getStartedNow": "지금 시작하기",
+    "trustedByThousands": "수천 명이 신뢰하는 서비스",
+    "testimonials": [
+      {
+        "text": "\"HASHPASS는 제가 온라인 계정을 관리하는 방식을 완전히 바꿔놓았어요. 안전하고 빠르며 정말 사용하기 쉬워요!\"",
+        "author": "- 알렉스 P., 테크 애호가"
+      },
+      {
+        "text": "\"정말로 믿을 수 있는 디지털 지갑을 찾았어요. 마음의 평화가 무엇인지 알게 되었어요.\"",
+        "author": "- 사라 L., 소상공인"
+      }
+    ],
+    "copyright": " 2025 HASHPASS™ 모든 권리 보유.",
+    "cta": {
+      "title": "시작하기",
+      "subtitle": "당신의 디지털 생명을 HASHPASS와 함께하세요.",
+      "startNow": "시작하기"
+    }
+  },
+  "digitalWallet": "디지털 티켓 지갑",
+  "walletDesc": "블록체인으로 검증된 티켓에 접근하세요",
+  "loyalty": "로열티 대시보드",
+  "loyaltyDesc": "포인트와 토큰 보상을 추적하세요",
+  "events": "이벤트 탐색",
+  "eventsDesc": "다가오는 이벤트를 찾고 토큰을 획득하세요",
+  "exchange": "토큰 교환",
+  "exchangeDesc": "포인트를 암호화폐로 전환하세요",
+  "getStarted": "시작하기"
+}

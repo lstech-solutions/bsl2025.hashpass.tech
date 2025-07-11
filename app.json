@@ -12,6 +12,23 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "linking": {
+      "enabled": true,
+      "config": {
+        "screens": {
+          "(tabs)": {
+            "path": "tabs",
+            "screens": {
+              "wallet": "wallet",
+              "scan": "scan",
+              "profile": "profile"
+            }
+          },
+          "auth": "auth"
+          
+        }
+      }
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hashpass.tech",
@@ -48,6 +65,10 @@
         "scope": "/"
       },
       "meta": {
+        "og:type": "website",
+        "og:title": "HashPass",
+        "og:description": "HashPass - Your secure password manager",
+        "og:image": "./assets/images/og-image.png",
         "apple-mobile-web-app-capable": "yes",
         "apple-mobile-web-app-status-bar-style": "default",
         "apple-mobile-web-app-title": "HashPass",
@@ -71,9 +92,6 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {
-        "origin": false
-      },
       "eas": {
         "projectId": "YOUR_EAS_PROJECT_ID"
       }

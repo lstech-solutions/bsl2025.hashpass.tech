@@ -1,0 +1,30 @@
+{
+  "common": {
+    "welcome": "Bienvenido a HashPass",
+    "tagline": "TU EVENTO - TU COMUNIDAD - TUS BENEFICIOS",
+    "unlock": "Desbloquea tu Potencial",
+    "getStarted": "Comenzar",
+    "signIn": "Iniciar Sesión",
+    "signOut": "Cerrar Sesión",
+    "welcomeBack": "Bienvenido de nuevo, {{name}}"
+  },
+  "features": {
+    "secure": {
+      "title": "Seguro y Privado",
+      "description": "Tus datos están encriptados y protegidos con protocolos de seguridad líderes en la industria. Priorizamos tu privacidad por encima de todo."
+    },
+    "management": {
+      "title": "Gestión sin Esfuerzo",
+      "description": "Organiza todas tus credenciales digitales, tarjetas de fidelización y notas importantes en un solo lugar intuitivo."
+    },
+    "sync": {
+      "title": "Sincronización Multiplataforma",
+      "description": "Accede a tus datos en todos tus dispositivos con nuestra sincronización segura en la nube. Tu información siempre está actualizada en todas partes."
+    }
+  },
+  "cta": {
+    "title": "¿Listo para comenzar?",
+    "subtitle": "Únete a miles de usuarios que confían en HashPass con su vida digital.",
+    "startNow": "Comenzar Ahora"
+  }
+}

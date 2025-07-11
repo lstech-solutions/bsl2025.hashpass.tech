@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from '../i18n/i18n';
 import { View, Text, Image, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { BackgroundGradientAnimation } from './components/BackgroundGradientAnimation';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
@@ -8,10 +10,14 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
-  interpolate,
-  Extrapolation,
   withTiming,
+  Extrapolation,
+  withDelay,
+  interpolate,
+  useAnimatedReaction,
+  withSpring,
 } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
@@ -19,10 +25,10 @@ export default function HomeScreen() {
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
   const [userName, setUserName] = useState<string | null>(null);
-  
+  const { t } = useTranslation('index');
   const styles = getStyles(isDark, colors);
   const systemColorScheme = useColorScheme();
-  const [isMounted, setIsMounted] = React.useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   // Prevent flash of incorrect theme on mount
   useEffect(() => {
@@ -32,7 +38,7 @@ export default function HomeScreen() {
 
   // Smooth background transition
   const bgAnimation = useSharedValue(0);
-  
+
   useEffect(() => {
     bgAnimation.value = withTiming(1, { duration: 300 });
   }, [isDark]);
@@ -47,6 +53,7 @@ export default function HomeScreen() {
 
   const router = useRouter();
   const scrollY = useSharedValue(0);
+  const buttonAnimation = useSharedValue(0);
 
   useEffect(() => {
     if (user) {
@@ -132,6 +139,58 @@ export default function HomeScreen() {
     },
   });
 
+  // Animation values for each feature
+  const feature1Anim = useSharedValue(0);
+  const feature2Anim = useSharedValue(0);
+  const feature3Anim = useSharedValue(0);
+
+  // Animate features based on scroll position
+  useAnimatedReaction(
+    () => scrollY.value,
+    (currentScrollY) => {
+      // Start animating when the features section comes into view
+      if (currentScrollY > 150) {
+        feature1Anim.value = withTiming(1, { duration: 500 });
+        feature2Anim.value = withDelay(200, withTiming(1, { duration: 500 }));
+        feature3Anim.value = withDelay(400, withTiming(1, { duration: 500 }));
+      } else {
+        // Reset animations when scrolling back up
+        feature1Anim.value = 0;
+        feature2Anim.value = 0;
+        feature3Anim.value = 0;
+      }
+    },
+    []
+  );
+
+  // Animated styles for each feature
+  const feature1Style = useAnimatedStyle(() => ({
+    opacity: feature1Anim.value,
+    transform: [
+      {
+        translateY: withTiming((1 - feature1Anim.value) * 30, { duration: 500 })
+      }
+    ],
+  }));
+
+  const feature2Style = useAnimatedStyle(() => ({
+    opacity: feature2Anim.value,
+    transform: [
+      {
+        translateY: withTiming((1 - feature2Anim.value) * 30, { duration: 500 })
+      }
+    ],
+  }));
+
+  const feature3Style = useAnimatedStyle(() => ({
+    opacity: feature3Anim.value,
+    transform: [
+      {
+        translateY: withTiming((1 - feature3Anim.value) * 30, { duration: 500 })
+      }
+    ],
+  }));
+
   if (!isMounted) {
     return (
       <View style={{ flex: 1, backgroundColor: systemColorScheme === 'dark' ? '#121212' : '#FFFFFF' }} />
@@ -147,7 +206,7 @@ export default function HomeScreen() {
         onScroll={scrollHandler}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Section - Immersive background with fading text */}
+
         <View style={styles.hero}>
           <Animated.View style={heroImageAnimatedStyle}>
             <AnimatedImage
@@ -158,83 +217,129 @@ export default function HomeScreen() {
             />
           </Animated.View>
           <Animated.View style={[styles.heroTextContainer, headerAnimatedStyle]}>
-            <Image 
-              source={isDark 
+            <Image
+              source={isDark
                 ? require('../assets/logos/logo-full-hashpass-black.svg')
                 : require('../assets/logos/logo-full-hashpass-white.svg')
-              } 
+              }
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={[styles.tagline, { color: colors.text.primary }]}>YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS</Text>
+            <Text style={[styles.tagline, { color: colors.text.primary }]}>{t('tagline')}</Text>
           </Animated.View>
-          
+
         </View>
 
-        {/* Features Section - Animated reveal of key benefits */}
+
         <Animated.View style={[styles.features, featuresAnimatedStyle]}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Unlock Your Potential</Text>
-          {/* Feature 1 */}
-          <View style={styles.feature}>
-            <Image source={{ uri: 'https://images.pexels.com/photos/11816764/pexels-photo-11816764.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }} style={styles.featureIcon} />
-            <Text style={[styles.featureTitle, { color: colors.text.onSurface }]}>Secure & Private</Text>
-            <Text style={[styles.featureDescription, { color: colors.text.onSurfaceVariant }]}>Your data is encrypted and protected with industry-leading security protocols. We prioritize your privacy above all else.</Text>
-          </View>
-          {/* Feature 2 */}
-          <View style={styles.feature}>
-            <Image source={{ uri: 'https://images.pexels.com/photos/11816764/pexels-photo-11816764.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }} style={styles.featureIcon} />
-            <Text style={[styles.featureTitle, { color: colors.text.onSurface }]}>Effortless Management</Text>
-            <Text style={[styles.featureDescription, { color: colors.text.onSurfaceVariant }]}>Organize all your digital credentials, loyalty cards, and important notes in one intuitive place.</Text>
-          </View>
-          {/* Feature 3 */}
-          <View style={styles.feature}>
-            <Image source={{ uri: 'https://images.pexels.com/photos/11816764/pexels-photo-11816764.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }} style={styles.featureIcon} />
-            <Text style={[styles.featureTitle, { color: colors.text.onSurface }]}>Cross-Platform Sync</Text>
-            <Text style={[styles.featureDescription, { color: colors.text.onSurfaceVariant }]}>Access your data across all your devices with our secure cloud sync. Your information is always up to date, everywhere.</Text>
-          </View>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>{t('unlockPotential')}</Text>
+
+          {/* Feature 1 - Security */}
+          <Animated.View style={[styles.feature, feature1Style]}>
+            <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
+            </View>
+            <Text style={[styles.featureTitle, { color: colors.text.onSurface }]}>{t('features.secure.title')}</Text>
+            <Text style={[styles.featureDescription, { color: colors.text.onSurfaceVariant }]}>{t('features.secure.description')}</Text>
+          </Animated.View>
+
+          {/* Feature 2 - Management */}
+          <Animated.View style={[styles.feature, feature2Style]}>
+            <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="key" size={24} color={colors.primary} />
+            </View>
+            <Text style={[styles.featureTitle, { color: colors.text.onSurface }]}>{t('features.management.title')}</Text>
+            <Text style={[styles.featureDescription, { color: colors.text.onSurfaceVariant }]}>{t('features.management.description')}</Text>
+          </Animated.View>
+
+          {/* Feature 3 - Sync */}
+          <Animated.View style={[styles.feature, feature3Style]}>
+            <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="sync" size={24} color={colors.primary} />
+            </View>
+            <Text style={[styles.featureTitle, { color: colors.text.onSurface }]}>{t('features.sync.title')}</Text>
+            <Text style={[styles.featureDescription, { color: colors.text.onSurfaceVariant }]}>{t('features.sync.description')}</Text>
+          </Animated.View>
         </Animated.View>
 
-        {/* Call to Action or User Info - Prominent and inviting */}
-        <Animated.View style={[styles.cta, ctaAnimatedStyle, { backgroundColor: colors.background.paper }]}>
+
+        <Animated.View style={[styles.cta, ctaAnimatedStyle]}>
+          <BackgroundGradientAnimation
+            gradientBackgroundStart={isDark ? "rgb(30, 30, 46)rgb(240, 240, 255)" : "rgb(240, 240, 255)rgb(30, 30, 46)"}
+            gradientBackgroundEnd={isDark ? "rgb(18, 25, 40)rgb(230, 230, 255)" : "rgb(62, 14, 117)rgb(18, 25, 40)"}
+            firstColor={isDark ? "18, 113, 255" : "221, 74, 255"}
+            secondColor={isDark ? "221, 74, 255" : "221, 74, 255"}
+            thirdColor={isDark ? "100, 220, 255" : "100, 220, 255"}
+            fourthColor={isDark ? "230, 60, 60" : "230, 60, 60"}
+            fifthColor={isDark ? "180, 180, 50" : "180, 180, 50"}
+            pointerColor={isDark ? "140, 100, 255" : "62, 14, 117"}
+            size="10%"
+            blendingValue={isDark ? "hard-light" : "hard-light"}
+            interactive={true}
+          >
+          </BackgroundGradientAnimation>
           {userName ? (
             <>
-              <Text style={[styles.ctaHeadline, { color: colors.text.onSurface }]}>Welcome back! <br />{userName}</Text>
-              <TouchableOpacity 
-                style={[styles.ctaButton, { backgroundColor: colors.primary }]} 
-                onPress={() => router.push('/(tabs)/wallet')}
-              >
-                <Text style={[styles.ctaButtonText, { color: colors.primaryContrastText }]}>Go to App</Text>
-              </TouchableOpacity>
+              <Text style={styles.ctaHeadline}>{t('welcomeBack')} <br />{userName}</Text>
+              <Animated.View style={styles.ctaButton}>
+                <TouchableOpacity
+                  onPress={() => router.push('/(tabs)/wallet')}
+                  activeOpacity={0.9}
+                  onPressIn={() => {
+                    buttonAnimation.value = withSpring(1);
+                  }}
+                  onPressOut={() => {
+                    buttonAnimation.value = withSpring(0);
+                  }}
+                >
+                  <Animated.View>
+                    <Text style={styles.ctaButtonText}>{t('goToApp')}</Text>
+                  </Animated.View>
+                </TouchableOpacity>
+              </Animated.View>
             </>
           ) : (
             <>
-              <Text style={[styles.ctaHeadline, { color: colors.text.primary }]}>Ready to Simplify Your Digital Life?</Text>
-              <TouchableOpacity 
-                style={[styles.ctaButton, { backgroundColor: colors.primary }]} 
-                onPress={() => router.push('/auth')}
-              >
-                <Text style={[styles.ctaButtonText, { color: colors.primaryContrastText }]}>Get Started Now</Text>
-              </TouchableOpacity>
+              <Text style={styles.ctaHeadline}>{t('readyToSimplify')}</Text>
+              <Animated.View style={styles.ctaButton}>
+                <TouchableOpacity
+                  onPress={() => router.push('/auth')}
+                  activeOpacity={0.9}
+                  onPressIn={() => {
+                    buttonAnimation.value = withSpring(1);
+                  }}
+                  onPressOut={() => {
+                    buttonAnimation.value = withSpring(0);
+                  }}
+                >
+                  <Animated.View>
+                    <Text style={styles.ctaButtonText}>{t('getStartedNow')}</Text>
+                  </Animated.View>
+                </TouchableOpacity>
+              </Animated.View>
             </>
           )}
         </Animated.View>
 
-        {/* Social Proof Section - Build trust and credibility */}
         <Animated.View style={[styles.socialProof, featuresAnimatedStyle]}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Trusted by Thousands</Text>
-          <View style={[styles.testimonialContainer, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.testimonialText, { color: colors.text.primary }]}>"HashPass has revolutionized how I manage my online accounts. It's secure, fast, and incredibly easy to use!"</Text>
-            <Text style={[styles.testimonialAuthor, { color: colors.text.primary }]}>- Alex P., Tech Enthusiast</Text>
-          </View>
-          <View style={[styles.testimonialContainer, { backgroundColor: colors.surface, marginTop: 16 }]}>
-            <Text style={[styles.testimonialText, { color: colors.text.primary }]}>"Finally, a digital wallet that I can truly trust. The peace of mind is priceless."</Text>
-            <Text style={[styles.testimonialAuthor, { color: colors.text.primary }]}>- Sarah L., Small Business Owner</Text>
-          </View>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>{t('trustedByThousands')}</Text>
+          {((t('testimonials', { returnObjects: true }) as unknown) as Array<{ text: string, author: string }>).map((testimonial, index) => (
+            <View
+              key={index}
+              style={[styles.testimonialContainer, {
+                backgroundColor: colors.surface,
+                marginTop: index > 0 ? 16 : 0
+              }]}
+            >
+              <Text style={[styles.testimonialText, { color: colors.text.primary }]}>{testimonial.text}</Text>
+              <Text style={[styles.testimonialAuthor, { color: colors.text.primary }]}>{testimonial.author}</Text>
+            </View>
+          ))}
         </Animated.View>
 
-        {/* Footer or additional content */}
+
         <View style={styles.footer}>
-          <Text style={styles.footerText}>© 2025 HashPass. All rights reserved.</Text>
+          <Text style={styles.footerText}>{t('copyright')}</Text>
         </View>
       </Animated.ScrollView>
     </Animated.View>
@@ -317,15 +422,10 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   features: {
     paddingHorizontal: 24,
     paddingVertical: 32,
-    backgroundColor: colors.background.paper, // Surface color
+    backgroundColor: 'transparent',
     borderRadius: 16,
     marginHorizontal: 16,
     marginBottom: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 10,
   },
   feature: {
     marginBottom: 30,
@@ -340,80 +440,106 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
     transform: [{ scale: 1 }],
+    alignItems: 'center',
+    textAlign: 'center',
   },
-  featureIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    marginBottom: 20,
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+  iconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginBottom: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
+    alignSelf: 'center',
   },
   featureTitle: {
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 12,
     letterSpacing: -0.3,
+    textAlign: 'center',
+    width: '100%',
   },
   featureDescription: {
     fontSize: 16,
     lineHeight: 24,
     opacity: 0.9,
     letterSpacing: 0.1,
+    textAlign: 'center',
+    width: '100%',
   },
   cta: {
-    backgroundColor: '#9E7FFF', // Primary color
     padding: 32,
-    borderRadius: 16,
+    borderRadius: 20,
     marginHorizontal: 16,
     alignItems: 'center',
     marginBottom: 32,
     shadowColor: '#9E7FFF',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.6,
-    shadowRadius: 15,
-    elevation: 15,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.7,
+    shadowRadius: 20,
+    elevation: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    position: 'relative',
+    height: '20%',
+    color: isDark ? '#FFFFFF' : '#121212',
+
   },
   ctaHeadline: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: '800',
+    color: isDark ? '#FFFFFF' : '#121212',
     textAlign: 'center',
     marginBottom: 24,
+    marginTop: 24,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+    letterSpacing: -0.5,
+    lineHeight: 40,
   },
   ctaButton: {
-    backgroundColor: '#f472b6', // Accent color
-    paddingVertical: 16,
-    paddingHorizontal: 40,
-    borderRadius: 12,
-    shadowColor: '#f472b6',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingVertical: 18,
+    paddingHorizontal: 45,
+    borderRadius: 14,
+    shadowColor: 'rgba(0, 0, 0, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    transform: [{ scale: 1 }],
+    overflow: 'hidden',
   },
   ctaButtonText: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: isDark ? '#FFFFFF' : '#121212',
+    letterSpacing: 0.5,
+  },
+  glossyOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
+    backgroundColor: 'transparent',
+    opacity: 0.3,
+    pointerEvents: 'none',
   },
   socialProof: {
     paddingHorizontal: 24,
     paddingVertical: 32,
-    backgroundColor: colors.background.paper,
+    backgroundColor: 'transparent',
     borderRadius: 16,
     marginHorizontal: 16,
     marginBottom: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 10,
   },
   testimonialContainer: {
-    backgroundColor: colors.background.paper,
+    backgroundColor: 'transparent',
     padding: 20,
     borderRadius: 12,
     marginBottom: 20,

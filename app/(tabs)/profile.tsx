@@ -3,6 +3,7 @@ import { View, Text, Switch, TouchableOpacity, Image, StyleSheet } from 'react-n
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
+import { useSettings } from '../../stores/settings';
 import { Ionicons } from '@expo/vector-icons';
 
 type LanguageType = 'en' | 'es' | 'fr';
@@ -116,6 +117,8 @@ export default function ProfileScreen() {
             />
           ),
         })}
+
+       
       </View>
 
       {/* Account Settings */}

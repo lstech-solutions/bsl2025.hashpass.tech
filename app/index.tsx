@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, Image, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
+import { ThemeAndLanguageSwitcher } from '../components/ThemeAndLanguageSwitcher';
 import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -15,8 +16,34 @@ import Animated, {
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 export default function HomeScreen() {
+  const { colors, isDark } = useTheme();
   const { user } = useAuth();
   const [userName, setUserName] = useState<string | null>(null);
+  
+  const styles = getStyles(isDark, colors);
+  const systemColorScheme = useColorScheme();
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  // Prevent flash of incorrect theme on mount
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
+
+  // Smooth background transition
+  const bgAnimation = useSharedValue(0);
+  
+  useEffect(() => {
+    bgAnimation.value = withTiming(1, { duration: 300 });
+  }, [isDark]);
+
+  const animatedBackground = useAnimatedStyle(() => ({
+    opacity: bgAnimation.value,
+    backgroundColor: withTiming(
+      isDark ? '#121212' : '#FFFFFF',
+      { duration: 300 }
+    )
+  }));
 
   const router = useRouter();
   const scrollY = useSharedValue(0);
@@ -105,8 +132,15 @@ export default function HomeScreen() {
     },
   });
 
+  if (!isMounted) {
+    return (
+      <View style={{ flex: 1, backgroundColor: systemColorScheme === 'dark' ? '#121212' : '#FFFFFF' }} />
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
+    <Animated.View style={[styles.container, animatedBackground]}>
+      <ThemeAndLanguageSwitcher />
       <Animated.ScrollView
         style={styles.scrollView}
         scrollEventThrottle={16}
@@ -124,48 +158,62 @@ export default function HomeScreen() {
             />
           </Animated.View>
           <Animated.View style={[styles.heroTextContainer, headerAnimatedStyle]}>
-            <Text style={styles.headline}>HashPass</Text>
-            <Text style={styles.tagline}>Your Digital Life, Simplified.</Text>
+            <Image 
+              source={isDark 
+                ? require('../assets/logos/logo-full-hashpass-black.svg')
+                : require('../assets/logos/logo-full-hashpass-white.svg')
+              } 
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={[styles.tagline, { color: colors.text.primary }]}>YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS</Text>
           </Animated.View>
+          
         </View>
 
         {/* Features Section - Animated reveal of key benefits */}
         <Animated.View style={[styles.features, featuresAnimatedStyle]}>
-          <Text style={styles.sectionTitle}>Unlock Your Potential</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Unlock Your Potential</Text>
           {/* Feature 1 */}
           <View style={styles.feature}>
             <Image source={{ uri: 'https://images.pexels.com/photos/11816764/pexels-photo-11816764.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }} style={styles.featureIcon} />
-            <Text style={styles.featureTitle}>Secure & Private</Text>
-            <Text style={styles.featureDescription}>Your data is encrypted and protected with industry-leading security protocols. We prioritize your privacy above all else.</Text>
+            <Text style={[styles.featureTitle, { color: colors.text.onSurface }]}>Secure & Private</Text>
+            <Text style={[styles.featureDescription, { color: colors.text.onSurfaceVariant }]}>Your data is encrypted and protected with industry-leading security protocols. We prioritize your privacy above all else.</Text>
           </View>
           {/* Feature 2 */}
           <View style={styles.feature}>
             <Image source={{ uri: 'https://images.pexels.com/photos/11816764/pexels-photo-11816764.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }} style={styles.featureIcon} />
-            <Text style={styles.featureTitle}>Effortless Management</Text>
-            <Text style={styles.featureDescription}>Organize all your digital credentials, loyalty cards, and important notes in one intuitive place.</Text>
+            <Text style={[styles.featureTitle, { color: colors.text.onSurface }]}>Effortless Management</Text>
+            <Text style={[styles.featureDescription, { color: colors.text.onSurfaceVariant }]}>Organize all your digital credentials, loyalty cards, and important notes in one intuitive place.</Text>
           </View>
           {/* Feature 3 */}
           <View style={styles.feature}>
             <Image source={{ uri: 'https://images.pexels.com/photos/11816764/pexels-photo-11816764.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }} style={styles.featureIcon} />
-            <Text style={styles.featureTitle}>Cross-Platform Sync</Text>
-            <Text style={styles.featureDescription}>Access your HashPass vault seamlessly across all your devices, anytime, anywhere.</Text>
+            <Text style={[styles.featureTitle, { color: colors.text.onSurface }]}>Cross-Platform Sync</Text>
+            <Text style={[styles.featureDescription, { color: colors.text.onSurfaceVariant }]}>Access your data across all your devices with our secure cloud sync. Your information is always up to date, everywhere.</Text>
           </View>
         </Animated.View>
 
         {/* Call to Action or User Info - Prominent and inviting */}
-        <Animated.View style={[styles.cta, ctaAnimatedStyle]}>
+        <Animated.View style={[styles.cta, ctaAnimatedStyle, { backgroundColor: colors.background.paper }]}>
           {userName ? (
             <>
-              <Text style={styles.ctaHeadline}>Welcome back! <br />{userName}</Text>
-              <TouchableOpacity style={styles.ctaButton} onPress={() => router.push('/(tabs)/home')}>
-                <Text style={styles.ctaButtonText}>Go to App</Text>
+              <Text style={[styles.ctaHeadline, { color: colors.text.onSurface }]}>Welcome back! <br />{userName}</Text>
+              <TouchableOpacity 
+                style={[styles.ctaButton, { backgroundColor: colors.primary }]} 
+                onPress={() => router.push('/(tabs)/wallet')}
+              >
+                <Text style={[styles.ctaButtonText, { color: colors.primaryContrastText }]}>Go to App</Text>
               </TouchableOpacity>
             </>
           ) : (
             <>
-              <Text style={styles.ctaHeadline}>Ready to Simplify Your Digital Life?</Text>
-              <TouchableOpacity style={styles.ctaButton} onPress={() => router.push('/auth')}>
-                <Text style={styles.ctaButtonText}>Get Started Now</Text>
+              <Text style={[styles.ctaHeadline, { color: colors.text.primary }]}>Ready to Simplify Your Digital Life?</Text>
+              <TouchableOpacity 
+                style={[styles.ctaButton, { backgroundColor: colors.primary }]} 
+                onPress={() => router.push('/auth')}
+              >
+                <Text style={[styles.ctaButtonText, { color: colors.primaryContrastText }]}>Get Started Now</Text>
               </TouchableOpacity>
             </>
           )}
@@ -173,16 +221,15 @@ export default function HomeScreen() {
 
         {/* Social Proof Section - Build trust and credibility */}
         <Animated.View style={[styles.socialProof, featuresAnimatedStyle]}>
-          <Text style={styles.sectionTitle}>Trusted by Thousands</Text>
-          <View style={styles.testimonialContainer}>
-            <Text style={styles.testimonialText}>"HashPass has revolutionized how I manage my online accounts. It's secure, fast, and incredibly easy to use!"</Text>
-            <Text style={styles.testimonialAuthor}>- Alex P., Tech Enthusiast</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Trusted by Thousands</Text>
+          <View style={[styles.testimonialContainer, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.testimonialText, { color: colors.text.primary }]}>"HashPass has revolutionized how I manage my online accounts. It's secure, fast, and incredibly easy to use!"</Text>
+            <Text style={[styles.testimonialAuthor, { color: colors.text.primary }]}>- Alex P., Tech Enthusiast</Text>
           </View>
-          <View style={styles.testimonialContainer}>
-            <Text style={styles.testimonialText}>"Finally, a digital wallet that I can truly trust. The peace of mind is priceless."</Text>
-            <Text style={styles.testimonialAuthor}>- Sarah L., Small Business Owner</Text>
+          <View style={[styles.testimonialContainer, { backgroundColor: colors.surface, marginTop: 16 }]}>
+            <Text style={[styles.testimonialText, { color: colors.text.primary }]}>"Finally, a digital wallet that I can truly trust. The peace of mind is priceless."</Text>
+            <Text style={[styles.testimonialAuthor, { color: colors.text.primary }]}>- Sarah L., Small Business Owner</Text>
           </View>
-          {/* Add more testimonials or partner logos here */}
         </Animated.View>
 
         {/* Footer or additional content */}
@@ -190,71 +237,87 @@ export default function HomeScreen() {
           <Text style={styles.footerText}>© 2025 HashPass. All rights reserved.</Text>
         </View>
       </Animated.ScrollView>
-    </SafeAreaView>
+    </Animated.View>
+
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#171717', // Background color from palette
+    position: 'relative',
   },
   scrollView: {
     flex: 1,
   },
   hero: {
-    width: '100%',
-    height: 500, // Adjust height as needed
-    justifyContent: 'center',
-    alignItems: 'center',
+    height: 400,
     position: 'relative',
     overflow: 'hidden',
-    borderRadius: 16, // Rounded corners
-    marginBottom: 32,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
   heroImage: {
     width: '100%',
     height: '100%',
-    position: 'absolute',
-    borderRadius: 16,
+    opacity: isDark ? 0.8 : 1,
   },
   heroTextContainer: {
     position: 'absolute',
-    zIndex: 1,
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-    backgroundColor: 'rgba(0,0,0,0.4)', // Semi-transparent overlay for readability
-    borderRadius: 16,
+    paddingHorizontal: 20,
+    width: '100%',
+  },
+  logo: {
+    width: 300,
+    height: 100,
+    marginBottom: 15,
   },
   headline: {
     fontSize: 48,
-    fontWeight: 'bold',
-    color: '#FFFFFF', // Text color from palette
-    textAlign: 'center',
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
+    fontWeight: '800',
+    marginBottom: 10,
+    letterSpacing: -1,
+    lineHeight: 48,
   },
   tagline: {
-    fontSize: 22,
-    color: '#A3A3A3', // Secondary text color
+    fontSize: 16,
+    opacity: 0.9,
+    marginTop: 10,
+    fontWeight: '400',
+    letterSpacing: 1,
     textAlign: 'center',
-    maxWidth: '80%',
-    lineHeight: 30,
+    width: '100%',
+    maxWidth: 400,
   },
   sectionTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '800',
+    marginBottom: 30,
     textAlign: 'center',
-    marginBottom: 24,
-    marginTop: 40,
+    letterSpacing: -0.5,
+    marginTop: 10,
+  },
+  footer: {
+    padding: 20,
+    backgroundColor: colors.background.default,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerText: {
+    fontSize: 14,
+    color: colors.text.primary,
+    textAlign: 'center',
   },
   features: {
     paddingHorizontal: 24,
     paddingVertical: 32,
-    backgroundColor: '#262626', // Surface color
+    backgroundColor: colors.background.paper, // Surface color
     borderRadius: 16,
     marginHorizontal: 16,
     marginBottom: 32,
@@ -265,33 +328,40 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   feature: {
-    alignItems: 'center',
-    marginBottom: 32,
-    padding: 16,
-    backgroundColor: '#171717', // Darker background for individual features
-    borderRadius: 12,
+    marginBottom: 30,
+    padding: 25,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#2F2F2F', // Border color
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    transform: [{ scale: 1 }],
   },
   featureIcon: {
-    width: 80,
-    height: 80,
-    marginBottom: 16,
-    borderRadius: 40, // Make icons circular
-    backgroundColor: '#38bdf8', // Secondary color for icon background
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    marginBottom: 20,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
   featureTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 12,
+    letterSpacing: -0.3,
   },
   featureDescription: {
     fontSize: 16,
-    color: '#A3A3A3',
-    textAlign: 'center',
     lineHeight: 24,
+    opacity: 0.9,
+    letterSpacing: 0.1,
   },
   cta: {
     backgroundColor: '#9E7FFF', // Primary color
@@ -332,7 +402,7 @@ const styles = StyleSheet.create({
   socialProof: {
     paddingHorizontal: 24,
     paddingVertical: 32,
-    backgroundColor: '#262626',
+    backgroundColor: colors.background.paper,
     borderRadius: 16,
     marginHorizontal: 16,
     marginBottom: 32,
@@ -343,7 +413,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   testimonialContainer: {
-    backgroundColor: '#171717',
+    backgroundColor: colors.background.paper,
     padding: 20,
     borderRadius: 12,
     marginBottom: 20,
@@ -363,16 +433,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#A3A3A3',
     textAlign: 'right',
-  },
-  footer: {
-    padding: 24,
-    alignItems: 'center',
-    backgroundColor: '#171717',
-    borderTopWidth: 1,
-    borderColor: '#2F2F2F',
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#A3A3A3',
   },
 });

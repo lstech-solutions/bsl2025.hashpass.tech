@@ -1,102 +1,127 @@
 import React from 'react';
 import { Tabs } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet, View, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../hooks/useTheme';
+import { themeShadows, themeSpacing, themeBorderRadius } from '../../lib/theme';
 
 // Custom Scan Button Component
 const ScanButton = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   return (
-    <TouchableOpacity
-      onPress={() => router.push('/scan')} // Navigate to the dedicated scan screen
-      style={[styles.scanButton, { bottom: insets.bottom + 10 }]} // Adjust position based on safe area
-    >
-      <Ionicons name="qr-code-sharp" size={32} color="#FFFFFF" />
-    </TouchableOpacity>
+    <View style={[styles.scanButtonContainer, { bottom: insets.bottom + themeSpacing.sm }]}>
+      <TouchableOpacity
+        onPress={() => router.push('/scan')}
+        style={[
+          styles.scanButton,
+          { 
+            backgroundColor: colors.secondary,
+            ...themeShadows.medium,
+            shadowColor: colors.secondary,
+          }
+        ]}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="qr-code-sharp" size={28} color={colors.primaryContrastText} />
+      </TouchableOpacity>
+    </View>
   );
 };
 
 export default function Layout() {
+  const { colors } = useTheme();
+
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: '#9E7FFF', // Primary color from palette
-        tabBarInactiveTintColor: '#A3A3A3', // Secondary text color from palette
-        tabBarStyle: {
-          backgroundColor: '#171717', // Background color from palette
-          borderTopWidth: 1,
-          borderTopColor: '#2F2F2F', // Border color from palette
-          height: 80, // Increased height for better spacing
-          paddingBottom: 10, // Add padding for safe area
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
-        }}
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar 
+        barStyle={colors.background === '#121212' ? 'light-content' : 'dark-content'} 
+        backgroundColor={colors.background}
       />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: "Explore",
-          tabBarIcon: ({ color, size }) => <Ionicons name="compass" size={size} color={color} />,
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: colors.tabBarActive,
+          tabBarInactiveTintColor: colors.tabBarInactive,
+          tabBarStyle: {
+            backgroundColor: colors.tabBar,
+            borderTopWidth: 0,
+            height: 60,
+            paddingBottom: 0,
+            ...themeShadows.small,
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontFamily: 'Inter-SemiBold',
+            marginBottom: themeSpacing.xs,
+          },
+          tabBarItemStyle: {
+            paddingVertical: themeSpacing.xs,
+          },
+          tabBarIconStyle: {
+            marginBottom: -themeSpacing.xs,
+          },
         }}
-      />
-      {/* Placeholder for the central scan button */}
-      <Tabs.Screen
-        name="scan-placeholder" // This screen won't render anything, just provides the button
-        options={{
-          title: "", // No label
-          tabBarButton: (props) => <ScanButton {...props} />,
-        }}
-      />
-      <Tabs.Screen
-        name="wallet"
-        options={{
-          title: "Wallet",
-          tabBarIcon: ({ color, size }) => <Ionicons name="wallet" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />,
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="explore"
+          options={{
+            title: "Explore",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="compass-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="scan-placeholder"
+          options={{
+            title: "",
+            tabBarButton: () => <ScanButton />,
+          }}
+        />
+        <Tabs.Screen
+          name="wallet"
+          options={{
+            title: "Wallet",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="wallet-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: "Profile",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="person-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      </Tabs>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  scanButtonContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1,
+  },
   scanButton: {
-    backgroundColor: '#f472b6', // Accent color from palette
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: themeBorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'absolute',
-    top: -30, // Adjust to float above the tab bar
-    alignSelf: 'center',
-    shadowColor: '#f472b6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
-    elevation: 10,
+    top: -themeSpacing.md,
     borderWidth: 4,
-    borderColor: '#171717', // Background color to create a "cutout" effect
+    borderColor: 'transparent',
   },
 });

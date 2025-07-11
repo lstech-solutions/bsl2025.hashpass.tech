@@ -4,13 +4,11 @@ import { ArrowRightLeft, DollarSign, Repeat2 } from 'lucide-react-native';
 
 const ExchangeView = () => {
   return (
-    <View className="bg-gray-100 p-4 rounded-xl shadow-sm">
-
-      {/* Exchange Overview Card */}
-      <View className="bg-white rounded-xl shadow-lg p-5 mb-4">
+    <View className="dark:bg-gray-900 p-4 rounded-xl shadow-sm">
+      <View className="bg-gray-100 dark:bg-gray-800 rounded-xl shadow-lg p-5 mb-4">
         <View className="flex-row items-center mb-3">
           <DollarSign size={24} color="#10b981" />
-          <Text className="text-xl font-semibold ml-2 text-gray-800">Your Exchange Balance</Text>
+          <Text className="text-xl font-semibold ml-2 text-gray-800 dark:text-white">Your Exchange Balance</Text>
         </View>
         <Text className="text-4xl font-extrabold text-green-600 mb-2">1,250 TOKENS</Text>
         <Text className="text-gray-600">Equivalent to $125.00 USD</Text>
@@ -32,7 +30,7 @@ const ExchangeView = () => {
       </View>
 
       {/* Exchange Rates/Info */}
-      <View className="bg-white rounded-xl shadow-lg p-5 mb-4">
+      <View className="bg-gray-100 dark:bg-gray-800 rounded-xl shadow-lg p-5 mb-4">
         <Text className="text-xl font-semibold mb-3 text-gray-800">Current Rates</Text>
         <View className="flex-row justify-between py-2 border-b border-gray-200">
           <Text className="text-gray-700">1 TOKEN</Text>
@@ -46,11 +44,11 @@ const ExchangeView = () => {
       </View>
 
       {/* Recent Transactions */}
-      <View className="bg-white rounded-xl shadow-lg p-5">
-        <Text className="text-xl font-semibold mb-3 text-gray-800">Recent Transactions</Text>
+      <View className="bg-gray-100 dark:bg-gray-800 rounded-xl shadow-lg p-5">
+        <Text className="text-xl font-semibold mb-3 text-gray-800 dark:text-white">Recent Transactions</Text>
         <View className="flex-row justify-between items-center py-2 border-b border-gray-200">
           <View>
-            <Text className="font-medium text-gray-800">Swap: 50 TOKENS for 5 USD</Text>
+            <Text className="font-medium text-gray-800 dark:text-white">Swap: 50 TOKENS for 5 USD</Text>
             <Text className="text-sm text-gray-500">2 hours ago</Text>
           </View>
           <Text className="text-green-600 font-semibold">+5 USD</Text>

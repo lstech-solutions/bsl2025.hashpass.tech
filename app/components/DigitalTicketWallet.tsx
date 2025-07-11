@@ -74,7 +74,6 @@ const DigitalTicketWallet = ({
         "https://images.unsplash.com/photo-1501084817091-a4f3d1d19e07?w=500&q=80",
     },
   ],
-  onTicketSelect = () => {},
 }: DigitalTicketWalletProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [expandedQR, setExpandedQR] = useState<string | null>(null);
@@ -111,18 +110,18 @@ const DigitalTicketWallet = ({
 
   if (tickets.length === 0) {
     return (
-      <View className="flex-1 items-center justify-center p-6 bg-gray-100">
-        <View className="bg-white rounded-xl p-8 items-center shadow-md w-full">
-          <Ticket size={64} color="#6366f1" />
-          <Text className="text-2xl font-bold mt-4 text-center">
+      <View className="flex-1 items-center justify-center p-6 bg-gray-100 dark:bg-gray-900">
+        <View className="bg-white dark:bg-gray-800 rounded-xl p-8 items-center shadow-md w-full">
+          <Ticket size={64} className="text-indigo-500 dark:text-indigo-400" />
+          <Text className="text-2xl font-bold mt-4 text-center text-gray-900 dark:text-white">
             No Tickets Yet
           </Text>
-          <Text className="text-gray-500 text-center mt-2">
+          <Text className="text-gray-500 dark:text-gray-300 text-center mt-2">
             Your purchased tickets will appear here. Explore events to get
             started!
           </Text>
           <TouchableOpacity
-            className="mt-6 bg-indigo-600 py-3 px-6 rounded-full"
+            className="mt-6 bg-indigo-600 dark:bg-indigo-700 py-3 px-6 rounded-full"
             onPress={() => {}}
           >
             <Text className="text-white font-semibold">Discover Events</Text>
@@ -135,47 +134,48 @@ const DigitalTicketWallet = ({
   const currentTicket = tickets[currentIndex];
 
   return (
-    <View className="flex-1 bg-gray-100 p-4">
- 
-      {/* Ticket Card */}
-      <View className="bg-white rounded-xl overflow-hidden shadow-lg mb-4">
+    <View className="flex-1 dark:bg-gray-900 p-4 rounded-xl shadow-sm">
+      <View className="bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg mb-4 border border-gray-200 dark:border-gray-700">
         {currentTicket.image && (
           <Image
             source={{ uri: currentTicket.image }}
             className="w-full h-40"
             contentFit="cover"
+            transition={200}
           />
         )}
 
         <View className="p-4">
-          <Text className="text-xl font-bold">{currentTicket.eventName}</Text>
+          <Text className="text-xl font-bold text-gray-900 dark:text-white">{currentTicket.eventName}</Text>
           <View className="flex-row items-center mt-2">
-            <Text className="text-gray-600">{currentTicket.date}</Text>
+            <Text className="text-gray-600 dark:text-gray-300">{currentTicket.date}</Text>
           </View>
-          <Text className="text-gray-600 mt-1">{currentTicket.location}</Text>
+          <Text className="text-gray-600 dark:text-gray-300 mt-1">{currentTicket.location}</Text>
 
           <View className="flex-row justify-between items-center mt-4">
-            <View className="bg-indigo-100 px-3 py-1 rounded-full">
-              <Text className="text-indigo-800 font-medium">
+            <View className="bg-indigo-100 dark:bg-indigo-900/30 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-800">
+              <Text className="text-indigo-800 dark:text-indigo-300 font-medium">
                 {currentTicket.accessLevel}
               </Text>
             </View>
             <View className="flex-row items-center">
-              <Text className="text-amber-600 font-bold mr-1">
+              <Text className="text-amber-600 dark:text-amber-400 font-bold mr-1">
                 {currentTicket.earnedTokens}
               </Text>
-              <Text className="text-gray-600">TOKENS EARNED</Text>
+              <Text className="text-gray-600 dark:text-gray-400">TOKENS EARNED</Text>
             </View>
           </View>
 
           <TouchableOpacity
             className="mt-4 items-center"
             onPress={() => toggleQRCode(currentTicket.qrCode)}
+            activeOpacity={0.8}
           >
             <Animated.View
               style={[
                 expandedQR === currentTicket.qrCode ? qrAnimatedStyle : {},
               ]}
+              className="bg-white dark:bg-gray-700 p-2 rounded-lg"
             >
               <Image
                 source={{ uri: currentTicket.qrCode }}
@@ -183,7 +183,7 @@ const DigitalTicketWallet = ({
                 contentFit="contain"
               />
             </Animated.View>
-            <Text className="text-gray-500 mt-2">
+            <Text className="text-gray-500 dark:text-gray-400 mt-2">
               {expandedQR === currentTicket.qrCode
                 ? "Tap to minimize"
                 : "Tap to enlarge"}
@@ -193,9 +193,9 @@ const DigitalTicketWallet = ({
       </View>
 
       {/* Navigation Controls */}
-      <View className="flex-row justify-between items-center mt-2">
+      <View className="flex-row justify-between items-center mt-4">
         <TouchableOpacity
-          className={`p-2 rounded-full ${currentIndex === 0 ? "bg-gray-200" : "bg-indigo-500"}`}
+          className={`p-2 rounded-full ${currentIndex === 0 ? "bg-gray-200 dark:bg-gray-700" : "bg-indigo-500 dark:bg-indigo-600"}`}
           onPress={handlePrevious}
           disabled={currentIndex === 0}
         >
@@ -205,12 +205,16 @@ const DigitalTicketWallet = ({
           />
         </TouchableOpacity>
 
-        <Text className="text-gray-600">
+        <Text className="text-gray-600 dark:text-gray-300">
           {currentIndex + 1} of {tickets.length}
         </Text>
 
         <TouchableOpacity
-          className={`p-2 rounded-full ${currentIndex === tickets.length - 1 ? "bg-gray-200" : "bg-indigo-500"}`}
+          className={`p-2 rounded-full ${
+            currentIndex === tickets.length - 1
+              ? "bg-gray-200 dark:bg-gray-700"
+              : "bg-indigo-500 dark:bg-indigo-600"
+          }`}
           onPress={handleNext}
           disabled={currentIndex === tickets.length - 1}
         >
@@ -227,23 +231,18 @@ const DigitalTicketWallet = ({
         showsHorizontalScrollIndicator={false}
         className="mt-4"
       >
-        {tickets.map((ticket, index) => (
-          <TouchableOpacity
-            key={ticket.id}
-            onPress={() => setCurrentIndex(index)}
-            className={`mr-3 rounded-lg overflow-hidden border-2 ${index === currentIndex ? "border-indigo-500" : "border-transparent"}`}
-          >
-            <Image
-              source={{
-                uri:
-                  ticket.image ||
-                  "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=200&q=70",
-              }}
-              className="w-16 h-16"
-              contentFit="cover"
+        <View className="flex-row space-x-2">
+          {tickets.map((_, index) => (
+            <View
+              key={index}
+              className={`h-2 rounded-full transition-all duration-200 ${
+                index === currentIndex
+                  ? "bg-indigo-500 dark:bg-indigo-400 w-6"
+                  : "bg-gray-300 dark:bg-gray-600 w-2"
+              }`}
             />
-          </TouchableOpacity>
-        ))}
+          ))}
+        </View>
       </ScrollView>
 
       <View className="mt-4 bg-amber-50 p-3 rounded-lg flex-row items-center">

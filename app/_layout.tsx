@@ -49,28 +49,22 @@ function ThemedContent() {
   return (
     <NavThemeProvider value={navigationTheme}>
       <Stack
-        screenOptions={{
-          headerShown: false,
+        screenOptions={({ route }) => ({
+          headerShown: (route.name !== 'index' && route.name !== 'auth') && false,
           contentStyle: {
             backgroundColor: colors.background.default,
           },
           animation: 'slide_from_right',
           animationTypeForReplace: 'push',
-          headerTintColor: colors.text.primary as string, // Explicit type assertion
+          headerTintColor: colors.text.primary as string, 
           headerTitleStyle: {
             fontWeight: '600',
-            color: colors.text.primary as string, // Explicit type assertion
+            color: colors.text.primary as string,
           },
           headerShadowVisible: false,
-        }}
-        initialRouteName="index"
+        })}
       >
-        <Stack.Screen 
-          name="index" 
-          options={{ 
-            headerShown: false,
-          }} 
-        />
+       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen 
           name="+not-found" 
           options={{

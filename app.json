@@ -12,23 +12,6 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "linking": {
-      "enabled": true,
-      "config": {
-        "screens": {
-          "(tabs)": {
-            "path": "tabs",
-            "screens": {
-              "wallet": "wallet",
-              "scan": "scan",
-              "profile": "profile"
-            }
-          },
-          "auth": "auth"
-          
-        }
-      }
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hashpass.tech",

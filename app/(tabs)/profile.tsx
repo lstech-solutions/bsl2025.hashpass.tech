@@ -1,20 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Switch, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 
-type ThemeType = 'light' | 'dark' | 'system';
 type LanguageType = 'en' | 'es' | 'fr';
 
 export default function ProfileScreen() {
-  const { user, loading, signOut } = useAuth();
-  const [darkMode, setDarkMode] = useState(false);
+  const { user, signOut } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [biometricAuth, setBiometricAuth] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageType>('en');
-  const [theme, setTheme] = useState<ThemeType>('system');
   const router = useRouter();
+  const { isDark, toggleTheme } = useTheme();
 
   const handleSignOut = async () => {
     try {
@@ -80,14 +79,14 @@ export default function ProfileScreen() {
         </Text>
         
         {renderSettingItem({
-          icon: 'moon-outline',
+          icon: isDark ? 'moon' : 'moon-outline',
           title: 'Dark Mode',
           rightComponent: (
             <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
+              value={isDark}
+              onValueChange={toggleTheme}
               trackColor={{ false: '#e5e7eb', true: '#818cf8' }}
-              thumbColor={darkMode ? '#4f46e5' : '#f3f4f6'}
+              thumbColor={isDark ? '#4f46e5' : '#f3f4f6'}
             />
           ),
         })}

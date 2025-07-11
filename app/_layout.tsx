@@ -1,34 +1,29 @@
-import React from 'react';
-import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { useFonts } from "expo-font";
+import './config/reanimated'; // CRITICAL: Ensure Reanimated is imported and configured first
+import 'react-native-gesture-handler'; // Then gesture handler
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
-import { useColorScheme as useNativeWindColorScheme } from 'nativewind';
-import "react-native-reanimated";
+import { ThemeProvider as NavThemeProvider, DefaultTheme } from '@react-navigation/native';
+import { ThemeProvider } from '../providers/ThemeProvider';
+import { useTheme, useThemeProvider } from '../hooks/useTheme';
 import "./global.css";
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
 export default function RootLayout() {
-  const [loaded] = useFonts({
-    SpaceMono: require('./assets/fonts/SpaceMono-Regular.ttf'),
-  });
+  const theme = useThemeProvider();
+  
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={theme}>
+        <ThemedContent />
+      </ThemeProvider>
+    </GestureHandlerRootView>
+  );
+}
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
+function ThemedContent() {
+  const { colors } = useTheme();
 
   return (
-    <ThemeProvider value={DefaultTheme}>
+    <NavThemeProvider value={{ ...DefaultTheme, colors }}>
       <Stack
         screenOptions={({ route }) => ({
           headerShown: false && route.name.startsWith("/"),
@@ -37,7 +32,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
-      <StatusBar style="light" />
-    </ThemeProvider>
+    </NavThemeProvider>
   );
 }
+

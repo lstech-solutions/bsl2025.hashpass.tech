@@ -1,8 +1,16 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
+import Animated, {
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  interpolate,
+  Extrapolation,
+  withTiming,
+} from 'react-native-reanimated';
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
@@ -11,7 +19,7 @@ export default function HomeScreen() {
   const [userName, setUserName] = useState<string | null>(null);
 
   const router = useRouter();
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useSharedValue(0);
 
   useEffect(() => {
     if (user) {
@@ -21,77 +29,108 @@ export default function HomeScreen() {
     }
   }, [user]);
 
-  // Animations with Easing functions for smoother transitions
-  // Header opacity fades out as user scrolls down
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
+  // Animation styles using Reanimated v3
+  const headerAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      scrollY.value,
+      [0, 100],
+      [1, 0],
+      { extrapolateLeft: Extrapolation.CLAMP, extrapolateRight: Extrapolation.CLAMP }
+    );
+    return {
+      opacity: withTiming(opacity, { duration: 100 })
+    };
   });
 
-  // Hero image scales down and fades out slightly as user scrolls
-  const heroImageScale = scrollY.interpolate({
-    inputRange: [0, 200],
-    outputRange: [1, 0.9], // subtle scale down effect
-    extrapolate: 'clamp',
-  });
-  const heroImageOpacity = scrollY.interpolate({
-    inputRange: [0, 200],
-    outputRange: [1, 0], // Fades out completely
-    extrapolate: 'clamp',
-  });
-
-  // Features section fades in and scales up as it comes into view
-  const featuresOpacity = scrollY.interpolate({
-    inputRange: [0, 250, 400], // Start fading in earlier
-    outputRange: [0, 0.5, 1],
-    extrapolate: 'clamp',
-  });
-  const featuresScale = scrollY.interpolate({
-    inputRange: [0, 250, 400],
-    outputRange: [0.9, 0.95, 1], // subtle scale up effect
-    extrapolate: 'clamp',
+  const heroImageAnimatedStyle = useAnimatedStyle(() => {
+    const scale = interpolate(
+      scrollY.value,
+      [0, 200],
+      [1, 0.9],
+      { extrapolateLeft: Extrapolation.CLAMP, extrapolateRight: Extrapolation.CLAMP }
+    );
+    const opacity = interpolate(
+      scrollY.value,
+      [0, 200],
+      [1, 0],
+      { extrapolateLeft: Extrapolation.CLAMP, extrapolateRight: Extrapolation.CLAMP }
+    );
+    return {
+      transform: [{ scale: withTiming(scale, { duration: 100 }) }],
+      opacity: withTiming(opacity, { duration: 100 })
+    };
   });
 
-  // Call to Action section fades in and scales up
-  const ctaOpacity = scrollY.interpolate({
-    inputRange: [300, 500], // Appears after features
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
+  const featuresAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      scrollY.value,
+      [0, 250, 400],
+      [0, 0.5, 1],
+      { extrapolateLeft: Extrapolation.CLAMP, extrapolateRight: Extrapolation.CLAMP }
+    );
+    const scale = interpolate(
+      scrollY.value,
+      [0, 250, 400],
+      [0.9, 0.95, 1],
+      { extrapolateLeft: Extrapolation.CLAMP, extrapolateRight: Extrapolation.CLAMP }
+    );
+    return {
+      opacity: withTiming(opacity, { duration: 100 }),
+      transform: [{ scale: withTiming(scale, { duration: 100 }) }]
+    };
   });
-  const ctaScale = scrollY.interpolate({
-    inputRange: [300, 500],
-    outputRange: [0.9, 1], // subtle scale up effect
-    extrapolate: 'clamp',
+
+  const ctaAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      scrollY.value,
+      [300, 500],
+      [0, 1],
+      { extrapolateLeft: Extrapolation.CLAMP, extrapolateRight: Extrapolation.CLAMP }
+    );
+    const scale = interpolate(
+      scrollY.value,
+      [300, 500],
+      [0.9, 1],
+      { extrapolateLeft: Extrapolation.CLAMP, extrapolateRight: Extrapolation.CLAMP }
+    );
+    return {
+      opacity: withTiming(opacity, { duration: 100 }),
+      transform: [{ scale: withTiming(scale, { duration: 100 }) }]
+    };
+  });
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
   });
 
   return (
     <SafeAreaView style={styles.container}>
       <Animated.ScrollView
         style={styles.scrollView}
-        scrollEventThrottle={16} // Update scroll position frequently for smooth animations
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true } // Use native driver for performance
-        )}
+        scrollEventThrottle={16}
+        onScroll={scrollHandler}
+        showsVerticalScrollIndicator={false}
       >
         {/* Hero Section - Immersive background with fading text */}
         <View style={styles.hero}>
-          <Animated.View style={{ transform: [{ scale: heroImageScale }], opacity: heroImageOpacity }}>
+          <Animated.View style={heroImageAnimatedStyle}>
             <AnimatedImage
-              source={{ uri: 'https://images.pexels.com/photos/7096461/pexels-photo-7096461.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }} // Abstract background
+              source={{ uri: 'https://images.pexels.com/photos/7096461/pexels-photo-7096461.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }}
               style={styles.heroImage}
               resizeMode="cover"
+              sharedTransitionTag="heroImage"
             />
           </Animated.View>
-          <Animated.View style={[styles.heroTextContainer, { opacity: headerOpacity }]}>
+          <Animated.View style={[styles.heroTextContainer, headerAnimatedStyle]}>
             <Text style={styles.headline}>HashPass</Text>
             <Text style={styles.tagline}>Your Digital Life, Simplified.</Text>
           </Animated.View>
         </View>
 
         {/* Features Section - Animated reveal of key benefits */}
-        <Animated.View style={[styles.features, { opacity: featuresOpacity, transform: [{ scale: featuresScale }] }]}>
+        <Animated.View style={[styles.features, featuresAnimatedStyle]}>
           <Text style={styles.sectionTitle}>Unlock Your Potential</Text>
           {/* Feature 1 */}
           <View style={styles.feature}>
@@ -114,7 +153,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* Call to Action or User Info - Prominent and inviting */}
-        <Animated.View style={[styles.cta, { opacity: ctaOpacity, transform: [{ scale: ctaScale }] }]}> 
+        <Animated.View style={[styles.cta, ctaAnimatedStyle]}>
           {userName ? (
             <>
               <Text style={styles.ctaHeadline}>Welcome back! <br />{userName}</Text>
@@ -133,7 +172,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* Social Proof Section - Build trust and credibility */}
-        <Animated.View style={[styles.socialProof, { opacity: featuresOpacity, transform: [{ scale: featuresScale }] }]}>
+        <Animated.View style={[styles.socialProof, featuresAnimatedStyle]}>
           <Text style={styles.sectionTitle}>Trusted by Thousands</Text>
           <View style={styles.testimonialContainer}>
             <Text style={styles.testimonialText}>"HashPass has revolutionized how I manage my online accounts. It's secure, fast, and incredibly easy to use!"</Text>

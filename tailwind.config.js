@@ -127,5 +127,5 @@ module.exports = {
     'text-success',
     'text-warning',
     'text-error',
-  ],
+  ]
 };

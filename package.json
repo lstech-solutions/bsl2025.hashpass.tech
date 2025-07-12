@@ -46,6 +46,7 @@
     "i18n-js": "^4.5.1",
     "lightningcss": "^1.29.2",
     "lucide-react-native": "^0.479.0",
+    "motion": "^12.23.3",
     "nativewind": "^4.1.23",
     "postcss": "^8.5.3",
     "react": "19.0.0",

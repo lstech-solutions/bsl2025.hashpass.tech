@@ -19,6 +19,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { GlowingEffect } from '../components/GlowingEffect';
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
@@ -224,6 +225,14 @@ export default function HomeScreen() {
 
           {/* Feature 1 - Security */}
           <Animated.View style={[styles.feature, feature1Style]}>
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
+            />
             <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
               <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
             </View>
@@ -233,6 +242,14 @@ export default function HomeScreen() {
 
           {/* Feature 2 - Management */}
           <Animated.View style={[styles.feature, feature2Style]}>
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
+            />
             <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
               <Ionicons name="key" size={24} color={colors.primary} />
             </View>
@@ -242,6 +259,14 @@ export default function HomeScreen() {
 
           {/* Feature 3 - Sync */}
           <Animated.View style={[styles.feature, feature3Style]}>
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
+            />
             <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
               <Ionicons name="sync" size={24} color={colors.primary} />
             </View>

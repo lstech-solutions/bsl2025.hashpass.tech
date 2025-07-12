@@ -7,16 +7,6 @@ import { useLanguage } from '../../providers/LanguageProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from '../../i18n/i18n';
 import { version } from '../../package.json';
-import { SplashCursor } from '../../components/SplashBackground';
-
-
-const NoiseDemo = () => {
-  return (
-    <View style={styles.noiseContainer}>
-      <SplashCursor />
-    </View>
-  )
-}
 
 const styles = StyleSheet.create({
   noiseContainer: {
@@ -76,9 +66,8 @@ export default function ProfileScreen() {
     <View className="flex-1" style={styles.container}>
 
       <View className="items-center py-8" style={styles.header}>
-       
         <View className="w-24 h-24 rounded-full bg-indigo-500 items-center justify-center mb-3 relative" >
-        {animations && <NoiseDemo />}
+        
           {user?.user_metadata?.avatar_url ? (
             <Image
               source={{ uri: user.user_metadata.avatar_url }}

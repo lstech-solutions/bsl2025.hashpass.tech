@@ -114,7 +114,8 @@
       "changePassword": "Cambiar Contraseña",
       "darkMode": "Modo Oscuro",
       "notifications": "Notificaciones",
-      "biometricAuthentication": "Autenticación Biométrica"
+      "biometricAuthentication": "Autenticación Biométrica",
+      "animations": "Animaciones"
     },
     "account": "CUENTA",
     "signOut": "Cerrar Sesión",

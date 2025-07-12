@@ -30,9 +30,10 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [biometricAuth, setBiometricAuth] = useState(false);
-  const { locale, setLocale } = useLanguage();
+  const [animations, setAnimations] = useState(true);
   const router = useRouter();
   const { isDark, toggleTheme, colors } = useTheme();
+  const { locale, setLocale } = useLanguage();
   const { t } = useTranslation('profile');
   const styles = getStyles(isDark, colors);
 
@@ -77,7 +78,7 @@ export default function ProfileScreen() {
       <View className="items-center py-8" style={styles.header}>
        
         <View className="w-24 h-24 rounded-full bg-indigo-500 items-center justify-center mb-3 relative" >
-        <NoiseDemo />
+        {animations && <NoiseDemo />}
           {user?.user_metadata?.avatar_url ? (
             <Image
               source={{ uri: user.user_metadata.avatar_url }}
@@ -97,11 +98,12 @@ export default function ProfileScreen() {
 
       {/* App Settings */}
       <ScrollView className="flex-1" style={styles.scrollView}>
-        <View className="mt-6 mb-4">
-          <Text className="px-6 py-2 text-sm font-medium" style={styles.settingsTitle}>
+         <Text className="px-6 py-2 text-sm font-medium" style={styles.settingsTitle}>
             {t('settings.title')}
           </Text>
-
+        
+        <View className="mt-6 mb-4">
+         
           {renderSettingItem({
             icon: isDark ? 'moon' : 'moon-outline',
             title: t('settings.darkMode'),
@@ -140,6 +142,19 @@ export default function ProfileScreen() {
               />
             ),
           })}
+
+           {renderSettingItem({
+            icon: 'eye-outline',
+            title: t('settings.animations'),
+            rightComponent: (
+              <Switch
+                value={animations}
+                onValueChange={setAnimations}
+                trackColor={{ false: '#767577', true: '#81b0ff' }}
+                thumbColor={animations ? '#f5dd4b' : '#f4f3f4'}
+              />
+            ),
+          })}
         </View>
 
         {/* Account Settings */}
@@ -151,11 +166,11 @@ export default function ProfileScreen() {
           {renderSettingItem({
             icon: 'language-outline',
             title: t('settings.language'),
-            onPress: () => {
+            onPress: async () => {
               const locales = ['en', 'es', 'ko'];
               const currentIndex = locales.indexOf(locale);
               const nextIndex = (currentIndex + 1) % locales.length;
-              setLocale(locales[nextIndex]);
+              await setLocale(locales[nextIndex]);
             }, rightComponent: (
               <View className="flex-row items-center">
                 <Text className="text-gray-500 dark:text-gray-400 mr-2">

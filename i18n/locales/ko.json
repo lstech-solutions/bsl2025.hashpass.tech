@@ -111,8 +111,8 @@
       "changePassword": "비밀번호 변경",
       "darkMode": "다크 모드",
       "notifications": "알림",
-      "biometricAuthentication": "생체 인증"
-
+      "biometricAuthentication": "생체 인증",
+      "animations": "애니메이션"
     },
     "account": "계정",
     "signOut": "로그아웃",

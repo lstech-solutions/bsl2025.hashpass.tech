@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useLanguageStore } from '../hooks/useLanguageStore';
+import { useLanguageStore } from '../hooks/useLanguage';
 
 const LanguageContext = createContext<{
   locale: string;
@@ -12,9 +12,10 @@ type LanguageProviderProps = {
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
   const { locale, setLocale } = useLanguageStore();
+  const displayLocale = locale || 'en'; // Fallback to 'en' if locale is null during initial load
 
   return (
-    <LanguageContext.Provider value={{ locale, setLocale }}>
+    <LanguageContext.Provider value={{ locale: displayLocale, setLocale }}>
       {children}
     </LanguageContext.Provider>
   );

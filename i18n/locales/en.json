@@ -122,7 +122,8 @@
       "changePassword": "Change Password",
       "darkMode": "Dark Mode",
       "notifications": "Notifications",
-      "biometricAuthentication": "Biometric Authentication"
+      "biometricAuthentication": "Biometric Authentication",
+      "animations": "Animations"
     },
     "account": "Account",
     "signOut": "Sign Out",

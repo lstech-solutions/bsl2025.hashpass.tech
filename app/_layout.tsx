@@ -67,7 +67,7 @@ function ThemedContent() {
         screenOptions={({ route }) => ({
           headerShown: (route.name !== 'index' && route.name !== 'auth') && false,
           contentStyle: {
-            backgroundColor: colors.background.default,
+            backgroundColor: isDark ? colors.primaryDark : colors.background.paper,
           },
           animation: 'slide_from_right',
           animationTypeForReplace: 'push',

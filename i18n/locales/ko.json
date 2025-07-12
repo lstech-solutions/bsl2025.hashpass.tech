@@ -70,16 +70,11 @@
     "readyToSimplify": "디지털 라이프를 간편하게 만들어보시겠어요?",
     "getStartedNow": "지금 시작하기",
     "trustedByThousands": "수천 명이 신뢰하는 서비스",
-    "testimonials": [
-      {
-        "text": "\"HASHPASS는 제가 온라인 커뮤니티를 관리하는 방식을 완전히 바꿔놓았어요. 안전하고 빠르며 정말 사용하기 쉬워요!\"",
-        "author": "- 알렉스 P., 테크 애호가"
-      },
-      {
-        "text": "\"정말로 믿을 수 있는 디지털 지갑을 찾았어요. 마음의 평화가 무엇인지 알게 되었어요.\"",
-        "author": "- 사라 L., 소상공인"
-      }
-    ],
+    "testimonials":{
+      "title": "고객 후기",
+      "subtitle": "고객들이 말하는 것",
+      "description": "고객들이 말하는 것"
+    },
     "copyright": " 2025 HASHPASS™ 모든 권리 보유.",
     "cta": {
       "title": "시작하기",

@@ -20,6 +20,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { GlowingEffect } from '../components/GlowingEffect';
+import { InteractiveHoverButton } from '../components/InteractiveHoverButton';
+import { rem } from 'nativewind';
 
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
@@ -223,7 +225,7 @@ export default function HomeScreen() {
         </View>
 
 
-        <Animated.View style={[styles.features, featuresAnimatedStyle]}>
+        <Animated.View className="mt-20 max-w-[840px] mx-auto" style={[styles.features, featuresAnimatedStyle]}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>{t('unlockPotential')}</Text>
 
           {/* Feature 1 - Security */}
@@ -279,11 +281,11 @@ export default function HomeScreen() {
         </Animated.View>
 
 
-        <Animated.View style={[styles.cta, ctaAnimatedStyle]}>
+        <Animated.View className="max-w-[740px] mx-auto" style={[styles.cta, ctaAnimatedStyle]}>
           {userName ? (
             <>
 
-              <Text style={styles.ctaHeadline}>{t('welcomeBack')} <br />{userName}</Text>
+              <Text style={styles.ctaHeadline}>👋 {t('welcomeBack')} <br />{userName}</Text>
               <Animated.View style={styles.ctaButton}>
                 <TouchableOpacity
                   onPress={() => router.push('/(tabs)/wallet')}
@@ -296,7 +298,7 @@ export default function HomeScreen() {
                   }}
                 >
                   <Animated.View>
-                    <Text style={styles.ctaButtonText}>{t('goToApp')}</Text>
+                    <InteractiveHoverButton text={t('goToApp')} />
                   </Animated.View>
                 </TouchableOpacity>
               </Animated.View>
@@ -316,7 +318,7 @@ export default function HomeScreen() {
                   }}
                 >
                   <Animated.View>
-                    <Text style={styles.ctaButtonText}>{t('getStartedNow')}</Text>
+                    <InteractiveHoverButton text={t('getStartedNow')}  />
                   </Animated.View>
                 </TouchableOpacity>
               </Animated.View>
@@ -325,19 +327,6 @@ export default function HomeScreen() {
         </Animated.View>
 
         <Animated.View style={[styles.socialProof, featuresAnimatedStyle]}>
-          {/* <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>{t('trustedByThousands')}</Text>
-          {((t('testimonials', { returnObjects: true }) as unknown) as Array<{ text: string, author: string }>).map((testimonial, index) => (
-            <View
-              key={index}
-              style={[styles.testimonialContainer, {
-                backgroundColor: colors.surface,
-                marginTop: index > 0 ? 16 : 0
-              }]}
-            >
-              <Text style={[styles.testimonialText, { color: colors.text.primary }]}>{testimonial.text}</Text>
-              <Text style={[styles.testimonialAuthor, { color: colors.text.primary }]}>{testimonial.author}</Text>
-            </View>
-          ))} */}
           <Testimonials locale={getCurrentLocale()} />
         </Animated.View>
 
@@ -434,8 +423,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   feature: {
     marginBottom: 30,
     padding: 25,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
+    borderRadius: 2 * 16,
     shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
@@ -474,47 +462,27 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   cta: {
     padding: 32,
-    borderRadius: 20,
-    marginHorizontal: 16,
+    borderRadius: 2 * 16,
     alignItems: 'center',
     marginBottom: 32,
-    shadowColor: '#9E7FFF',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.7,
-    shadowRadius: 20,
-    elevation: 20,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
     position: 'relative',
     color: isDark ? '#FFFFFF' : '#121212',
-
   },
   ctaHeadline: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: isDark ? '#FFFFFF' : '#121212',
     textAlign: 'center',
     marginBottom: 24,
-    marginTop: 24,
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
     letterSpacing: -0.5,
-    lineHeight: 40,
+    lineHeight: 36,
   },
   ctaButton: {
-    paddingVertical: 18,
-    paddingHorizontal: 45,
-    borderRadius: 14,
-    shadowColor: 'rgba(0, 0, 0, 0.3)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-    elevation: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    transform: [{ scale: 1 }],
+    transform: [{ scale: 1.3 }],
     overflow: 'hidden',
   },
   ctaButtonText: {
@@ -535,17 +503,11 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   socialProof: {
     paddingHorizontal: 24,
-    paddingVertical: 32,
-    backgroundColor: 'transparent',
-    borderRadius: 16,
     marginHorizontal: 16,
     marginBottom: 32,
   },
   testimonialContainer: {
-    backgroundColor: 'transparent',
-    padding: 20,
     borderRadius: 12,
-    marginBottom: 20,
     borderWidth: 1,
     borderColor: '#2F2F2F',
   },

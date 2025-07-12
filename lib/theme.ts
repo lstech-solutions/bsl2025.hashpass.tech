@@ -44,7 +44,7 @@ export interface ThemeColors {
 // Base color palette
 const baseColors = {
   primary: {
-    main: '#7C4DFF', // Brighter purple for better visibility
+    main: '#af0d01', // Brighter purple for better visibility
     light: '#B388FF',
     dark: '#651FFF',
     contrastText: '#FFFFFF',

@@ -71,23 +71,18 @@
     "welcomeBack": "¡Bienvenido de nuevo!",
     "goToApp": "Ir a la Aplicación",
     "readyToSimplify": "¿Listo para simplificar tu vida digital?",
-    "getStartedNow": "Comenzar Ahora",
+    "getStartedNow": "Inicia Aquí",
     "trustedByThousands": "Con la confianza de miles",
-    "testimonials": [
-      {
-        "text": "\"HASHPASS ha revolucionado cómo gestiono mis comunidades en línea. ¡Es seguro, rápido e increíblemente fácil de usar!\"",
-        "author": "- Alex P., Entusiasta de la Tecnología"
-      },
-      {
-        "text": "\"Finalmente, una billetera digital en la que realmente puedo confiar. La tranquilidad no tiene precio.\"",
-        "author": "- Sarah L., Pequeña Empresaria"
-      }
-    ],
+    "testimonials": {
+      "title": "Testimonials",
+      "subtitle": "What our users say",
+      "description": "See what our customers have to say about us."
+    },
     "copyright": " 2025 HASHPASS™ Todos los derechos reservados.",
     "cta": {
       "title": "¿Listo para comenzar?",
       "subtitle": "Únete a miles de usuarios que confían en HASHPASS con su vida digital.",
-      "startNow": "Comenzar Ahora"
+      "startNow": "Comienzar"
     }
   },
   "loyalty": "Panel de Fidelización",

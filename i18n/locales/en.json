@@ -78,18 +78,13 @@
     "welcomeBack": "Welcome back!",
     "goToApp": "Go to App",
     "readyToSimplify": "Ready to Simplify Your Digital Life?",
-    "getStartedNow": "Get Started Now",
+    "getStartedNow": "Start Now",
     "trustedByThousands": "Trusted by Thousands",
-    "testimonials": [
-      {
-        "text": "\"HASHPASS has revolutionized how I manage my online communities. It's secure, fast, and incredibly easy to use!\"",
-        "author": "- Alex P., Tech Enthusiast"
-      },
-      {
-        "text": "\"Finally, a digital wallet that I can truly trust. The peace of mind is priceless.\"",
-        "author": "- Sarah L., Small Business Owner"
-      }
-    ],
+    "testimonials":{
+      "title": "Testimonials",
+      "subtitle": "What our users say",
+      "description": "See what our customers have to say about us."
+    },
     "copyright": " 2025 HASHPASS™ All rights reserved.",
     "cta": {
       "title": "Ready to get started?",

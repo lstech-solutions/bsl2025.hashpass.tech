@@ -218,9 +218,8 @@ export default function HomeScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-          {/*   <Text style={[styles.tagline, { color: colors.text.primary }]}>{t('tagline')}</Text> */}
             <Text style={[styles.tagline, { color: colors.text.primary }]}> 
-              {t('taglineFlipText')}<FlipWords words={words} /> 
+              -<FlipWords words={words} />-
             </Text>
           </Animated.View>
 
@@ -396,7 +395,10 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     textAlign: 'center',
     width: '100%',
     maxWidth: 400,
-  },
+    transform: [{ translateY: 0 }],
+    backfaceVisibility: 'hidden',
+    position: 'relative',
+  } as const,
   sectionTitle: {
     fontSize: 28,
     fontWeight: '800',

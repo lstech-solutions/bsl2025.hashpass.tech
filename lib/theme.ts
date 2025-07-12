@@ -11,6 +11,7 @@ export interface ThemeColors {
   secondaryDark: string;
   secondaryContrastText: string;
   background: {
+    primary: string;
     default: string;
     paper: string;
   };
@@ -44,8 +45,8 @@ export interface ThemeColors {
 // Base color palette
 const baseColors = {
   primary: {
-    main: '#af0d01', // Brighter purple for better visibility
-    light: '#B388FF',
+    main: '#af0d01', 
+    light: '#a1d1d6',
     dark: '#651FFF',
     contrastText: '#FFFFFF',
   },
@@ -56,6 +57,7 @@ const baseColors = {
     contrastText: '#000000',
   },
   background: {
+    primary: '#FFFFFF',
     default: '#FFFFFF',
     paper: '#F5F5F7', // Slightly darker for better contrast
   },
@@ -95,6 +97,7 @@ export const lightColors: ThemeColors = {
   secondaryDark: baseColors.secondary.dark,
   secondaryContrastText: baseColors.secondary.contrastText,
   background: {
+    primary: baseColors.background.default,
     default: baseColors.background.default,
     paper: baseColors.background.paper,
   },
@@ -122,6 +125,7 @@ export const darkColors: ThemeColors = {
   secondaryDark: baseColors.secondary.dark,
   secondaryContrastText: baseColors.secondary.contrastText,
   background: {
+    primary: '#121212',
     default: '#121212',
     paper: '#1E1E1E',
   },

@@ -4,6 +4,7 @@ import testimonials from "@/i18n/locales/testimonials.json";
 import { useTranslation } from "../i18n/i18n";
 import { useTheme } from "../hooks/useTheme";
 
+
 const Testimonials: React.FC<{ locale: string }> = ({ locale }) => {
   const { t } = useTranslation('index.testimonials');
   const currentTestimonials = testimonials[locale as keyof typeof testimonials] || testimonials.en;

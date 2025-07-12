@@ -21,12 +21,9 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { GlowingEffect } from '../components/GlowingEffect';
 import { InteractiveHoverButton } from '../components/InteractiveHoverButton';
-import { rem } from 'nativewind';
-
-
-const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 export default function HomeScreen() {
+  const AnimatedImage = Animated.createAnimatedComponent(Image);
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
   const [userName, setUserName] = useState<string | null>(null);
@@ -237,6 +234,7 @@ export default function HomeScreen() {
               proximity={64}
               inactiveZone={0.01}
               borderWidth={3}
+              isDarkMode={isDark}
             />
             <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
               <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
@@ -254,6 +252,7 @@ export default function HomeScreen() {
               proximity={64}
               inactiveZone={0.01}
               borderWidth={3}
+              isDarkMode={isDark}
             />
             <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
               <Ionicons name="key" size={24} color={colors.primary} />
@@ -271,6 +270,7 @@ export default function HomeScreen() {
               proximity={64}
               inactiveZone={0.01}
               borderWidth={3}
+              isDarkMode={isDark}
             />
             <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
               <Ionicons name="sync" size={24} color={colors.primary} />
@@ -318,7 +318,7 @@ export default function HomeScreen() {
                   }}
                 >
                   <Animated.View>
-                    <InteractiveHoverButton text={t('getStartedNow')}  />
+                    <InteractiveHoverButton text={t('getStartedNow')} />
                   </Animated.View>
                 </TouchableOpacity>
               </Animated.View>
@@ -488,7 +488,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   ctaButtonText: {
     fontSize: 20,
     fontWeight: '700',
-    color: isDark ? '#FFFFFF' : '#121212',
+    color: colors.text.primary,
     letterSpacing: 0.5,
   },
   glossyOverlay: {

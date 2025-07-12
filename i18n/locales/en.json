@@ -1,4 +1,12 @@
 {
+  "tabs": {
+    "explore": "Explore",
+    "wallet": "Wallet",
+    "profile": "Profile"
+  },
+  "common": {
+    "back": "Back"
+  },
   "auth": {
     "title": "Welcome to",
     "subtitle": "Sign in to unlock your digital life.",
@@ -9,6 +17,13 @@
       "privacy": "Privacy Policy"
     }
   },  
+  "settings": {
+    "languages": {
+      "en": "English",
+      "es": "Spanish",
+      "ko": "Korean"
+    }
+  },
   "index": {
     "tagline": "YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS",
     "unlockPotential": "Unlock Your Potential",
@@ -33,7 +48,7 @@
     "trustedByThousands": "Trusted by Thousands",
     "testimonials": [
       {
-        "text": "\"HASHPASS has revolutionized how I manage my online accounts. It's secure, fast, and incredibly easy to use!\"",
+        "text": "\"HASHPASS has revolutionized how I manage my online communities. It's secure, fast, and incredibly easy to use!\"",
         "author": "- Alex P., Tech Enthusiast"
       },
       {
@@ -56,5 +71,28 @@
   "eventsDesc": "Find upcoming events and earn tokens",
   "exchange": "Token Exchange",
   "exchangeDesc": "Convert points to cryptocurrency",
-  "getStarted": "Get Started"
+  "getStarted": "Get Started",
+  "profile": {
+    "languages": {
+      "english": "English",
+      "spanish": "Spanish",
+      "korean": "Korean"
+    },
+    "biometric": {
+      "title": "Biometric Authentication",
+      "description": "Use fingerprint or face recognition to authenticate"
+    },
+    "settings": {
+      "title": "APP SETTINGS",
+      "account": "ACCOUNT",
+      "language": "Language",
+      "changePassword": "Change Password",
+      "darkMode": "Dark Mode",
+      "notifications": "Notifications",
+      "biometricAuthentication": "Biometric Authentication"
+    },
+    "account": "Account",
+    "signOut": "Sign Out",
+    "version": "HashPass v{version}"
+  }
 }

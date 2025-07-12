@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../i18n/i18n';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
-import { BackgroundGradientAnimation } from './components/BackgroundGradientAnimation';
+import { BackgroundGradientAnimation } from '../components/BackgroundGradientAnimation';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -164,8 +164,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     textShadowRadius: 4,
   },
   logoContainer: {
-    width: 200,
-    height: 200,
     alignItems: 'center',
     justifyContent: 'center',
   },

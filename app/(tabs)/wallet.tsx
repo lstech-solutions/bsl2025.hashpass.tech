@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
-import DigitalTicketWallet from '../components/DigitalTicketWallet';
-import LoyaltyDashboard from '../components/LoyaltyDashboard';
-import ExchangeView from '../components/ExchangeView';
+import DigitalTicketWallet from '../../components/DigitalTicketWallet';
+import LoyaltyDashboard from '../../components/LoyaltyDashboard';
+import ExchangeView from '../../components/ExchangeView';
 
 const WalletScreen = () => {
   const [activeTab, setActiveTab] = useState<'tickets' | 'loyalty' | 'exchange'>('tickets');
   const { colors } = useTheme();
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+    <View className="flex-1" style={{ backgroundColor: colors.background.default }}>
       <View className="p-6 pb-0">
-        <Text className="text-4xl font-extrabold mb-2" style={{ color: colors.text }}>
+        <Text className="text-4xl font-extrabold mb-2" style={{ color: colors.text.primary }}>
           Your Digital Hub
         </Text>
-        <Text className="text-lg mb-4" style={{ color: colors.textSecondary }}>
+        <Text className="text-lg mb-4" style={{ color: colors.text.secondary }}>
           All your passes, rewards, and tokens in one place.
         </Text>
       </View>
@@ -43,7 +43,7 @@ const WalletScreen = () => {
             <Text 
               className="text-base font-semibold"
               style={{
-                color: activeTab === tab.key ? colors.primary : colors.textSecondary,
+                color: activeTab === tab.key ? colors.primary : colors.text.primary,
                 opacity: activeTab === tab.key ? 1 : 0.7
               }}
             >
@@ -61,10 +61,10 @@ const WalletScreen = () => {
         {activeTab === 'tickets' && (
           <View className="mb-8" >
             <View className="px-6 mb-4">
-              <Text className="text-2xl font-bold" style={{ color: colors.text }}>
+              <Text className="text-2xl font-bold" style={{ color: colors.text.primary }}>
                 My Tickets
               </Text>
-              <Text className="mt-1" style={{ color: colors.textSecondary }}>
+              <Text className="mt-1" style={{ color: colors.text.secondary }}>
                 Access your event passes and earned rewards.
               </Text>
             </View>
@@ -74,10 +74,10 @@ const WalletScreen = () => {
         {activeTab === 'loyalty' && (
           <View className="mb-8">
             <View className="px-6 mb-4">
-              <Text className="text-2xl font-bold" style={{ color: colors.text }}>
+              <Text className="text-2xl font-bold" style={{ color: colors.text.primary }}>
                 Loyalty Rewards
               </Text>
-              <Text className="mt-1" style={{ color: colors.textSecondary }}>
+              <Text className="mt-1" style={{ color: colors.text.secondary }}>
                 Track your progress and unlock exclusive benefits.
               </Text>
             </View>
@@ -87,10 +87,10 @@ const WalletScreen = () => {
         {activeTab === 'exchange' && (
           <View className="mb-8">
             <View className="px-6 mb-4">
-              <Text className="text-2xl font-bold" style={{ color: colors.text }}>
+              <Text className="text-2xl font-bold" style={{ color: colors.text.primary }}>
                 Token Exchange
               </Text>
-              <Text className="mt-1" style={{ color: colors.textSecondary }}>
+              <Text className="mt-1" style={{ color: colors.text.secondary }}>
                 Manage your tokens and explore exchange options.
               </Text>
             </View>

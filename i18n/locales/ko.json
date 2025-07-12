@@ -1,4 +1,9 @@
-{
+{ 
+  "tabs": {
+    "explore": "탐색",
+    "wallet": "지갑",
+    "profile": "프로필"
+  },
   "auth": {
     "title": "환영합니다",
     "subtitle": "디지털 라이프를 잠금 해제하기 위해 로그인하세요.",
@@ -33,7 +38,7 @@
     "trustedByThousands": "수천 명이 신뢰하는 서비스",
     "testimonials": [
       {
-        "text": "\"HASHPASS는 제가 온라인 계정을 관리하는 방식을 완전히 바꿔놓았어요. 안전하고 빠르며 정말 사용하기 쉬워요!\"",
+        "text": "\"HASHPASS는 제가 온라인 커뮤니티를 관리하는 방식을 완전히 바꿔놓았어요. 안전하고 빠르며 정말 사용하기 쉬워요!\"",
         "author": "- 알렉스 P., 테크 애호가"
       },
       {
@@ -56,5 +61,29 @@
   "eventsDesc": "다가오는 이벤트를 찾고 토큰을 획득하세요",
   "exchange": "토큰 교환",
   "exchangeDesc": "포인트를 암호화폐로 전환하세요",
-  "getStarted": "시작하기"
+  "getStarted": "시작하기",
+  "profile": {
+    "languages": {
+      "english": "영어",
+      "spanish": "스페인어",
+      "korean": "한국어"
+    },
+    "biometric": {
+      "title": "생체 인증",
+      "description": "생체 인증을 사용하여 로그인"
+    },
+    "settings": {
+      "title": "설정",
+      "account": "계정",
+      "language": "언어",
+      "changePassword": "비밀번호 변경",
+      "darkMode": "다크 모드",
+      "notifications": "알림",
+      "biometricAuthentication": "생체 인증"
+
+    },
+    "account": "계정",
+    "signOut": "로그아웃",
+    "version": "HashPass v{version}"
+  }
 }

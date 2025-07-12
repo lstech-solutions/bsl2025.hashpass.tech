@@ -1,4 +1,12 @@
 {
+  "tabs": {
+    "explore": "Explorar",
+    "wallet": "Billetera",
+    "profile": "Perfil"
+  },
+  "common": {
+    "back": "Volver"
+  },
   "auth": {
     "title": "Bienvenido a",
     "subtitle": "Inicia sesión para desbloquear tu vida digital.",
@@ -33,7 +41,7 @@
     "trustedByThousands": "Con la confianza de miles",
     "testimonials": [
       {
-        "text": "\"HASHPASS ha revolucionado cómo gestiono mis cuentas en línea. ¡Es seguro, rápido e increíblemente fácil de usar!\"",
+        "text": "\"HASHPASS ha revolucionado cómo gestiono mis comunidades en línea. ¡Es seguro, rápido e increíblemente fácil de usar!\"",
         "author": "- Alex P., Entusiasta de la Tecnología"
       },
       {
@@ -56,5 +64,28 @@
   "eventsDesc": "Encuentra próximos eventos y gana tokens",
   "exchange": "Intercambio de Tokens",
   "exchangeDesc": "Convierte puntos en criptomonedas",
-  "getStarted": "Comenzar"
+  "getStarted": "Comenzar",
+  "profile": {
+    "languages": {
+      "english": "Inglés",
+      "spanish": "Español",
+      "korean": "Coreano"
+    },
+    "biometric": {
+      "title": "Autenticación Biométrica",
+      "description": "Usa huella dactilar o reconocimiento facial para autenticarte"
+    },
+    "settings": {
+      "title": "CONFIGURACIÓN",
+      "account": "CUENTA",
+      "language": "Idioma",
+      "changePassword": "Cambiar Contraseña",
+      "darkMode": "Modo Oscuro",
+      "notifications": "Notificaciones",
+      "biometricAuthentication": "Autenticación Biométrica"
+    },
+    "account": "CUENTA",
+    "signOut": "Cerrar Sesión",
+    "version": "HashPass v{version}"
+  }
 }

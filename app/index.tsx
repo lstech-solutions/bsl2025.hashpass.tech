@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '../i18n/i18n';
 import { View, Text, Image, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
-import { BackgroundGradientAnimation } from './components/BackgroundGradientAnimation';
+import { BackgroundGradientAnimation } from '../components/BackgroundGradientAnimation';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { ThemeAndLanguageSwitcher } from '../components/ThemeAndLanguageSwitcher';
+import { BackToTop } from '../components/BackToTop';
 import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -27,17 +28,11 @@ export default function HomeScreen() {
   const [userName, setUserName] = useState<string | null>(null);
   const { t } = useTranslation('index');
   const styles = getStyles(isDark, colors);
-  const systemColorScheme = useColorScheme();
-  const [isMounted, setIsMounted] = useState(false);
-
-  // Prevent flash of incorrect theme on mount
-  useEffect(() => {
-    setIsMounted(true);
-    return () => setIsMounted(false);
-  }, []);
-
-  // Smooth background transition
   const bgAnimation = useSharedValue(0);
+  const scrollRef = React.useRef<any>(null);
+  const feature1Anim = useSharedValue(0);
+  const feature2Anim = useSharedValue(0);
+  const feature3Anim = useSharedValue(0);
 
   useEffect(() => {
     bgAnimation.value = withTiming(1, { duration: 300 });
@@ -55,6 +50,13 @@ export default function HomeScreen() {
   const scrollY = useSharedValue(0);
   const buttonAnimation = useSharedValue(0);
 
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+
   useEffect(() => {
     if (user) {
       setUserName(user.email || user.user_metadata?.full_name || user.id);
@@ -63,7 +65,6 @@ export default function HomeScreen() {
     }
   }, [user]);
 
-  // Animation styles using Reanimated v3
   const headerAnimatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
       scrollY.value,
@@ -133,17 +134,6 @@ export default function HomeScreen() {
     };
   });
 
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
-
-  // Animation values for each feature
-  const feature1Anim = useSharedValue(0);
-  const feature2Anim = useSharedValue(0);
-  const feature3Anim = useSharedValue(0);
-
   // Animate features based on scroll position
   useAnimatedReaction(
     () => scrollY.value,
@@ -191,22 +181,20 @@ export default function HomeScreen() {
     ],
   }));
 
-  if (!isMounted) {
-    return (
-      <View style={{ flex: 1, backgroundColor: systemColorScheme === 'dark' ? '#121212' : '#FFFFFF' }} />
-    );
-  }
 
   return (
     <Animated.View style={[styles.container, animatedBackground]}>
-      <ThemeAndLanguageSwitcher />
+
+      <BackToTop scrollY={scrollY} scrollRef={scrollRef} colors={colors} />
+
       <Animated.ScrollView
-        style={styles.scrollView}
-        scrollEventThrottle={16}
+        ref={scrollRef}
         onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-
+        <ThemeAndLanguageSwitcher />
         <View style={styles.hero}>
           <Animated.View style={heroImageAnimatedStyle}>
             <AnimatedImage
@@ -264,22 +252,9 @@ export default function HomeScreen() {
 
 
         <Animated.View style={[styles.cta, ctaAnimatedStyle]}>
-          <BackgroundGradientAnimation
-            gradientBackgroundStart={isDark ? "rgb(30, 30, 46)rgb(240, 240, 255)" : "rgb(240, 240, 255)rgb(30, 30, 46)"}
-            gradientBackgroundEnd={isDark ? "rgb(18, 25, 40)rgb(230, 230, 255)" : "rgb(62, 14, 117)rgb(18, 25, 40)"}
-            firstColor={isDark ? "18, 113, 255" : "221, 74, 255"}
-            secondColor={isDark ? "221, 74, 255" : "221, 74, 255"}
-            thirdColor={isDark ? "100, 220, 255" : "100, 220, 255"}
-            fourthColor={isDark ? "230, 60, 60" : "230, 60, 60"}
-            fifthColor={isDark ? "180, 180, 50" : "180, 180, 50"}
-            pointerColor={isDark ? "140, 100, 255" : "62, 14, 117"}
-            size="10%"
-            blendingValue={isDark ? "hard-light" : "hard-light"}
-            interactive={true}
-          >
-          </BackgroundGradientAnimation>
           {userName ? (
             <>
+
               <Text style={styles.ctaHeadline}>{t('welcomeBack')} <br />{userName}</Text>
               <Animated.View style={styles.ctaButton}>
                 <TouchableOpacity
@@ -483,7 +458,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     position: 'relative',
-    height: '20%',
     color: isDark ? '#FFFFFF' : '#121212',
 
   },

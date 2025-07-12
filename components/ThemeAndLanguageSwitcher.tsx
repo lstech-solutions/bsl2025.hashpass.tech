@@ -3,7 +3,7 @@ import { View, TouchableOpacity, StyleSheet, Animated, Easing, Text, Modal, Touc
 import { useTheme } from '../hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../providers/LanguageProvider';
 import { getAvailableLocales } from '../i18n/i18n';
 
 export const ThemeAndLanguageSwitcher = () => {
@@ -18,10 +18,9 @@ export const ThemeAndLanguageSwitcher = () => {
   const currentLanguage = availableLocales.find(lang => lang.code === locale) || availableLocales[0];
 
   const handleThemeToggle = () => {
-    // Haptic feedback
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     
-    // Scale down and up animation
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 0.8,
@@ -35,8 +34,7 @@ export const ThemeAndLanguageSwitcher = () => {
         easing: Easing.bounce,
       }),
     ]).start();
-    
-    // Rotation animation (continuous)
+
     Animated.timing(rotateAnim, {
       toValue: 1,
       duration: 300,
@@ -72,11 +70,8 @@ export const ThemeAndLanguageSwitcher = () => {
 
   const handleLanguageSelect = (langCode: string) => {
     try {
-      // Haptic feedback
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      // Update the locale through the context
       setLocale(langCode);
-      // Close the language menu
       setShowLanguageMenu(false);
     } catch (error) {
       console.error('Failed to change language:', error);
@@ -107,7 +102,6 @@ export const ThemeAndLanguageSwitcher = () => {
 
   return (
     <View style={styles.container}>
-      {/* Language Switcher */}
       <View style={styles.languageContainer}>
         <TouchableOpacity 
           style={[styles.button, { backgroundColor: colors.surface }]}
@@ -149,7 +143,6 @@ export const ThemeAndLanguageSwitcher = () => {
         )}
       </View>
       
-      {/* Theme Toggler */}
       <Animated.View style={[animatedStyle, { marginLeft: 10 }]}>
         <TouchableOpacity 
           style={[
@@ -174,7 +167,6 @@ export const ThemeAndLanguageSwitcher = () => {
         </TouchableOpacity>
       </Animated.View>
       
-      {/* Overlay to close menu when clicking outside */}
       {showLanguageMenu && (
         <TouchableWithoutFeedback onPress={toggleLanguageMenu}>
           <View style={styles.overlay} />

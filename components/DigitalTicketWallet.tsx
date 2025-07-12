@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
 } from "react-native";
 import { Image } from "expo-image";
 import {
@@ -18,6 +17,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from "react-native-reanimated";
+import { useTranslation } from "../i18n/i18n";
 
 interface TicketProps {
   id: string;
@@ -77,6 +77,7 @@ const DigitalTicketWallet = ({
 }: DigitalTicketWalletProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [expandedQR, setExpandedQR] = useState<string | null>(null);
+  const { t } = useTranslation('digitalWallet');
 
   const qrScale = useSharedValue(1);
 
@@ -114,17 +115,16 @@ const DigitalTicketWallet = ({
         <View className="bg-white dark:bg-gray-800 rounded-xl p-8 items-center shadow-md w-full">
           <Ticket size={64} className="text-indigo-500 dark:text-indigo-400" />
           <Text className="text-2xl font-bold mt-4 text-center text-gray-900 dark:text-white">
-            No Tickets Yet
+            {t("noTickets")}
           </Text>
           <Text className="text-gray-500 dark:text-gray-300 text-center mt-2">
-            Your purchased tickets will appear here. Explore events to get
-            started!
+            {t("noTicketsDesc")}
           </Text>
           <TouchableOpacity
             className="mt-6 bg-indigo-600 dark:bg-indigo-700 py-3 px-6 rounded-full"
             onPress={() => {}}
           >
-            <Text className="text-white font-semibold">Discover Events</Text>
+            <Text className="text-white font-semibold">{t("discoverEvents")}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -162,7 +162,7 @@ const DigitalTicketWallet = ({
               <Text className="text-amber-600 dark:text-amber-400 font-bold mr-1">
                 {currentTicket.earnedTokens}
               </Text>
-              <Text className="text-gray-600 dark:text-gray-400">TOKENS EARNED</Text>
+              <Text className="text-gray-600 dark:text-gray-400">{t("tokensEarned")}</Text>
             </View>
           </View>
 
@@ -185,8 +185,8 @@ const DigitalTicketWallet = ({
             </Animated.View>
             <Text className="text-gray-500 dark:text-gray-400 mt-2">
               {expandedQR === currentTicket.qrCode
-                ? "Tap to minimize"
-                : "Tap to enlarge"}
+                ? t("tapToMinimize")
+                : t("tapToEnlarge")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -206,7 +206,7 @@ const DigitalTicketWallet = ({
         </TouchableOpacity>
 
         <Text className="text-gray-600 dark:text-gray-300">
-          {currentIndex + 1} of {tickets.length}
+          {currentIndex + 1} {t("of")} {tickets.length}
         </Text>
 
         <TouchableOpacity
@@ -225,7 +225,6 @@ const DigitalTicketWallet = ({
         </TouchableOpacity>
       </View>
 
-      {/* Ticket Thumbnails */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -248,7 +247,7 @@ const DigitalTicketWallet = ({
       <View className="mt-4 bg-amber-50 p-3 rounded-lg flex-row items-center">
         <AlertCircle size={20} color="#d97706" />
         <Text className="ml-2 text-amber-700">
-          Present this QR code at the event entrance for verification
+          {t("presentQR")}
         </Text>
       </View>
     </View>

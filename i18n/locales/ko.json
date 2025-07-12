@@ -1,4 +1,38 @@
 { 
+  "wallet": {
+    "walletDesc": "블록체인으로 검증된 티켓에 접근하세요",
+    "loyaltyDesc": "포인트와 토큰 보상을 추적하세요",
+    "events": "이벤트 탐색",
+    "eventsDesc": "다가오는 이벤트를 찾고 토큰을 획득하세요",
+    "exchangeDesc": "포인트를 암호화폐로 전환하세요",
+    "tabs": {
+      "tickets": "나의 티켓",
+      "loyalty": "로열티 보상",
+      "exchange": "토큰 교환"
+    },
+    "tickets": {
+      "title": "나의 티켓",
+      "description": ""
+    },
+    "loyalty": {
+      "title": "로열티 보상",
+      "description": "포인트와 토큰 보상을 추적하세요"
+    },
+    "exchange": {
+      "title": "토큰 교환",
+      "description": "포인트를 암호화폐로 전환하세요"
+    }
+  },
+  "digitalWallet": {
+    "tokensEarned": "획득된 토큰",
+    "noTickets": "티켓이 없습니다",
+    "noTicketsDesc": "구매한 티켓이 여기에 표시됩니다. 이벤트 탐색으로 시작하세요!",
+    "discoverEvents": "이벤트 탐색",
+    "of": "~의" ,
+    "presentQR": "이벤트 입구에서 티켓을 확인하기 위해 QR 코드를 보여주세요",
+    "tapToEnlarge": "확대하기",
+    "tapToMinimize": "축소하기"
+  },
   "tabs": {
     "explore": "탐색",
     "wallet": "지갑",
@@ -53,8 +87,6 @@
       "startNow": "시작하기"
     }
   },
-  "digitalWallet": "디지털 티켓 지갑",
-  "walletDesc": "블록체인으로 검증된 티켓에 접근하세요",
   "loyalty": "로열티 대시보드",
   "loyaltyDesc": "포인트와 토큰 보상을 추적하세요",
   "events": "이벤트 탐색",

@@ -1,4 +1,38 @@
 {
+  "wallet": {
+    "walletDesc": "Accede a tus entradas verificadas por blockchain",
+    "loyaltyDesc": "Sigue tus puntos y recompensas de tokens",
+    "events": "Descubrimiento de Eventos",
+    "eventsDesc": "Encuentra próximos eventos y gana tokens",
+    "exchangeDesc": "Convierte puntos en criptomonedas",
+    "tabs": {
+      "tickets": "Mis Entradas",
+      "loyalty": "Recompensas de Fidelización",
+      "exchange": "Intercambio de Tokens"
+    },
+    "tickets": {
+      "title": "Mis Entradas",
+      "description": "Accede a tus entradas verificadas por blockchain."
+    },
+    "loyalty": {
+      "title": "Recompensas de Fidelización",
+      "description": "Sigue tus puntos y recompensas de tokens."
+    },
+    "exchange": {
+      "title": "Intercambio de Tokens",
+      "description": "Convierte puntos en criptomonedas."
+    }
+  },
+  "digitalWallet": {
+    "tokensEarned": "Tokens Ganados",
+    "noTickets": "No hay Entradas",
+    "noTicketsDesc": "Tus entradas compradas aparecerán aquí. Descubre eventos para comenzar!",
+    "discoverEvents": "Descubre Eventos",
+    "of": "de",
+    "presentQR": "Presenta este código QR en la entrada del evento para verificar",
+    "tapToEnlarge": "Tap to enlarge",
+    "tapToMinimize": "Tap to minimize"
+  },
   "tabs": {
     "explore": "Explorar",
     "wallet": "Billetera",
@@ -56,8 +90,6 @@
       "startNow": "Comenzar Ahora"
     }
   },
-  "digitalWallet": "Billetera de Entradas Digital",
-  "walletDesc": "Accede a tus entradas verificadas por blockchain",
   "loyalty": "Panel de Fidelización",
   "loyaltyDesc": "Sigue tus puntos y recompensas de tokens",
   "events": "Descubrimiento de Eventos",

@@ -1,4 +1,38 @@
 {
+  "wallet": {
+    "digitalWalletTitle": "Digital Ticket Wallet",
+    "walletDesc": "Access your secure blockchain-verified tickets",
+    "events": "Event Discovery",
+    "eventsDesc": "Find upcoming events and earn tokens",
+    "exchangeDesc": "Convert points to cryptocurrency",
+    "tabs": {
+      "tickets": "My Tickets",
+      "loyalty": "Loyalty Rewards",
+      "exchange": "Token Exchange"
+    },
+    "tickets": {
+      "title": "My Tickets",
+      "description": "Access your event passes and earned rewards."
+    },
+    "loyalty": {
+      "title": "Loyalty Rewards",
+      "description": "Track your points and token rewards."
+    },
+    "exchange": {
+      "title": "Token Exchange",
+      "description": "Convert points to cryptocurrency."
+    }
+  },
+  "digitalWallet": {
+    "tokensEarned": "Tokens Earned",
+    "noTickets": "No Tickets Yet",
+    "noTicketsDesc": "Your purchased tickets will appear here. Explore events to get started!",
+    "discoverEvents": "Discover Events",
+    "of": "of",
+    "presentQR": "Present this QR code at the event entrance for verification",
+    "tapToEnlarge": "Tap to enlarge",
+    "tapToMinimize": "Tap to minimize"
+  },
   "tabs": {
     "explore": "Explore",
     "wallet": "Wallet",
@@ -16,7 +50,7 @@
       "terms": "Terms of Service",
       "privacy": "Privacy Policy"
     }
-  },  
+  },
   "settings": {
     "languages": {
       "en": "English",
@@ -36,7 +70,7 @@
         "title": "Effortless Management",
         "description": "Organize all your digital credentials, loyalty cards, and communities in one intuitive place."
       },
-        "sync": {
+      "sync": {
         "title": "Cross-Platform Sync",
         "description": "Access your data across all your devices with our secure cloud sync. Your information is always up to date, everywhere."
       }
@@ -63,7 +97,6 @@
       "startNow": "Start Now"
     }
   },
-  "digitalWallet": "Digital Ticket Wallet",
   "walletDesc": "Access your secure blockchain-verified tickets",
   "loyalty": "Loyalty Dashboard",
   "loyaltyDesc": "Track your points and token rewards",

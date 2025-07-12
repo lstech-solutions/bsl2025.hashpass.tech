@@ -4,19 +4,21 @@ import { useTheme } from '../../hooks/useTheme';
 import DigitalTicketWallet from '../../components/DigitalTicketWallet';
 import LoyaltyDashboard from '../../components/LoyaltyDashboard';
 import ExchangeView from '../../components/ExchangeView';
+import { useTranslation } from '../../i18n/i18n';
 
 const WalletScreen = () => {
   const [activeTab, setActiveTab] = useState<'tickets' | 'loyalty' | 'exchange'>('tickets');
   const { colors } = useTheme();
+  const { t } = useTranslation('wallet');
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background.default }}>
       <View className="p-6 pb-0">
         <Text className="text-4xl font-extrabold mb-2" style={{ color: colors.text.primary }}>
-          Your Digital Hub
+          {t("digitalWalletTitle")}
         </Text>
         <Text className="text-lg mb-4" style={{ color: colors.text.secondary }}>
-          All your passes, rewards, and tokens in one place.
+          {t("walletDesc")}
         </Text>
       </View>
 
@@ -24,30 +26,29 @@ const WalletScreen = () => {
         className="flex-row px-4 pt-2 pb-4 justify-between"
         style={{ borderBottomWidth: 0 }}
       >
-        {[
-          { key: 'tickets', label: 'My Tickets' },
-          { key: 'loyalty', label: 'Loyalty Rewards' },
-          { key: 'exchange', label: 'Token Exchange' },
-        ].map(tab => (
+        {Object.entries(t("tabs")).map(([key, value]) => ({
+          key,
+          value
+        })).map(tab => (
           <TouchableOpacity
             key={tab.key}
-            onPress={() => setActiveTab(tab.key as any)}
+            onPress={() => setActiveTab(tab.key as 'tickets' | 'loyalty' | 'exchange')}
             style={{
               flex: 1,
               alignItems: 'center',
               paddingVertical: 8,
               borderBottomWidth: 2,
-              borderBottomColor: activeTab === tab.key ? colors.primary : 'transparent'
+              borderBottomColor: activeTab === tab.key ? colors.primary : 'transparent',
             }}
           >
             <Text 
               className="text-base font-semibold"
               style={{
-                color: activeTab === tab.key ? colors.primary : colors.text.primary,
+                color: activeTab === tab.key ? colors.text.primary : colors.text.secondary,
                 opacity: activeTab === tab.key ? 1 : 0.7
               }}
             >
-              {tab.label}
+              {tab.value}
             </Text>
           </TouchableOpacity>
         ))}
@@ -62,10 +63,10 @@ const WalletScreen = () => {
           <View className="mb-8" >
             <View className="px-6 mb-4">
               <Text className="text-2xl font-bold" style={{ color: colors.text.primary }}>
-                My Tickets
+                {t("tickets.title")}
               </Text>
               <Text className="mt-1" style={{ color: colors.text.secondary }}>
-                Access your event passes and earned rewards.
+                {t("tickets.description")}
               </Text>
             </View>
             <DigitalTicketWallet />
@@ -75,10 +76,10 @@ const WalletScreen = () => {
           <View className="mb-8">
             <View className="px-6 mb-4">
               <Text className="text-2xl font-bold" style={{ color: colors.text.primary }}>
-                Loyalty Rewards
+                {t("loyalty.title")}
               </Text>
               <Text className="mt-1" style={{ color: colors.text.secondary }}>
-                Track your progress and unlock exclusive benefits.
+                {t("loyalty.description")}
               </Text>
             </View>
             <LoyaltyDashboard />
@@ -88,10 +89,10 @@ const WalletScreen = () => {
           <View className="mb-8">
             <View className="px-6 mb-4">
               <Text className="text-2xl font-bold" style={{ color: colors.text.primary }}>
-                Token Exchange
+                {t("exchange.title")}
               </Text>
               <Text className="mt-1" style={{ color: colors.text.secondary }}>
-                Manage your tokens and explore exchange options.
+                {t("exchange.description")}
               </Text>
             </View>
             <ExchangeView />

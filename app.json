@@ -44,7 +44,7 @@
       "preferRelatedApplications": false,
       "dangerouslyAllowInsecureHttpRequests": false,
       "serviceWorker": {
-        "source": "/service-worker.js",
+        "source": "/sw.js",
         "scope": "/"
       },
       "manifest": {

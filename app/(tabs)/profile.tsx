@@ -5,8 +5,26 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { useLanguage } from '../../providers/LanguageProvider';
 import { Ionicons } from '@expo/vector-icons';
-import { useTranslation} from '../../i18n/i18n';
+import { useTranslation } from '../../i18n/i18n';
 import { version } from '../../package.json';
+import { SplashCursor } from '../../components/SplashBackground';
+
+
+const NoiseDemo = () => {
+  return (
+    <View style={styles.noiseContainer}>
+      <SplashCursor />
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  noiseContainer: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+  },
+});
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
@@ -55,8 +73,11 @@ export default function ProfileScreen() {
 
   return (
     <View className="flex-1" style={styles.container}>
+
       <View className="items-center py-8" style={styles.header}>
-        <View className="w-24 h-24 rounded-full bg-indigo-500 items-center justify-center mb-3" >
+       
+        <View className="w-24 h-24 rounded-full bg-indigo-500 items-center justify-center mb-3 relative" >
+        <NoiseDemo />
           {user?.user_metadata?.avatar_url ? (
             <Image
               source={{ uri: user.user_metadata.avatar_url }}
@@ -75,7 +96,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* App Settings */}
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1" style={styles.scrollView}>
         <View className="mt-6 mb-4">
           <Text className="px-6 py-2 text-sm font-medium" style={styles.settingsTitle}>
             {t('settings.title')}
@@ -140,7 +161,7 @@ export default function ProfileScreen() {
                 <Text className="text-gray-500 dark:text-gray-400 mr-2">
                   {locale === 'en' ? 'English' :
                     locale === 'es' ? 'Español' :
-                    locale === 'ko' ? '한국어' : 'English'}
+                      locale === 'ko' ? '한국어' : 'English'}
                 </Text>
                 <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
               </View>
@@ -175,8 +196,10 @@ export default function ProfileScreen() {
 }
 
 const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
+
   container: {
     flex: 1,
+    backgroundColor: isDark ? colors.background.default : colors.background.paper,
   },
   header: {
     alignItems: 'center',
@@ -207,5 +230,9 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: isDark ? colors.divider : colors.divider,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: isDark ? colors.background.paper : colors.background.paper,
   },
 });

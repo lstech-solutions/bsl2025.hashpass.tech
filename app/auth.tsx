@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import * as Linking from 'expo-linking';
 import { ThemeAndLanguageSwitcher } from '../components/ThemeAndLanguageSwitcher';
+import { SplashCursor } from '../components/SplashBackground';
 import { useTheme } from '../hooks/useTheme';
 
 export default function AuthScreen() {
@@ -68,20 +69,18 @@ export default function AuthScreen() {
   };
 
   return (
-    <BackgroundGradientAnimation
-      gradientBackgroundStart={isDark ? "rgb(30, 30, 46)rgb(240, 240, 255)" : "rgb(240, 240, 255)rgb(30, 30, 46)"}
-      gradientBackgroundEnd={isDark ? "rgb(18, 25, 40)rgb(230, 230, 255)" : "rgb(62, 14, 117)rgb(18, 25, 40)"}
-      firstColor={isDark ? "18, 113, 255" : "221, 74, 255"}
-      secondColor={isDark ? "221, 74, 255" : "221, 74, 255"}
-      thirdColor={isDark ? "100, 220, 255" : "100, 220, 255"}
-      fourthColor={isDark ? "230, 60, 60" : "230, 60, 60"}
-      fifthColor={isDark ? "180, 180, 50" : "180, 180, 50"}
-      pointerColor={isDark ? "140, 100, 255" : "62, 14, 117"}
-      size="80%"
-      blendingValue={isDark ? "hard-light" : "hard-light"}
-      interactive={true}
-    >
+ 
       <SafeAreaView style={styles.container}>
+        <SplashCursor
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: -1
+          }}
+        />
         <ThemeAndLanguageSwitcher />
         <TouchableOpacity
           style={{ position: 'absolute', top: 20, left: 20, zIndex: 10 }}
@@ -126,7 +125,7 @@ export default function AuthScreen() {
           </Text>
         </View>
       </SafeAreaView>
-    </BackgroundGradientAnimation>
+/*     </BackgroundGradientAnimation> */
   );
 }
 
@@ -144,8 +143,9 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    position: 'relative',
+    position: 'absolute',
     top: 200,
+    zIndex: 100,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

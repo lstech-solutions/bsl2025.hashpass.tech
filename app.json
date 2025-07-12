@@ -2,7 +2,7 @@
   "expo": {
     "name": "hashpass.tech",
     "slug": "hashpass-tech",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "hashpass",
@@ -72,7 +72,7 @@
       "meta": {
         "og:type": "website",
         "og:title": "HashPass",
-        "og:description": "HashPass - Your secure password manager",
+        "og:description": "YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS",
         "og:image": "./assets/images/og-image.png",
         "apple-mobile-web-app-capable": "yes",
         "apple-mobile-web-app-status-bar-style": "default",

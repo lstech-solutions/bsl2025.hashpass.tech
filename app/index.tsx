@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTranslation , getCurrentLocale} from '../i18n/i18n';
+import { useTranslation, getCurrentLocale } from '../i18n/i18n';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
@@ -21,6 +21,7 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { GlowingEffect } from '../components/GlowingEffect';
 import { InteractiveHoverButton } from '../components/InteractiveHoverButton';
+import { FlipWords } from '../components/FlipWords';
 
 export default function HomeScreen() {
   const AnimatedImage = Animated.createAnimatedComponent(Image);
@@ -183,6 +184,7 @@ export default function HomeScreen() {
     ],
   }));
 
+  const words: string[] = t('taglineFlipList').split(',');
 
   return (
     <Animated.View style={[styles.container, animatedBackground]}>
@@ -197,7 +199,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ThemeAndLanguageSwitcher />
-        
+
         <View style={styles.hero}>
           <Animated.View style={heroImageAnimatedStyle}>
             <AnimatedImage
@@ -216,7 +218,10 @@ export default function HomeScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={[styles.tagline, { color: colors.text.primary }]}>{t('tagline')}</Text>
+          {/*   <Text style={[styles.tagline, { color: colors.text.primary }]}>{t('tagline')}</Text> */}
+            <Text style={[styles.tagline, { color: colors.text.primary }]}> 
+              {t('taglineFlipText')}<FlipWords words={words} /> 
+            </Text>
           </Animated.View>
 
         </View>
@@ -386,7 +391,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   tagline: {
     fontSize: 16,
     opacity: 0.9,
-    marginTop: 10,
     fontWeight: '400',
     letterSpacing: 1,
     textAlign: 'center',

@@ -53,6 +53,8 @@
   },
   "index": {
     "tagline": "TU EVENTO - TU COMUNIDAD - TUS BENEFICIOS",
+    "taglineFlipText": "TUS",
+    "taglineFlipList": "EVENTOS, COMUNIDADES, BENEFICIOS",
     "unlockPotential": "Desbloquea tu Potencial",
     "features": {
       "secure": {

@@ -10,7 +10,7 @@
     "web": "expo start --web --clear",
     "test": "jest --watchAll",
     "dev": "expo start --web --clear",
-    "build:web": "npm run prebuild && expo export -p web",
+    "build:web": "npm run prebuild && expo export -p web && npx workbox-cli generateSW workbox-config.js",
     "prebuild": "rm -rf dist ",
     "lint": "expo lint",
     "deploy": "npm run build:web && netlify deploy --prod"
@@ -19,6 +19,7 @@
     "preset": "jest-expo"
   },
   "dependencies": {
+    "workbox-cli": "^7.1.0",
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-navigation/bottom-tabs": "^7.2.0",

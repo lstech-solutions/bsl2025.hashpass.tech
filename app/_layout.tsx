@@ -11,6 +11,7 @@ import { StatusBar } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import "./global.css";
+import PWAPrompt from '../components/PWAPrompt';
 
 export default function RootLayout() {
   const theme = useThemeProvider();
@@ -101,7 +102,7 @@ function ThemedContent() {
           }}
         />
       </Stack>
+      <PWAPrompt />
     </NavThemeProvider>
   );
 }
-

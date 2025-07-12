@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useLanguageStore } from '../hooks/useLanguage';
+import { useLanguageStore } from '../hooks/useLanguageStore';
 
 const LanguageContext = createContext<{
   locale: string;

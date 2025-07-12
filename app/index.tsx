@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from '../i18n/i18n';
-import { View, Text, Image, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
-import { BackgroundGradientAnimation } from '../components/BackgroundGradientAnimation';
+import { useTranslation , getCurrentLocale} from '../i18n/i18n';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { ThemeAndLanguageSwitcher } from '../components/ThemeAndLanguageSwitcher';
 import { BackToTop } from '../components/BackToTop';
+import Testimonials from '../components/Testimonials';
 import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -21,6 +21,7 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { GlowingEffect } from '../components/GlowingEffect';
 
+
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 export default function HomeScreen() {
@@ -34,6 +35,7 @@ export default function HomeScreen() {
   const feature1Anim = useSharedValue(0);
   const feature2Anim = useSharedValue(0);
   const feature3Anim = useSharedValue(0);
+
 
   useEffect(() => {
     bgAnimation.value = withTiming(1, { duration: 300 });
@@ -196,6 +198,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ThemeAndLanguageSwitcher />
+        
         <View style={styles.hero}>
           <Animated.View style={heroImageAnimatedStyle}>
             <AnimatedImage
@@ -322,7 +325,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         <Animated.View style={[styles.socialProof, featuresAnimatedStyle]}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>{t('trustedByThousands')}</Text>
+          {/* <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>{t('trustedByThousands')}</Text>
           {((t('testimonials', { returnObjects: true }) as unknown) as Array<{ text: string, author: string }>).map((testimonial, index) => (
             <View
               key={index}
@@ -334,7 +337,8 @@ export default function HomeScreen() {
               <Text style={[styles.testimonialText, { color: colors.text.primary }]}>{testimonial.text}</Text>
               <Text style={[styles.testimonialAuthor, { color: colors.text.primary }]}>{testimonial.author}</Text>
             </View>
-          ))}
+          ))} */}
+          <Testimonials locale={getCurrentLocale()} />
         </Animated.View>
 
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Switch, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, Switch, TouchableOpacity, Image, ScrollView, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
@@ -75,105 +75,104 @@ export default function ProfileScreen() {
       </View>
 
       {/* App Settings */}
-      <View className="mt-6 mb-4">
-        <Text className="px-6 py-2 text-sm font-medium" style={styles.settingsTitle}>
-          {t('settings.title')}
-        </Text>
+      <ScrollView className="flex-1">
+        <View className="mt-6 mb-4">
+          <Text className="px-6 py-2 text-sm font-medium" style={styles.settingsTitle}>
+            {t('settings.title')}
+          </Text>
 
-        {renderSettingItem({
-          icon: isDark ? 'moon' : 'moon-outline',
-          title: t('settings.darkMode'),
-          rightComponent: (
-            <Switch
-              value={isDark}
-              onValueChange={toggleTheme}
-              trackColor={{ false: '#e5e7eb', true: '#818cf8' }}
-              thumbColor={isDark ? '#4f46e5' : '#f3f4f6'}
-            />
-          ),
-        })}
+          {renderSettingItem({
+            icon: isDark ? 'moon' : 'moon-outline',
+            title: t('settings.darkMode'),
+            rightComponent: (
+              <Switch
+                value={isDark}
+                onValueChange={toggleTheme}
+                trackColor={{ false: '#e5e7eb', true: '#818cf8' }}
+                thumbColor={isDark ? '#4f46e5' : '#f3f4f6'}
+              />
+            ),
+          })}
 
-        {renderSettingItem({
-          icon: 'notifications-outline',
-          title: t('settings.notifications'),
-          rightComponent: (
-            <Switch
-              value={notifications}
-              onValueChange={setNotifications}
-              trackColor={{ false: '#e5e7eb', true: '#818cf8' }}
-              thumbColor={notifications ? '#4f46e5' : '#f3f4f6'}
-            />
-          ),
-        })}
+          {renderSettingItem({
+            icon: 'notifications-outline',
+            title: t('settings.notifications'),
+            rightComponent: (
+              <Switch
+                value={notifications}
+                onValueChange={setNotifications}
+                trackColor={{ false: '#e5e7eb', true: '#818cf8' }}
+                thumbColor={notifications ? '#4f46e5' : '#f3f4f6'}
+              />
+            ),
+          })}
 
-        {renderSettingItem({
-          icon: 'finger-print-outline',
-          title: 'Biometric Authentication',
-          rightComponent: (
-            <Switch
-              value={biometricAuth}
-              onValueChange={setBiometricAuth}
-              trackColor={{ false: '#e5e7eb', true: '#818cf8' }}
-              thumbColor={biometricAuth ? '#4f46e5' : '#f3f4f6'}
-            />
-          ),
-        })}
+          {renderSettingItem({
+            icon: 'finger-print-outline',
+            title: 'Biometric Authentication',
+            rightComponent: (
+              <Switch
+                value={biometricAuth}
+                onValueChange={setBiometricAuth}
+                trackColor={{ false: '#e5e7eb', true: '#818cf8' }}
+                thumbColor={biometricAuth ? '#4f46e5' : '#f3f4f6'}
+              />
+            ),
+          })}
+        </View>
 
+        {/* Account Settings */}
+        <View className="mb-4">
+          <Text className="px-6 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+            {t('settings.account')}
+          </Text>
 
-      </View>
+          {renderSettingItem({
+            icon: 'language-outline',
+            title: t('settings.language'),
+            onPress: () => {
+              const locales = ['en', 'es', 'ko'];
+              const currentIndex = locales.indexOf(locale);
+              const nextIndex = (currentIndex + 1) % locales.length;
+              setLocale(locales[nextIndex]);
+            }, rightComponent: (
+              <View className="flex-row items-center">
+                <Text className="text-gray-500 dark:text-gray-400 mr-2">
+                  {locale === 'en' ? 'English' :
+                    locale === 'es' ? 'Español' :
+                    locale === 'ko' ? '한국어' : 'English'}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
+              </View>
+            ),
+          })}
 
-      {/* Account Settings */}
-      <View className="mb-4">
-        <Text className="px-6 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-          {t('settings.account')}
-        </Text>
+          {renderSettingItem({
+            icon: 'lock-closed-outline',
+            title: t('settings.changePassword'),
+            onPress: () => {
+              // Navigate to change password
+            },
+          })}
+        </View>
 
-        {renderSettingItem({
-          icon: 'language-outline',
-          title: t('settings.language'),
-          onPress: () => {
-            const locales = ['en', 'es', 'ko'];
-            const currentIndex = locales.indexOf(locale);
-            const nextIndex = (currentIndex + 1) % locales.length;
-            setLocale(locales[nextIndex]);
-          }, rightComponent: (
-            <View className="flex-row items-center">
-              <Text className="text-gray-500 dark:text-gray-400 mr-2">
-                {locale === 'en' ? 'English' :
-                  locale === 'es' ? 'Español' :
-                  locale === 'ko' ? '한국어' : 'English'}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
-            </View>
-          ),
-        })}
+        {/* Actions */}
+        <View className="mt-auto mb-8 px-6">
+          <TouchableOpacity
+            className="py-3 bg-indigo-600 rounded-lg items-center"
+            onPress={handleSignOut}
+          >
+            <Text className="text-white font-medium">{t('signOut')}</Text>
+          </TouchableOpacity>
 
-        {renderSettingItem({
-          icon: 'lock-closed-outline',
-          title: t('settings.changePassword'),
-          onPress: () => {
-            // Navigate to change password
-          },
-        })}
-      </View>
-
-      {/* Actions */}
-      <View className="mt-auto mb-8 px-6">
-        <TouchableOpacity
-          className="py-3 bg-indigo-600 rounded-lg items-center"
-          onPress={handleSignOut}
-        >
-          <Text className="text-white font-medium">{t('signOut')}</Text>
-        </TouchableOpacity>
-
-        <Text className="text-center mt-4 text-xs text-gray-500 dark:text-gray-400">
-          HashPass v{version}
-        </Text>
-      </View>
+          <Text className="text-center mt-4 text-xs text-gray-500 dark:text-gray-400">
+            HashPass v{version}
+          </Text>
+        </View>
+      </ScrollView>
     </View>
   );
 }
-
 
 const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {

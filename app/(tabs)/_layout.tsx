@@ -17,7 +17,7 @@ export default function Layout() {
         backgroundColor={colors.background.default}
       />
       <Tabs
-        screenOptions={{
+        screenOptions={({ route }) => ({
           headerShown: false,
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.text.primary,
@@ -30,7 +30,7 @@ export default function Layout() {
           },
           tabBarLabelStyle: {
             fontSize: 12,
-            fontFamily: 'Inter-SemiBold',
+            fontFamily: 'system-ui',
             marginBottom: themeSpacing.xs,
           },
           tabBarItemStyle: {
@@ -39,7 +39,7 @@ export default function Layout() {
           tabBarIconStyle: {
             marginBottom: -themeSpacing.xs,
           },
-        }}
+        })}
       >
         <Tabs.Screen
           name="explore"

@@ -108,7 +108,7 @@ export default function AuthCallback() {
             setMessage(`❌ Authentication failed: ${error.message}`);
 
             setTimeout(() => {
-                router.replace('/(tabs)/wallet');
+                router.replace('/');
             }, 5000);
         }
     };

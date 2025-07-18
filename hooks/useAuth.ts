@@ -4,19 +4,22 @@ import { supabase } from '../lib/supabase';
 
 export const useAuth = () => {
   const [user, setUser] = useState<Session['user'] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      setLoading(false);
+      setIsLoggedIn(!!session?.user);
+      setIsLoading(false);
     });
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setLoading(false);
+      setIsLoggedIn(!!session?.user);
+      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -34,7 +37,8 @@ export const useAuth = () => {
 
   return {
     user,
-    loading,
+    isLoggedIn,
+    isLoading,
     signOut,
   };
 };

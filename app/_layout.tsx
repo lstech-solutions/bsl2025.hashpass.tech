@@ -1,69 +1,72 @@
 import '../config/reanimated'; // CRITICAL: Ensure Reanimated is imported and configured first
-import 'react-native-gesture-handler'; // Then gesture handler
+import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack, usePathname, useRouter } from "expo-router";
-import React from 'react';
-import { ThemeProvider as NavThemeProvider, DefaultTheme } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
 import { ThemeProvider } from '../providers/ThemeProvider';
 import { LanguageProvider } from '../providers/LanguageProvider';
 import { useTheme, useThemeProvider } from '../hooks/useTheme';
-import { StatusBar } from 'react-native';
-import { supabase } from '../lib/supabase';
+import { StatusBar, View } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import "./global.css";
 import PWAPrompt from './components/PWAPrompt';
+import { ActivityIndicator } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const theme = useThemeProvider();
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background.default }}>
-      <LanguageProvider>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
         <ThemeProvider value={theme}>
-            <StatusBar 
-              barStyle={theme.isDark ? 'light-content' : 'dark-content'}
-              backgroundColor={theme.colors.background.default}
-            />
+          <StatusBar
+            barStyle={theme.isDark ? 'light-content' : 'dark-content'}
+            backgroundColor={theme.colors.background.default}
+          />
+          <LanguageProvider>
             <ThemedContent />
-          </ThemeProvider>
-      </LanguageProvider>
-    </GestureHandlerRootView>
+          </LanguageProvider>
+        </ThemeProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
 
 function ThemedContent() {
   const { colors, isDark } = useTheme();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { isLoggedIn, isLoading } = useAuth();
+  const [isReady, setIsReady] = useState(false);
   const router = useRouter();
 
-  const navigationTheme = {
-    ...DefaultTheme,
-    dark: isDark,
-    colors: {
-      ...DefaultTheme.colors,
-      primary: colors.primary,
-      background: colors.background.default,
-      card: colors.background.paper,
-      text: colors.text.primary,
-      border: colors.divider,
-      notification: colors.error.main,
-    },
-  };
-
-  React.useEffect(() => {
-    if (!user && (pathname !== '/auth' && pathname !== '/')) {
-      supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
-        if (!session) {
-          supabase.auth.signOut();
-          router.replace('/auth');
-        }
-      });
+  useEffect(() => {
+    if (!isLoading) {
+      setIsReady(true);
     }
-  }, [user, pathname]);
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (isReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [isReady]);
+
+
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.default }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
-    <NavThemeProvider value={navigationTheme}>
+    <>
       <Stack
         screenOptions={({ route }) => ({
           headerShown: (route.name !== 'index' && route.name !== 'auth') && false,
@@ -72,7 +75,7 @@ function ThemedContent() {
           },
           animation: 'slide_from_right',
           animationTypeForReplace: 'push',
-          headerTintColor: colors.text.primary as string, 
+          headerTintColor: colors.text.primary as string,
           headerTitleStyle: {
             fontWeight: '600',
             color: colors.text.primary as string,
@@ -80,29 +83,22 @@ function ThemedContent() {
           headerShadowVisible: false,
         })}
       >
-        <Stack.Screen 
-          name="(tabs)"
-          options={{
-            headerShown: false,
-            title: 'Tabs',
-          }}
-        />
-        <Stack.Screen 
-          name="auth"
-          options={{
-            headerShown: false,
-            title: 'Sign In',
-          }}
-        />
-        <Stack.Screen 
-          name="+not-found" 
-          options={{
-            title: 'Not Found',
-            headerShown: false,
-          }}
-        />
+        <Stack.Protected guard={isLoggedIn}>
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              headerShown: false,
+              title: 'Tabs',
+            }}
+
+          />
+        </Stack.Protected>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="home" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
       </Stack>
       <PWAPrompt />
-    </NavThemeProvider>
+    </>
   );
 }

@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation, getCurrentLocale } from '../i18n/i18n';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import Features from './components/Features';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { ThemeAndLanguageSwitcher } from '../components/ThemeAndLanguageSwitcher';
-import { BackToTop } from '../components/BackToTop';
-import Testimonials from '../components/Testimonials';
+import { ThemeAndLanguageSwitcher } from './components/ThemeAndLanguageSwitcher';
+import { BackToTop } from './components/BackToTop';
+import Testimonials from './components/Testimonials';
 import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -19,9 +20,9 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { GlowingEffect } from '../components/GlowingEffect';
-import { InteractiveHoverButton } from '../components/InteractiveHoverButton';
-import { FlipWords } from '../components/FlipWords';
+import { GlowingEffect } from './components/GlowingEffect';
+import { InteractiveHoverButton } from './components/InteractiveHoverButton';
+import { FlipWords } from './components/FlipWords';
 
 export default function HomeScreen() {
   const AnimatedImage = Animated.createAnimatedComponent(Image);
@@ -226,63 +227,14 @@ export default function HomeScreen() {
         </View>
 
 
-        <Animated.View className="mt-20 max-w-[840px] mx-auto" style={[styles.features, featuresAnimatedStyle]}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>{t('unlockPotential')}</Text>
-
-          {/* Feature 1 - Security */}
-          <Animated.View style={[styles.feature, feature1Style]}>
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
-              isDarkMode={isDark}
-            />
-            <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
-            </View>
-            <Text style={[styles.featureTitle, { color: colors.text.onSurface }]}>{t('features.secure.title')}</Text>
-            <Text style={[styles.featureDescription, { color: colors.text.onSurfaceVariant }]}>{t('features.secure.description')}</Text>
-          </Animated.View>
-
-          {/* Feature 2 - Management */}
-          <Animated.View style={[styles.feature, feature2Style]}>
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
-              isDarkMode={isDark}
-            />
-            <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="key" size={24} color={colors.primary} />
-            </View>
-            <Text style={[styles.featureTitle, { color: colors.text.onSurface }]}>{t('features.management.title')}</Text>
-            <Text style={[styles.featureDescription, { color: colors.text.onSurfaceVariant }]}>{t('features.management.description')}</Text>
-          </Animated.View>
-
-          {/* Feature 3 - Sync */}
-          <Animated.View style={[styles.feature, feature3Style]}>
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
-              isDarkMode={isDark}
-            />
-            <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="sync" size={24} color={colors.primary} />
-            </View>
-            <Text style={[styles.featureTitle, { color: colors.text.onSurface }]}>{t('features.sync.title')}</Text>
-            <Text style={[styles.featureDescription, { color: colors.text.onSurfaceVariant }]}>{t('features.sync.description')}</Text>
-          </Animated.View>
-        </Animated.View>
+        <Features
+          styles={styles}
+          featuresAnimatedStyle={featuresAnimatedStyle}
+          feature1Style={feature1Style}
+          feature2Style={feature2Style}
+          feature3Style={feature3Style}
+          isDark={isDark}
+        />
 
 
         <Animated.View className="max-w-[740px] mx-auto" style={[styles.cta, ctaAnimatedStyle]}>
@@ -426,45 +378,16 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 32,
   },
-  feature: {
-    marginBottom: 30,
-    padding: 25,
-    borderRadius: 2 * 16,
-    shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-    transform: [{ scale: 1 }],
-    alignItems: 'center',
-    textAlign: 'center',
+  featuresContainer: {
+    marginTop: 40,
+    marginBottom: 40,
   },
-  iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 16,
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
-  },
-  featureTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 12,
-    letterSpacing: -0.3,
-    textAlign: 'center',
-    width: '100%',
-  },
-  featureDescription: {
-    fontSize: 16,
-    lineHeight: 24,
-    opacity: 0.9,
-    letterSpacing: 0.1,
-    textAlign: 'center',
-    width: '100%',
+    gap: 24,
+    paddingHorizontal: 16,
   },
   cta: {
     padding: 32,

@@ -155,7 +155,7 @@ export const Newsletter = ({ mode }: Props) => {
                                 <button
                                     onClick={handleSubscribe}
                                     disabled={isLoading}
-                                    className='w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl hover:shadow-blue-500/20 disabled:hover:shadow-none'
+                                    className='w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl hover:shadow-blue-500/20 disabled:hover:shadow-none'
                                 >
                                     {isLoading ? (
                                         <>

@@ -79,7 +79,8 @@
         "apple-mobile-web-app-title": "HashPass",
         "mobile-web-app-capable": "yes",
         "msapplication-TileColor": "#1D9BF0",
-        "msapplication-tap-highlight": "no"
+        "msapplication-tap-highlight": "no",
+        "viewport": "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
       },
       "build": {
         "babel": {

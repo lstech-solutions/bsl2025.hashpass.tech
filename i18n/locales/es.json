@@ -1,4 +1,14 @@
 {
+  "newsletter": {
+    "title": "Suscríbete a nuestro boletín",
+    "description": "Suscríbete a nuestro boletín y nunca te pierdas una actualización. Recibe las últimas noticias, artículos y ofertas exclusivas directamente en tu bandeja de entrada!",
+    "emailPlaceholder": "Introduce correo electrónico",
+    "subscribe": "Suscríbete",
+    "processing": "Procesando...",
+    "successTitle": "Correo electrónico enviado!",
+    "successMessage": "Hemos enviado un correo electrónico de confirmación a {{email}}. Revisa tu bandeja de entrada para más detalles.",
+    "sendAnother": "Enviar otro"
+  },
   "wallet": {
     "walletDesc": "Accede a tus entradas verificadas por blockchain",
     "loyaltyDesc": "Sigue tus puntos y recompensas de tokens",

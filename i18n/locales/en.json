@@ -1,4 +1,14 @@
 {
+  "newsletter": {
+    "title": "Subscribe to our newsletter",
+    "description": "Subscribe to our newsletter and never miss an update. Get the latest news, articles, and exclusive offers straight to your inbox!",
+    "emailPlaceholder": "Enter email",
+    "subscribe": "Subscribe",
+    "processing": "Processing...",
+    "successTitle": "Email Sent!",
+    "successMessage": "We have sent a confirmation email to {{email}}. Check your inbox for more details.",
+    "sendAnother": "Send Another"
+  },
   "wallet": {
     "digitalWalletTitle": "Digital Ticket Wallet",
     "walletDesc": "Access your secure blockchain-verified tickets",

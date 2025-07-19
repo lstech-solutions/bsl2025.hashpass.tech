@@ -1,13 +1,16 @@
 { 
   "newsletter": {
-    "title": "뉴스레터 구독",
-    "description": "뉴스레터 구독을 통해 최신 정보를 받아보세요!",
-    "emailPlaceholder": "이메일 주소",
+    "title": "뉴스레터 구독하기",
+    "subtitle": "커뮤니티에 참여하세요",
+    "subscribers": "구독자 1,000명 이상",
+    "privacy": "개인정보를 존중합니다. 언제든지 구독을 취소할 수 있습니다.",
+    "description": "뉴스레터를 구독하시면 최신 소식, 기사 및 특별 제안을 놓치지 마세요. 모든 업데이트를 이메일로 받아보세요!",
+    "emailPlaceholder": "이메일 주소를 입력하세요",
     "subscribe": "구독하기",
     "processing": "처리 중...",
-    "successTitle": "이메일이 성공적으로 전송되었습니다!",
-    "successMessage": "{{email}}로 구독 확인 이메일이 전송되었습니다. 확인 후 구독이 완료됩니다.",
-    "sendAnother": "다른 이메일로 구독"
+    "successTitle": "이메일이 전송되었습니다!",
+    "successMessage": "{{email}} 주소로 확인 이메일을 보냈습니다. 자세한 내용은 수신함을 확인해주세요.",
+    "sendAnother": "다시 보내기"
   },
   "wallet": {
     "walletDesc": "블록체인으로 검증된 티켓에 접근하세요",

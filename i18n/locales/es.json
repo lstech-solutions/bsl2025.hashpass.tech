@@ -1,6 +1,9 @@
 {
   "newsletter": {
-    "title": "Suscríbete a nuestro boletín",
+   "title": "Suscríbete a nuestro boletín",
+    "subtitle": "Unete a nuestra comunidad",
+    "subscribers": "1000+ suscriptores",
+    "privacy": "Respetamos tu privacidad. Cancela la suscripción en cualquier momento.",
     "description": "Suscríbete a nuestro boletín y nunca te pierdas una actualización. Recibe las últimas noticias, artículos y ofertas exclusivas directamente en tu bandeja de entrada!",
     "emailPlaceholder": "Introduce correo electrónico",
     "subscribe": "Suscríbete",

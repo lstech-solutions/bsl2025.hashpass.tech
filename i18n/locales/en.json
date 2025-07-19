@@ -1,6 +1,9 @@
 {
   "newsletter": {
     "title": "Subscribe to our newsletter",
+    "subtitle": "Join our newsletter for the latest updates",
+    "subscribers": "1000+ subscribers",
+    "privacy": "We respect your privacy. Unsubscribe at any time.",
     "description": "Subscribe to our newsletter and never miss an update. Get the latest news, articles, and exclusive offers straight to your inbox!",
     "emailPlaceholder": "Enter email",
     "subscribe": "Subscribe",

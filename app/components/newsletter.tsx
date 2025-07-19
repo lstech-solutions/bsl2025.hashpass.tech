@@ -33,19 +33,19 @@ export const Newsletter = ({ mode }: Props) => {
 
     const handleSubscribe = async () => {
         setError('');
-        
+
         if (!email) {
             setError('Email is required');
             return;
         }
-        
+
         if (!validateEmail(email)) {
             setError('Please enter a valid email address');
             return;
         }
-        
+
         setIsLoading(true);
-        
+
         try {
             const locale = getCurrentLocale();
             const response = await fetch('/api/subscribe', {
@@ -53,9 +53,9 @@ export const Newsletter = ({ mode }: Props) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     email,
-                    locale 
+                    locale
                 }),
             });
 
@@ -76,116 +76,136 @@ export const Newsletter = ({ mode }: Props) => {
     };
 
     return (
-        <div className='flex justify-center items-center py-20'>
-            <div className={`${mode === 'dark'? 'bg-black border border-zinc-600' : 'bg-white'} w-96 h-80 rounded-lg p-5 overflow-hidden z-50`}>
+        <div className='flex justify-center items-center py-8 md:py-20 px-4 w-full'>
+            <div className={`${mode === 'dark' ? 'bg-black border border-zinc-600' : 'bg-white shadow-lg'} w-full max-w-md rounded-xl p-6 overflow-hidden z-50 transition-all duration-300`}>
                 <AnimatePresence>
                     {!subscribed ? (
                         <motion.div
                             key="form"
                             initial={{ opacity: 1, scale: 1 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ duration: 0.5 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3 }}
                             className='flex flex-col justify-center items-center h-full'
                         >
-                            <div className='flex justify-center items-center mt-5 relative h-12'>
-                                {imageUrls.map((url, index) => (
-                                    <div 
-                                        key={index}
-                                        className='relative rounded-full overflow-hidden border-2 border-white'
-                                        style={{
-                                            width: 40,
-                                            height: 40,
-                                            marginLeft: index > 0 ? -10 : 0,
-                                            zIndex: zIndices[index]
-                                        }}
-                                    >
-                                        <Image
-                                            source={{ uri: url }}
-                                            alt={`Avatar ${index + 1}`}
-                                            style={{ width: 40, height: 40 }}
-                                            resizeMode='cover'
-                                        />
-                                    </div>
-                                ))}
+                            <div className='text-center mb-6'>
+                                <h2 className={`text-2xl font-bold mb-2 ${mode === "dark" ? 'text-white' : 'text-black'}`}>
+                                    {t('title', 'Stay Updated')}
+                                </h2>
+                                <p className='text-sm text-gray-500 dark:text-gray-400 text-black dark:text-white'>
+                                    {t('subtitle', 'Join our newsletter for the latest updates')}
+                                </p>
                             </div>
-                            <div className='flex flex-col justify-center items-center mt-5 gap-2'>
-                                <span className={`${mode === 'dark'? 'text-white' : 'text-black'} text-lg font-semibold`}>{t('title')}</span>
-                                <span className={`${mode === 'dark'? 'text-gray-400' : 'text-gray-600'} text-center text-sm`}>{t('description')}</span>
+
+                            <div className='flex justify-center items-center mb-6 relative h-12 w-full'>
+                                <div className='flex relative'>
+                                    {imageUrls.map((url, index) => (
+                                        <div
+                                            key={index}
+                                            className='relative rounded-full overflow-hidden border-2 border-white dark:border-gray-800 transition-transform hover:scale-110'
+                                            style={{
+                                                width: 40,
+                                                height: 40,
+                                                marginLeft: index > 0 ? -10 : 0,
+                                                zIndex: zIndices[index]
+                                            }}
+                                        >
+                                            <Image
+                                                source={{ uri: url }}
+                                                alt={`Subscriber ${index + 1}`}
+                                                style={{ width: '100%', height: '100%' }}
+                                                resizeMode='cover'
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                                <span className='ml-3 text-sm text-gray-500 dark:text-gray-400'>
+                                    {t('subscribers', 'Join our community')}
+                                </span>
                             </div>
-                            <div>
-                                <div className="flex justify-center items-center mt-5">
-                                    <div className={`${mode === 'dark'? 'bg-black border-gray-600' : 'bg-white border-gray-300'} border relative flex items-center shadow-md rounded-full w-80 h-10`}>
-                                        <svg width="20" height="20" viewBox="0 0 80 64" fill="#6B7280" xmlns="http://www.w3.org/2000/svg" className='absolute left-3'>
-                                            <path d="M72 0H8C3.6 0 0.04 3.6 0.04 8L0 56C0 60.4 3.6 64 8 64H72C76.4 64 80 60.4 80 56V8C80 3.6 76.4 0 72 0ZM72 16L40 36L8 16V8L40 28L72 8V16Z" fill="#4B5563" />
+
+                            <div className='w-full space-y-4 mt-6'>
+                                <div className='relative'>
+                                    <div className={`relative flex items-center rounded-lg border ${error ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all duration-200`}>
+                                        <svg className='h-5 w-5 text-gray-400 absolute left-3' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                                            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' />
                                         </svg>
                                         <input
-                                            type="email"
-                                            name="EmailInput"
-                                            id="EmailInput"
-                                            placeholder={t('emailPlaceholder')}
-                                            className={`${mode === 'dark' ? 'text-gray-200' : 'text-gray-700 placeholder-gray-500'} ${error ? 'border-red-500' : ''} bg-transparent outline-none flex-grow pl-10 py-2 rounded-full text-sm ml-1`}
+                                            type='email'
                                             value={email}
                                             onChange={(e) => {
                                                 setEmail(e.target.value);
-                                                // Clear error when user starts typing
                                                 if (error) setError('');
                                             }}
+                                            placeholder={t('emailPlaceholder', 'your@email.com')}
+                                            className='w-full px-4 py-3 pl-10 text-sm sm:text-base rounded-lg bg-transparent outline-none transition-all duration-200 placeholder-gray-400 dark:placeholder-white dark:text-white text-gray-600 dark:text-gray-300'
+                                            disabled={isLoading}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSubscribe()}
                                         />
                                     </div>
+                                    {error && (
+                                        <p className='mt-1.5 text-xs text-red-500 dark:text-red-400 flex items-center'>
+                                            <svg xmlns='http://www.w3.org/2000/svg' className='h-3.5 w-3.5 mr-1' viewBox='0 0 20 20' fill='currentColor'>
+                                                <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2z' clipRule='evenodd' />
+                                            </svg>
+                                            {error}
+                                        </p>
+                                    )}
                                 </div>
-                                {error && (
-                                    <p className="text-red-500 text-xs mt-1 ml-2 text-left w-full max-w-xs">
-                                        {error}
-                                    </p>
-                                )}
-                            </div>
-                            <div className='flex justify-center items-center mt-2 w-full'>
-                                <button 
-                                    onClick={handleSubscribe} 
+                                <button
+                                    onClick={handleSubscribe}
                                     disabled={isLoading}
-                                    className={`${mode === 'dark'? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'} 
-                                    w-80 p-2 rounded-full flex items-center justify-center transition-colors
-                                    ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                    className='w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl hover:shadow-blue-500/20 disabled:hover:shadow-none'
                                 >
                                     {isLoading ? (
                                         <>
-                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            <svg className='animate-spin h-4 w-4 text-white' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'>
+                                                <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4'></circle>
+                                                <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'></path>
                                             </svg>
-                                            {t('processing')}
+                                            <span>{t('processing', 'Processing...')}</span>
                                         </>
-                                    ) : t('subscribe')}
+                                    ) : (
+                                        <>
+                                            <span>{t('subscribe', 'Subscribe')}</span>
+                                        </>
+                                    )}
                                 </button>
                             </div>
+
+                            <p className='text-xs text-center text-gray-400 dark:text-gray-500 mt-4 px-4'>
+                                {t('privacy', 'We respect your privacy. Unsubscribe at any time.')}
+                            </p>
                         </motion.div>
                     ) : (
                         <motion.div
-                            key="thank-you"
-                            initial={{ opacity: 0, scale: 0.8 }}
+                            key="success"
+                            initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ duration: 0.5 }}
-                            className='flex flex-col justify-center items-center mt-10 gap-2'
+                            exit={{ opacity: 0, scale: 1.05 }}
+                            transition={{ duration: 0.3, type: 'spring', stiffness: 500, damping: 30 }}
+                            className='flex flex-col items-center justify-center h-full text-center p-4'
                         >
-                            <span>
-                                <svg width="60" height="60" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M40 0C17.92 0 0 17.92 0 40C0 62.08 17.92 80 40 80H60V72H40C22.64 72 8 57.36 8 40C8 22.64 22.64 8 40 8C57.36 8 72 22.64 72 40V45.72C72 48.88 69.16 52 66 52C62.84 52 60 48.88 60 45.72V40C60 28.96 51.04 20 40 20C28.96 20 20 28.96 20 40C20 51.04 28.96 60 40 60C45.52 60 50.56 57.76 54.16 54.12C56.76 57.68 61.24 60 66 60C73.88 60 80 53.6 80 45.72V40C80 17.92 62.08 0 40 0ZM40 52C33.36 52 28 46.64 28 40C28 33.36 33.36 28 40 28C46.64 28 52 33.36 52 40C52 46.64 46.64 52 40 52Z" fill={`${mode === 'dark' ? '#F3F4F6' : '#1E1E1E'}`} />
+                            <div className='w-20 h-20 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mb-6 shadow-inner'>
+                                <svg xmlns='http://www.w3.org/2000/svg' className='h-10 w-10 text-green-600 dark:text-green-400' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth='2'>
+                                    <path strokeLinecap='round' strokeLinejoin='round' d='M5 13l4 4L19 7' />
                                 </svg>
-                            </span>
-                            <span className={`${mode === 'dark'? 'text-white' : 'text-black'} text-2xl font-semibold mt-1`}>{t('successTitle')}</span>
-                            <span className={`${mode === 'dark'? 'text-gray-400' : 'text-gray-600'} text-center text-sm mb-4`}>
-                                {t('successMessage', { email })}
-                            </span>
-                            <button 
+                            </div>
+                            <h3 className='text-2xl font-bold mb-3 text-gray-900 dark:text-white'>{t('successTitle', 'You\'re in!')}</h3>
+                            <p className='text-gray-600 dark:text-gray-300 mb-6 max-w-xs'>
+                                {t('successMessage', 'Thanks for subscribing! We\'ll keep you updated with our latest news.')}
+                            </p>
+                            <button
                                 onClick={() => {
                                     setSubscribed(false);
                                     setEmail('');
                                 }}
-                                className={`${mode === 'dark'? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'} px-6 py-2 rounded-full text-sm transition-colors duration-200`}
+                                className='text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors flex items-center group'
                             >
-                                {t('sendAnother')}
+                                <span className='group-hover:-translate-x-0.5 transition-transform'>{t('backToForm', 'Back to form')}</span>
+                                <svg xmlns='http://www.w3.org/2000/svg' className='h-4 w-4 ml-1 transform group-hover:translate-x-0.5 transition-transform' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M14 5l7 7m0 0l-7 7m7-7H3' />
+                                </svg>
                             </button>
                         </motion.div>
                     )}

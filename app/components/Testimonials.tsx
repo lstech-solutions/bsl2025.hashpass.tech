@@ -13,7 +13,7 @@ const Testimonials: React.FC<{ locale: string }> = ({ locale }) => {
   const thirdColumn = currentTestimonials.slice(4, 9);
   const { colors } = useTheme();
   return (
-    <section className="bg-background my-20 relative">
+    <section className="bg-background relative">
 
       <div className="container z-10 mx-auto">
         <motion.div

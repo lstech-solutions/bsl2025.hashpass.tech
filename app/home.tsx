@@ -21,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { InteractiveHoverButton } from './components/InteractiveHoverButton';
 import { FlipWords } from './components/FlipWords';
+import { Newsletter } from './components/newsletter';
 
 export default function HomeScreen() {
   const AnimatedImage = Animated.createAnimatedComponent(Image);
@@ -217,7 +218,7 @@ export default function HomeScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={[styles.tagline, { color: colors.text.primary }]}> 
+            <Text style={[styles.tagline, { color: colors.text.primary }]}>
               -<FlipWords words={words} />-
             </Text>
           </Animated.View>
@@ -280,10 +281,13 @@ export default function HomeScreen() {
           )}
         </Animated.View>
 
+
+
         <Animated.View style={[styles.socialProof, featuresAnimatedStyle]}>
           <Testimonials locale={getCurrentLocale()} />
         </Animated.View>
 
+        <Newsletter mode={isDark ? 'dark' : 'light'} />
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>{t('copyright')}</Text>

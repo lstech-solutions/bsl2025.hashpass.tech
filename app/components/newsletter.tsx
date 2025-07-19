@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Image } from 'react-native';
+import { useTranslation, getCurrentLocale } from '../../i18n/i18n';
 type Mode = "light" | "dark";
 
 interface Props {
@@ -9,9 +10,11 @@ interface Props {
 }
 
 export const Newsletter = ({ mode }: Props) => {
+    const { t } = useTranslation('newsletter');
     const [email, setEmail] = useState('');
     const [subscribed, setSubscribed] = useState(false);
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const validateEmail = (email: string) => {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,13 +44,19 @@ export const Newsletter = ({ mode }: Props) => {
             return;
         }
         
+        setIsLoading(true);
+        
         try {
+            const locale = getCurrentLocale();
             const response = await fetch('/api/subscribe', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email }),
+                body: JSON.stringify({ 
+                    email,
+                    locale 
+                }),
             });
 
             const data = await response.json();
@@ -61,6 +70,8 @@ export const Newsletter = ({ mode }: Props) => {
             console.error('Subscription error:', error);
             const errorMessage = error instanceof Error ? error.message : 'Failed to subscribe. Please try again.';
             setError(errorMessage);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -99,8 +110,8 @@ export const Newsletter = ({ mode }: Props) => {
                                 ))}
                             </div>
                             <div className='flex flex-col justify-center items-center mt-5 gap-2'>
-                                <span className={`${mode === 'dark'? 'text-white' : 'text-black'} text-lg font-semibold`}>Subscribe to our newsletter</span>
-                                <span className={`${mode === 'dark'? 'text-gray-400' : 'text-gray-600'} text-center text-sm`}>Subscribe to our newsletter and never miss an update. Get the latest news, articles, and exclusive offers straight to your inbox!</span>
+                                <span className={`${mode === 'dark'? 'text-white' : 'text-black'} text-lg font-semibold`}>{t('title')}</span>
+                                <span className={`${mode === 'dark'? 'text-gray-400' : 'text-gray-600'} text-center text-sm`}>{t('description')}</span>
                             </div>
                             <div>
                                 <div className="flex justify-center items-center mt-5">
@@ -112,7 +123,7 @@ export const Newsletter = ({ mode }: Props) => {
                                             type="email"
                                             name="EmailInput"
                                             id="EmailInput"
-                                            placeholder="Enter email"
+                                            placeholder={t('emailPlaceholder')}
                                             className={`${mode === 'dark' ? 'text-gray-200' : 'text-gray-700 placeholder-gray-500'} ${error ? 'border-red-500' : ''} bg-transparent outline-none flex-grow pl-10 py-2 rounded-full text-sm ml-1`}
                                             value={email}
                                             onChange={(e) => {
@@ -129,8 +140,24 @@ export const Newsletter = ({ mode }: Props) => {
                                     </p>
                                 )}
                             </div>
-                            <div className='flex justify-center items-center mt-2'>
-                                <button onClick={handleSubscribe} className={`${mode === 'dark'? 'bg-white text-black' : 'bg-black text-white'} w-80 p-2 rounded-full`}>Subscribe</button>
+                            <div className='flex justify-center items-center mt-2 w-full'>
+                                <button 
+                                    onClick={handleSubscribe} 
+                                    disabled={isLoading}
+                                    className={`${mode === 'dark'? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'} 
+                                    w-80 p-2 rounded-full flex items-center justify-center transition-colors
+                                    ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            {t('processing')}
+                                        </>
+                                    ) : t('subscribe')}
+                                </button>
                             </div>
                         </motion.div>
                     ) : (
@@ -147,9 +174,9 @@ export const Newsletter = ({ mode }: Props) => {
                                     <path d="M40 0C17.92 0 0 17.92 0 40C0 62.08 17.92 80 40 80H60V72H40C22.64 72 8 57.36 8 40C8 22.64 22.64 8 40 8C57.36 8 72 22.64 72 40V45.72C72 48.88 69.16 52 66 52C62.84 52 60 48.88 60 45.72V40C60 28.96 51.04 20 40 20C28.96 20 20 28.96 20 40C20 51.04 28.96 60 40 60C45.52 60 50.56 57.76 54.16 54.12C56.76 57.68 61.24 60 66 60C73.88 60 80 53.6 80 45.72V40C80 17.92 62.08 0 40 0ZM40 52C33.36 52 28 46.64 28 40C28 33.36 33.36 28 40 28C46.64 28 52 33.36 52 40C52 46.64 46.64 52 40 52Z" fill={`${mode === 'dark' ? '#F3F4F6' : '#1E1E1E'}`} />
                                 </svg>
                             </span>
-                            <span className={`${mode === 'dark'? 'text-white' : 'text-black'} text-2xl font-semibold mt-1`}>Email Sent!</span>
+                            <span className={`${mode === 'dark'? 'text-white' : 'text-black'} text-2xl font-semibold mt-1`}>{t('successTitle')}</span>
                             <span className={`${mode === 'dark'? 'text-gray-400' : 'text-gray-600'} text-center text-sm mb-4`}>
-                                We have sent a confirmation email to <span className='font-medium'>{email}</span>. Check your inbox for more details.
+                                {t('successMessage', { email })}
                             </span>
                             <button 
                                 onClick={() => {
@@ -158,7 +185,7 @@ export const Newsletter = ({ mode }: Props) => {
                                 }}
                                 className={`${mode === 'dark'? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'} px-6 py-2 rounded-full text-sm transition-colors duration-200`}
                             >
-                                Send Another
+                                {t('sendAnother')}
                             </button>
                         </motion.div>
                     )}

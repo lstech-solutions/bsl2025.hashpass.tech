@@ -1,4 +1,5 @@
 import { supabaseServer as supabase } from '@/lib/supabase-server';
+import { sendSubscriptionConfirmation } from '@/lib/email';
 
 export async function POST(request: Request) {
   try {
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const email = body?.email?.trim();
+    const locale = body?.locale || 'en'; // Default to English if locale not provided
 
     if (!email) {
       return new Response(
@@ -72,28 +74,87 @@ export async function POST(request: Request) {
       throw new Error('Failed to save subscription');
     }
 
-    return new Response(
-      JSON.stringify({ 
-        message: 'Successfully subscribed!', 
-        data: data?.[0] || null 
-      }),
-      { 
-        status: 201,
-        headers: { 'Content-Type': 'application/json' }
+    // Send confirmation email
+    let emailResult;
+    try {
+      emailResult = await sendSubscriptionConfirmation(email, locale);
+      
+      if (!emailResult.success) {
+        console.warn('Email notification warning:', emailResult.error);
+        // Continue with success response but indicate email wasn't sent
+        return new Response(
+          JSON.stringify({ 
+            message: 'Successfully subscribed! However, we encountered an issue sending your confirmation email.',
+            warning: emailResult.error,
+            subscription: data?.[0] || null,
+            emailSent: false
+          }),
+          { 
+            status: 201,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
       }
-    );
+      
+      // Success case with email sent
+      return new Response(
+        JSON.stringify({ 
+          message: 'Successfully subscribed! Please check your email for confirmation.', 
+          subscription: data?.[0] || null,
+          emailSent: true
+        }),
+        { 
+          status: 201,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+      
+    } catch (emailError) {
+      console.error('Email sending error:', emailError);
+      // Still return success since subscription was saved, but indicate email failed
+      return new Response(
+        JSON.stringify({ 
+          message: 'Successfully subscribed! However, we encountered an issue sending your confirmation email.',
+          warning: 'Could not send confirmation email',
+          subscription: data?.[0] || null,
+          emailSent: false
+        }),
+        { 
+          status: 201,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
   } catch (error) {
     console.error('Subscription error:', error);
     
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    // Determine appropriate status code
+    const statusCode = error instanceof Error && 'statusCode' in error 
+      ? (error as any).statusCode 
+      : 500;
+      
+    // Get user-friendly error message
+    let errorMessage = 'An unexpected error occurred';
+    if (error instanceof Error) {
+      if (error.message.includes('duplicate key')) {
+        errorMessage = 'This email is already subscribed';
+      } else if (error.message.includes('connection')) {
+        errorMessage = 'Unable to connect to the database';
+      } else {
+        errorMessage = error.message || errorMessage;
+      }
+    }
     
     return new Response(
       JSON.stringify({ 
         error: errorMessage,
-        code: 'SUBSCRIPTION_ERROR'
+        code: statusCode,
+        details: process.env.NODE_ENV === 'development' && error instanceof Error 
+          ? error.stack 
+          : undefined
       }),
       { 
-        status: 500,
+        status: statusCode,
         headers: { 'Content-Type': 'application/json' }
       }
     );

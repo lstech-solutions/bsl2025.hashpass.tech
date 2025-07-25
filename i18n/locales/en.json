@@ -2,7 +2,7 @@
   "newsletter": {
     "title": "Subscribe to our newsletter",
     "subtitle": "Join our newsletter for the latest updates",
-    "subscribers": "1000+ subscribers",
+    "subscribers": "Subscribers",
     "privacy": "We respect your privacy. Unsubscribe at any time.",
     "description": "Subscribe to our newsletter and never miss an update. Get the latest news, articles, and exclusive offers straight to your inbox!",
     "emailPlaceholder": "Enter email",
@@ -10,7 +10,8 @@
     "processing": "Processing...",
     "successTitle": "Email Sent!",
     "successMessage": "We have sent a confirmation email to {{email}}. Check your inbox for more details.",
-    "sendAnother": "Send Another"
+    "sendAnother": "Send Another",
+    "backToForm": "Back to Form"
   },
   "wallet": {
     "digitalWalletTitle": "Digital Ticket Wallet",

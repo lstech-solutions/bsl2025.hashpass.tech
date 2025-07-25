@@ -12,18 +12,17 @@ const getFeatureStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     marginBottom: 30,
     padding: 25,
     borderRadius: 2 * 16,
-    shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+    shadowColor: isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.05)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 12,
     elevation: 3,
     borderWidth: 1,
-    borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
     transform: [{ scale: 1 }],
     alignItems: 'center',
     textAlign: 'center',
-    backgroundColor: colors.background.default,
-    //color: colors.text.primary,
+    backgroundColor: isDark ? colors.background.paper : colors.background.default,
   },
   iconContainer: {
     width: 60,
@@ -33,7 +32,7 @@ const getFeatureStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
   },
   featureTitle: {
     fontSize: 20,
@@ -47,11 +46,11 @@ const getFeatureStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   featureDescription: {
     fontSize: 16,
     lineHeight: 24,
-    opacity: 0.9,
+    opacity: isDark ? 0.85 : 0.9,
     letterSpacing: 0.1,
     textAlign: 'center',
     width: '100%',
-    color: colors.text,
+    color: isDark ? colors.text : colors.textSecondary,
   },
 });
 
@@ -101,8 +100,8 @@ const Features: React.FC<FeaturesProps> = ({
     <Animated.View style={[containerStyles?.featuresContainer, featuresAnimatedStyle]}>
       <View style={containerStyles?.featuresGrid}>
         {features.map((feature, index) => (
-          <View key={feature.id} style={[featureStyles.feature, [feature1Style, feature2Style, feature3Style][index]]}>
-             <GlowingEffect
+          <View key={feature.id} style={[featureStyles.feature, [feature1Style, feature2Style, feature3Style][index], { backgroundColor: isDark ? 'black' : colors.background.default }]}>
+            <GlowingEffect
               spread={40}
               glow={true}
               disabled={false}

@@ -375,13 +375,16 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     flex: 1,
   },
   hero: {
-    height: 400,
+    minHeight: 400,
+    height: isMobile ? 400 : '100%',
+    maxHeight: 1000,
     position: 'relative',
     overflow: 'hidden',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-    flexDirection: 'column', // add flexDirection
-    justifyContent: 'flex-end', // ensure children stack to bottom
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    paddingBottom: isMobile ? 40 : 60, 
   },
   heroImage: {
     width: '100%',
@@ -531,9 +534,14 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   scrollDownContainer: {
     width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     backgroundColor: 'transparent',
-    marginBottom: 0, 
+    paddingBottom: isMobile ? 20 : 40,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
   scrollDownButton: {
     // Make the entire area clickable
@@ -587,7 +595,9 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     height: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
-    opacity: 0.8
+    marginBottom: 0,
+    opacity: 0.8,
+    position: 'relative',
+    bottom: 0,
   }
 });

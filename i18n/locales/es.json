@@ -2,7 +2,7 @@
   "newsletter": {
    "title": "Suscríbete a nuestro boletín",
     "subtitle": "Unete a nuestra comunidad",
-    "subscribers": "1000+ suscriptores",
+    "subscribers": "Suscriptores",
     "privacy": "Respetamos tu privacidad. Cancela la suscripción en cualquier momento.",
     "description": "Suscríbete a nuestro boletín y nunca te pierdas una actualización. Recibe las últimas noticias, artículos y ofertas exclusivas directamente en tu bandeja de entrada!",
     "emailPlaceholder": "Introduce correo electrónico",
@@ -10,7 +10,8 @@
     "processing": "Procesando...",
     "successTitle": "Correo electrónico enviado!",
     "successMessage": "Hemos enviado un correo electrónico de confirmación a {{email}}. Revisa tu bandeja de entrada para más detalles.",
-    "sendAnother": "Enviar otro"
+    "sendAnother": "Enviar otro",
+    "backToForm": "Volver al formulario"
   },
   "wallet": {
     "walletDesc": "Accede a tus entradas verificadas por blockchain",

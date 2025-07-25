@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Image } from 'react-native';
 import { useTranslation, getCurrentLocale } from '../../i18n/i18n';
+import { useTheme } from '../../hooks/useTheme';
 type Mode = "light" | "dark";
 
 interface Props {
@@ -15,6 +16,8 @@ export const Newsletter = ({ mode }: Props) => {
     const [subscribed, setSubscribed] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [subscribers, setSubscribers] = useState(1000);
+    const { isDark } = useTheme();
 
     const validateEmail = (email: string) => {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -66,6 +69,7 @@ export const Newsletter = ({ mode }: Props) => {
             }
 
             setSubscribed(true);
+            setSubscribers(subscribers + 1);
         } catch (error) {
             console.error('Subscription error:', error);
             const errorMessage = error instanceof Error ? error.message : 'Failed to subscribe. Please try again.';
@@ -77,7 +81,7 @@ export const Newsletter = ({ mode }: Props) => {
 
     return (
         <div className='flex justify-center items-center py-8 md:py-20 px-4 w-full'>
-            <div className={`${mode === 'dark' ? 'bg-black border border-zinc-600' : 'bg-white shadow-lg'} w-full max-w-md rounded-xl p-6 overflow-hidden z-50 transition-all duration-300`}>
+            <div className="w-full max-w-md rounded-xl p-6 overflow-hidden z-50 transition-all duration-300">
                 <AnimatePresence>
                     {!subscribed ? (
                         <motion.div
@@ -120,7 +124,7 @@ export const Newsletter = ({ mode }: Props) => {
                                     ))}
                                 </div>
                                 <span className='ml-3 text-sm text-gray-500 dark:text-gray-400'>
-                                    {t('subscribers', 'Join our community')}
+                                    <span className='font-bold'>{subscribers}+</span> {t('subscribers', 'Join our community')}
                                 </span>
                             </div>
 
@@ -191,9 +195,9 @@ export const Newsletter = ({ mode }: Props) => {
                                     <path strokeLinecap='round' strokeLinejoin='round' d='M5 13l4 4L19 7' />
                                 </svg>
                             </div>
-                            <h3 className='text-2xl font-bold mb-3 text-gray-900 dark:text-white'>{t('successTitle', 'You\'re in!')}</h3>
+                            <h3 className={`text-2xl font-bold mb-3 ${isDark ? 'text-white' : 'text-black'}`}>{t('successTitle', 'You\'re in!')}</h3>
                             <p className='text-gray-600 dark:text-gray-300 mb-6 max-w-xs'>
-                                {t('successMessage', 'Thanks for subscribing! We\'ll keep you updated with our latest news.')}
+                                {t('successMessage', { email })}
                             </p>
                             <button
                                 onClick={() => {

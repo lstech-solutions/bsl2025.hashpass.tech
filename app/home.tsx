@@ -90,13 +90,16 @@ export default function HomeScreen() {
   });
 
   const handleScrollToFeatures = () => {
-    if (featuresRef.current) {
-      featuresRef.current.measureInWindow((x, y) => {
-        scrollRef.current?.scrollTo({ y, animated: true });
+    // Get the height of the viewport
+    const screenHeight = window.innerHeight || document.documentElement.clientHeight;
+
+    // Scroll to just below the hero section
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        y: screenHeight,
+        animated: true,
+        duration: 500 // Add duration for smoother scrolling
       });
-    } else {
-      // Fallback to a smooth scroll to a position that should be below the hero section
-      scrollRef.current?.scrollTo({ y: window.innerHeight - 100, animated: true });
     }
   };
 
@@ -262,15 +265,17 @@ export default function HomeScreen() {
             <Text style={[styles.tagline, { color: colors.text.primary }]}>
               <FlipWords words={words} />
             </Text>
-
-            <TouchableOpacity
+          </Animated.View>
+          <View style={{ flex: 1 }} /> 
+          <Animated.View style={[styles.scrollDownContainer, headerAnimatedStyle]}>
+            <TouchableOpacity 
               activeOpacity={0.7}
               onPress={handleScrollToFeatures}
-              style={styles.scrollDownWrapper}
+              style={styles.scrollDownButton}
+              hitSlop={{top: 30, bottom: 0, left: 40, right: 40}} // increased hitSlop
             >
-              <View style={styles.scrollDownContainer}>
-                <Text style={styles.scrollDownText}>{t('learnMore')}</Text>
-                <View style={styles.arrowContainer}>
+              <View style={styles.scrollDownContent} pointerEvents="box-none">
+                <View style={styles.arrowContainer} pointerEvents="box-none">
                   <Animated.View style={[styles.arrowDown, arrowAnimatedStyle]}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M7 10L12 15L17 10" stroke={isDark ? '#FFFFFF' : '#121212'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -281,6 +286,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </Animated.View>
         </View>
+
 
         <View ref={featuresRef} onLayout={(event) => {
           const { y } = event.nativeEvent.layout;
@@ -374,6 +380,8 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     overflow: 'hidden',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
+    flexDirection: 'column', // add flexDirection
+    justifyContent: 'flex-end', // ensure children stack to bottom
   },
   heroImage: {
     width: '100%',
@@ -520,21 +528,27 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     color: '#A3A3A3',
     textAlign: 'right',
   },
-  scrollDownWrapper: {
-    position: 'fixed' as const,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    alignItems: 'center' as const,
-    padding: 20,
-    width: '100%',
-    backgroundColor: 'transparent',
-  },
   scrollDownContainer: {
-    alignItems: 'center' as const,
-    padding: 12,
-    minWidth: 160,
-    borderRadius: 25,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    marginBottom: 0, 
+  },
+  scrollDownButton: {
+    // Make the entire area clickable
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Make sure touch events work properly
+    position: 'relative',
+    zIndex: 1001,
+  },
+  scrollDownContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    elevation: 4,
   },
   scrollDownText: {
     color: isDark ? '#FFFFFF' : '#121212',
@@ -545,19 +559,35 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
     opacity: 0.8,
+    textAlign: 'center',
   },
   arrowContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+   // backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    borderRadius: 20,
+    pointerEvents: 'auto',
+    elevation: 50,
+    zIndex: 1001,
+  },
+  arrowButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    cursor: 'pointer',
+    // Visual feedback on press
+    transform: [{ scale: 1 }],
   },
   arrowDown: {
     width: 24,
     height: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 15,
     opacity: 0.8
   }
 });

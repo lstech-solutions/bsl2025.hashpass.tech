@@ -18,10 +18,15 @@ import Animated, {
   interpolate,
   useAnimatedReaction,
   withSpring,
+  withRepeat,
+  withSequence,
 } from 'react-native-reanimated';
 import { InteractiveHoverButton } from './components/InteractiveHoverButton';
 import { FlipWords } from './components/FlipWords';
 import { Newsletter } from './components/newsletter';
+import { ArrowDown } from 'lucide-react-native';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { Easing } from 'react-native-reanimated';
 
 export default function HomeScreen() {
   const AnimatedImage = Animated.createAnimatedComponent(Image);
@@ -29,7 +34,29 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const [userName, setUserName] = useState<string | null>(null);
   const { t } = useTranslation('index');
-  const styles = getStyles(isDark, colors);
+  const isMobile = useIsMobile();
+
+  // Animation for the scroll down arrow
+  const bounceAnim = useSharedValue(0);
+
+  useEffect(() => {
+    bounceAnim.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.5, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1, // Infinite repeat
+      true // Reverse the animation on each iteration
+    );
+  }, []);
+
+  const arrowAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(bounceAnim.value, [0, 1], [0, 10]) },
+    ],
+    opacity: interpolate(bounceAnim.value, [0, 0.5, 1], [0.6, 1, 0.6]),
+  }));
+  const styles = getStyles(isDark, colors, isMobile);
   const bgAnimation = useSharedValue(0);
   const scrollRef = React.useRef<any>(null);
   const feature1Anim = useSharedValue(0);
@@ -53,11 +80,25 @@ export default function HomeScreen() {
   const scrollY = useSharedValue(0);
   const buttonAnimation = useSharedValue(0);
 
+  const featuresRef = React.useRef<View>(null);
+  const [featuresLayout, setFeaturesLayout] = React.useState({ y: 0 });
+
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollY.value = event.contentOffset.y;
     },
   });
+
+  const handleScrollToFeatures = () => {
+    if (featuresRef.current) {
+      featuresRef.current.measureInWindow((x, y) => {
+        scrollRef.current?.scrollTo({ y, animated: true });
+      });
+    } else {
+      // Fallback to a smooth scroll to a position that should be below the hero section
+      scrollRef.current?.scrollTo({ y: window.innerHeight - 100, animated: true });
+    }
+  };
 
 
   useEffect(() => {
@@ -219,21 +260,41 @@ export default function HomeScreen() {
               resizeMode="contain"
             />
             <Text style={[styles.tagline, { color: colors.text.primary }]}>
-              -<FlipWords words={words} />-
+              <FlipWords words={words} />
             </Text>
-          </Animated.View>
 
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleScrollToFeatures}
+              style={styles.scrollDownWrapper}
+            >
+              <View style={styles.scrollDownContainer}>
+                <Text style={styles.scrollDownText}>{t('learnMore')}</Text>
+                <View style={styles.arrowContainer}>
+                  <Animated.View style={[styles.arrowDown, arrowAnimatedStyle]}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M7 10L12 15L17 10" stroke={isDark ? '#FFFFFF' : '#121212'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </Animated.View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
 
-
-        <Features
-          styles={styles}
-          featuresAnimatedStyle={featuresAnimatedStyle}
-          feature1Style={feature1Style}
-          feature2Style={feature2Style}
-          feature3Style={feature3Style}
-          isDark={isDark}
-        />
+        <View ref={featuresRef} onLayout={(event) => {
+          const { y } = event.nativeEvent.layout;
+          setFeaturesLayout({ y });
+        }}>
+          <Features
+            styles={styles}
+            featuresAnimatedStyle={featuresAnimatedStyle}
+            feature1Style={feature1Style}
+            feature2Style={feature2Style}
+            feature3Style={feature3Style}
+            isDark={isDark}
+          />
+        </View>
 
 
         <Animated.View className="max-w-[740px] mx-auto" style={[styles.cta, ctaAnimatedStyle]}>
@@ -285,9 +346,10 @@ export default function HomeScreen() {
 
         <Animated.View style={[styles.socialProof, featuresAnimatedStyle]}>
           <Testimonials locale={getCurrentLocale()} />
+          <Newsletter mode={isDark ? 'dark' : 'light'} />
         </Animated.View>
 
-        <Newsletter mode={isDark ? 'dark' : 'light'} />
+
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>{t('copyright')}</Text>
@@ -298,7 +360,7 @@ export default function HomeScreen() {
   );
 }
 
-const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
+const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
@@ -330,35 +392,35 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     width: '100%',
   },
   logo: {
-    width: 300,
-    height: 100,
-    marginBottom: 15,
+    width: isMobile ? 300 : 650,
+    height: isMobile ? 150 : 250,
+    marginBottom: isMobile ? 10 : 25,
   },
   headline: {
-    fontSize: 48,
+    fontSize: isMobile ? 24 : 48,
     fontWeight: '800',
-    marginBottom: 10,
-    letterSpacing: -1,
-    lineHeight: 48,
+    marginBottom: isMobile ? 10 : 10,
+    letterSpacing: isMobile ? -0.5 : -1,
+    lineHeight: isMobile ? 28 : 48,
   },
   tagline: {
-    fontSize: 16,
+    fontSize: isMobile ? 24 : 44,
     opacity: 0.9,
     fontWeight: '400',
     letterSpacing: 1,
     textAlign: 'center',
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 600,
     transform: [{ translateY: 0 }],
     backfaceVisibility: 'hidden',
     position: 'relative',
   } as const,
   sectionTitle: {
-    fontSize: 28,
+    fontSize: isMobile ? 24 : 28,
     fontWeight: '800',
     marginBottom: 30,
     textAlign: 'center',
-    letterSpacing: -0.5,
+    letterSpacing: isMobile ? -0.5 : -0.5,
     marginTop: 10,
   },
   footer: {
@@ -366,6 +428,8 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     backgroundColor: colors.background.default,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+    bottom: 0,
   },
   footerText: {
     fontSize: 14,
@@ -455,5 +519,45 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontWeight: 'bold',
     color: '#A3A3A3',
     textAlign: 'right',
+  },
+  scrollDownWrapper: {
+    position: 'fixed' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center' as const,
+    padding: 20,
+    width: '100%',
+    backgroundColor: 'transparent',
+  },
+  scrollDownContainer: {
+    alignItems: 'center' as const,
+    padding: 12,
+    minWidth: 160,
+    borderRadius: 25,
+  },
+  scrollDownText: {
+    color: isDark ? '#FFFFFF' : '#121212',
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    opacity: 0.8,
+  },
+  arrowContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  arrowDown: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.8
   }
 });

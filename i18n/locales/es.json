@@ -51,9 +51,6 @@
     "wallet": "Billetera",
     "profile": "Perfil"
   },
-  "common": {
-    "back": "Volver"
-  },
   "auth": {
     "title": "Bienvenido a",
     "subtitle": "Inicia sesión para desbloquear tu vida digital.",
@@ -67,7 +64,8 @@
   "index": {
     "tagline": "TU EVENTO - TU COMUNIDAD - TUS BENEFICIOS",
     "taglineFlipText": "TUS",
-    "taglineFlipList": "TU EVENTO, TU COMUNIDAD, TUS BENEFICIOS",
+    "learnMore": "Conoce más",
+    "taglineFlipList": "- TU EVENTO -,- TU COMUNIDAD -,- TUS BENEFICIOS -",
     "unlockPotential": "Desbloquea tu Potencial",
     "features": {
       "secure": {

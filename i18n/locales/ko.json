@@ -46,6 +46,9 @@
     "tapToEnlarge": "확대하기",
     "tapToMinimize": "축소하기"
   },
+  "common": {
+    "learnMore": "더 알아보기"
+  },
   "tabs": {
     "explore": "탐색",
     "wallet": "지갑",
@@ -64,7 +67,8 @@
   "index": {
     "tagline": "당신의 이벤트 - 당신의 커뮤니티 - 당신의 혜택",
     "taglineFlipText": "당신의",
-    "taglineFlipList": "당신의 이벤트, 당신의 커뮤니티, 당신의 혜택",
+    "learnMore": "더 알아보기",
+    "taglineFlipList": "-당신의 이벤트-,-당신의 커뮤니티-,-당신의 혜택-",
     "unlockPotential": "당신의 잠재력을 발휘하세요",
     "features": {
       "secure": {

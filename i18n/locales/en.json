@@ -74,7 +74,8 @@
   "index": {
     "tagline": "YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS",
     "taglineFlipText": "YOUR",
-    "taglineFlipList": "YOUR EVENT, YOUR COMMUNITY, YOUR BENEFITS",
+    "learnMore": "Learn More",
+    "taglineFlipList": "- YOUR EVENT -,- YOUR COMMUNITY -,- YOUR BENEFITS -",
     "unlockPotential": "Unlock Your Potential",
     "features": {
       "secure": {

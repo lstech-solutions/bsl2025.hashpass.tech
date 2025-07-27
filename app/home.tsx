@@ -96,9 +96,9 @@ export default function HomeScreen() {
     // Scroll to just below the hero section
     if (scrollRef.current) {
       scrollRef.current.scrollTo({
-        y: screenHeight,
+        y: screenHeight * 0.5,
         animated: true,
-        duration: 500 // Add duration for smoother scrolling
+        duration: 500 * (isMobile ? 3 : 2.5), // Add duration for smoother scrolling
       });
     }
   };

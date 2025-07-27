@@ -303,6 +303,11 @@ export default function HomeScreen() {
         </View>
 
 
+ 
+        <Animated.View style={[styles.socialProof, featuresAnimatedStyle]}>
+          <Testimonials locale={getCurrentLocale()} />
+        </Animated.View>
+
         <Animated.View className="max-w-[740px] mx-auto" style={[styles.cta, ctaAnimatedStyle]}>
           {userName ? (
             <>
@@ -348,10 +353,7 @@ export default function HomeScreen() {
           )}
         </Animated.View>
 
-
-
         <Animated.View style={[styles.socialProof, featuresAnimatedStyle]}>
-          <Testimonials locale={getCurrentLocale()} />
           <Newsletter mode={isDark ? 'dark' : 'light'} />
         </Animated.View>
 

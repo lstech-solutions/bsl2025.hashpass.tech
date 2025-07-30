@@ -24,7 +24,6 @@ import Animated, {
 import { InteractiveHoverButton } from './components/InteractiveHoverButton';
 import { FlipWords } from './components/FlipWords';
 import { Newsletter } from './components/newsletter';
-import { ArrowDown } from 'lucide-react-native';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Easing } from 'react-native-reanimated';
 
@@ -245,14 +244,6 @@ export default function HomeScreen() {
         <ThemeAndLanguageSwitcher />
 
         <View style={styles.hero}>
-          <Animated.View style={heroImageAnimatedStyle}>
-            <AnimatedImage
-              source={{ uri: 'https://images.pexels.com/photos/7096461/pexels-photo-7096461.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }}
-              style={styles.heroImage}
-              resizeMode="cover"
-              sharedTransitionTag="heroImage"
-            />
-          </Animated.View>
           <Animated.View style={[styles.heroTextContainer, headerAnimatedStyle]}>
             <Image
               source={isDark
@@ -315,7 +306,7 @@ export default function HomeScreen() {
               <Text style={styles.ctaHeadline}>👋 {t('welcomeBack')} <br />{userName}</Text>
               <Animated.View style={styles.ctaButton}>
                 <TouchableOpacity
-                  onPress={() => router.push('/(tabs)/wallet')}
+                  onPress={() => router.push('/dashboard/explore')}
                   activeOpacity={0.9}
                   onPressIn={() => {
                     buttonAnimation.value = withSpring(1);

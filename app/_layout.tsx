@@ -2,16 +2,17 @@ import '../config/reanimated'; // CRITICAL: Ensure Reanimated is imported and co
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Stack, usePathname, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
+import { usePathname, useSegments } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { ThemeProvider } from '../providers/ThemeProvider';
 import { LanguageProvider } from '../providers/LanguageProvider';
 import { useTheme, useThemeProvider } from '../hooks/useTheme';
-import { StatusBar, View } from 'react-native';
+import { StatusBar } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import "./global.css";
 import PWAPrompt from './components/PWAPrompt';
-import { ActivityIndicator } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Keep the splash screen visible while we fetch resources
@@ -38,26 +39,47 @@ export default function RootLayout() {
 }
 
 function ThemedContent() {
+  // All hooks must be called unconditionally at the top level
   const { colors, isDark } = useTheme();
   const pathname = usePathname();
+  const segments = useSegments();
+  const router = useRouter();
   const { isLoggedIn, isLoading } = useAuth();
   const [isReady, setIsReady] = useState(false);
-  const router = useRouter();
+  const [showSplash, setShowSplash] = useState(true);
 
+  // Check if we're in the auth flow
+  const isAuthFlow = segments[0] === 'auth' || pathname.startsWith('/auth');
+
+  // Handle loading state and splash screen
   useEffect(() => {
     if (!isLoading) {
       setIsReady(true);
     }
   }, [isLoading]);
 
+  // Handle splash screen hiding
   useEffect(() => {
     if (isReady) {
-      SplashScreen.hideAsync();
+      const hideSplash = async () => {
+        await SplashScreen.hideAsync();
+        setShowSplash(false);
+      };
+      hideSplash();
     }
   }, [isReady]);
 
+  // Handle auth redirection
+  useEffect(() => {
+    if (isReady && !isLoading) {
+      if (!isLoggedIn && !isAuthFlow) {
+        router.replace('/auth');
+      }
+    }
+  }, [isLoggedIn, isAuthFlow, isReady, isLoading, router]);
 
-  if (!isReady) {
+  // Show loading state
+  if (isLoading || !isReady || showSplash) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.default }}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -68,35 +90,31 @@ function ThemedContent() {
   return (
     <>
       <Stack
-        screenOptions={({ route }) => ({
-          headerShown: (route.name !== 'index' && route.name !== 'auth') && false,
+        screenOptions={{
+          headerShown: false,
           contentStyle: {
             backgroundColor: isDark ? colors.primaryDark : colors.background.paper,
           },
           animation: 'slide_from_right',
           animationTypeForReplace: 'push',
-          headerTintColor: colors.text.primary as string,
-          headerTitleStyle: {
-            fontWeight: '600',
-            color: colors.text.primary as string,
-          },
-          headerShadowVisible: false,
-        })}
+        }}
       >
-        <Stack.Protected guard={isLoggedIn}>
-          <Stack.Screen
-            name="(tabs)"
-            options={{
-              headerShown: false,
-              title: 'Tabs',
+        {!isLoggedIn ? (
+          // Auth flow screens
+          <>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="auth" options={{ headerShown: false }} />
+            <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+          </>
+        ) : (
+          // Main app screens - use a single Stack.Screen
+          <Stack.Screen 
+            name="dashboard" 
+            options={{ 
+              headerShown: false
             }}
-
           />
-        </Stack.Protected>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="home" options={{ headerShown: false }} />
-        <Stack.Screen name="auth" options={{ headerShown: false }} />
-        <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+        )}
       </Stack>
       <PWAPrompt />
     </>

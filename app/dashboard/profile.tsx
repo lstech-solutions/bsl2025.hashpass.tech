@@ -8,14 +8,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from '../../i18n/i18n';
 import { version } from '../../package.json';
 
-const styles = StyleSheet.create({
-  noiseContainer: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    overflow: 'hidden',
-  },
-});
-
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const [notifications, setNotifications] = useState(true);

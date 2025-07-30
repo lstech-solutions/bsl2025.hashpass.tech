@@ -143,33 +143,42 @@ export const ThemeAndLanguageSwitcher = () => {
         )}
       </View>
       
-      <Animated.View style={[animatedStyle, { marginLeft: 10 }]}>
+      <Animated.View style={[styles.button, animatedStyle, { marginLeft: 10 }]}>
         <TouchableOpacity 
-          style={[
-            styles.button, 
-            { 
-              backgroundColor: colors.surface,
-              shadowColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.5,
-              shadowRadius: 4,
-              elevation: 4,
-            }
-          ]}
+          style={{
+            width: '100%',
+            height: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: colors.primary,
+            borderRadius: 25,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+            elevation: 5,
+          }}
           onPress={handleThemeToggle}
           activeOpacity={0.8}
         >
           <Ionicons 
             name={isDark ? 'sunny' : 'moon'} 
             size={24} 
-            color={isDark ? '#FFD700' : '#6C63FF'} 
+            color={colors.primaryContrastText} 
           />
         </TouchableOpacity>
       </Animated.View>
       
       {showLanguageMenu && (
         <TouchableWithoutFeedback onPress={toggleLanguageMenu}>
-          <View style={styles.overlay} />
+          <View style={[
+            styles.overlay, 
+            { 
+              backgroundColor: isDark 
+                ? 'rgba(0,0,0,0.7)' 
+                : 'rgba(0,0,0,0.5)' 
+            }
+          ]} />
         </TouchableWithoutFeedback>
       )}
     </View>

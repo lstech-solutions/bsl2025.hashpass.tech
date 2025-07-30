@@ -70,7 +70,7 @@ export default function AuthCallback() {
                 setMessage('✅ Google authentication successful!');
 
                 setTimeout(() => {
-                    router.replace('/(tabs)/wallet');
+                    router.replace('/dashboard/explore');
                 }, 2000);
             } else {
                 console.log('⚠️ No session created but no error - checking for existing session');
@@ -83,7 +83,7 @@ export default function AuthCallback() {
                     setMessage('✅ Authentication successful!');
 
                     setTimeout(() => {
-                        router.replace('/(tabs)/wallet');
+                        router.replace('/dashboard/explore');
                     }, 2000);
                 } else {
                     throw new Error('No session could be established');
@@ -99,7 +99,7 @@ export default function AuthCallback() {
                 setMessage('✅ Google authentication successful!\n\n⚠️ Email not provided by Google (this is normal)');
 
                 setTimeout(() => {
-                    router.replace('/(tabs)/wallet');
+                    router.replace('/dashboard/explore');
                 }, 3000);
                 return;
             }

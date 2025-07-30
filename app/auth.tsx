@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../i18n/i18n';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
-import { BackgroundGradientAnimation } from './components/BackgroundGradientAnimation';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,7 +34,7 @@ export default function AuthScreen() {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         if (session) {
-          router.replace('/(tabs)/wallet');
+          router.replace('/dashboard/explore');
         }
       }
     );
@@ -69,7 +68,6 @@ export default function AuthScreen() {
   };
 
   return (
- 
       <SafeAreaView style={styles.container}>
         <SplashCursor
           style={{
@@ -125,7 +123,6 @@ export default function AuthScreen() {
           </Text>
         </View>
       </SafeAreaView>
-/*     </BackgroundGradientAnimation> */
   );
 }
 

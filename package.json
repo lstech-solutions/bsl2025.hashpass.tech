@@ -1,7 +1,7 @@
 {
   "name": "hashpass.tech",
   "main": "expo-router/entry",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -22,12 +22,15 @@
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-navigation/bottom-tabs": "^7.2.0",
+    "@react-navigation/drawer": "^7.5.5",
     "@react-navigation/native": "^7.0.14",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.52.0",
+    "@tailwindcss/typography": "^0.5.13",
     "@types/nodemailer": "^6.4.17",
     "autoprefixer": "^10.4.20",
+    "babel-plugin-module-resolver": "^5.0.2",
     "events": "^3.3.0",
     "expo": "^53.0.0",
     "expo-atlas": "^0.4.0",
@@ -38,6 +41,7 @@
     "expo-font": "~13.3.1",
     "expo-haptics": "~14.1.4",
     "expo-image": "~2.1.6",
+    "expo-linear-gradient": "~14.1.5",
     "expo-linking": "~7.1.4",
     "expo-localization": "^16.1.6",
     "expo-router": "~5.0.5",
@@ -56,7 +60,7 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.2",
-    "react-native-gesture-handler": "~2.24.0",
+    "react-native-gesture-handler": "~2.12.0",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.10.0",
@@ -66,9 +70,7 @@
     "react-native-webview": "13.13.5",
     "tailwindcss": "^3.4.17",
     "twrnc": "^4.9.1",
-    "workbox-cli": "^7.1.0",
-    "babel-plugin-module-resolver": "^5.0.2",
-    "@tailwindcss/typography": "^0.5.13"
+    "workbox-cli": "^7.1.0"
   },
   "engines": {
     "node": "22.17.1"

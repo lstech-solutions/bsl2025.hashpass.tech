@@ -41,7 +41,7 @@ const getFeatureStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     letterSpacing: -0.3,
     textAlign: 'center',
     width: '100%',
-    color: colors.text,
+    color: isDark ? colors.primary : colors.secondaryDark,
   },
   featureDescription: {
     fontSize: 16,
@@ -50,7 +50,7 @@ const getFeatureStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     letterSpacing: 0.1,
     textAlign: 'center',
     width: '100%',
-    color: isDark ? colors.text : colors.textSecondary,
+    color: isDark ? colors.primaryContrastText : colors.textSecondary,
   },
 });
 
@@ -143,7 +143,8 @@ const Features: React.FC<FeaturesProps> = ({
               }
               height={280}
               width={280}
-            />
+              isDark={isDark}
+              />
           </View>
         ))}
       </View>

@@ -53,7 +53,7 @@ const baseColors = {
   secondary: {
     main: '#FF80AB', // Softer pink
     light: '#FFA8C5',
-    dark: '#F50057',
+    dark: '#af0d01',
     contrastText: '#000000',
   },
   background: {

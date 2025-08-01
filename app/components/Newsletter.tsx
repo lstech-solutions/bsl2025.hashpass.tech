@@ -130,7 +130,7 @@ export const Newsletter = ({ mode }: Props) => {
 
                             <div className='w-full space-y-4 mt-6'>
                                 <div className='relative'>
-                                    <div className={`relative flex items-center rounded-lg border ${error ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all duration-200`}>
+                                    <div className={`relative flex items-center rounded-full  border ${error ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all duration-200`}>
                                         <svg className='h-5 w-5 text-gray-400 absolute left-3' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
                                             <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' />
                                         </svg>
@@ -142,7 +142,7 @@ export const Newsletter = ({ mode }: Props) => {
                                                 if (error) setError('');
                                             }}
                                             placeholder={t('emailPlaceholder', 'your@email.com')}
-                                            className='w-full px-4 py-3 pl-10 text-sm sm:text-base rounded-lg bg-transparent outline-none transition-all duration-200 placeholder-gray-400 dark:placeholder-white dark:text-white text-gray-600 dark:text-gray-300'
+                                            className='w-full px-4 py-3 pl-10 text-sm sm:text-base rounded-full  bg-transparent outline-none transition-all duration-200 placeholder-gray-400 dark:placeholder-white dark:text-white text-gray-600 dark:text-gray-300'
                                             disabled={isLoading}
                                             onKeyDown={(e) => e.key === 'Enter' && handleSubscribe()}
                                         />
@@ -159,7 +159,10 @@ export const Newsletter = ({ mode }: Props) => {
                                 <button
                                     onClick={handleSubscribe}
                                     disabled={isLoading}
-                                    className='w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl hover:shadow-blue-500/20 disabled:hover:shadow-none'
+                                    className={`w-full rounded-full font-medium py-3 px-6 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl disabled:hover:shadow-none ${isDark
+                                            ? 'bg-cyan-700 hover:bg-cyan-700 text-white hover:shadow-cyan-900/50'
+                                            : 'bg-red-700 hover:bg-red-600 text-white hover:shadow-red-500/20'
+                                        }`}
                                 >
                                     {isLoading ? (
                                         <>

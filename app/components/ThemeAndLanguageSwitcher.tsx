@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../../providers/LanguageProvider';
 import { getAvailableLocales } from '../../i18n/i18n';
+import { useTranslation } from '../../i18n/i18n';
 
 export const ThemeAndLanguageSwitcher = () => {
   const { toggleTheme, colors, isDark } = useTheme();
@@ -14,13 +15,14 @@ export const ThemeAndLanguageSwitcher = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const availableLocales = getAvailableLocales();
-  
+  const { t } = useTranslation('profile');
+
   const currentLanguage = availableLocales.find(lang => lang.code === locale) || availableLocales[0];
 
   const handleThemeToggle = () => {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 0.8,
@@ -45,7 +47,7 @@ export const ThemeAndLanguageSwitcher = () => {
         rotateAnim.setValue(0);
       }
     });
-    
+
     toggleTheme();
   };
 
@@ -82,14 +84,14 @@ export const ThemeAndLanguageSwitcher = () => {
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
-  
+
   const animatedStyle = {
     transform: [
       { rotate: rotateInterpolate },
       { scale: scaleAnim },
     ],
   };
-  
+
   const menuTranslateY = slideAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [-20, 0],
@@ -103,7 +105,7 @@ export const ThemeAndLanguageSwitcher = () => {
   return (
     <View style={styles.container}>
       <View style={styles.languageContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.button, { backgroundColor: colors.surface }]}
           onPress={toggleLanguageMenu}
           activeOpacity={0.8}
@@ -112,12 +114,12 @@ export const ThemeAndLanguageSwitcher = () => {
             {currentLanguage.code.toUpperCase()}
           </Text>
         </TouchableOpacity>
-        
+
         {showLanguageMenu && (
-          <Animated.View 
+          <Animated.View
             style={[
               styles.languageMenu,
-              { 
+              {
                 backgroundColor: colors.surface,
                 transform: [{ translateY: menuTranslateY }],
                 opacity: menuOpacity,
@@ -135,16 +137,16 @@ export const ThemeAndLanguageSwitcher = () => {
                 onPress={() => handleLanguageSelect(lang.code)}
               >
                 <Text style={[styles.languageText, { color: colors.text.primary }]}>
-                  {lang.name}
+                  {t(`languages.${lang.name}`)}
                 </Text>
               </TouchableOpacity>
             ))}
           </Animated.View>
         )}
       </View>
-      
+
       <Animated.View style={[styles.button, animatedStyle, { marginLeft: 10 }]}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={{
             width: '100%',
             height: '100%',
@@ -161,23 +163,19 @@ export const ThemeAndLanguageSwitcher = () => {
           onPress={handleThemeToggle}
           activeOpacity={0.8}
         >
-          <Ionicons 
-            name={isDark ? 'sunny' : 'moon'} 
-            size={24} 
-            color={colors.primaryContrastText} 
+          <Ionicons
+            name={isDark ? 'sunny' : 'moon'}
+            size={24}
+            color={colors.primaryContrastText}
           />
         </TouchableOpacity>
       </Animated.View>
-      
+
       {showLanguageMenu && (
         <TouchableWithoutFeedback onPress={toggleLanguageMenu}>
           <View style={[
-            styles.overlay, 
-            { 
-              backgroundColor: isDark 
-                ? 'rgba(0,0,0,0.7)' 
-                : 'rgba(0,0,0,0.5)' 
-            }
+            styles.overlay,
+
           ]} />
         </TouchableWithoutFeedback>
       )}

@@ -64,9 +64,9 @@ export const getDeviceLocale = (): string => {
 
 export const getAvailableLocales = () => {
   return [
-    { code: 'en', name: 'English' },
-    { code: 'es', name: 'Español' },
-    { code: 'ko', name: '한국어' },
+    { code: 'en', name: 'english' },
+    { code: 'es', name: 'spanish' },
+    { code: 'ko', name: 'korean' },
   ];
 };
 

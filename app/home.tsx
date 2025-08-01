@@ -23,7 +23,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { InteractiveHoverButton } from './components/InteractiveHoverButton';
 import { FlipWords } from './components/FlipWords';
-import { Newsletter } from './components/newsletter';
+import { Newsletter } from './components/Newsletter';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Easing } from 'react-native-reanimated';
 
@@ -247,10 +247,10 @@ export default function HomeScreen() {
           <Animated.View style={[styles.heroTextContainer, headerAnimatedStyle]}>
             <Image
               source={isDark
-                ? require('../assets/logos/logo-full-hashpass-black.svg')
+                ? require('../assets/logos/logo-full-hashpass-white-cyan.svg')
                 : require('../assets/logos/logo-full-hashpass-white.svg')
               }
-              style={styles.logo}
+              style={[styles.logo, headerAnimatedStyle]}
               resizeMode="contain"
             />
             <Text style={[styles.tagline, { color: colors.text.primary }]}>
@@ -537,11 +537,9 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     zIndex: 10,
   },
   scrollDownButton: {
-    // Make the entire area clickable
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    // Make sure touch events work properly
     position: 'relative',
     zIndex: 1001,
   },
@@ -567,7 +565,6 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-   // backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
     borderRadius: 20,
     pointerEvents: 'auto',
     elevation: 50,
@@ -580,7 +577,6 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     justifyContent: 'center',
     alignItems: 'center',
     cursor: 'pointer',
-    // Visual feedback on press
     transform: [{ scale: 1 }],
   },
   arrowDown: {

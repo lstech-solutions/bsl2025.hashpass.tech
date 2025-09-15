@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Platform, Image, TouchableOpacity, Linking } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { createSessionFromUrl, supabase } from '../../lib/supabase';
 import { Check, AlertCircle, Info } from 'lucide-react-native';
@@ -7,7 +7,7 @@ import { Check, AlertCircle, Info } from 'lucide-react-native';
 export default function AuthCallback() {
     const router = useRouter();
     const params = useLocalSearchParams();
-    const [status, setStatus] = useState<'processing' | 'success' | 'warning' | 'error'>('processing');
+    const [status, setStatus] = useState<'processing' | 'success' | 'warning' | 'error' | 'show_download'>('processing');
     const [message, setMessage] = useState('Processing authentication...');
 
     useEffect(() => {
@@ -70,8 +70,12 @@ export default function AuthCallback() {
                 setMessage('✅ Google authentication successful!');
 
                 setTimeout(() => {
-                    router.replace('/dashboard/explore');
-                }, 2000);
+                    if (Platform.OS === 'web') {
+                        setStatus('show_download');
+                    } else {
+                        router.replace('/dashboard/explore');
+                    }
+                }, 1000);
             } else {
                 console.log('⚠️ No session created but no error - checking for existing session');
 
@@ -83,8 +87,12 @@ export default function AuthCallback() {
                     setMessage('✅ Authentication successful!');
 
                     setTimeout(() => {
-                        router.replace('/dashboard/explore');
-                    }, 2000);
+                        if (Platform.OS === 'web') {
+                            setStatus('show_download');
+                        } else {
+                            router.replace('/dashboard/explore');
+                        }
+                    }, 1000);
                 } else {
                     throw new Error('No session could be established');
                 }
@@ -115,6 +123,38 @@ export default function AuthCallback() {
 
     const styles = createStyles();
 
+    const handleContinue = () => {
+        router.replace('/dashboard/explore');
+    };
+
+    if (status === 'show_download') {
+        return (
+            <View style={styles.container}>
+                <View style={styles.content}>
+                    <Text style={styles.title}>Welcome to Hashpass!</Text>
+                    <Text style={styles.betaDisclaimer}>Our web app is in beta. For the best experience, please use our mobile app.</Text>
+                    
+                    <Image source={{ uri: '/assets/images/qr-code.png' }} style={styles.qrCode} />
+
+                    <Text style={styles.message}>Scan the QR code to download</Text>
+
+                    <View style={styles.storeButtonsContainer}>
+                        <TouchableOpacity onPress={() => Linking.openURL('https://onelink.to/4px5bv')}>
+                            <Image source={{ uri: '/assets/images/app-store-badge.png' }} style={styles.storeButton} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => Linking.openURL('https://onelink.to/4px5bv')}>
+                            <Image source={{ uri: '/assets/images/google-play-badge.png' }} style={styles.storeButton} />
+                        </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity onPress={handleContinue} style={styles.continueButton}>
+                        <Text style={styles.continueButtonText}>Continue to Web App</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    }
+
     return (
         <View style={styles.container}>
             <View style={styles.content}>
@@ -125,21 +165,12 @@ export default function AuthCallback() {
                     </>
                 )}
 
-                {status === 'success' && (
+                {(status === 'success' || status === 'warning') && (
                     <>
                         <View style={styles.successIcon}>
                             <Check size={32} color="#fff" />
                         </View>
                         <Text style={styles.title}>Success!</Text>
-                    </>
-                )}
-
-                {status === 'warning' && (
-                    <>
-                        <View style={styles.warningIcon}>
-                            <Info size={32} color="#fff" />
-                        </View>
-                        <Text style={styles.title}>Authentication Successful!</Text>
                     </>
                 )}
 
@@ -156,7 +187,7 @@ export default function AuthCallback() {
 
                 {status !== 'processing' && (
                     <Text style={styles.redirectText}>
-                        Redirecting you back to the app...
+                        Please wait...
                     </Text>
                 )}
             </View>
@@ -218,5 +249,42 @@ const createStyles = () => StyleSheet.create({
         backgroundColor: '#000',
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    betaDisclaimer: {
+        fontSize: 14,
+        color: '#fff',
+        textAlign: 'center',
+        marginBottom: 20,
+        lineHeight: 20,
+        opacity: 0.8,
+    },
+    qrCode: {
+        width: 200,
+        height: 200,
+        marginVertical: 20,
+    },
+    storeButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 10,
+        marginTop: 10,
+        marginBottom: 20,
+    },
+    storeButton: {
+        width: 135,
+        height: 40,
+        resizeMode: 'contain',
+    },
+    continueButton: {
+        marginTop: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        backgroundColor: '#333',
+        borderRadius: 8,
+    },
+    continueButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
     },
 });

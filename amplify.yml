@@ -8,10 +8,9 @@ frontend:
         - npm ci
     build:
       commands:
-        - npm run prebuild  # This will remove any existing web-build directory
         - npm run build:web
   artifacts:
-    baseDirectory: dist/client
+    baseDirectory: dist/
     files:
       - '**/*'
   cache:

@@ -17,7 +17,7 @@ frontend:
       commands:
         - npx expo export -p web
   artifacts:
-    baseDirectory: web-build
+    baseDirectory: dist
     files:
       - '**/*'
   cache:

@@ -22,3 +22,12 @@ frontend:
       headers:
         - key: 'Cache-Control'
           value: 'public, max-age=0, must-revalidate'
+  
+  # Single Page App (SPA) routing
+  redirects:
+    - source: '/<*>'
+      status: '200'
+      target: '/index.html'
+    - source: '/'
+      status: '200'
+      target: '/index.html'

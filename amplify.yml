@@ -10,7 +10,7 @@ frontend:
       commands:
         - npm run build:web
   artifacts:
-    baseDirectory: dist/
+    baseDirectory: dist/client
     files:
       - '**/*'
   cache:

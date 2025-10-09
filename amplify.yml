@@ -40,11 +40,8 @@ frontend:
         - key: 'Cache-Control'
           value: 'public, max-age=0, must-revalidate'
   
-  # Handle Expo web routing
+  # Handle Expo web routing with App Router
   redirects:
-    - source: '/*'
-      status: '200'
-      target: '/index.html'
     - source: '/_expo/*'
       status: '200'
       target: '/_expo/'
@@ -54,6 +51,12 @@ frontend:
     - source: '/dashboard/*'
       status: '200'
       target: '/dashboard/'
+    - source: '/*'
+      status: '200'
+      target: '/'
+    - source: '/*/'
+      status: '200'
+      target: '/'
   
   # Custom error responses
   customErrorResponses:

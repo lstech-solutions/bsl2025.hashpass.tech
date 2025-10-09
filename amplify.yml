@@ -21,7 +21,21 @@ frontend:
       - node_modules/**/*
       - .expo/**/*
   customHeaders:
-    - pattern: '**/*'
+    - pattern: 'sw.js'
+      headers:
+        - key: 'Cache-Control'
+          value: 'no-cache, no-store, must-revalidate'
+        - key: 'Service-Worker-Allowed'
+          value: '/'
+    - pattern: '**/*.js'
+      headers:
+        - key: 'Cache-Control'
+          value: 'public, max-age=31536000, immutable'
+    - pattern: '**/*.css'
+      headers:
+        - key: 'Cache-Control'
+          value: 'public, max-age=31536000, immutable'
+    - pattern: '**/*.html'
       headers:
         - key: 'Cache-Control'
           value: 'public, max-age=0, must-revalidate'

@@ -25,6 +25,8 @@ frontend:
         - cp -r dist/* dist/client/ || true
         # Copy service worker to client directory for root access
         - cp dist/sw.js dist/client/
+        # Copy index.html from server to client as SPA entry point
+        - cp dist/server/index.html dist/client/index.html
   artifacts:
     baseDirectory: dist/client
     files:
@@ -34,7 +36,11 @@ frontend:
         headers:
           - key: Cache-Control
             value: 'public, max-age=31536000, immutable'
-      - pattern: 'sw.js'
+      - pattern: 'index.html'
+        headers:
+          - key: Cache-Control
+            value: 'public, max-age=0, must-revalidate'
+      - pattern: '**/*.html'
         headers:
           - key: Cache-Control
             value: 'public, max-age=0, must-revalidate'

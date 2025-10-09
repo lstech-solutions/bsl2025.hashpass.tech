@@ -39,20 +39,20 @@ customHeaders:
 # Handle client-side routing
 redirects:
   - source: '/<*>'
-    status: '200'
-    target: '/index.html'
+    status: 200
+    target: '/'
   - source: '/_expo/*'
-    status: '200'
+    status: 200
     target: '/_expo/'
   - source: '/api/*'
-    status: '200'
+    status: 200
     target: '/api/'
   - source: '/dashboard/*'
-    status: '200'
-    target: '/dashboard/'
+    status: 200
+    target: '/'
   - source: '/auth/*'
-    status: '200'
-    target: '/auth/'
+    status: 200
+    target: '/'
 
 # Custom error responses
 customErrorResponses:

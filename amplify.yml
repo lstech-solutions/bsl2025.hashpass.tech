@@ -15,9 +15,9 @@ frontend:
           fi
     build:
       commands:
-        - npx expo export -p web
+        - npx expo export -p web && npx workbox-cli generateSW workbox-config.js
   artifacts:
-    baseDirectory: dist
+    baseDirectory: dist/client
     files:
       - '**/*'
   cache:

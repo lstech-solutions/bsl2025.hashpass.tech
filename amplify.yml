@@ -1,21 +1,29 @@
-version: 1
+version: 1.0
 frontend:
   phases:
     preBuild:
       commands:
         - nvm install 22.18.0
-        - npm install -g npm@latest
-        - npm ci
+        - npm install --quiet --global expo-cli
+        - >
+          if [ -f yarn.lock ]; then
+            yarn
+          elif [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            npm install
+          fi
     build:
       commands:
-        - npm run build:web
+        - expo build:web
   artifacts:
-    baseDirectory: dist/client
+    baseDirectory: web-build
     files:
       - '**/*'
   cache:
     paths:
       - node_modules/**/*
+      - $(npm root --global)/**/*
 
 # Custom cache settings
 customHeaders:

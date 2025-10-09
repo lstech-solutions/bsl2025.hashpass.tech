@@ -13,53 +13,50 @@ frontend:
     baseDirectory: dist/client
     files:
       - '**/*'
-    # Include all files from the client directory
-    include:
-      - '**/*'
   cache:
     paths:
       - node_modules/**/*
-      - .expo/**/*
-  customHeaders:
-    - pattern: 'sw.js'
-      headers:
-        - key: 'Cache-Control'
-          value: 'no-cache, no-store, must-revalidate'
-        - key: 'Service-Worker-Allowed'
-          value: '/'
-    - pattern: '**/*.js'
-      headers:
-        - key: 'Cache-Control'
-          value: 'public, max-age=31536000, immutable'
-    - pattern: '**/*.css'
-      headers:
-        - key: 'Cache-Control'
-          value: 'public, max-age=31536000, immutable'
-    - pattern: '**/*.html'
-      headers:
-        - key: 'Cache-Control'
-          value: 'public, max-age=0, must-revalidate'
-  
-  # Handle Expo web routing with App Router
-  redirects:
-    - source: '/_expo/*'
-      status: '200'
-      target: '/_expo/'
-    - source: '/auth/*'
-      status: '200'
-      target: '/auth/'
-    - source: '/dashboard/*'
-      status: '200'
-      target: '/dashboard/'
-    - source: '/*'
-      status: '200'
-      target: '/'
-    - source: '/*/'
-      status: '200'
-      target: '/'
-  
-  # Custom error responses
-  customErrorResponses:
-    - errorCode: 404
-      responsePagePath: '/+not-found.html'
-      responseCode: 200
+
+# Custom cache settings
+customHeaders:
+  - pattern: '**/*.js'
+    headers:
+      - key: Cache-Control
+        value: 'public, max-age=31536000, immutable'
+  - pattern: '**/*.css'
+    headers:
+      - key: Cache-Control
+        value: 'public, max-age=31536000, immutable'
+  - pattern: '**/*.html'
+    headers:
+      - key: Cache-Control
+        value: 'public, max-age=0, must-revalidate'
+  - pattern: '_expo/static/**/*'
+    headers:
+      - key: Cache-Control
+        value: 'public, max-age=31536000, immutable'
+
+# Handle client-side routing
+redirects:
+  - source: '/<*>'
+    status: '200'
+    target: '/index.html'
+  - source: '/_expo/*'
+    status: '200'
+    target: '/_expo/'
+  - source: '/api/*'
+    status: '200'
+    target: '/api/'
+  - source: '/dashboard/*'
+    status: '200'
+    target: '/dashboard/'
+  - source: '/auth/*'
+    status: '200'
+    target: '/auth/'
+
+# Custom error responses
+customErrorResponses:
+  - errorCode: 404
+    responsePagePath: '/index.html'
+    responseCode: 200
+    errorCachingMinTTL: 0

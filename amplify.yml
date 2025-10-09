@@ -10,10 +10,10 @@ frontend:
       commands:
         - npm run build:web
   artifacts:
-    baseDirectory: dist/server
+    baseDirectory: dist/client
     files:
       - '**/*'
-    # Include all files from the server directory
+    # Include all files from the client directory
     include:
       - '**/*'
   cache:

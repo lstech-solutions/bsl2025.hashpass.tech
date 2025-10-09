@@ -17,14 +17,16 @@ frontend:
       commands:
         # Clean previous builds
         - rm -rf dist
-        # Build Expo web app
-        - npx expo export -p web
+        # Build Expo web app with service worker
+        - npm run build:web
         # Create necessary directories
-        - mkdir -p dist
-        # Copy built files to dist directory
-        - cp -r dist/* dist/ || true
+        - mkdir -p dist/client
+        # Copy built files to dist/client directory if needed
+        - cp -r dist/* dist/client/ || true
+        # Copy service worker to client directory for root access
+        - cp dist/sw.js dist/client/
   artifacts:
-    baseDirectory: dist
+    baseDirectory: dist/client
     files:
       - '**/*'
     customHeaders:
@@ -32,18 +34,14 @@ frontend:
         headers:
           - key: Cache-Control
             value: 'public, max-age=31536000, immutable'
+      - pattern: 'sw.js'
+        headers:
+          - key: Cache-Control
+            value: 'public, max-age=0, must-revalidate'
       - pattern: '**/*.js'
         headers:
           - key: Cache-Control
             value: 'public, max-age=31536000, immutable'
-      - pattern: '**/*.css'
-        headers:
-          - key: Cache-Control
-            value: 'public, max-age=31536000, immutable'
-      - pattern: '**/*.html'
-        headers:
-          - key: Cache-Control
-            value: 'public, max-age=0, must-revalidate'
 
   cache:
     paths:
@@ -55,6 +53,9 @@ redirects:
   - source: '/<*>'
     status: 200
     target: '/index.html'
+  - source: '/sw.js'
+    status: 200
+    target: '/sw.js'
   - source: '/_expo/*'
     status: 200
     target: '/_expo/'

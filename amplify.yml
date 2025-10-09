@@ -7,7 +7,7 @@ frontend:
         - npm install --quiet --global @expo/cli
         - >
           if [ -f yarn.lock ]; then
-            yarn
+            yarn install --frozen-lockfile
           elif [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
             npm ci
           else
@@ -15,7 +15,18 @@ frontend:
           fi
     build:
       commands:
-        - npx expo export -p web && npx workbox-cli generateSW workbox-config.js
+        # Build Expo web in server mode
+        - npx expo export -p web
+
+        # Prepare Amplify deploy directory
+        - mkdir -p dist/client
+
+        # Copy static and server files to Amplify deploy folder
+        - cp -r .expo/output/static/* dist/client/ || echo "No static folder found"
+        - cp -r .expo/output/server/* dist/client/ || echo "No server folder found"
+
+        # Optional: generate service worker (only if workbox-config.js exists)
+        - npx workbox-cli generateSW workbox-config.js || echo "Skipping Workbox"
   artifacts:
     baseDirectory: dist/client
     files:
@@ -25,7 +36,6 @@ frontend:
       - node_modules/**/*
       - $(npm root --global)/**/*
 
-# Custom cache settings
 customHeaders:
   - pattern: '**/*.js'
     headers:
@@ -44,27 +54,8 @@ customHeaders:
       - key: Cache-Control
         value: 'public, max-age=31536000, immutable'
 
-# Handle client-side routing
 redirects:
+  # Client-side routing (SPA)
   - source: '/<*>'
     status: 200
     target: '/'
-  - source: '/_expo/*'
-    status: 200
-    target: '/_expo/'
-  - source: '/api/*'
-    status: 200
-    target: '/api/'
-  - source: '/dashboard/*'
-    status: 200
-    target: '/'
-  - source: '/auth/*'
-    status: 200
-    target: '/'
-
-# Custom error responses
-customErrorResponses:
-  - errorCode: 404
-    responsePagePath: '/index.html'
-    responseCode: 200
-    errorCachingMinTTL: 0

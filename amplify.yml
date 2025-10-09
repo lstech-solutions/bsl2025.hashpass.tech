@@ -10,8 +10,11 @@ frontend:
       commands:
         - npm run build:web
   artifacts:
-    baseDirectory: dist/client
+    baseDirectory: dist/server
     files:
+      - '**/*'
+    # Include all files from the server directory
+    include:
       - '**/*'
   cache:
     paths:
@@ -23,11 +26,23 @@ frontend:
         - key: 'Cache-Control'
           value: 'public, max-age=0, must-revalidate'
   
-  # Single Page App (SPA) routing
+  # Handle Expo web routing
   redirects:
-    - source: '/<*>'
+    - source: '/*'
       status: '200'
       target: '/index.html'
-    - source: '/'
+    - source: '/_expo/*'
       status: '200'
-      target: '/index.html'
+      target: '/_expo/'
+    - source: '/auth/*'
+      status: '200'
+      target: '/auth/'
+    - source: '/dashboard/*'
+      status: '200'
+      target: '/dashboard/'
+  
+  # Custom error responses
+  customErrorResponses:
+    - errorCode: 404
+      responsePagePath: '/+not-found.html'
+      responseCode: 200

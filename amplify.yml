@@ -15,27 +15,23 @@ frontend:
           fi
     build:
       commands:
-        # Build Expo for web in server mode (SSR)
+        # Clean previous builds
+        - rm -rf dist
+        # Build Expo web app
         - npx expo export -p web
-
-        # Prepare Amplify directory structure
-        - mkdir -p dist/client
-        - mkdir -p dist/server
-
-        # Copy static assets (client-side)
-        - cp -r .expo/output/static/* dist/client/ || echo "No static folder found"
-
-        # Copy server bundle (for SSR)
-        - cp -r .expo/output/server/* dist/server/ || echo "No server folder found"
-        - cp .expo/output/server.mjs dist/server/index.mjs || echo "No server.mjs found"
-
+        # Create necessary directories
+        - mkdir -p dist
+        # Copy built files to dist directory
+        - cp -r dist/* dist/ || true
   artifacts:
-    # Tell Amplify where to find built assets and SSR entrypoint
     baseDirectory: dist
     files:
       - '**/*'
-    # SSR configuration
     customHeaders:
+      - pattern: '_expo/static/**/*'
+        headers:
+          - key: Cache-Control
+            value: 'public, max-age=31536000, immutable'
       - pattern: '**/*.js'
         headers:
           - key: Cache-Control
@@ -54,20 +50,27 @@ frontend:
       - node_modules/**/*
       - $(npm root --global)/**/*
 
-# Enable SSR with Node runtime
-backend:
-  phases:
-    build:
-      commands:
-        - echo "Using Node SSR runtime for Expo"
-  artifacts:
-    baseDirectory: dist/server
-    files:
-      - '**/*'
-  customRules:
-    - source: '/<*>'
-      target: '/'
-      status: 200
-  ssr:
-    enabled: true
-    entry: dist/server/index.mjs
+# Client-side routing
+redirects:
+  - source: '/<*>'
+    status: 200
+    target: '/index.html'
+  - source: '/_expo/*'
+    status: 200
+    target: '/_expo/'
+  - source: '/api/*'
+    status: 200
+    target: '/api/'
+  - source: '/dashboard/*'
+    status: 200
+    target: '/'
+  - source: '/auth/*'
+    status: 200
+    target: '/'
+
+# Error page for 404s
+customErrorResponses:
+  - errorCode: 404
+    responsePagePath: '/index.html'
+    responseCode: 200
+    errorCachingMinTTL: 0

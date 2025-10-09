@@ -3,7 +3,7 @@ frontend:
   phases:
     preBuild:
       commands:
-        - nvm install 18.18.0
+        - nvm install 22.18.0
         - npm install --quiet --global @expo/cli
         - >
           if [ -f yarn.lock ]; then

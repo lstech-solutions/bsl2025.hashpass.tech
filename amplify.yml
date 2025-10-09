@@ -3,8 +3,8 @@ frontend:
   phases:
     preBuild:
       commands:
-        - nvm install 22.18.0
-        - npm install --quiet --global expo-cli
+        - nvm install 18.18.0
+        - npm install --quiet --global @expo/cli
         - >
           if [ -f yarn.lock ]; then
             yarn
@@ -15,7 +15,7 @@ frontend:
           fi
     build:
       commands:
-        - expo build:web
+        - npx expo export:web
   artifacts:
     baseDirectory: web-build
     files:

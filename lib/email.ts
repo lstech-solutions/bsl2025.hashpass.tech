@@ -160,3 +160,21 @@ ${content.html.website}`,
     };
   }
 }
+
+export async function sendBookingEmail(
+  to: string,
+  type: 'requested' | 'accepted' | 'cancelled',
+  payload: { speakerName?: string; start?: string }
+): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  if (!emailEnabled || !transporter) {
+    return { success: false, error: 'Email service is not configured' };
+  }
+  try {
+    const subject = type === 'requested' ? 'Nueva solicitud de cita' : type === 'accepted' ? 'Tu cita fue aceptada' : 'Tu cita fue cancelada';
+    const html = `<p>${subject}</p><p>${payload.speakerName || ''}</p><p>${payload.start || ''}</p>`;
+    const info = await transporter.sendMail({ from: `HashPass <${process.env.NODEMAILER_FROM}>`, to, subject, html });
+    return { success: true, messageId: info.messageId };
+  } catch (e: any) {
+    return { success: false, error: e?.message || 'Email failed' };
+  }
+}

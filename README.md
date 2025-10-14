@@ -78,7 +78,7 @@ Seeding speakers:
 ```bash
 export EXPO_PUBLIC_SUPABASE_URL=...
 export SUPABASE_SERVICE_ROLE_KEY=...
-npx ts-node ./scripts/seed-bslatam.ts ./speakers.json
+npm run seed:bslatam
 ```
 
 Env vars (email via SES / Nodemailer):

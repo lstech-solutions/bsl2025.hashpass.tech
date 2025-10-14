@@ -1,10 +1,14 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!supabaseUrl || !serviceKey) {
   console.error('Missing Supabase env vars');
   process.exit(1);
@@ -12,8 +16,8 @@ if (!supabaseUrl || !serviceKey) {
 const supabase = createClient(supabaseUrl, serviceKey);
 
 async function main() {
-  const filePath = process.argv[2] || path.resolve(process.cwd(), 'speakers.json');
-  const raw = fs.readFileSync(filePath, 'utf-8');
+  const fileArg = process.argv[2] || path.resolve(__dirname, '..', 'speakers.json');
+  const raw = fs.readFileSync(fileArg, 'utf-8');
   const speakers = JSON.parse(raw);
   for (const s of speakers) {
     const { error } = await supabase.from('BSL_Speakers').upsert({

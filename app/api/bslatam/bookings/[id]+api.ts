@@ -24,6 +24,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (error) return new Response(JSON.stringify({ error: 'Failed to update booking' }), { status: 500 });
   if (!data) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 });
   try { await sendBookingEmail('sandbox@example.com', body.status, { start: data.start }); } catch {}
+  try { await supabase.from('BSL_Audit').insert({ event: 'booking_status_changed', ref_id: id, metadata: { status: body.status } }); } catch {}
   return new Response(JSON.stringify({ data }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 }
 

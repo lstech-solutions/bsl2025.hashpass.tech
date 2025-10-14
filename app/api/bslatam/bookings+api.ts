@@ -58,6 +58,7 @@ export async function POST(request: Request) {
     if (error) return new Response(JSON.stringify({ error: 'Failed to create booking' }), { status: 500 });
     // Fire-and-forget email notifications (sandbox safe)
     try { await sendBookingEmail('sandbox@example.com', 'requested', { start }); } catch {}
+    try { await supabase.from('BSL_Audit').insert({ event: 'booking_created', ref_id: data?.id, actor: attendeeId, metadata: { speakerId, start } }); } catch {}
     return new Response(JSON.stringify({ data }), { status: 201, headers: { 'Content-Type': 'application/json' } });
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 });

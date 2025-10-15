@@ -22,6 +22,8 @@ frontend:
         - rm -rf dist
         # Build Expo web app in server mode
         - npm run build:web
+        # Add cache-busting timestamp to index.html
+        - echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html
         # Copy all server files to client directory for Amplify
         - cp -r dist/server/* dist/client/
         # Copy service worker to client directory
@@ -50,11 +52,19 @@ frontend:
       - pattern: 'index.html'
         headers:
           - key: Cache-Control
-            value: 'public, max-age=0, must-revalidate'
+            value: 'no-cache, no-store, must-revalidate'
+          - key: Pragma
+            value: 'no-cache'
+          - key: Expires
+            value: '0'
       - pattern: '**/*.html'
         headers:
           - key: Cache-Control
-            value: 'public, max-age=0, must-revalidate'
+            value: 'no-cache, no-store, must-revalidate'
+          - key: Pragma
+            value: 'no-cache'
+          - key: Expires
+            value: '0'
       - pattern: '**/*.js'
         headers:
           - key: Cache-Control

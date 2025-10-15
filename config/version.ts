@@ -22,9 +22,9 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202510150934,
-  releaseDate: '2025-10-15',
-  releaseType: 'beta',
+  buildNumber: 202510151510,
+  releaseDate: '2025-10-15'
+  releaseType: 'beta'
   environment: 'development',
   features: [
     'User pass management system',
@@ -50,11 +50,69 @@ export const CURRENT_VERSION: VersionInfo = {
     'Resolved CloudFormation stack deployment errors'
   ],
   breakingChanges: [],
-  notes: 'Lambda deployment fixes and AWS SDK v3 migration for improved stability'
+  notes: 'UI display fixes and automatic version management'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.1.9': {
+    version: '1.1.9',
+    buildNumber: 202510151510,
+    releaseDate: '2025-10-15',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'User pass management system',
+      'BSL 2025 event integration',
+      'Speaker profile system with avatars',
+      'Event agenda with live updates',
+      'Unified search and filter system',
+      'Dark mode support',
+      'Event banner component',
+      'Pass card UI with BSL branding',
+      'Agenda tabbed interface',
+      'Real-time countdown system'
+    ],
+    bugfixes: [
+      'Fixed SVG logo rendering issues',
+      'Resolved TypeScript undefined property errors',
+      'Fixed agenda data grouping logic',
+      'Corrected speaker count discrepancies',
+      'Fixed dark mode contrast issues',
+      'Resolved navigation routing problems'
+    ],
+    breakingChanges: [],
+    notes: 'UI display fixes and automatic version management'
+  },
+  '1.1.9': {
+    version: '1.1.9',
+    buildNumber: 202510151509,
+    releaseDate: '2025-10-15',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'User pass management system',
+      'BSL 2025 event integration',
+      'Speaker profile system with avatars',
+      'Event agenda with live updates',
+      'Unified search and filter system',
+      'Dark mode support',
+      'Event banner component',
+      'Pass card UI with BSL branding',
+      'Agenda tabbed interface',
+      'Real-time countdown system'
+    ],
+    bugfixes: [
+      'Fixed SVG logo rendering issues',
+      'Resolved TypeScript undefined property errors',
+      'Fixed agenda data grouping logic',
+      'Corrected speaker count discrepancies',
+      'Fixed dark mode contrast issues',
+      'Resolved navigation routing problems'
+    ],
+    breakingChanges: [],
+    notes: 'UI display fixes and automatic version management'
+  },
   '1.1.8': {
     version: '1.1.8',
     buildNumber: 202510150934,

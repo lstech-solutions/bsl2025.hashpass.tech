@@ -47,14 +47,69 @@ fi
 echo "Seeding speakers..."
 node ./scripts/seed-bslatam.mjs ./speakers.json || true
 
-if command -v amplify >/dev/null 2>&1; then
-  echo "Deploying to Amplify..."
+# Function to install Amplify CLI
+install_amplify_cli() {
+  echo "Amplify CLI not found. Attempting to install..."
+  
+  # Check if npm is available
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "npm is required to install Amplify CLI but not found. Please install Node.js and npm first." 1>&2
+    return 1
+  fi
+  
+  # Install Amplify CLI globally
+  echo "Installing Amplify CLI globally..."
+  if npm install -g @aws-amplify/cli; then
+    echo "Amplify CLI installed successfully."
+    return 0
+  else
+    echo "Failed to install Amplify CLI. Please install manually with: npm install -g @aws-amplify/cli" 1>&2
+    return 1
+  fi
+}
+
+# Check for Amplify CLI and install if needed
+if ! command -v amplify >/dev/null 2>&1; then
+  if install_amplify_cli; then
+    echo "Amplify CLI installed successfully. Proceeding with deployment..."
+  else
+    echo "Amplify CLI installation failed. Please install manually and run 'amplify publish'." 1>&2
+    exit 1
+  fi
+fi
+
+echo "Deploying to Amplify hosting..."
+
+# Check if we have an Amplify app configured
+if [ -f "amplify/.config/project-config.json" ] && [ -f "amplify/team-provider-info.json" ]; then
+  echo "Amplify project configuration found. Initializing environment if needed..."
+  
+  # Check if environment is initialized
+  if [ ! -d "amplify/backend" ] || [ ! -f "amplify/backend/amplify-meta.json" ]; then
+    echo "Initializing Amplify environment..."
+    amplify init --yes || {
+      echo "Failed to initialize Amplify environment. Please run 'amplify init' manually." 1>&2
+      exit 1
+    }
+  fi
+  
+  # Deploy to Amplify hosting
+  echo "Publishing to Amplify hosting..."
   amplify publish --yes || {
-    echo "Amplify publish failed. Verify AWS credentials and Amplify app configuration." 1>&2
+    echo "Amplify publish failed. This might be due to:" 1>&2
+    echo "1. AWS credentials not configured" 1>&2
+    echo "2. Insufficient permissions" 1>&2
+    echo "3. Network connectivity issues" 1>&2
+    echo "" 1>&2
+    echo "Please check your AWS credentials and try again." 1>&2
     exit 1
   }
 else
-  echo "Amplify CLI not found. Please run 'amplify publish' manually with proper AWS credentials configured."
+  echo "Amplify project configuration not found. Please ensure:" 1>&2
+  echo "1. amplify/.config/project-config.json exists" 1>&2
+  echo "2. amplify/team-provider-info.json exists" 1>&2
+  echo "3. Run 'amplify init' to initialize the project" 1>&2
+  exit 1
 fi
 
 echo "Done."

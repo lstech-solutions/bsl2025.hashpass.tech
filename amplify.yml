@@ -17,12 +17,16 @@ frontend:
       commands:
         # Clean previous builds
         - rm -rf dist
-        # Build Expo web app in server mode to include API routes
+        # Build Expo web app in server mode
         - npm run build:web
-        # Ensure we have both client and server directories
-        - ls -la dist/
-        - ls -la dist/client/ || echo "No client directory"
-        - ls -la dist/server/ || echo "No server directory"
+        # Copy all server files to client directory for Amplify
+        - cp -r dist/server/* dist/client/
+        # Copy service worker to client directory
+        - cp dist/sw.js dist/client/
+        # List contents for debugging
+        - ls -la dist/client/
+        - echo "Checking for index.html:"
+        - ls -la dist/client/index.html
   artifacts:
     baseDirectory: dist/client
     files:
@@ -50,29 +54,27 @@ frontend:
       - node_modules/**/*
       - $(npm root --global)/**/*
 
-# Serverless functions for API routes
-functions:
-  - name: api
-    runtime: nodejs18.x
-    handler: dist/server/_expo/functions/server.js
-    events:
-      - http:
-          path: /{proxy+}
-          method: ANY
-          cors: true
-
-# Redirects for SPA routing (only for non-API routes)
+# Redirects for SPA routing
 redirects:
-  - source: '/dashboard/<*>'
+  - source: '/<*>'
     status: 200
     target: '/index.html'
-  - source: '/auth/<*>'
+  - source: '/sw.js'
+    status: 200
+    target: '/sw.js'
+  - source: '/_expo/*'
+    status: 200
+    target: '/_expo/'
+  - source: '/api/*'
+    status: 200
+    target: '/api/'
+  - source: '/dashboard/*'
     status: 200
     target: '/index.html'
-  - source: '/bslatam/<*>'
+  - source: '/auth/*'
     status: 200
     target: '/index.html'
-  - source: '/components/<*>'
+  - source: '/bslatam/*'
     status: 200
     target: '/index.html'
 

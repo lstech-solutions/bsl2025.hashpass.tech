@@ -1,0 +1,1119 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { useEvent } from '../../../contexts/EventContext';
+import { useTheme } from '../../../hooks/useTheme';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import EventBanner from '../../../components/EventBanner';
+import UnifiedSearchAndFilter from '../../../components/UnifiedSearchAndFilter';
+import { EVENTS } from '../../../config/events';
+
+// Type definitions
+interface AgendaItem {
+  id: string;
+  time: string;
+  title: string;
+  description?: string;
+  speakers?: string[];
+  type: 'keynote' | 'panel' | 'break' | 'meal' | 'registration';
+  location?: string;
+}
+
+const { width } = Dimensions.get('window');
+
+const getAgendaTypeColor = (type: string) => {
+  switch (type) {
+    case 'keynote': return '#007AFF';
+    case 'panel': return '#34A853';
+    case 'break': return '#FF9500';
+    case 'meal': return '#FF3B30';
+    case 'registration': return '#8E8E93';
+    default: return '#8E8E93';
+  }
+};
+
+const getAgendaTypeIcon = (type: string) => {
+  switch (type) {
+    case 'keynote': return 'mic';
+    case 'panel': return 'group';
+    case 'break': return 'coffee';
+    case 'meal': return 'restaurant';
+    case 'registration': return 'person-add';
+    default: return 'event';
+  }
+};
+
+export default function BSL2025AgendaScreen() {
+  const { event } = useEvent();
+  const { isDark, colors } = useTheme();
+  const router = useRouter();
+  const styles = getStyles(isDark, colors);
+
+  const [agendaByDay, setAgendaByDay] = useState<{ [key: string]: AgendaItem[] }>({});
+  const [activeTab, setActiveTab] = useState<string>('');
+  const [agenda, setAgenda] = useState<AgendaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isLive, setIsLive] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [usingJsonFallback, setUsingJsonFallback] = useState(false);
+  const [serviceStatus, setServiceStatus] = useState<'running' | 'stopped' | 'unknown'>('unknown');
+  const [nextUpdateCountdown, setNextUpdateCountdown] = useState<number | null>(null);
+  const [isEventPeriod, setIsEventPeriod] = useState(false);
+  const [filteredAgenda, setFilteredAgenda] = useState<AgendaItem[]>([]);
+  const [showNotLiveDetails, setShowNotLiveDetails] = useState(false);
+
+  // Load agenda from database first, fallback to hardcoded config only on error
+  useEffect(() => {
+    const loadAgenda = async () => {
+      try {
+        setLoading(true);
+        setUsingJsonFallback(false);
+        setServiceStatus('unknown');
+        console.log('📅 Attempting to load agenda from database...');
+        
+        // First check agenda status
+        const statusResponse = await fetch('/api/bslatam/agenda-status?eventId=bsl2025');
+        const statusResult = await statusResponse.json();
+        
+        if (statusResponse.ok && statusResult.hasData) {
+          console.log('✅ Live agenda data available:', statusResult.itemCount, 'items');
+          setIsLive(true);
+          setLastUpdated(statusResult.lastUpdated);
+          setServiceStatus('running');
+          
+          // Load the actual agenda data
+          const response = await fetch('/api/bslatam/agenda?eventId=bsl2025');
+          const result = await response.json();
+          
+          if (response.ok && result.data && result.data.length > 0) {
+            console.log('✅ Loaded live agenda from database:', result.data.length, 'items');
+            setAgenda(result.data);
+          } else {
+            console.warn('⚠️ Status showed data but fetch failed, using JSON fallback');
+            const fallbackAgenda = event.agenda || EVENTS.bsl2025.agenda || [];
+            setAgenda(fallbackAgenda);
+            setIsLive(false);
+            setUsingJsonFallback(true);
+            setServiceStatus('stopped');
+          }
+        } else if (statusResponse.ok && !statusResult.hasData) {
+          console.warn('⚠️ No live agenda data in database, showing JSON fallback');
+          console.log('📄 Event object:', event);
+          console.log('📄 JSON fallback data:', event.agenda?.length || 0, 'items');
+          // No live data - show JSON fallback with "not live" indicator
+          const fallbackAgenda = event.agenda || EVENTS.bsl2025.agenda || [];
+          console.log('📄 Setting fallback agenda:', fallbackAgenda.length, 'items');
+          setAgenda(fallbackAgenda);
+          setIsLive(false);
+          setLastUpdated(null);
+          setUsingJsonFallback(true);
+          setServiceStatus('stopped');
+        } else {
+          console.warn('⚠️ Database error, using JSON fallback');
+          console.log('📄 JSON fallback data:', event.agenda?.length || 0, 'items');
+          // Database error - use JSON fallback
+          const fallbackAgenda = event.agenda || EVENTS.bsl2025.agenda || [];
+          setAgenda(fallbackAgenda);
+          setIsLive(false);
+          setUsingJsonFallback(true);
+          setServiceStatus('stopped');
+        }
+      } catch (error) {
+        console.error('❌ Network error loading agenda from database:', error);
+        console.log('🔄 Using JSON fallback due to network error');
+        console.log('📄 JSON fallback data:', event.agenda?.length || 0, 'items');
+        // Network error - use JSON fallback
+        const fallbackAgenda = event.agenda || EVENTS.bsl2025.agenda || [];
+        setAgenda(fallbackAgenda);
+        setIsLive(false);
+        setUsingJsonFallback(true);
+        setServiceStatus('stopped');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAgenda();
+  }, [event.agenda]);
+
+  // Check if we're in the event period
+  useEffect(() => {
+    checkEventPeriod();
+  }, []);
+
+  // Countdown timer for next update (every 5 minutes) - only during event period
+  useEffect(() => {
+    if (!isLive || !isEventPeriod) return;
+
+    const updateInterval = 5 * 60 * 1000; // 5 minutes in milliseconds
+    let countdown = updateInterval;
+
+    const timer = setInterval(() => {
+      countdown -= 1000;
+      setNextUpdateCountdown(countdown);
+
+      if (countdown <= 0) {
+        countdown = updateInterval;
+        // Trigger a refresh
+        const refreshAgenda = async () => {
+          try {
+            const response = await fetch('/api/bslatam/agenda?eventId=bsl2025');
+            const result = await response.json();
+            if (response.ok && result.data && result.data.length > 0) {
+              setAgenda(result.data);
+              setLastUpdated(new Date().toISOString());
+            }
+          } catch (error) {
+            console.error('Auto-refresh failed:', error);
+          }
+        };
+        refreshAgenda();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isLive, isEventPeriod]);
+
+  // Group agenda by day
+  useEffect(() => {
+    if (loading) return;
+    
+    if (agenda.length === 0) {
+      // No agenda data - clear the grouped data
+      console.log('📅 No agenda data to group, clearing agendaByDay');
+      setAgendaByDay({});
+      return;
+    }
+    
+    console.log('📅 Grouping agenda data:', agenda.length, 'items');
+    console.log('📅 First agenda item:', agenda[0]);
+    const grouped: { [key: string]: AgendaItem[] } = {};
+    
+    // Check if agenda items have day information from database
+    const hasDayInfo = agenda.some(item => (item as any).day);
+    console.log('📅 Has day info from database:', hasDayInfo);
+    
+    if (hasDayInfo) {
+      const dayValues = agenda.map(item => (item as any).day).filter(Boolean);
+      console.log('📅 Day values found:', [...new Set(dayValues)]);
+    }
+    
+    if (hasDayInfo) {
+      // Group by day column from database
+      console.log('📅 Using database day information');
+      
+      // Check if the day values are simple (1, 2, 3) or complex (with thematic names)
+      const dayValues = agenda.map(item => (item as any).day).filter(Boolean);
+      const uniqueDays = [...new Set(dayValues)];
+      console.log('📅 Unique day values:', uniqueDays);
+      
+      // Group by day, handling both simple and complex day names
+      agenda.forEach(item => {
+        const day = (item as any).day;
+        if (day) {
+          let dayKey: string;
+          let dayName: string;
+          
+          // Extract day number from complex day names
+          if (day.includes('Día 1')) {
+            dayKey = 'Day 1 - November 12';
+            dayName = 'Regulación, Bancos Centrales e Infraestructura del Dinero Digital';
+          } else if (day.includes('Día 2')) {
+            dayKey = 'Day 2 - November 13';
+            dayName = 'PSAV, Compliance, Custodia y Tokenización';
+          } else if (day.includes('Día 3')) {
+            dayKey = 'Day 3 - November 14';
+            dayName = 'Stablecoins y DeFi: Integrando el Mundo Financiero Global';
+          } else if (day === '1' || day === '2' || day === '3') {
+            // Simple day numbers
+            dayKey = `Day ${day} - November ${day === '1' ? '12' : day === '2' ? '13' : '14'}`;
+            dayName = day === '1' ? 'Regulación, Bancos Centrales e Infraestructura del Dinero Digital' :
+                     day === '2' ? 'PSAV, Compliance, Custodia y Tokenización' :
+                     'Stablecoins y DeFi: Integrando el Mundo Financiero Global';
+          } else {
+            // Fallback for other formats
+            dayKey = day;
+            dayName = 'Event Day';
+          }
+          
+          if (!grouped[dayKey]) {
+            grouped[dayKey] = [];
+          }
+          grouped[dayKey].push(item);
+        }
+      });
+      
+      // Also handle items without day information
+      const itemsWithoutDay = agenda.filter(item => !(item as any).day);
+      if (itemsWithoutDay.length > 0) {
+        console.log('📅 Found', itemsWithoutDay.length, 'items without day info, distributing them');
+        // Distribute items without day info across the days
+        const dayKeys = Object.keys(grouped).sort();
+        if (dayKeys.length > 0) {
+          itemsWithoutDay.forEach((item, index) => {
+            const targetDay = dayKeys[index % dayKeys.length];
+            grouped[targetDay].push(item);
+          });
+        } else {
+          // If no days exist yet, create them from the items without day info
+          const day1Items = itemsWithoutDay.slice(0, Math.ceil(itemsWithoutDay.length / 3));
+          const day2Items = itemsWithoutDay.slice(Math.ceil(itemsWithoutDay.length / 3), Math.ceil(itemsWithoutDay.length * 2 / 3));
+          const day3Items = itemsWithoutDay.slice(Math.ceil(itemsWithoutDay.length * 2 / 3));
+          
+          if (day1Items.length > 0) {
+            grouped['Day 1 - November 12'] = day1Items;
+          }
+          if (day2Items.length > 0) {
+            grouped['Day 2 - November 13'] = day2Items;
+          }
+          if (day3Items.length > 0) {
+            grouped['Day 3 - November 14'] = day3Items;
+          }
+        }
+      }
+      
+      console.log('📅 Grouped by database day column:', Object.keys(grouped).map(key => `${key}: ${grouped[key].length} items`));
+    } else {
+      // Fallback: distribute sessions across 3 days
+      console.log('📅 No day info in database, using fallback distribution');
+      const day1Items = agenda.slice(0, 4); // First 4 items for Day 1
+      const day2Items = agenda.slice(4, 8); // Next 4 items for Day 2
+      const day3Items = agenda.slice(8); // Remaining items for Day 3
+      
+      console.log('📅 Day distribution:', {
+        day1: day1Items.length,
+        day2: day2Items.length, 
+        day3: day3Items.length
+      });
+      
+      console.log('📅 Day 1 items:', day1Items.map(item => item.title));
+      console.log('📅 Day 2 items:', day2Items.map(item => item.title));
+      console.log('📅 Day 3 items:', day3Items.map(item => item.title));
+      
+      // Add Day 1 items
+      if (day1Items.length > 0) {
+        grouped['Day 1 - November 12'] = day1Items;
+      }
+      
+      // Add Day 2 items
+      if (day2Items.length > 0) {
+        grouped['Day 2 - November 13'] = day2Items;
+      }
+      
+      // Add Day 3 items
+      if (day3Items.length > 0) {
+        grouped['Day 3 - November 14'] = day3Items;
+      }
+      
+      console.log('📅 Grouped after fallback distribution:', Object.keys(grouped));
+    }
+
+    // Sort items within each day by time
+    Object.keys(grouped).forEach(day => {
+      grouped[day].sort((a, b) => {
+        // Extract start time for sorting
+        const timeA = a.time.split(' - ')[0] || '00:00';
+        const timeB = b.time.split(' - ')[0] || '00:00';
+        return timeA.localeCompare(timeB);
+      });
+    });
+
+    // Sort days in correct order (Day 1, Day 2, Day 3)
+    const sortedGrouped: { [key: string]: AgendaItem[] } = {};
+    const dayOrder = ['Day 1 - November 12', 'Day 2 - November 13', 'Day 3 - November 14'];
+    
+    dayOrder.forEach(dayKey => {
+      if (grouped[dayKey]) {
+        sortedGrouped[dayKey] = grouped[dayKey];
+      }
+    });
+
+    console.log('📅 Final grouped data:', Object.keys(sortedGrouped).map(key => `${key}: ${sortedGrouped[key].length} items`));
+    setAgendaByDay(sortedGrouped);
+    
+    // Set first tab as active (Day 1)
+    const firstTab = 'Day 1 - November 12';
+    if (sortedGrouped[firstTab]) {
+      console.log('📅 Setting active tab to:', firstTab);
+      setActiveTab(firstTab);
+    } else {
+      // Fallback to first available tab
+      const availableTabs = Object.keys(sortedGrouped);
+      console.log('📅 Available tabs:', availableTabs);
+      if (availableTabs.length > 0) {
+        console.log('📅 Setting active tab to first available:', availableTabs[0]);
+        setActiveTab(availableTabs[0]);
+      }
+    }
+  }, [agenda, loading]);
+
+  // Function to clean session titles by removing type prefixes
+  const cleanSessionTitle = (title: string) => {
+    // Remove common session type prefixes
+    return title
+      .replace(/^Keynote\s*–\s*/i, '')
+      .replace(/^Panel\s*–\s*/i, '')
+      .replace(/^Panel\s*\([^)]+\)\s*–\s*/i, '')
+      .replace(/^Break\s*–\s*/i, '')
+      .replace(/^Meal\s*–\s*/i, '')
+      .replace(/^Registration\s*–\s*/i, '')
+      .trim();
+  };
+
+  // Function to find speaker ID by name
+  const findSpeakerId = (speakerName: string) => {
+    // Try to find speaker in the event speakers data
+    if (event?.speakers) {
+      const speaker = event.speakers.find(s => 
+        s.name.toLowerCase().includes(speakerName.toLowerCase()) ||
+        speakerName.toLowerCase().includes(s.name.toLowerCase())
+      );
+      return speaker?.id;
+    }
+    return null;
+  };
+
+  // Function to handle speaker navigation
+  const handleSpeakerPress = (speakerName: string) => {
+    const speakerId = findSpeakerId(speakerName);
+    if (speakerId) {
+      router.push(`/events/bsl2025/speakers/${speakerId}`);
+    }
+  };
+
+  const renderAgendaItem = (item: AgendaItem) => (
+    <View key={item.id} style={styles.agendaItem}>
+      {/* Time and Type Header */}
+      <View style={styles.agendaItemHeader}>
+        <View style={styles.timeContainer}>
+          <Text style={styles.agendaTime}>{item.time}</Text>
+          <View style={[styles.agendaTypeBadge, { backgroundColor: getAgendaTypeColor(item.type) }]}>
+            <Text style={styles.agendaTypeText}>{item.type.toUpperCase()}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Content */}
+      <View style={styles.agendaItemContent}>
+        <Text style={styles.agendaTitle}>{cleanSessionTitle(item.title)}</Text>
+        
+        {item.description && (
+          <Text style={styles.agendaDescription}>{item.description}</Text>
+        )}
+
+        {/* Speakers */}
+        {item.speakers && item.speakers.length > 0 && (
+          <View style={styles.speakersContainer}>
+            <MaterialIcons name="people" size={16} color={colors.text.secondary} />
+            <View style={styles.speakersList}>
+              {item.speakers.map((speaker, index) => {
+                const speakerId = findSpeakerId(speaker);
+                const isClickable = speakerId !== null;
+                
+                return (
+                  <React.Fragment key={index}>
+                    {isClickable ? (
+                      <TouchableOpacity
+                        onPress={() => handleSpeakerPress(speaker)}
+                        style={styles.speakerLink}
+                      >
+                        <Text style={[styles.agendaSpeakers, styles.clickableSpeaker]}>
+                          {speaker}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.agendaSpeakers}>{speaker}</Text>
+                    )}
+                    {index < (item.speakers?.length || 0) - 1 && (
+                      <Text style={styles.speakerSeparator}>, </Text>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Location */}
+        {(() => {
+          let location = '';
+          
+          // Determine location based on session type
+          if (item.type === 'keynote') {
+            location = 'Main Stage';
+          } else if (item.type === 'registration') {
+            location = 'Registration Area';
+          } else if (item.type === 'meal' || item.type === 'break') {
+            // Don't show location for meals and breaks
+            return null;
+          } else if (item.location) {
+            // Use existing location for other types
+            location = item.location;
+          }
+          
+          // Only show location if we have one
+          if (location) {
+            return (
+              <View style={styles.locationContainer}>
+                <MaterialIcons name="location-on" size={16} color={colors.text.secondary} />
+                <Text style={styles.agendaLocation}>{location}</Text>
+              </View>
+            );
+          }
+          
+          return null;
+        })()}
+      </View>
+    </View>
+  );
+
+  const getTabLabel = (dayKey: string) => {
+    if (dayKey.includes('Day 1')) return 'Día 1';
+    if (dayKey.includes('Day 2')) return 'Día 2';
+    if (dayKey.includes('Day 3')) return 'Día 3';
+    return dayKey;
+  };
+
+
+  const getTabTheme = (dayKey: string) => {
+    if (dayKey.includes('Day 1')) return 'Regulación, Bancos Centrales e Infraestructura del Dinero Digital';
+    if (dayKey.includes('Day 2')) return 'Adopción Empresarial y Casos de Uso';
+    if (dayKey.includes('Day 3')) return 'Stablecoins y DeFi: Integrando el Mundo Financiero Global';
+    return '';
+  };
+
+  const formatCountdown = (milliseconds: number) => {
+    const minutes = Math.floor(milliseconds / 60000);
+    const seconds = Math.floor((milliseconds % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const checkEventPeriod = () => {
+    const now = new Date();
+    const eventStart = new Date('2025-11-12T00:00:00-05:00'); // November 12, 2025, Colombia time
+    const eventEnd = new Date('2025-11-14T23:59:59-05:00'); // November 14, 2025, Colombia time
+    
+    const isDuringEvent = now >= eventStart && now <= eventEnd;
+    setIsEventPeriod(isDuringEvent);
+    
+    console.log('📅 Event period check:', {
+      now: now.toISOString(),
+      eventStart: eventStart.toISOString(),
+      eventEnd: eventEnd.toISOString(),
+      isDuringEvent
+    });
+  };
+
+  // Filter configuration for the unified component
+  const filterGroups = [
+    {
+      key: 'type',
+      label: 'Session Type',
+      type: 'chips' as const,
+      options: []
+    },
+    {
+      key: 'speakers',
+      label: 'Speaker',
+      type: 'chips' as const,
+      options: []
+    }
+  ];
+
+  // Custom filter logic for agenda
+  const customAgendaFilterLogic = (data: AgendaItem[], filters: { [key: string]: any }, searchQuery: string): AgendaItem[] => {
+    let filtered = data;
+
+    // Apply search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.title.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query) ||
+        item.speakers?.some(speaker => speaker.toLowerCase().includes(query)) ||
+        item.type.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply type filter
+    if (filters.type) {
+      filtered = filtered.filter(item => item.type === filters.type);
+    }
+
+    // Apply speaker filter
+    if (filters.speakers) {
+      filtered = filtered.filter(item => 
+        item.speakers?.some(speaker => speaker === filters.speakers)
+      );
+    }
+
+    return filtered;
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Event Header */}
+      <EventBanner
+        title="Event Agenda"
+        subtitle={`Conference Schedule • ${agenda.length} Sessions`}
+        date="November 12-14, 2025 • Medellín, Colombia"
+        showCountdown={true}
+        showLiveIndicator={isLive}
+      />
+
+      {/* Tab Navigation */}
+      {Object.keys(agendaByDay).length > 0 && (
+        <View style={styles.tabContainer}>
+          <View style={styles.tabScrollContent}>
+            {Object.keys(agendaByDay).map((dayKey) => (
+              <TouchableOpacity
+                key={dayKey}
+                style={[
+                  styles.tab,
+                  activeTab === dayKey && styles.activeTab
+                ]}
+                onPress={() => setActiveTab(dayKey)}
+              >
+                <Text style={[
+                  styles.tabLabel,
+                  activeTab === dayKey && styles.activeTabLabel
+                ]}>
+                  {getTabLabel(dayKey)}
+                </Text>
+                <Text style={[
+                  styles.tabTheme,
+                  activeTab === dayKey && styles.activeTabTheme
+                ]}>
+                  {getTabTheme(dayKey)}
+                </Text>
+                <Text style={[
+                  styles.tabCount,
+                  activeTab === dayKey && styles.activeTabCount
+                ]}>
+                  {agendaByDay[dayKey].length} sessions
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Status Indicator - Positioned at top right */}
+      {!loading && agenda.length > 0 && (
+        <View style={styles.statusIndicatorContainer}>
+          {isLive && isEventPeriod ? (
+            <View style={[styles.statusBadge, styles.liveBadge]}>
+              <MaterialIcons name="fiber-manual-record" size={12} color="#fff" />
+              <Text style={styles.statusBadgeText}>LIVE</Text>
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity 
+                style={[styles.statusBadge, styles.notLiveBadge]}
+                onPress={() => setShowNotLiveDetails(!showNotLiveDetails)}
+              >
+                <MaterialIcons name="stop" size={12} color="#fff" />
+                <Text style={styles.statusBadgeText}>NOT LIVE</Text>
+                <MaterialIcons 
+                  name={showNotLiveDetails ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
+                  size={12} 
+                  color="#fff" 
+                />
+              </TouchableOpacity>
+              
+              {/* Not Live Details Dropdown */}
+              {showNotLiveDetails && (
+                <View style={styles.notLiveDetailsDropdown}>
+                  <View style={styles.notLiveDetailsContent}>
+                    <View style={styles.notLiveDetailsRow}>
+                      <View style={styles.notLiveIconContainer}>
+                        <MaterialIcons name="event" size={16} color="#007AFF" />
+                      </View>
+                      <Text style={styles.notLiveDetailsText}>
+                        Live updates start Nov 12, 2025
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.notLiveDetailsRow}>
+                      <View style={styles.notLiveIconContainer}>
+                        <MaterialIcons name="update" size={16} color="#007AFF" />
+                      </View>
+                      <Text style={styles.notLiveDetailsText}>
+                        Auto-refresh every 5 minutes
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.notLiveDetailsRow}>
+                      <View style={styles.notLiveIconContainer}>
+                        <MaterialIcons name="info" size={16} color="#007AFF" />
+                      </View>
+                      <Text style={styles.notLiveDetailsText}>
+                        Showing preview data
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+      )}
+
+      {/* Live Status Details - Only during event period */}
+      {!loading && isLive && isEventPeriod && agenda.length > 0 && (
+        <View style={styles.liveStatusDetails}>
+          <View style={styles.liveStatusRow}>
+            <MaterialIcons name="update" size={14} color={colors.success.main} />
+            <Text style={styles.liveStatusDetailText}>
+              Auto-updating every 5 minutes during event
+            </Text>
+          </View>
+          {nextUpdateCountdown && (
+            <View style={styles.liveStatusRow}>
+              <MaterialIcons name="timer" size={14} color={colors.text.secondary} />
+              <Text style={styles.liveStatusDetailText}>
+                Next update in {formatCountdown(nextUpdateCountdown)}
+              </Text>
+            </View>
+          )}
+          {lastUpdated && (
+            <View style={styles.liveStatusRow}>
+              <MaterialIcons name="access-time" size={14} color={colors.text.secondary} />
+              <Text style={styles.liveStatusDetailText}>
+                Last updated: {new Date(lastUpdated).toLocaleTimeString()}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
+
+      {/* Service Status Warning - Below tabs */}
+      {!loading && !isLive && serviceStatus === 'stopped' && (
+        <View style={styles.serviceWarningContainer}>
+          <MaterialIcons name="warning" size={16} color={colors.warning.main} />
+          <Text style={styles.serviceWarningText}>Agenda monitoring service is not running</Text>
+        </View>
+      )}
+
+      {/* Unified Search and Filter Section */}
+      {!loading && agenda.length > 0 && (
+        <UnifiedSearchAndFilter
+          data={agenda}
+          onFilteredData={setFilteredAgenda}
+          onSearchChange={() => {}}
+          searchPlaceholder="Search sessions, speakers, or keywords..."
+          searchFields={['title', 'description', 'type', 'speakers']}
+          filterGroups={filterGroups}
+          customFilterLogic={customAgendaFilterLogic}
+          showResultsCount={true}
+        />
+      )}
+
+      {/* Tab Content */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
+        bounces={true}
+      >
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <MaterialIcons name="schedule" size={48} color={colors.text.secondary} />
+            <Text style={styles.loadingText}>Loading agenda...</Text>
+            <Text style={styles.loadingSubtext}>Fetching latest schedule from database</Text>
+          </View>
+        ) : activeTab && agendaByDay[activeTab] ? (
+          <View style={styles.agendaList}>
+            {(() => {
+              // Get filtered items for the active tab
+              const filteredItems = filteredAgenda.filter(item => {
+                const dayItems = agendaByDay[activeTab] || [];
+                return dayItems.some(dayItem => dayItem.id === item.id);
+              });
+              
+              console.log('📅 Rendering filtered agenda items for', activeTab, ':', filteredItems.length, 'items');
+              
+              if (filteredItems.length === 0) {
+                return (
+                  <View style={styles.noResultsContainer}>
+                    <MaterialIcons name="search-off" size={48} color={colors.text.secondary} />
+                    <Text style={styles.noResultsText}>No sessions match your filters</Text>
+                    <Text style={styles.noResultsSubtext}>Try adjusting your search or filters</Text>
+                  </View>
+                );
+              }
+              
+              return filteredItems.map(renderAgendaItem);
+            })()}
+          </View>
+        ) : (
+          <View style={styles.noAgendaContainer}>
+            <MaterialIcons name="event-busy" size={48} color={colors.text.secondary} />
+            <Text style={styles.noAgendaText}>No agenda available</Text>
+            <Text style={styles.noAgendaSubtext}>Check back later for the event schedule</Text>
+            <View style={styles.noLiveIndicator}>
+              <MaterialIcons name="schedule" size={16} color={colors.text.secondary} />
+              <Text style={styles.noLiveText}>No live agenda data</Text>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background.default,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: colors.background.default,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
+  },
+  // Tab Styles - Full width with better spacing
+  tabContainer: {
+    backgroundColor: colors.background.default,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  tabScrollContent: {
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  tab: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    marginHorizontal: 6,
+    borderRadius: 16,
+    backgroundColor: colors.background.paper,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  activeTab: {
+    backgroundColor: '#007AFF',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  tabLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: 2,
+    letterSpacing: 0.3,
+  },
+  activeTabLabel: {
+    color: '#FFFFFF',
+  },
+  tabTheme: {
+    fontSize: 10,
+    color: colors.text.secondary,
+    marginBottom: 4,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  activeTabTheme: {
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  tabCount: {
+    fontSize: 10,
+    color: colors.text.secondary,
+    fontWeight: '600',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  activeTabCount: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  agendaList: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  agendaItem: {
+    backgroundColor: colors.background.paper,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    overflow: 'hidden',
+  },
+  agendaItemHeader: {
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  timeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  agendaTime: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  agendaTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  agendaTypeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.5,
+  },
+  agendaItemContent: {
+    padding: 16,
+  },
+  agendaTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 8,
+    lineHeight: 22,
+  },
+  agendaDescription: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  speakersContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  speakersList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  agendaSpeakers: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    marginLeft: 6,
+    flex: 1,
+  },
+  clickableSpeaker: {
+    color: '#007AFF',
+    textDecorationLine: 'underline',
+  },
+  speakerLink: {
+    // No additional styling needed, inherits from parent
+  },
+  speakerSeparator: {
+    fontSize: 13,
+    color: colors.text.secondary,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  agendaLocation: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    marginLeft: 6,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  noAgendaContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  noAgendaText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  noAgendaSubtext: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  noLiveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    borderRadius: 8,
+  },
+  noLiveText: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  statusIndicatorContainer: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  liveBadge: {
+    backgroundColor: colors.success,
+  },
+  notLiveBadge: {
+    backgroundColor: '#8E8E93',
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.5,
+  },
+  liveStatusDetails: {
+    backgroundColor: isDark ? 'rgba(76, 175, 80, 0.1)' : 'rgba(76, 175, 80, 0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.success.main,
+  },
+  liveStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  liveStatusDetailText: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  serviceWarningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    backgroundColor: isDark ? 'rgba(255, 193, 7, 0.1)' : 'rgba(255, 193, 7, 0.1)',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.warning.main,
+  },
+  serviceWarningText: {
+    fontSize: 12,
+    color: colors.warning.main,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  noResultsContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  noResultsText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  noResultsSubtext: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
+  },
+  notLiveDetailsDropdown: {
+    position: 'absolute',
+    top: 50,
+    right: 0,
+    backgroundColor: colors.background.paper,
+    borderRadius: 12,
+    minWidth: 280,
+    shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    zIndex: 1000,
+  },
+  notLiveDetailsContent: {
+    padding: 16,
+  },
+  notLiveDetailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 4,
+  },
+  notLiveIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  notLiveDetailsText: {
+    fontSize: 13,
+    color: colors.text.primary,
+    flex: 1,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+});

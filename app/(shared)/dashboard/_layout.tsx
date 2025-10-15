@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image, Animated } from 'react-native';
+import AnimatedGradient, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, interpolate } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname, useNavigation as useExpoNavigation } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
@@ -14,6 +15,8 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useLanguage } from '../../../providers/LanguageProvider';
 import { color } from 'motion/react';
 import { ScrollProvider, useScroll } from '../../../contexts/ScrollContext';
+import { NotificationProvider } from '../../../contexts/NotificationContext';
+import VersionDisplay from '../../../components/VersionDisplay';
 
 // Define the type for our drawer navigation
 type DrawerNavigation = CompositeNavigationProp<
@@ -33,11 +36,30 @@ function CustomDrawerContent() {
   const isMobile = useIsMobile();
   const styles = getStyles(isDark, colors, isMobile);
 
+  // Animated gradient effect
+  const gradientAnimation = useSharedValue(0);
+  
+  useEffect(() => {
+    gradientAnimation.value = withRepeat(
+      withTiming(1, { duration: 3000 }),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedGradientStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(gradientAnimation.value, [0, 0.5, 1], [0.1, 0.2, 0.1]);
+    return {
+      opacity,
+    };
+  });
+
   const menuItems = [
-    { label: 'Explore', icon: 'compass-outline', route: '/(shared)/dashboard/explore' as const },
-    { label: 'Wallet', icon: 'wallet-outline', route: '/(shared)/dashboard/wallet' as const },
-    { label: 'Profile', icon: 'person-outline', route: '/(shared)/dashboard/profile' as const },
-    { label: 'Settings', icon: 'settings-outline', route: '/(shared)/dashboard/settings' as const },
+    { label: 'Explore', icon: 'compass-outline', route: './explore' as const },
+    { label: 'Notifications', icon: 'notifications-outline', route: './notifications' as const },
+    { label: 'Wallet', icon: 'wallet-outline', route: './wallet' as const },
+    { label: 'Profile', icon: 'person-outline', route: './profile' as const },
+    { label: 'Settings', icon: 'settings-outline', route: './settings' as const },
   ] as const;
 
   const handleNavigation = (route: typeof menuItems[number]['route']) => {
@@ -46,8 +68,8 @@ function CustomDrawerContent() {
 
     // Only navigate if we're not already on this screen
     if (pathname !== route) {
-      // Use replace to avoid adding to navigation stack
-      router.replace(route as any);
+      // Navigate to the route
+      router.push(route);
     }
   };
 
@@ -84,19 +106,39 @@ function CustomDrawerContent() {
         borderBottomWidth: 1,
         borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
       }]}>
-        <Ionicons 
-          name="key" 
-          size={32} 
-          color={colors.primaryContrastText} 
+        {/* Animated Gradient Background */}
+        <AnimatedGradient.View 
+          style={[
+            styles.gradientBackground,
+            {
+              backgroundColor: isDark ? 'rgba(96, 165, 250, 0.1)' : 'rgba(30, 64, 175, 0.1)',
+            },
+            animatedGradientStyle
+          ]}
         />
-        <Text style={[styles.drawerHeaderText, { 
-          color: colors.primaryContrastText,
-          textShadowColor: 'rgba(0, 0, 0, 0.2)',
-          textShadowOffset: { width: 0, height: 1 },
-          textShadowRadius: 2
-        }]}>
-          HASH PASS
-        </Text>
+        <View style={styles.brandingContainer}>
+          <View style={styles.logoContainer}>
+            <View style={[styles.logoPill, {
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+            }]}>
+              <Image 
+                source={isDark 
+                  ? require('../../../assets/logos/logo-full-hashpass-white.svg')
+                  : require('../../../assets/logos/logo-full-hashpass-black-cyan.svg')
+                } 
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+          <View style={styles.brandingSection}>
+            <Text style={styles.brandSubtitle}>Digital Event Platform</Text>
+            <View style={styles.brandBadge}>
+              <Text style={styles.brandBadgeText}>BSL2025</Text>
+            </View>
+          </View>
+        </View>
       </View>
 
       {/* Menu Items */}
@@ -147,27 +189,16 @@ function CustomDrawerContent() {
         })}
       </View>
 
-      {/* Quick Settings */}
+      {/* Quick Settings & Actions */}
       <View style={[styles.quickSettingsSection, { 
         backgroundColor: colors.background.paper,
-        borderTopWidth: 1,
-        borderTopColor: colors.divider,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.divider,
       }]}>
-        <Text style={[styles.quickSettingsTitle, { color: colors.text.secondary }]}>
-          Quick Settings
-        </Text>
-        
         <View style={styles.quickTogglesRow}>
           {/* Theme Toggle */}
           <TouchableOpacity
-            style={[styles.quickToggleButton, {
-              backgroundColor: colors.background.default,
-              shadowColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-            }]}
+            style={styles.quickToggleButton}
             onPress={toggleTheme}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <Ionicons 
               name={isDark ? 'sunny' : 'moon'} 
@@ -178,40 +209,30 @@ function CustomDrawerContent() {
 
           {/* Language Toggle */}
           <TouchableOpacity
-            style={[styles.quickToggleButton, {
-              backgroundColor: colors.background.default,
-              shadowColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-            }]}
+            style={styles.quickToggleButton}
             onPress={handleLanguageToggle}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <Text style={styles.languageFlag}>{getLanguageFlag(locale)}</Text>
+          </TouchableOpacity>
+
+          {/* Logout Button */}
+          <TouchableOpacity
+            style={styles.quickToggleButton}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name="log-out-outline" 
+              size={20} 
+              color={colors.error.main} 
+            />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Logout Button */}
-      <View style={{ 
-        borderTopWidth: 1, 
-        borderTopColor: colors.divider,
-        backgroundColor: colors.background.paper,
-        padding: 4
-      }}>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          activeOpacity={0.7}
-        >
-          <Ionicons 
-            name="log-out-outline" 
-            size={24} 
-            color={colors.error.main} 
-          />
-          <Text style={[styles.logoutText, { color: colors.error.main }]}>
-            Logout
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {/* Version Display */}
+      <VersionDisplay showInSidebar={true} />
     </View>
   );
 }
@@ -290,20 +311,7 @@ export default function DashboardLayout() {
         >
           <TouchableOpacity
             onPress={() => drawerNavigation.dispatch(DrawerActions.toggleDrawer())}
-            style={[styles.headerButton, {
-              backgroundColor: isDark 
-                ? 'rgba(255, 255, 255, 0.12)' 
-                : 'rgba(0, 0, 0, 0.08)',
-              borderRadius: 16,
-              padding: 12,
-              shadowColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.4,
-              shadowRadius: 8,
-              elevation: 10,
-              borderWidth: 1,
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
-            }]}
+            style={styles.headerButton}
             activeOpacity={0.8}
           >
             <Ionicons 
@@ -318,26 +326,15 @@ export default function DashboardLayout() {
             />
           </TouchableOpacity>
 
-          <View style={styles.logoContainer}>
-            <Text style={[styles.logoText, { 
-              color: isDark ? '#FFFFFF' : '#000000',
-              textShadowColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-              textShadowOffset: { width: 0, height: 2 },
-              textShadowRadius: 4,
-              fontWeight: '800',
-            }]}>
-              H<Text style={{ 
-                color: isDark ? '#60A5FA' : '#1E40AF',
-                textShadowColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                textShadowOffset: { width: 0, height: 2 },
-                textShadowRadius: 4,
-              }}>Λ</Text>SHP<View style={{ transform: [{ rotate: '90deg' }] }}><Text style={{ 
-                color: isDark ? '#60A5FA' : '#1E40AF',
-                textShadowColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                textShadowOffset: { width: 0, height: 2 },
-                textShadowRadius: 4,
-              }}>Λ</Text></View>SS
-            </Text>
+          <View style={styles.headerLogoContainer}>
+            <Image 
+              source={isDark 
+                ? require('../../../assets/logos/logo-full-hashpass-white.svg')
+                : require('../../../assets/logos/logo-full-hashpass-black-cyan.svg')
+              } 
+              style={styles.headerLogoImage}
+              resizeMode="contain"
+            />
           </View>
 
           <TouchableOpacity
@@ -388,29 +385,60 @@ export default function DashboardLayout() {
 
 
   return (
-    <ScrollProvider>
-      <View style={{ flex: 1 }}>
-        <Drawer
-          drawerContent={CustomDrawerContent}
-          screenOptions={{
-            header: () => <ScreenWithHeader />,
-            drawerType: 'front',
-            drawerStyle: {
-              width: '80%',
-            },
-            overlayColor: 'rgba(0,0,0,0.5)',
-            drawerPosition: 'left',
-          }}
-        >
-          <Drawer.Screen
-            name="(tabs)"
-            options={{
-              headerShown: false,
+    <NotificationProvider>
+      <ScrollProvider>
+        <View style={{ flex: 1 }}>
+          <Drawer
+            drawerContent={CustomDrawerContent}
+            screenOptions={{
+              header: () => <ScreenWithHeader />,
+              drawerType: 'front',
+              drawerStyle: {
+                width: '80%',
+              },
+              overlayColor: 'rgba(0,0,0,0.5)',
+              drawerPosition: 'left',
             }}
-          />
-        </Drawer>
-      </View>
-    </ScrollProvider>
+          >
+            <Drawer.Screen
+              name="explore"
+              options={{
+                headerShown: true,
+                header: () => <ScreenWithHeader />,
+              }}
+            />
+            <Drawer.Screen
+              name="notifications"
+              options={{
+                headerShown: true,
+                header: () => <ScreenWithHeader />,
+              }}
+            />
+            <Drawer.Screen
+              name="wallet"
+              options={{
+                headerShown: true,
+                header: () => <ScreenWithHeader />,
+              }}
+            />
+            <Drawer.Screen
+              name="profile"
+              options={{
+                headerShown: true,
+                header: () => <ScreenWithHeader />,
+              }}
+            />
+            <Drawer.Screen
+              name="settings"
+              options={{
+                headerShown: true,
+                header: () => <ScreenWithHeader />,
+              }}
+            />
+          </Drawer>
+        </View>
+      </ScrollProvider>
+    </NotificationProvider>
   );
 }
 
@@ -430,7 +458,9 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     right: 0,
     zIndex: 1000,
     paddingTop: StatusBar.currentHeight,
-    backgroundColor: colors.background.default,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
   },
   headerContent: {
     flexDirection: 'row',
@@ -438,30 +468,100 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     padding: 12,
   },
   headerButton: {
-    padding: 8,
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+    shadowColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
   },
-  logoContainer: {
+  headerLogoContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 48, // Balance the header button on the left
   },
-  logoText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    color: colors.text.primary,
+  headerLogoImage: {
+    width: 120,
+    height: 40,
   },
   drawerHeader: {
-    padding: 24,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  gradientBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 0,
+  },
+  brandingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 30,
+    borderWidth: 1,
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  logoImage: {
+    width: 80,
+    height: 80,
+  },
+  brandingSection: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  brandSubtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.95)',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+  },
+  brandBadge: {
+    backgroundColor: '#60A5FA',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: 'rgba(0, 0, 0, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  brandBadgeText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
   drawerHeaderText: {
     fontSize: 20,
@@ -473,28 +573,39 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   },
   menuItems: {
     flex: 1,
-    paddingTop: 16,
-    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingHorizontal: 8,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    marginVertical: 6,
-    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    borderRadius: 16,
     borderLeftWidth: 4,
     borderLeftColor: 'transparent',
-    shadowColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+    shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
   },
   menuIcon: {
-    width: 32,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
     textAlign: 'center',
     marginRight: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
   },
   menuText: {
     fontSize: 16,
@@ -505,17 +616,19 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
-    borderRadius: 12,
+    borderRadius: 16,
     margin: 12,
     gap: 16,
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 59, 48, 0.1)' : 'rgba(255, 59, 48, 0.05)',
     borderLeftWidth: 4,
-    borderLeftColor: 'transparent',
-    shadowColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderLeftColor: '#FF3B30',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 59, 48, 0.1)',
+    shadowColor: isDark ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 59, 48, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   logoutText: {
     fontSize: 16,
@@ -525,10 +638,16 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   },
   quickSettingsSection: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginHorizontal: 12,
+    paddingVertical: 24,
+    marginHorizontal: 16,
     marginVertical: 12,
-    borderRadius: 12,
+    borderRadius: 24,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)',
+    shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
   },
   quickSettingsTitle: {
     fontSize: 14,
@@ -539,19 +658,22 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   },
   quickTogglesRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-evenly',
     alignItems: 'center',
+    gap: 12,
   },
   quickToggleButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+    shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
   },
   languageFlag: {
     fontSize: 18,

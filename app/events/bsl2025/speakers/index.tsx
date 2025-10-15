@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
 import { useEvent } from '../../../../contexts/EventContext';
 import { useTheme } from '../../../../hooks/useTheme';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { supabase } from '../../../../lib/supabase';
+import EventBanner from '../../../../components/EventBanner';
+import SpeakerAvatar from '../../../../components/SpeakerAvatar';
+import UnifiedSearchAndFilter from '../../../../components/UnifiedSearchAndFilter';
+import SpeakerListWithDividers from '../../../../components/SpeakerListWithDividers';
 
 // Type definitions
 interface Speaker {
@@ -28,46 +32,6 @@ interface AgendaItem {
 
 const { width } = Dimensions.get('window');
 
-const SpeakerCard = ({ speaker }: { speaker: Speaker }) => {
-  const router = useRouter();
-  
-  return (
-    <TouchableOpacity 
-      style={styles.speakerCard}
-      onPress={() => router.push(`/events/bsl2025/speakers/${speaker.id}`)}
-    >
-      <View style={styles.speakerImageContainer}>
-        <View style={styles.speakerImagePlaceholder}>
-          <MaterialIcons name="person" size={24} color="#666" />
-        </View>
-      </View>
-      <View style={styles.speakerInfo}>
-        <Text style={styles.speakerName}>{speaker.name}</Text>
-        <Text style={styles.speakerTitle}>{speaker.title}</Text>
-        <Text style={styles.speakerCompany}>{speaker.company}</Text>
-      </View>
-      <MaterialIcons name="chevron-right" size={20} color="#666" />
-    </TouchableOpacity>
-  );
-};
-
-const AgendaCard = ({ agendaItem }: { agendaItem: AgendaItem }) => (
-  <View style={styles.agendaCard}>
-    <View style={styles.agendaTimeContainer}>
-      <Text style={styles.agendaTime}>{agendaItem.time}</Text>
-      <View style={[styles.agendaTypeBadge, { backgroundColor: getAgendaTypeColor(agendaItem.type) }]}>
-        <Text style={styles.agendaTypeText}>{agendaItem.type.toUpperCase()}</Text>
-      </View>
-    </View>
-    <View style={styles.agendaContent}>
-      <Text style={styles.agendaTitle}>{agendaItem.title}</Text>
-      {agendaItem.speakers && agendaItem.speakers.length > 0 && (
-        <Text style={styles.agendaSpeakers}>Speakers: {agendaItem.speakers.join(', ')}</Text>
-      )}
-    </View>
-  </View>
-);
-
 const getAgendaTypeColor = (type: string) => {
   switch (type) {
     case 'keynote': return '#007AFF';
@@ -85,8 +49,229 @@ export default function BSL2025SpeakersScreen() {
   const router = useRouter();
   const styles = getStyles(isDark, colors);
 
-  const speakers = event.speakers || [];
+  const [speakers, setSpeakers] = useState<Speaker[]>([]);
+  const [filteredSpeakers, setFilteredSpeakers] = useState<Speaker[]>([]);
+  const [groupedSpeakers, setGroupedSpeakers] = useState<{ [key: string]: Speaker[] }>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('name');
   const agenda = event.agenda || [];
+
+  // Load speakers from database with JSON fallback
+  useEffect(() => {
+    const loadSpeakers = async () => {
+      try {
+        console.log('🔍 Loading speakers from database...');
+        
+        const dbPromise = supabase
+          .from('bsl_speakers')
+          .select('*')
+          .order('name');
+
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database timeout')), 5000)
+        );
+
+        try {
+          const { data: dbSpeakers, error: dbError } = await Promise.race([dbPromise, timeoutPromise]) as any;
+
+          if (dbSpeakers && !dbError && dbSpeakers.length > 0) {
+            console.log('📊 Database speakers sample:', dbSpeakers.slice(0, 3).map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              imageurl: s.imageurl,
+              company: s.company
+            })));
+            
+            const formattedSpeakers = dbSpeakers.map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              title: s.title,
+              company: s.company || '',
+              bio: s.bio || `Experienced professional in ${s.title}.`,
+              image: s.imageurl || null // Don't use fallback URL, let SpeakerAvatar handle it
+            }));
+            
+            // Check for speakers without images
+            const speakersWithoutImages = formattedSpeakers.filter((s: Speaker) => !s.image);
+            if (speakersWithoutImages.length > 0) {
+              console.warn('⚠️ Speakers without images:', speakersWithoutImages.map((s: Speaker) => s.name));
+            }
+            
+            // Remove duplicates based on ID
+            const uniqueSpeakers = formattedSpeakers.filter((speaker: Speaker, index: number, self: Speaker[]) => 
+              index === self.findIndex((s: Speaker) => s.id === speaker.id)
+            );
+            
+            // Check for duplicates
+            const duplicateIds = formattedSpeakers.length - uniqueSpeakers.length;
+            if (duplicateIds > 0) {
+              console.warn('⚠️ Found duplicate speakers:', duplicateIds);
+            }
+            
+            setSpeakers(uniqueSpeakers);
+            console.log('✅ Loaded speakers from database:', uniqueSpeakers.length, 'unique speakers');
+            return;
+          }
+        } catch (dbError: any) {
+          console.log('⚠️ Database unavailable, falling back to event config...', dbError?.message);
+        }
+
+        // Fallback to event config (JSON)
+        console.log('📋 Loading speakers from event config (JSON fallback)...');
+        const eventSpeakers = event.speakers || [];
+        const formattedEventSpeakers = eventSpeakers.map(s => ({
+          id: s.id,
+          name: s.name,
+          title: s.title,
+          company: s.company,
+          bio: `Experienced professional in ${s.title} at ${s.company}.`,
+          image: `https://blockchainsummit.la/wp-content/uploads/2025/09/foto-${s.name.toLowerCase().replace(/\s+/g, '-')}.png`
+        }));
+        
+        // Remove duplicates based on ID
+        const uniqueEventSpeakers = formattedEventSpeakers.filter((speaker: Speaker, index: number, self: Speaker[]) => 
+          index === self.findIndex((s: Speaker) => s.id === speaker.id)
+        );
+        
+        setSpeakers(uniqueEventSpeakers);
+        console.log('✅ Loaded speakers from event config (JSON fallback):', uniqueEventSpeakers.length, 'unique speakers');
+      } catch (error) {
+        console.error('❌ Error loading speakers:', error);
+        // Emergency fallback to event config
+        const eventSpeakers = event.speakers || [];
+        const formattedEventSpeakers = eventSpeakers.map(s => ({
+          id: s.id,
+          name: s.name,
+          title: s.title,
+          company: s.company,
+          bio: `Experienced professional in ${s.title} at ${s.company}.`,
+          image: `https://blockchainsummit.la/wp-content/uploads/2025/09/foto-${s.name.toLowerCase().replace(/\s+/g, '-')}.png`
+        }));
+        
+        // Remove duplicates based on ID
+        const uniqueEmergencySpeakers = formattedEventSpeakers.filter((speaker: Speaker, index: number, self: Speaker[]) => 
+          index === self.findIndex((s: Speaker) => s.id === speaker.id)
+        );
+        
+        setSpeakers(uniqueEmergencySpeakers);
+        console.log('✅ Emergency fallback successful:', uniqueEmergencySpeakers.length, 'unique speakers');
+      }
+    };
+
+    loadSpeakers();
+  }, []); // Load only once on mount
+
+  // Update filtered speakers when speakers change
+  useEffect(() => {
+    setFilteredSpeakers(speakers);
+  }, [speakers]);
+
+  // Update grouped speakers when filtered speakers change
+  useEffect(() => {
+    if (filteredSpeakers.length > 0) {
+      const grouped = groupSpeakersByLetter(filteredSpeakers, sortBy);
+      setGroupedSpeakers(grouped);
+    } else {
+      setGroupedSpeakers({});
+    }
+  }, [filteredSpeakers, sortBy]);
+
+  // Helper function to group speakers by letter
+  const groupSpeakersByLetter = (speakers: Speaker[], sortBy: string): { [key: string]: Speaker[] } => {
+    const sorted = [...speakers].sort((a, b) => {
+      let aValue = '';
+      let bValue = '';
+      
+      switch (sortBy) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'company':
+          aValue = a.company.toLowerCase();
+          bValue = b.company.toLowerCase();
+          break;
+        case 'title':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+      }
+      
+      return aValue.localeCompare(bValue);
+    });
+    
+    const grouped: { [key: string]: Speaker[] } = {};
+    
+    sorted.forEach(speaker => {
+      let firstLetter = '';
+      switch (sortBy) {
+        case 'name':
+          firstLetter = speaker.name.charAt(0).toUpperCase();
+          break;
+        case 'company':
+          firstLetter = speaker.company.charAt(0).toUpperCase();
+          break;
+        case 'title':
+          firstLetter = speaker.title.charAt(0).toUpperCase();
+          break;
+      }
+      
+      // Handle non-alphabetic characters
+      if (!/[A-Z]/.test(firstLetter)) {
+        firstLetter = '#';
+      }
+      
+      if (!grouped[firstLetter]) {
+        grouped[firstLetter] = [];
+      }
+      grouped[firstLetter].push(speaker);
+    });
+    
+    return grouped;
+  };
+
+  // SpeakerCard component
+  const SpeakerCard = ({ speaker }: { speaker: Speaker }) => {
+    return (
+      <TouchableOpacity 
+        style={styles.speakerCard}
+        onPress={() => router.push(`/events/bsl2025/speakers/${speaker.id}`)}
+      >
+        <View style={styles.speakerImageContainer}>
+          <SpeakerAvatar
+            imageUrl={speaker.image}
+            name={speaker.name}
+            size={50}
+            showBorder={false}
+          />
+        </View>
+        <View style={styles.speakerInfo}>
+          <Text style={styles.speakerName}>{speaker.name}</Text>
+          <Text style={styles.speakerTitle}>{speaker.title}</Text>
+          <Text style={styles.speakerCompany}>{speaker.company}</Text>
+        </View>
+        <MaterialIcons name="chevron-right" size={20} color="#666" />
+      </TouchableOpacity>
+    );
+  };
+
+  // AgendaCard component
+  const AgendaCard = ({ agendaItem }: { agendaItem: AgendaItem }) => (
+    <View style={styles.agendaCard}>
+      <View style={styles.agendaTimeContainer}>
+        <Text style={styles.agendaTime}>{agendaItem.time}</Text>
+        <View style={[styles.agendaTypeBadge, { backgroundColor: getAgendaTypeColor(agendaItem.type) }]}>
+          <Text style={styles.agendaTypeText}>{agendaItem.type.toUpperCase()}</Text>
+        </View>
+      </View>
+      <View style={styles.agendaContent}>
+        <Text style={styles.agendaTitle}>{agendaItem.title}</Text>
+        {agendaItem.speakers && agendaItem.speakers.length > 0 && (
+          <Text style={styles.agendaSpeakers}>Speakers: {agendaItem.speakers.join(', ')}</Text>
+        )}
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -96,30 +281,54 @@ export default function BSL2025SpeakersScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Event Header */}
-        <View style={styles.headerSection}>
-          <Text style={styles.eventTitle}>{event.name}</Text>
-          <Text style={styles.eventSubtitle}>Blockchain Summit Latam 2025</Text>
-          <Text style={styles.eventDate}>November 12-14, 2025</Text>
-        </View>
+        <EventBanner
+          title="Featured Speakers"
+          subtitle={`${speakers.length} Industry Leaders & Experts`}
+          date="November 12-14, 2025 • Medellín, Colombia"
+          showCountdown={true}
+          showLiveIndicator={true}
+        />
+
+        {/* Search and Sort */}
+        {speakers.length > 0 && (
+          <UnifiedSearchAndFilter
+            data={speakers}
+            onFilteredData={setFilteredSpeakers}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search speakers..."
+            searchFields={['name', 'title', 'company']}
+          />
+        )}
 
         {/* Featured Speakers Section */}
-        {speakers.length > 0 && (
+        {Object.keys(groupedSpeakers).length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Featured Speakers</Text>
+              <Text style={styles.sectionTitle}>
+                {searchQuery ? `Search Results (${filteredSpeakers.length})` : `Featured Speakers (${speakers.length})`}
+              </Text>
               <TouchableOpacity 
                 style={styles.viewAllButton}
                 onPress={() => router.push('/events/bsl2025/speakers/calendar')}
               >
-                <Text style={styles.viewAllButtonText}>View All</Text>
+                <Text style={styles.viewAllButtonText}>View Full Calendar</Text>
                 <MaterialIcons name="arrow-forward" size={16} color="#007AFF" />
               </TouchableOpacity>
             </View>
-            <View style={styles.speakersList}>
-              {speakers.slice(0, 8).map(speaker => (
-                <SpeakerCard key={speaker.id} speaker={speaker} />
-              ))}
-            </View>
+            <SpeakerListWithDividers
+              groupedSpeakers={groupedSpeakers}
+              onSpeakerPress={(speaker) => router.push(`/events/bsl2025/speakers/${speaker.id}`)}
+              sortBy={sortBy}
+            />
+          </View>
+        )}
+
+        {/* No Results */}
+        {searchQuery && filteredSpeakers.length === 0 && (
+          <View style={styles.noResultsContainer}>
+            <MaterialIcons name="search-off" size={48} color={colors.text.secondary} />
+            <Text style={styles.noResultsText}>No speakers found for "{searchQuery}"</Text>
+            <Text style={styles.noResultsSubtext}>Try a different search term</Text>
           </View>
         )}
 
@@ -177,27 +386,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 30,
-  },
-  headerSection: {
-    padding: 20,
-    backgroundColor: '#007AFF',
-    alignItems: 'center',
-  },
-  eventTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  eventSubtitle: {
-    fontSize: 16,
-    color: '#E3F2FD',
-    marginBottom: 8,
-  },
-  eventDate: {
-    fontSize: 14,
-    color: '#BBDEFB',
+    paddingBottom: 40,
   },
   section: {
     paddingHorizontal: 20,
@@ -234,14 +423,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   speakerImageContainer: {
     marginRight: 12,
-  },
-  speakerImagePlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   speakerInfo: {
     flex: 1,
@@ -353,5 +534,23 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontSize: 14,
     color: colors.text.primary,
     marginLeft: 12,
+  },
+  noResultsContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  noResultsText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  noResultsSubtext: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });

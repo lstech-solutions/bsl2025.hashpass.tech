@@ -1,7 +1,7 @@
 import { supabaseServer as supabase } from '@/lib/supabase-server';
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
-  const id = params.id;
+  const id = params?.id;
   if (!id) {
     return new Response(JSON.stringify({ error: 'Missing speaker id' }), { status: 400 });
   }

@@ -13,6 +13,9 @@ frontend:
           else
             npm install
           fi
+        # Install AWS CLI for Lambda deployment
+        - pip install awscli --upgrade --user
+        - export PATH=~/.local/bin:$PATH
     build:
       commands:
         # Clean previous builds
@@ -23,6 +26,14 @@ frontend:
         - cp -r dist/server/* dist/client/
         # Copy service worker to client directory
         - cp dist/sw.js dist/client/
+        # Build and deploy Lambda functions
+        - echo "Building Lambda functions..."
+        - cd amplify/backend/function/agendaMonitor
+        - npm install --production
+        - cd ../../../..
+        # Deploy Lambda function
+        - echo "Deploying Lambda function..."
+        - amplify push --yes
         # List contents for debugging
         - ls -la dist/client/
         - echo "Checking for index.html:"

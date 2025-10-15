@@ -256,8 +256,8 @@ export const BRANDING_PRESETS: Record<string, BrandingConfig> = {
     },
     assets: {
       logo: {
-        light: '/assets/logos/logo-full-hashpass-white-cyan.svg',
-        dark: '/assets/logos/logo-full-hashpass-black-cyan.svg',
+        light: '/assets/logos/BSL-Logo-fondo-oscuro-2024.svg',
+        dark: '/assets/logos/BSL-Logo-fondo-oscuro-2024.svg',
         favicon: '/favicon.ico',
         icon: '/assets/images/icon.png'
       },

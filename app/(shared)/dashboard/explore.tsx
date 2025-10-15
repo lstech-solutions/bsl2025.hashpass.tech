@@ -1,11 +1,13 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, FlatList, Image, Dimensions, TouchableOpacity, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { SvgUri } from 'react-native-svg';
 import { useScroll } from '../../../contexts/ScrollContext';
 import { useEvent } from '../../../contexts/EventContext';
 import { useTheme } from '../../../hooks/useTheme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import EventBanner from '../../../components/EventBanner';
 
 // Type definitions
 interface Ticket {
@@ -25,14 +27,6 @@ interface Event {
   image: string;
 }
 
-interface Speaker {
-  id: string;
-  name: string;
-  title: string;
-  company: string;
-  bio?: string;
-  image?: string;
-}
 
 interface AgendaItem {
   id: string;
@@ -42,6 +36,19 @@ interface AgendaItem {
   speakers?: string[];
   type: 'keynote' | 'panel' | 'break' | 'meal' | 'registration';
   location?: string;
+}
+
+interface Pass {
+  id: string;
+  user_id: string;
+  event_id: string;
+  pass_type: 'general' | 'vip' | 'business';
+  status: 'active' | 'used' | 'expired' | 'cancelled';
+  purchase_date: string;
+  price_usd: number;
+  access_features: string[];
+  created_at: string;
+  updated_at: string;
 }
 
 // Mock data for tickets and events
@@ -124,6 +131,39 @@ export default function ExploreScreen() {
   const { isDark, colors } = useTheme();
   const router = useRouter();
   const styles = getStyles(isDark, colors);
+  
+  const [userPasses, setUserPasses] = useState<Pass[]>([]);
+  const [loadingPasses, setLoadingPasses] = useState(true);
+
+  // Fetch user passes
+  useEffect(() => {
+    const fetchUserPasses = async () => {
+      if (event.id === 'bsl2025') {
+        try {
+          setLoadingPasses(true);
+          const response = await fetch(`/api/bslatam/user-passes?userId=edward-calderon-unal&eventId=${event.id}`);
+          const result = await response.json();
+          
+          if (response.ok && result.data) {
+            setUserPasses(result.data);
+          } else {
+            console.error('Failed to fetch user passes:', result.error);
+            setUserPasses([]);
+          }
+        } catch (error) {
+          console.error('Error fetching user passes:', error);
+          setUserPasses([]);
+        } finally {
+          setLoadingPasses(false);
+        }
+      } else {
+        setUserPasses([]);
+        setLoadingPasses(false);
+      }
+    };
+
+    fetchUserPasses();
+  }, [event.id]);
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -145,6 +185,89 @@ export default function ExploreScreen() {
       case 'registration': return '#8E8E93';
       default: return '#8E8E93';
     }
+  };
+
+  // PassCard component (using TicketCard design)
+  const PassCard = ({ pass }: { pass: Pass }) => {
+    const getPassTypeColor = (type: string) => {
+      switch (type) {
+        case 'business': return '#007AFF';
+        case 'vip': return '#FF9500';
+        case 'general': return '#34A853';
+        default: return '#8E8E93';
+      }
+    };
+
+    const getPassTypeLabel = (type: string) => {
+      switch (type) {
+        case 'business': return 'Business Pass';
+        case 'vip': return 'VIP Pass';
+        case 'general': return 'General Pass';
+        default: return 'Event Pass';
+      }
+    };
+
+    const getPassImage = (type: string) => {
+      switch (type) {
+        case 'business': return 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=400&h=200&fit=crop';
+        case 'vip': return 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=400&h=200&fit=crop';
+        case 'general': return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop';
+        default: return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop';
+      }
+    };
+
+    const getPassAccess = (type: string) => {
+      switch (type) {
+        case 'business': return 'B2B + Closing Party';
+        case 'vip': return 'All VIP Benefits';
+        case 'general': return 'General Access';
+        default: return 'Event Access';
+      }
+    };
+
+    return (
+      <View style={styles.ticketCard}>
+        <View style={styles.ticketHeader}>
+          <View>
+            <Text style={styles.ticketDate}>Nov 12-14, 2025</Text>
+            <Text style={styles.ticketTitle}>{getPassTypeLabel(pass.pass_type)}</Text>
+          </View>
+          <View style={[styles.ticketType, { backgroundColor: getPassTypeColor(pass.pass_type) }]}>
+            <Text style={[styles.ticketTypeText, { color: '#FFFFFF' }]}>
+              {pass.pass_type.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+        
+        <View style={styles.ticketImageContainer}>
+          <Image source={{ uri: getPassImage(pass.pass_type) }} style={styles.ticketImage} />
+          <View style={styles.ticketOverlay}>
+            <Text style={styles.ticketAccessText}>{getPassAccess(pass.pass_type)}</Text>
+            <Text style={styles.ticketPriceText}>${pass.price_usd?.toFixed(0) || '0'}</Text>
+          </View>
+          <View style={styles.logoSeal}>
+            <Text style={styles.logoSealText}>BSL2025</Text>
+          </View>
+        </View>
+        
+        <View style={styles.ticketFooter}>
+          <TouchableOpacity style={styles.actionButton}>
+            <MaterialIcons name="qr-code" size={20} color="#4A90E2" />
+            <Text style={styles.actionButtonText}>Generate QR</Text>
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity style={styles.actionButton}>
+            <MaterialIcons name="info" size={20} color="#4A90E2" />
+            <Text style={styles.actionButtonText}>See Details</Text>
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity style={styles.actionButton}>
+            <MaterialIcons name="share" size={20} color="#4A90E2" />
+            <Text style={styles.actionButtonText}>Share</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   };
 
   // TicketCard component
@@ -201,43 +324,155 @@ export default function ExploreScreen() {
     </View>
   );
 
-  // SpeakerCard component
-  const SpeakerCard = ({ speaker }: { speaker: Speaker }) => (
-    <TouchableOpacity 
-      style={styles.speakerCard}
-      onPress={() => router.push(`/events/bsl2025/speakers/${speaker.id}`)}
-    >
-      <View style={styles.speakerImageContainer}>
-        <View style={styles.speakerImagePlaceholder}>
-          <MaterialIcons name="person" size={24} color="#666" />
-        </View>
-      </View>
-      <View style={styles.speakerInfo}>
-        <Text style={styles.speakerName}>{speaker.name}</Text>
-        <Text style={styles.speakerTitle}>{speaker.title}</Text>
-        <Text style={styles.speakerCompany}>{speaker.company}</Text>
-      </View>
-      <MaterialIcons name="chevron-right" size={20} color="#666" />
-    </TouchableOpacity>
-  );
 
   // AgendaCard component
-  const AgendaCard = ({ agendaItem }: { agendaItem: AgendaItem }) => (
-    <View style={styles.agendaCard}>
-      <View style={styles.agendaTimeContainer}>
-        <Text style={styles.agendaTime}>{agendaItem.time}</Text>
-        <View style={[styles.agendaTypeBadge, { backgroundColor: getAgendaTypeColor(agendaItem.type) }]}>
-          <Text style={styles.agendaTypeText}>{agendaItem.type.toUpperCase()}</Text>
+  // Function to detect current day based on date
+  const getCurrentDay = () => {
+    const now = new Date();
+    const eventStart = new Date('2025-11-12T00:00:00'); // BSL 2025 start date
+    const eventEnd = new Date('2025-11-14T23:59:59'); // BSL 2025 end date
+    
+    // Calculate time difference in milliseconds
+    const timeDiff = eventStart.getTime() - now.getTime();
+    const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    
+    if (now < eventStart) {
+      return { 
+        day: 1, 
+        status: 'upcoming', 
+        daysUntil: daysDiff,
+        hoursUntil: Math.ceil((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      };
+    } else if (now >= eventStart && now <= eventEnd) {
+      const dayNumber = Math.floor((now.getTime() - eventStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return { day: Math.min(dayNumber, 3), status: 'current' };
+    } else {
+      return { day: 3, status: 'past' };
+    }
+  };
+
+  // Function to get day theme name
+  const getDayTheme = (day: number) => {
+    switch (day) {
+      case 1: return 'Regulación, Bancos Centrales e Infraestructura del Dinero Digital';
+      case 2: return 'PSAV, Compliance, Custodia y Tokenización';
+      case 3: return 'Stablecoins y DeFi: Integrando el Mundo Financiero Global';
+      default: return 'Event Day';
+    }
+  };
+
+  // Function to get upcoming sessions for current day
+  const getUpcomingSessions = (day: number) => {
+    const now = new Date();
+    const currentTime = now.getHours() * 100 + now.getMinutes();
+    
+    return agenda.filter(item => {
+      // Simple day detection - you might need to adjust this based on your data structure
+      const itemTime = parseInt(item.time.split(' - ')[0].replace(':', ''));
+      return itemTime >= currentTime;
+    }).slice(0, 3); // Show next 3 sessions
+  };
+
+  const AgendaSummaryCard = () => {
+    const [currentDayInfo, setCurrentDayInfo] = useState(getCurrentDay());
+    const upcomingSessions = getUpcomingSessions(currentDayInfo.day);
+
+    // Update countdown every minute
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setCurrentDayInfo(getCurrentDay());
+      }, 60000); // Update every minute
+
+      return () => clearInterval(interval);
+    }, []);
+    
+    return (
+      <View style={styles.agendaSummaryCard}>
+        <View style={styles.agendaSummaryHeader}>
+          <View style={styles.dayIndicator}>
+            <Text style={styles.dayNumber}>Day {currentDayInfo.day}</Text>
+            <View style={[styles.dayStatusBadge, { 
+              backgroundColor: currentDayInfo.status === 'current' ? '#34A853' : 
+                              currentDayInfo.status === 'upcoming' ? '#FF9500' : '#8E8E93'
+            }]}>
+              <Text style={styles.dayStatusText}>
+                {currentDayInfo.status === 'current' ? 'LIVE' : 
+                 currentDayInfo.status === 'upcoming' ? 
+                   ((currentDayInfo.daysUntil ?? 0) > 7 ? `${currentDayInfo.daysUntil} days` : 
+                    (currentDayInfo.daysUntil ?? 0) > 1 ? `${currentDayInfo.daysUntil} days` :
+                    (currentDayInfo.daysUntil ?? 0) === 1 ? `${currentDayInfo.hoursUntil ?? 0}h left` : 'Starting soon!') : 
+                 'COMPLETED'}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.dayTheme}>{getDayTheme(currentDayInfo.day)}</Text>
         </View>
-      </View>
-      <View style={styles.agendaContent}>
-        <Text style={styles.agendaTitle}>{agendaItem.title}</Text>
-        {agendaItem.speakers && agendaItem.speakers.length > 0 && (
-          <Text style={styles.agendaSpeakers}>Speakers: {agendaItem.speakers.join(', ')}</Text>
+        
+        {upcomingSessions.length > 0 && (
+          <View style={styles.upcomingSessions}>
+            <Text style={styles.upcomingTitle}>Upcoming Sessions</Text>
+            {upcomingSessions.map((session, index) => (
+              <View key={session.id} style={styles.upcomingSession}>
+                <Text style={styles.upcomingTime}>{session.time}</Text>
+                <Text style={styles.upcomingSessionTitle}>{session.title}</Text>
+              </View>
+            ))}
+          </View>
         )}
+        
+        <TouchableOpacity 
+          style={styles.viewFullAgendaButton}
+          onPress={() => router.push('/events/bsl2025/agenda')}
+        >
+          <Text style={styles.viewFullAgendaText}>View Full Agenda</Text>
+          <MaterialIcons name="arrow-forward" size={16} color="#007AFF" />
+        </TouchableOpacity>
       </View>
-    </View>
-  );
+    );
+  };
+
+  const EventInfoCard = () => {
+    const eventStats = [
+      { icon: 'location-on', label: 'Location', value: 'Medellín, Colombia' },
+      { icon: 'event', label: 'Date', value: 'November 12-14, 2025' },
+      { icon: 'people', label: 'Speakers', value: `${speakers.length} Featured` },
+      { icon: 'schedule', label: 'Duration', value: '3 Days of Content' },
+      { icon: 'business', label: 'Venue', value: 'Universidad EAFIT' }
+    ];
+    
+    return (
+      <View style={styles.agendaSummaryCard}>
+        <View style={styles.agendaSummaryHeader}>
+          <View style={styles.dayIndicator}>
+            <Text style={styles.dayNumber}>BSL 2025</Text>
+            <View style={styles.logoContainer}>
+              <Text style={styles.bslLogoText}>BSL</Text>
+            </View>
+          </View>
+          <Text style={styles.dayTheme}>Blockchain Summit Latam 2025</Text>
+        </View>
+        
+        <View style={styles.upcomingSessions}>
+          <Text style={styles.upcomingTitle}>Event Details</Text>
+          {eventStats.map((stat, index) => (
+            <View key={index} style={styles.upcomingSession}>
+              <MaterialIcons name={stat.icon as any} size={16} color="#007AFF" />
+              <Text style={styles.upcomingTime}>{stat.label}</Text>
+              <Text style={styles.upcomingSessionTitle}>{stat.value}</Text>
+            </View>
+          ))}
+        </View>
+        
+        <TouchableOpacity 
+          style={styles.viewFullAgendaButton}
+          onPress={() => router.push('/events/bsl2025/event-info')}
+        >
+          <Text style={styles.viewFullAgendaText}>View Full Event Info</Text>
+          <MaterialIcons name="arrow-forward" size={16} color="#007AFF" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.default }]}>
@@ -252,11 +487,13 @@ export default function ExploreScreen() {
       >
         {/* Event Header for BSL2025 */}
         {isBSL2025Event && (
-          <View style={styles.eventHeaderSection}>
-            <Text style={styles.eventHeaderTitle}>{event.name}</Text>
-            <Text style={styles.eventHeaderSubtitle}>Blockchain Summit Latam 2025</Text>
-            <Text style={styles.eventHeaderDate}>November 12-14, 2025 • Medellín, Colombia</Text>
-          </View>
+          <EventBanner
+            title={event.name}
+            subtitle="Blockchain Summit Latam 2025"
+            date="November 12-14, 2025 • Medellín, Colombia"
+            showCountdown={true}
+            showLiveIndicator={true}
+          />
         )}
 
         {/* Your Passes Section */}
@@ -264,40 +501,66 @@ export default function ExploreScreen() {
           <Text style={styles.sectionTitle}>
             {isBSL2025Event ? 'Your Event Passes' : 'Your Passes'}
           </Text>
-          <View style={{ height: 250 }}>
-            <FlatList
-              data={userTickets}
-              renderItem={({ item }) => (
-                <View style={userTickets.length === 1 ? styles.singleTicketContainer : null}>
-                  <TicketCard ticket={item} />
-                </View>
-              )}
-              keyExtractor={item => item.id}
-              horizontal={userTickets.length > 1}
-              showsHorizontalScrollIndicator={userTickets.length > 1}
-              contentContainerStyle={styles.ticketList}
-              scrollEnabled={userTickets.length > 1}
-            />
-          </View>
+          {loadingPasses ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading your passes...</Text>
+            </View>
+          ) : userPasses.length > 0 ? (
+            <View style={{ height: 300 }}>
+              <FlatList
+                data={userPasses}
+                renderItem={({ item }) => (
+                  <View style={userPasses.length === 1 ? styles.singlePassContainer : null}>
+                    <PassCard pass={item} />
+                  </View>
+                )}
+                keyExtractor={item => item.id}
+                horizontal={userPasses.length > 1}
+                showsHorizontalScrollIndicator={userPasses.length > 1}
+                contentContainerStyle={styles.passList}
+                scrollEnabled={userPasses.length > 1}
+              />
+            </View>
+          ) : (
+            <View style={styles.noPassesContainer}>
+              <MaterialIcons name="confirmation-number" size={48} color={colors.text.secondary} />
+              <Text style={styles.noPassesText}>No passes found</Text>
+              <Text style={styles.noPassesSubtext}>Contact support to get your event passes</Text>
+            </View>
+          )}
         </View>
 
-        {/* BSL2025 Specific Content */}
-        {isBSL2025Event && speakers.length > 0 && (
-          <View style={[styles.section, styles.speakersSection]}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Featured Speakers</Text>
+        {/* BSL2025 Quick Access */}
+        {isBSL2025Event && (
+          <View style={[styles.section, styles.quickAccessSection]}>
+            <Text style={styles.sectionTitle}>Event Quick Access</Text>
+            <View style={styles.quickAccessGrid}>
               <TouchableOpacity 
-                style={styles.viewAllButton}
-                onPress={() => router.push('/events/bsl2025/speakers')}
+                style={styles.quickAccessCard}
+                onPress={() => router.push('/events/bsl2025/speakers/calendar')}
               >
-                <Text style={styles.viewAllButtonText}>View All</Text>
-                <MaterialIcons name="arrow-forward" size={16} color="#007AFF" />
+                <MaterialIcons name="people" size={32} color="#007AFF" />
+                <Text style={styles.quickAccessTitle}>All Speakers</Text>
+                <Text style={styles.quickAccessSubtitle}>{speakers.length} Featured Speakers</Text>
               </TouchableOpacity>
-            </View>
-            <View style={styles.speakersList}>
-              {speakers.slice(0, 6).map(speaker => (
-                <SpeakerCard key={speaker.id} speaker={speaker} />
-              ))}
+              
+              <TouchableOpacity 
+                style={styles.quickAccessCard}
+                onPress={() => router.push('/events/bsl2025/agenda')}
+              >
+                <MaterialIcons name="event" size={32} color="#34A853" />
+                <Text style={styles.quickAccessTitle}>Event Agenda</Text>
+                <Text style={styles.quickAccessSubtitle}>3 Days Schedule</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.quickAccessCard}
+                onPress={() => router.push('/events/bsl2025/event-info')}
+              >
+                <MaterialIcons name="info" size={32} color="#FF9500" />
+                <Text style={styles.quickAccessTitle}>Event Info</Text>
+                <Text style={styles.quickAccessSubtitle}>Details & Logistics</Text>
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -305,17 +568,7 @@ export default function ExploreScreen() {
         {isBSL2025Event && agenda.length > 0 && (
           <View style={[styles.section, styles.agendaSection]}>
             <Text style={styles.sectionTitle}>Event Agenda</Text>
-            <View style={styles.agendaList}>
-              {agenda.slice(0, 5).map(agendaItem => (
-                <AgendaCard key={agendaItem.id} agendaItem={agendaItem} />
-              ))}
-            </View>
-            {agenda.length > 5 && (
-              <TouchableOpacity style={styles.viewAllButton}>
-                <Text style={styles.viewAllButtonText}>View Full Agenda</Text>
-                <MaterialIcons name="arrow-forward" size={16} color="#007AFF" />
-              </TouchableOpacity>
-            )}
+            <AgendaSummaryCard />
           </View>
         )}
 
@@ -333,26 +586,9 @@ export default function ExploreScreen() {
 
         {/* Event Info for BSL2025 */}
         {isBSL2025Event && (
-          <View style={[styles.section, styles.infoSection]}>
+          <View style={[styles.section, styles.agendaSection]}>
             <Text style={styles.sectionTitle}>Event Information</Text>
-            <View style={styles.infoCard}>
-              <View style={styles.infoRow}>
-                <MaterialIcons name="location-on" size={20} color="#007AFF" />
-                <Text style={styles.infoText}>Medellín, Colombia</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <MaterialIcons name="event" size={20} color="#007AFF" />
-                <Text style={styles.infoText}>November 12-14, 2025</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <MaterialIcons name="people" size={20} color="#007AFF" />
-                <Text style={styles.infoText}>{speakers.length} Speakers</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <MaterialIcons name="schedule" size={20} color="#007AFF" />
-                <Text style={styles.infoText}>3 Days of Content</Text>
-              </View>
-            </View>
+            <EventInfoCard />
           </View>
         )}
       </Animated.ScrollView>
@@ -391,6 +627,40 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   singleTicketContainer: {
     width: width * 0.8,
     marginRight: 15,
+  },
+  // Pass Card Styles (using ticket card design)
+  singlePassContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  passList: {
+    paddingHorizontal: 20,
+  },
+  noPassesContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  noPassesText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  noPassesSubtext: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: colors.text.secondary,
   },
   ticketFooter: {
     flexDirection: 'row',
@@ -509,6 +779,39 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  ticketPriceText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  logoSeal: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: '#007AFF',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: 'rgba(0, 0, 0, 0.4)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoSealText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
   // Event card styles
   eventsSection: {
     backgroundColor: colors.background.paper,
@@ -561,102 +864,143 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontSize: 12,
     color: colors.text.secondary,
   },
-  // BSL2025 Event Header
-  eventHeaderSection: {
-    padding: 32,
-    backgroundColor: '#007AFF',
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  eventHeaderTitle: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  eventHeaderSubtitle: {
-    fontSize: 20,
-    color: '#E3F2FD',
-    marginBottom: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  eventHeaderDate: {
-    fontSize: 16,
-    color: '#BBDEFB',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  // Speaker card styles
-  speakersSection: {
+  // Quick access styles
+  quickAccessSection: {
     backgroundColor: colors.background.paper,
   },
-  sectionHeader: {
+  quickAccessGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  speakersList: {
     gap: 16,
   },
-  speakerCard: {
-    flexDirection: 'row',
+  quickAccessCard: {
+    flex: 1,
+    backgroundColor: colors.background.default,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  quickAccessTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginTop: 12,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  quickAccessSubtitle: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    textAlign: 'center',
+  },
+  // Agenda card styles
+  agendaSection: {
+    backgroundColor: colors.background.paper,
+  },
+  agendaSummaryCard: {
     backgroundColor: colors.background.paper,
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    padding: 20,
     shadowColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 6,
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.divider,
   },
-  speakerImageContainer: {
-    marginRight: 16,
+  agendaSummaryHeader: {
+    marginBottom: 16,
   },
-  speakerImagePlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#E0E0E0',
-    justifyContent: 'center',
+  dayIndicator: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  speakerInfo: {
-    flex: 1,
+  dayNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+  },
+  dayStatusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  dayStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  logoContainer: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  speakerName: {
+  bslLogoText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
+  dayTheme: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    lineHeight: 20,
+  },
+  upcomingSessions: {
+    marginBottom: 16,
+  },
+  upcomingTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text.primary,
-    marginBottom: 2,
+    marginBottom: 12,
   },
-  speakerTitle: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginBottom: 2,
+  upcomingSession: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingVertical: 4,
   },
-  speakerCompany: {
+  upcomingTime: {
     fontSize: 12,
-    color: colors.text.secondary,
+    fontWeight: '600',
+    color: '#007AFF',
+    minWidth: 80,
+    marginRight: 12,
   },
-  // Agenda card styles
-  agendaSection: {
-    backgroundColor: colors.background.paper,
+  upcomingSessionTitle: {
+    fontSize: 14,
+    color: colors.text.primary,
+    flex: 1,
+  },
+  viewFullAgendaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: isDark ? 'rgba(0, 122, 255, 0.1)' : 'rgba(0, 122, 255, 0.05)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  viewFullAgendaText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginRight: 8,
   },
   agendaList: {
     gap: 16,
@@ -727,26 +1071,11 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   infoSection: {
     backgroundColor: colors.background.paper,
   },
-  infoCard: {
-    backgroundColor: colors.background.paper,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  infoRow: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  infoText: {
-    fontSize: 14,
-    color: colors.text.primary,
-    marginLeft: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
 });

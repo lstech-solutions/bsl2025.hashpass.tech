@@ -9,6 +9,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { ThemeProvider } from '../providers/ThemeProvider';
 import { LanguageProvider } from '../providers/LanguageProvider';
 import { EventProvider } from '../contexts/EventContext';
+import { ToastProvider } from '../contexts/ToastContext';
 import { useTheme, useThemeProvider } from '../hooks/useTheme';
 import { StatusBar } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
@@ -32,7 +33,9 @@ export default function RootLayout() {
           />
           <EventProvider>
             <LanguageProvider>
-              <ThemedContent />
+              <ToastProvider>
+                <ThemedContent />
+              </ToastProvider>
             </LanguageProvider>
           </EventProvider>
         </ThemeProvider>

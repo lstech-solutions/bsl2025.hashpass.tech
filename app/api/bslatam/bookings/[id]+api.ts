@@ -7,7 +7,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!rateLimitOk(`patch-booking:${ip}`)) {
     return new Response(JSON.stringify({ error: 'Too many requests' }), { status: 429 });
   }
-  const id = params.id;
+  const id = params?.id;
   if (!id) {
     return new Response(JSON.stringify({ error: 'Missing booking id' }), { status: 400 });
   }

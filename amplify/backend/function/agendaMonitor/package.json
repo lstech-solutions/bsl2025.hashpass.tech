@@ -1,0 +1,14 @@
+{
+  "name": "agenda-monitor",
+  "version": "1.0.0",
+  "description": "BSL2025 Agenda Monitor Lambda Function",
+  "main": "index.js",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "aws-sdk": "^2.1691.0",
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

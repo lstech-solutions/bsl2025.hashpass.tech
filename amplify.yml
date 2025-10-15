@@ -17,14 +17,14 @@ frontend:
       commands:
         # Clean previous builds
         - rm -rf dist
-        # Build Expo web app for static export (not server mode)
-        - npx expo export -p web --output-dir dist
-        # Ensure we have the proper static files
+        # Build Expo web app in server mode to include API routes
+        - npm run build:web
+        # Ensure we have both client and server directories
         - ls -la dist/
-        # Copy service worker to root if needed
-        - cp dist/sw.js dist/ || true
+        - ls -la dist/client/ || echo "No client directory"
+        - ls -la dist/server/ || echo "No server directory"
   artifacts:
-    baseDirectory: dist
+    baseDirectory: dist/client
     files:
       - '**/*'
     customHeaders:
@@ -50,27 +50,29 @@ frontend:
       - node_modules/**/*
       - $(npm root --global)/**/*
 
-# Client-side routing for SPA
+# Serverless functions for API routes
+functions:
+  - name: api
+    runtime: nodejs18.x
+    handler: dist/server/_expo/functions/server.js
+    events:
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors: true
+
+# Redirects for SPA routing (only for non-API routes)
 redirects:
-  - source: '/<*>'
+  - source: '/dashboard/<*>'
     status: 200
     target: '/index.html'
-  - source: '/sw.js'
-    status: 200
-    target: '/sw.js'
-  - source: '/_expo/*'
-    status: 200
-    target: '/_expo/'
-  - source: '/api/*'
-    status: 200
-    target: '/api/'
-  - source: '/dashboard/*'
+  - source: '/auth/<*>'
     status: 200
     target: '/index.html'
-  - source: '/auth/*'
+  - source: '/bslatam/<*>'
     status: 200
     target: '/index.html'
-  - source: '/bslatam/*'
+  - source: '/components/<*>'
     status: 200
     target: '/index.html'
 

@@ -13,7 +13,9 @@
     "build:web": "npm run prebuild && expo export -p web && npx workbox-cli generateSW workbox-config.js",
     "prebuild": "rm -rf dist",
     "lint": "expo lint",
-    "deploy": "npm run build:web && netlify deploy --prod"
+    "deploy": "npm run build:web && netlify deploy --prod",
+    "seed:bslatam": "node ./scripts/seed-bslatam.mjs ./speakers.json",
+    "test:e2e:bslatam": "node ./tests/bslatam/e2e.mjs"
   },
   "jest": {
     "preset": "jest-expo"
@@ -55,6 +57,7 @@
     "lucide-react-native": "^0.479.0",
     "motion": "^12.23.3",
     "nativewind": "^4.1.23",
+    "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.5",
     "postcss": "^8.5.3",
     "react": "19.0.0",
@@ -80,7 +83,7 @@
     "@babel/core": "^7.25.2",
     "@expo/metro-config": "^0.20.17",
     "@types/expo-localization": "^1.0.1",
-    "@types/jest": "^29.5.12",
+    "@types/jest": "^29.5.14",
     "@types/node": "^24.0.14",
     "@types/react": "~19.0.10",
     "@types/react-dom": "^19.1.6",

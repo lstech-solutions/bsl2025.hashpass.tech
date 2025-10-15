@@ -8,7 +8,7 @@
     "scheme": "hashpass",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -73,7 +73,7 @@
         "og:type": "website",
         "og:title": "HashPass",
         "og:description": "YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS",
-        "og:image": "./assets/images/og-image.png",
+        "og:image": "./assets/images/icon.png",
         "apple-mobile-web-app-capable": "yes",
         "apple-mobile-web-app-status-bar-style": "default",
         "apple-mobile-web-app-title": "HashPass",

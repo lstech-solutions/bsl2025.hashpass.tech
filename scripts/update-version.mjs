@@ -122,8 +122,10 @@ for (const file of filesToUpdate) {
         if (update.pattern.test(content)) {
           if (update.key === 'buildNumber') {
             content = content.replace(update.pattern, `buildNumber: ${update.value},`);
-          } else {
+          } else if (update.key === 'notes') {
             content = content.replace(update.pattern, `${update.key}: ${update.value}`);
+          } else {
+            content = content.replace(update.pattern, `${update.key}: ${update.value},`);
           }
           updated = true;
         }
@@ -226,8 +228,13 @@ if (allUpdated) {
   filesToUpdate.forEach(file => console.log(`   - ${file.path}`));
   console.log('\n🚀 Next steps:');
   console.log('   1. Review the changes: git diff');
-  console.log('   2. Commit the changes: git add . && git commit -m "Release v' + newVersion + '"');
-  console.log('   3. Push to repository: git push');
+  console.log('   2. Test the build: npm run build:web');
+  console.log('   3. Commit the changes: git add . && git commit -m "Release v' + newVersion + '"');
+  console.log('   4. Push to repository: git push');
+  
+  // Ask if user wants to build now
+  console.log('\n🔨 Would you like to build the project now? (y/n)');
+  console.log('   Run: npm run build:web');
 } else {
   console.log('\n❌ Some files could not be updated. Please check the errors above.');
   process.exit(1);

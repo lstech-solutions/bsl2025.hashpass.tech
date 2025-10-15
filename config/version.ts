@@ -23,8 +23,8 @@ export interface VersionHistory {
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
   buildNumber: 202510151510,
-  releaseDate: '2025-10-15'
-  releaseType: 'beta'
+  releaseDate: '2025-10-15',
+  releaseType: 'beta',
   environment: 'development',
   features: [
     'User pass management system',
@@ -58,35 +58,6 @@ export const VERSION_HISTORY: VersionHistory = {
   '1.1.9': {
     version: '1.1.9',
     buildNumber: 202510151510,
-    releaseDate: '2025-10-15',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'User pass management system',
-      'BSL 2025 event integration',
-      'Speaker profile system with avatars',
-      'Event agenda with live updates',
-      'Unified search and filter system',
-      'Dark mode support',
-      'Event banner component',
-      'Pass card UI with BSL branding',
-      'Agenda tabbed interface',
-      'Real-time countdown system'
-    ],
-    bugfixes: [
-      'Fixed SVG logo rendering issues',
-      'Resolved TypeScript undefined property errors',
-      'Fixed agenda data grouping logic',
-      'Corrected speaker count discrepancies',
-      'Fixed dark mode contrast issues',
-      'Resolved navigation routing problems'
-    ],
-    breakingChanges: [],
-    notes: 'UI display fixes and automatic version management'
-  },
-  '1.1.9': {
-    version: '1.1.9',
-    buildNumber: 202510151509,
     releaseDate: '2025-10-15',
     releaseType: 'beta',
     environment: 'development',
@@ -173,41 +144,6 @@ export const VERSION_HISTORY: VersionHistory = {
     ],
     breakingChanges: [],
     notes: 'Major UI overhaul with BSL 2025 branding and improved user experience'
-  },
-  '1.1.0': {
-    version: '1.1.7',
-    buildNumber: 2025011401,
-    releaseDate: '2025-01-14',
-    releaseType: 'alpha',
-    environment: 'development',
-    features: [
-      'Basic event management',
-      'Speaker listing functionality',
-      'Simple agenda display',
-      'Basic authentication system'
-    ],
-    bugfixes: [
-      'Fixed initial setup issues',
-      'Resolved database connection problems'
-    ],
-    breakingChanges: [],
-    notes: 'Initial BSL 2025 integration'
-  },
-  '1.0.0': {
-    version: '1.0.0',
-    buildNumber: 2025011301,
-    releaseDate: '2025-01-13',
-    releaseType: 'alpha',
-    environment: 'development',
-    features: [
-      'Core HashPass application structure',
-      'Basic navigation system',
-      'Theme management',
-      'Event context system'
-    ],
-    bugfixes: [],
-    breakingChanges: [],
-    notes: 'Initial HashPass application release'
   }
 };
 

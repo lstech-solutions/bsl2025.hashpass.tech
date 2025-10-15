@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator, Platform, Image, TouchableOp
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { createSessionFromUrl, supabase } from '../../lib/supabase';
 import { Check, AlertCircle, Info } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function AuthCallback() {
     const router = useRouter();
@@ -134,16 +135,44 @@ export default function AuthCallback() {
                     <Text style={styles.title}>Welcome to Hashpass!</Text>
                     <Text style={styles.betaDisclaimer}>Our web app is in beta. For the best experience, please use our mobile app.</Text>
                     
-                    <Image source={{ uri: './public/assets/images/qr-code.png' }} style={styles.qrCode} />
+                    <View style={styles.qrCodeContainer}>
+                        <Image 
+                            source={require('../../assets/images/qr-one-link-hashpass.png')} 
+                            style={styles.qrCode}
+                            resizeMode="contain"
+                        />
+                    </View>
 
                     <Text style={styles.message}>Scan the QR code to download</Text>
 
                     <View style={styles.storeButtonsContainer}>
-                        <TouchableOpacity onPress={() => Linking.openURL('https://onelink.to/4px5bv')}>
-                            <Text style={styles.storeButtonText}>App Store</Text>
+                        <TouchableOpacity 
+                            style={[styles.storeButton, styles.appStoreButton]}
+                            onPress={() => Linking.openURL('https://onelink.to/4px5bv')}
+                        >
+                            <View style={styles.storeButtonContent}>
+                                <View style={styles.storeIcon}>
+                                    <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
+                                </View>
+                                <View style={styles.storeTextContainer}>
+                                    <Text style={styles.storeButtonSubtext}>Download on the</Text>
+                                    <Text style={styles.storeButtonMaintext}>App Store</Text>
+                                </View>
+                            </View>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => Linking.openURL('https://onelink.to/4px5bv')}>
-                            <Text style={styles.storeButtonText}>Google Play</Text>
+                        <TouchableOpacity 
+                            style={[styles.storeButton, styles.googlePlayButton]}
+                            onPress={() => Linking.openURL('https://onelink.to/4px5bv')}
+                        >
+                            <View style={styles.storeButtonContent}>
+                                <View style={styles.storeIcon}>
+                                    <Ionicons name="logo-google-playstore" size={20} color="#FFFFFF" />
+                                </View>
+                                <View style={styles.storeTextContainer}>
+                                    <Text style={styles.storeButtonSubtext}>GET IT ON</Text>
+                                    <Text style={styles.storeButtonMaintext}>Google Play</Text>
+                                </View>
+                            </View>
                         </TouchableOpacity>
                     </View>
 
@@ -258,32 +287,74 @@ const createStyles = () => StyleSheet.create({
         lineHeight: 20,
         opacity: 0.8,
     },
+    qrCodeContainer: {
+        marginVertical: 20,
+        padding: 16,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        shadowColor: 'rgba(0, 0, 0, 0.1)',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 1,
+        shadowRadius: 8,
+        elevation: 4,
+    },
     qrCode: {
         width: 200,
         height: 200,
-        marginVertical: 20,
     },
     storeButtonsContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        gap: 10,
+        gap: 16,
         marginTop: 10,
         marginBottom: 20,
+        flexWrap: 'wrap',
     },
     storeButton: {
-        width: 135,
-        height: 40,
-        resizeMode: 'contain',
-    },
-    storeButtonText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '600',
-        textAlign: 'center',
-        paddingVertical: 8,
         paddingHorizontal: 16,
-        backgroundColor: '#333',
-        borderRadius: 6,
+        paddingVertical: 12,
+        borderRadius: 8,
+        minWidth: 140,
+        alignItems: 'center',
+        shadowColor: 'rgba(0, 0, 0, 0.2)',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    appStoreButton: {
+        backgroundColor: '#000000',
+    },
+    googlePlayButton: {
+        backgroundColor: '#000000',
+    },
+    storeButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    storeIcon: {
+        width: 20,
+        height: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    storeTextContainer: {
+        alignItems: 'flex-start',
+    },
+    storeButtonSubtext: {
+        fontSize: 10,
+        fontWeight: '400',
+        color: '#FFFFFF',
+        lineHeight: 12,
+        letterSpacing: 0.5,
+    },
+    storeButtonMaintext: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#FFFFFF',
+        lineHeight: 18,
+        letterSpacing: 0.3,
     },
     continueButton: {
         marginTop: 10,

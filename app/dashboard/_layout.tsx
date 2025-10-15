@@ -10,6 +10,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/navigation';
 import { useTheme } from '../../hooks/useTheme';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useAuth } from '../../hooks/useAuth';
 import { color } from 'motion/react';
 import { ScrollProvider, useScroll } from '../../contexts/ScrollContext';
 
@@ -23,6 +24,7 @@ type DrawerNavigation = CompositeNavigationProp<
 // Custom drawer content component
 function CustomDrawerContent() {
   const { colors, isDark } = useTheme();
+  const { signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const navigation = useNavigation<DrawerNavigation>();
@@ -46,10 +48,13 @@ function CustomDrawerContent() {
     }
   };
 
-  const handleLogout = () => {
-    // Handle logout logic here
-    console.log('Logout');
-    router.replace('/');
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      router.replace('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return (

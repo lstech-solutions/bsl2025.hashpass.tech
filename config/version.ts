@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202510150933,
+  buildNumber: 202510150934,
   releaseDate: '2025-10-15',
   releaseType: 'beta',
   environment: 'development',
@@ -44,14 +44,49 @@ export const CURRENT_VERSION: VersionInfo = {
     'Fixed agenda data grouping logic',
     'Corrected speaker count discrepancies',
     'Fixed dark mode contrast issues',
-    'Resolved navigation routing problems'
+    'Resolved navigation routing problems',
+    'Fixed Lambda deployment parameter issues',
+    'Updated AWS SDK to v3 for better performance',
+    'Resolved CloudFormation stack deployment errors'
   ],
   breakingChanges: [],
-  notes: 'Major UI overhaul with BSL 2025 branding and improved user experience'
+  notes: 'Lambda deployment fixes and AWS SDK v3 migration for improved stability'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.1.8': {
+    version: '1.1.8',
+    buildNumber: 202510150934,
+    releaseDate: '2025-10-15',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'User pass management system',
+      'BSL 2025 event integration',
+      'Speaker profile system with avatars',
+      'Event agenda with live updates',
+      'Unified search and filter system',
+      'Dark mode support',
+      'Event banner component',
+      'Pass card UI with BSL branding',
+      'Agenda tabbed interface',
+      'Real-time countdown system'
+    ],
+    bugfixes: [
+      'Fixed SVG logo rendering issues',
+      'Resolved TypeScript undefined property errors',
+      'Fixed agenda data grouping logic',
+      'Corrected speaker count discrepancies',
+      'Fixed dark mode contrast issues',
+      'Resolved navigation routing problems',
+      'Fixed Lambda deployment parameter issues',
+      'Updated AWS SDK to v3 for better performance',
+      'Resolved CloudFormation stack deployment errors'
+    ],
+    breakingChanges: [],
+    notes: 'Lambda deployment fixes and AWS SDK v3 migration for improved stability'
+  },
   [packageJson.version]: {
     version: packageJson.version,
     buildNumber: 2025011501,

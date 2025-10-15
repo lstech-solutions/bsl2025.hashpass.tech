@@ -3,9 +3,17 @@
   "Description": "Lambda function for BSL2025 Agenda Monitor",
   "Parameters": {
     "env": {
-      "Type": "String"
+      "Type": "String",
+      "Default": "dev"
     },
     "functionName": {
+      "Type": "String",
+      "Default": "agendaMonitor"
+    },
+    "DeploymentBucket": {
+      "Type": "String"
+    },
+    "S3Key": {
       "Type": "String"
     }
   },

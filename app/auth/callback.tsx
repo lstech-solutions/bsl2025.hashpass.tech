@@ -134,16 +134,16 @@ export default function AuthCallback() {
                     <Text style={styles.title}>Welcome to Hashpass!</Text>
                     <Text style={styles.betaDisclaimer}>Our web app is in beta. For the best experience, please use our mobile app.</Text>
                     
-                    <Image source={{ uri: '/assets/images/qr-code.png' }} style={styles.qrCode} />
+                    <Image source={{ uri: './public/assets/images/qr-code.png' }} style={styles.qrCode} />
 
                     <Text style={styles.message}>Scan the QR code to download</Text>
 
                     <View style={styles.storeButtonsContainer}>
                         <TouchableOpacity onPress={() => Linking.openURL('https://onelink.to/4px5bv')}>
-                            <Image source={{ uri: '/assets/images/app-store-badge.png' }} style={styles.storeButton} />
+                            <Text style={styles.storeButtonText}>App Store</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => Linking.openURL('https://onelink.to/4px5bv')}>
-                            <Image source={{ uri: '/assets/images/google-play-badge.png' }} style={styles.storeButton} />
+                            <Text style={styles.storeButtonText}>Google Play</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -274,6 +274,16 @@ const createStyles = () => StyleSheet.create({
         width: 135,
         height: 40,
         resizeMode: 'contain',
+    },
+    storeButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        backgroundColor: '#333',
+        borderRadius: 6,
     },
     continueButton: {
         marginTop: 10,

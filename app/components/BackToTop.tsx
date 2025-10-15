@@ -10,7 +10,7 @@ interface BackToTopProps {
   colors: any;
 }
 
-export const BackToTop: React.FC<BackToTopProps> = ({ scrollY, scrollRef, colors }) => {
+const BackToTop: React.FC<BackToTopProps> = ({ scrollY, scrollRef, colors }) => {
   const { isDark } = useTheme();
   const buttonOpacity = useAnimatedStyle(() => ({
     opacity: scrollY.value > 30 ? 1 : 0,
@@ -58,3 +58,5 @@ const baseStyles = StyleSheet.create({
     shadowRadius: 3.84,
   },
 });
+
+export default BackToTop;

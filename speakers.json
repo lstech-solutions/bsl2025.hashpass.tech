@@ -1,0 +1,16 @@
+[
+  {
+    "id": "speaker-1",
+    "name": "Nombre Apellido",
+    "title": "CTO, Empresa",
+    "bio": "Breve bio...",
+    "linkedin": "https://linkedin.com/in/speaker1",
+    "imageUrl": "https://placehold.co/300x300",
+    "tags": ["DeFi", "Infra"],
+    "availability": [
+      { "day": "2025-11-13", "slots": ["09:00", "09:15", "09:30"] }
+    ]
+  }
+]
+
+

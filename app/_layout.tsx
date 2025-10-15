@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { ThemeProvider } from '../providers/ThemeProvider';
 import { LanguageProvider } from '../providers/LanguageProvider';
+import { EventProvider } from '../contexts/EventContext';
 import { useTheme, useThemeProvider } from '../hooks/useTheme';
 import { StatusBar } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
@@ -29,9 +30,11 @@ export default function RootLayout() {
             barStyle={theme.isDark ? 'light-content' : 'dark-content'}
             backgroundColor={theme.colors.background.default}
           />
-          <LanguageProvider>
-            <ThemedContent />
-          </LanguageProvider>
+          <EventProvider>
+            <LanguageProvider>
+              <ThemedContent />
+            </LanguageProvider>
+          </EventProvider>
         </ThemeProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
@@ -49,8 +52,8 @@ function ThemedContent() {
   const [showSplash, setShowSplash] = useState(true);
 
   // Check if we're in the auth flow
-  const isAuthFlow = segments[0] === 'auth' || pathname.startsWith('/auth');
-  const isBSLPublic = pathname.startsWith('/bslatam');
+  const isAuthFlow = (segments[0] === '(shared)' && segments[1] === 'auth') || pathname.startsWith('/(shared)/auth');
+  const isBSLPublic = pathname.startsWith('/events/bsl2025');
 
   // Handle loading state and splash screen
   useEffect(() => {
@@ -74,7 +77,7 @@ function ThemedContent() {
   useEffect(() => {
     if (isReady && !isLoading) {
       if (!isLoggedIn && !isAuthFlow && !isBSLPublic) {
-        router.replace('/auth');
+        router.replace('/(shared)/auth' as any);
       }
     }
   }, [isLoggedIn, isAuthFlow, isBSLPublic, isReady, isLoading, router]);
@@ -102,21 +105,21 @@ function ThemedContent() {
       >
         {/* Always register routes to avoid linking mismatches */}
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="auth" options={{ headerShown: false }} />
-        <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+        <Stack.Screen name="(shared)/auth" options={{ headerShown: false }} />
+        <Stack.Screen name="(shared)/auth/callback" options={{ headerShown: false }} />
         <Stack.Screen 
-          name="dashboard" 
+          name="(shared)/dashboard" 
           options={{ 
             headerShown: false
           }}
         />
         {/* Public BSL routes */}
-        <Stack.Screen name="bslatam/home" options={{ headerShown: false }} />
-        <Stack.Screen name="bslatam/speakers/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="bslatam/speakers/calendar" options={{ headerShown: false }} />
-        <Stack.Screen name="bslatam/my-bookings" options={{ headerShown: false }} />
-        <Stack.Screen name="bslatam/speaker-dashboard" options={{ headerShown: false }} />
-        <Stack.Screen name="bslatam/admin" options={{ headerShown: false }} />
+        <Stack.Screen name="events/bsl2025/home" options={{ headerShown: false }} />
+        <Stack.Screen name="events/bsl2025/speakers/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="events/bsl2025/speakers/calendar" options={{ headerShown: false }} />
+        <Stack.Screen name="events/bsl2025/my-bookings" options={{ headerShown: false }} />
+        <Stack.Screen name="events/bsl2025/speaker-dashboard" options={{ headerShown: false }} />
+        <Stack.Screen name="events/bsl2025/admin" options={{ headerShown: false }} />
       </Stack>
       <PWAPrompt />
     </>

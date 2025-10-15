@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
+import { useEvent } from '@/contexts/EventContext';
 
 type Speaker = {
   id: string;
@@ -14,6 +15,7 @@ type Speaker = {
 export default function MatchmakingHome() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { event, getApiEndpoint, getRoute } = useEvent();
   const [query, setQuery] = useState('');
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   const [loading, setLoading] = useState(false);
@@ -22,7 +24,8 @@ export default function MatchmakingHome() {
     const fetchSpeakers = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/bslatam/speakers');
+        const speakersEndpoint = getApiEndpoint('/speakers');
+        const res = await fetch(speakersEndpoint);
         const json = await res.json();
         setSpeakers(json.data || []);
       } catch (e) {
@@ -30,7 +33,7 @@ export default function MatchmakingHome() {
       } finally { setLoading(false); }
     };
     fetchSpeakers();
-  }, []);
+  }, [getApiEndpoint]);
 
   const filtered = speakers.filter(s => {
     const q = query.toLowerCase();
@@ -39,7 +42,7 @@ export default function MatchmakingHome() {
 
   return (
     <View style={{ flex: 1, padding: 16, backgroundColor: colors.background.default }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text.primary }}>BSL 2025 Matchmaking</Text>
+      <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text.primary }}>{event.name} Matchmaking</Text>
       <TextInput
         value={query}
         onChangeText={setQuery}
@@ -53,7 +56,7 @@ export default function MatchmakingHome() {
         refreshing={loading}
         renderItem={({ item }) => (
           <TouchableOpacity
-            onPress={() => router.push(`/bslatam/speakers/${item.id}`)}
+            onPress={() => router.push(`${getRoute('speakers')}/${item.id}` as any)}
             style={{ flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 12, borderRadius: 8, backgroundColor: colors.background.paper }}
           >
             <Image source={{ uri: item.imageUrl || './assets/images/icon.png' }} style={{ width: 48, height: 48, borderRadius: 24, marginRight: 12 }} />

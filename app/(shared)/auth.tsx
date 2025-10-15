@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from '../i18n/i18n';
+import { useTranslation } from '../../i18n/i18n';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import * as Linking from 'expo-linking';
-import ThemeAndLanguageSwitcher from './components/ThemeAndLanguageSwitcher';
-import { SplashCursor } from './components/SplashBackground';
-import { useTheme } from '../hooks/useTheme';
+import ThemeAndLanguageSwitcher from '../components/ThemeAndLanguageSwitcher';
+import { SplashCursor } from '../components/SplashBackground';
+import { useTheme } from '../../hooks/useTheme';
 
 export default function AuthScreen() {
   const { colors, isDark } = useTheme();
@@ -34,7 +34,7 @@ export default function AuthScreen() {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         if (session) {
-          router.replace('/dashboard/explore');
+          router.replace('/(shared)/dashboard/explore');
         }
       }
     );
@@ -50,7 +50,7 @@ export default function AuthScreen() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: Linking.createURL('/auth/callback'),
+          redirectTo: Linking.createURL('/(shared)/auth/callback'),
           skipBrowserRedirect: false,
         },
       });
@@ -93,8 +93,8 @@ export default function AuthScreen() {
           <Animated.View style={[styles.logoContainer, headerAnimatedStyle]}>            
             <Image
               source={isDark
-                ? require('../assets/logos/logo-full-hashpass-black.svg')
-                : require('../assets/logos/logo-full-hashpass-white.svg')
+                ? require('../../assets/logos/logo-full-hashpass-black.svg')
+                : require('../../assets/logos/logo-full-hashpass-white.svg')
               }
               style={styles.logo}
               resizeMode="contain"

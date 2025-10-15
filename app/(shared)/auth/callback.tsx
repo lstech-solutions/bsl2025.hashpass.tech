@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform, Image, TouchableOpacity, Linking } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { createSessionFromUrl, supabase } from '../../lib/supabase';
+import { createSessionFromUrl, supabase } from '../../../lib/supabase';
 import { Check, AlertCircle, Info } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -71,11 +71,7 @@ export default function AuthCallback() {
                 setMessage('✅ Google authentication successful!');
 
                 setTimeout(() => {
-                    if (Platform.OS === 'web') {
-                        setStatus('show_download');
-                    } else {
-                        router.replace('/dashboard/explore');
-                    }
+                    router.replace('/(shared)/dashboard/explore');
                 }, 1000);
             } else {
                 console.log('⚠️ No session created but no error - checking for existing session');
@@ -88,11 +84,7 @@ export default function AuthCallback() {
                     setMessage('✅ Authentication successful!');
 
                     setTimeout(() => {
-                        if (Platform.OS === 'web') {
-                            setStatus('show_download');
-                        } else {
-                            router.replace('/dashboard/explore');
-                        }
+                        router.replace('/(shared)/dashboard/explore');
                     }, 1000);
                 } else {
                     throw new Error('No session could be established');
@@ -108,7 +100,7 @@ export default function AuthCallback() {
                 setMessage('✅ Google authentication successful!\n\n⚠️ Email not provided by Google (this is normal)');
 
                 setTimeout(() => {
-                    router.replace('/dashboard/explore');
+                    router.replace('/(shared)/dashboard/explore');
                 }, 3000);
                 return;
             }
@@ -125,7 +117,7 @@ export default function AuthCallback() {
     const styles = createStyles();
 
     const handleContinue = () => {
-        router.replace('/dashboard/explore');
+        router.replace('/(shared)/dashboard/explore');
     };
 
     if (status === 'show_download') {
@@ -137,7 +129,7 @@ export default function AuthCallback() {
                     
                     <View style={styles.qrCodeContainer}>
                         <Image 
-                            source={require('../../assets/images/qr-one-link-hashpass.png')} 
+                            source={require('../../../assets/images/qr-one-link-hashpass.png')} 
                             style={styles.qrCode}
                             resizeMode="contain"
                         />

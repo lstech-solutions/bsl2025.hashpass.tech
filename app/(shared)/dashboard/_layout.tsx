@@ -8,11 +8,12 @@ import type { DrawerNavigationProp } from '@react-navigation/drawer';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/navigation';
-import { useTheme } from '../../hooks/useTheme';
-import { useIsMobile } from '../../hooks/useIsMobile';
-import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../../hooks/useTheme';
+import { useIsMobile } from '../../../hooks/useIsMobile';
+import { useAuth } from '../../../hooks/useAuth';
+import { useLanguage } from '../../../providers/LanguageProvider';
 import { color } from 'motion/react';
-import { ScrollProvider, useScroll } from '../../contexts/ScrollContext';
+import { ScrollProvider, useScroll } from '../../../contexts/ScrollContext';
 
 // Define the type for our drawer navigation
 type DrawerNavigation = CompositeNavigationProp<
@@ -23,8 +24,9 @@ type DrawerNavigation = CompositeNavigationProp<
 
 // Custom drawer content component
 function CustomDrawerContent() {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, toggleTheme } = useTheme();
   const { signOut } = useAuth();
+  const { locale, setLocale } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
   const navigation = useNavigation<DrawerNavigation>();
@@ -32,9 +34,10 @@ function CustomDrawerContent() {
   const styles = getStyles(isDark, colors, isMobile);
 
   const menuItems = [
-    { label: 'Explore', icon: 'compass-outline', route: '/dashboard/explore' as const },
-    { label: 'Wallet', icon: 'wallet-outline', route: '/dashboard/wallet' as const },
-    { label: 'Profile', icon: 'person-outline', route: '/dashboard/profile' as const },
+    { label: 'Explore', icon: 'compass-outline', route: '/(shared)/dashboard/explore' as const },
+    { label: 'Wallet', icon: 'wallet-outline', route: '/(shared)/dashboard/wallet' as const },
+    { label: 'Profile', icon: 'person-outline', route: '/(shared)/dashboard/profile' as const },
+    { label: 'Settings', icon: 'settings-outline', route: '/(shared)/dashboard/settings' as const },
   ] as const;
 
   const handleNavigation = (route: typeof menuItems[number]['route']) => {
@@ -54,6 +57,22 @@ function CustomDrawerContent() {
       router.replace('/');
     } catch (error) {
       console.error('Error signing out:', error);
+    }
+  };
+
+  const handleLanguageToggle = async () => {
+    const locales = ['en', 'es', 'ko'];
+    const currentIndex = locales.indexOf(locale);
+    const nextIndex = (currentIndex + 1) % locales.length;
+    await setLocale(locales[nextIndex]);
+  };
+
+  const getLanguageFlag = (locale: string) => {
+    switch (locale) {
+      case 'en': return '🇺🇸';
+      case 'es': return '🇪🇸';
+      case 'ko': return '🇰🇷';
+      default: return '🇺🇸';
     }
   };
 
@@ -107,7 +126,7 @@ function CustomDrawerContent() {
             >
               <Ionicons
                 name={item.icon as any}
-                size={24}
+                size={28}
                 color={isActive ? colors.primary : colors.text.primary}
                 style={styles.menuIcon}
               />
@@ -116,7 +135,8 @@ function CustomDrawerContent() {
                   styles.menuText,
                   {
                     color: isActive ? colors.primary : colors.text.primary,
-                    fontWeight: isActive ? '600' : '400',
+                    fontWeight: isActive ? '700' : '500',
+                    fontSize: 16,
                   }
                 ]}
               >
@@ -125,6 +145,49 @@ function CustomDrawerContent() {
             </TouchableOpacity>
           );
         })}
+      </View>
+
+      {/* Quick Settings */}
+      <View style={[styles.quickSettingsSection, { 
+        backgroundColor: colors.background.paper,
+        borderTopWidth: 1,
+        borderTopColor: colors.divider,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.divider,
+      }]}>
+        <Text style={[styles.quickSettingsTitle, { color: colors.text.secondary }]}>
+          Quick Settings
+        </Text>
+        
+        <View style={styles.quickTogglesRow}>
+          {/* Theme Toggle */}
+          <TouchableOpacity
+            style={[styles.quickToggleButton, {
+              backgroundColor: colors.background.default,
+              shadowColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+            }]}
+            onPress={toggleTheme}
+            activeOpacity={0.8}
+          >
+            <Ionicons 
+              name={isDark ? 'sunny' : 'moon'} 
+              size={20} 
+              color={isDark ? '#FFD700' : '#6C63FF'} 
+            />
+          </TouchableOpacity>
+
+          {/* Language Toggle */}
+          <TouchableOpacity
+            style={[styles.quickToggleButton, {
+              backgroundColor: colors.background.default,
+              shadowColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+            }]}
+            onPress={handleLanguageToggle}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.languageFlag}>{getLanguageFlag(locale)}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Logout Button */}
@@ -162,7 +225,7 @@ export default function DashboardLayout() {
   // Header component for the drawer screens
   const Header = () => {
     const drawerNavigation = useNavigation<DrawerNavigation>();
-    const { headerOpacity, headerBackground, headerTint, headerBorderWidth, headerHeight, setHeaderHeight } = useScroll();
+    const { headerOpacity, headerBackground, headerTint, headerBorderWidth, headerShadowOpacity, headerHeight, setHeaderHeight } = useScroll();
 
     return (
       <Animated.View
@@ -171,12 +234,12 @@ export default function DashboardLayout() {
           {
             backgroundColor: 'transparent',
             borderBottomWidth: headerBorderWidth,
-            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-            shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 1,
-            shadowRadius: 4,
-            elevation: 4,
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
+            shadowColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.2)',
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: headerShadowOpacity,
+            shadowRadius: 6,
+            elevation: 8,
             overflow: 'hidden',
           }
         ]}
@@ -188,8 +251,19 @@ export default function DashboardLayout() {
             StyleSheet.absoluteFill,
             {
               backgroundColor: headerBackground,
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
+              backdropFilter: 'blur(25px)',
+              WebkitBackdropFilter: 'blur(25px)',
+            }
+          ]} 
+        />
+        {/* Gradient overlay for depth */}
+        <Animated.View 
+          style={[
+            StyleSheet.absoluteFill,
+            { 
+              backgroundColor: isDark 
+                ? 'rgba(0, 0, 0, 0.1)' 
+                : 'rgba(255, 255, 255, 0.1)',
             }
           ]} 
         />
@@ -199,7 +273,7 @@ export default function DashboardLayout() {
             StyleSheet.absoluteFill,
             { 
               backgroundColor: headerTint,
-              opacity: 0.7,
+              opacity: 1,
             }
           ]} 
         />
@@ -217,37 +291,82 @@ export default function DashboardLayout() {
           <TouchableOpacity
             onPress={() => drawerNavigation.dispatch(DrawerActions.toggleDrawer())}
             style={[styles.headerButton, {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-              borderRadius: 8,
-              padding: 6
+              backgroundColor: isDark 
+                ? 'rgba(255, 255, 255, 0.12)' 
+                : 'rgba(0, 0, 0, 0.08)',
+              borderRadius: 16,
+              padding: 12,
+              shadowColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.4,
+              shadowRadius: 8,
+              elevation: 10,
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
             }]}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
           >
             <Ionicons 
               name="menu" 
-              size={24} 
-              color={colors.text.primary}
+              size={26} 
+              color={isDark ? '#FFFFFF' : '#000000'}
+              style={{
+                textShadowColor: isDark ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.6)',
+                textShadowOffset: { width: 0, height: 2 },
+                textShadowRadius: 3,
+              }}
             />
           </TouchableOpacity>
 
           <View style={styles.logoContainer}>
             <Text style={[styles.logoText, { 
-              color: colors.text.primary,
-              textShadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.5)',
-              textShadowRadius: 2,
+              color: isDark ? '#FFFFFF' : '#000000',
+              textShadowColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+              textShadowOffset: { width: 0, height: 2 },
+              textShadowRadius: 4,
+              fontWeight: '800',
             }]}>
-              H<Text style={{ color: isDark ? colors.primaryLight : colors.primaryDark }}>Λ</Text>SHP<View style={{ transform: [{ rotate: '90deg' }] }}><Text style={{ color: isDark ? colors.primaryLight : colors.primaryDark }}>Λ</Text></View>SS
+              H<Text style={{ 
+                color: isDark ? '#60A5FA' : '#1E40AF',
+                textShadowColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                textShadowOffset: { width: 0, height: 2 },
+                textShadowRadius: 4,
+              }}>Λ</Text>SHP<View style={{ transform: [{ rotate: '90deg' }] }}><Text style={{ 
+                color: isDark ? '#60A5FA' : '#1E40AF',
+                textShadowColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                textShadowOffset: { width: 0, height: 2 },
+                textShadowRadius: 4,
+              }}>Λ</Text></View>SS
             </Text>
           </View>
 
           <TouchableOpacity
             onPress={() => console.log('Scan QR')}
-            style={styles.headerButton}
+            style={[styles.headerButton, {
+              backgroundColor: isDark 
+                ? 'rgba(255, 255, 255, 0.12)' 
+                : 'rgba(0, 0, 0, 0.08)',
+              borderRadius: 16,
+              padding: 12,
+              shadowColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.4,
+              shadowRadius: 8,
+              elevation: 10,
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+            }]}
+            activeOpacity={0.8}
           >
             <Ionicons 
               name="qr-code-outline" 
-              size={24} 
-              color={isDark ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.95)'} 
+              size={26} 
+              color={isDark ? '#FFFFFF' : '#000000'}
+              style={{
+                textShadowColor: isDark ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.6)',
+                textShadowOffset: { width: 0, height: 2 },
+                textShadowRadius: 3,
+              }}
             />
           </TouchableOpacity>
         </Animated.View>
@@ -337,10 +456,10 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     color: colors.text.primary,
   },
   drawerHeader: {
-    padding: 20,
+    padding: 24,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
     borderBottomWidth: 1,
     borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
   },
@@ -354,23 +473,28 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   },
   menuItems: {
     flex: 1,
-    paddingTop: 10,
-    paddingHorizontal: 8,
+    paddingTop: 16,
+    paddingHorizontal: 12,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginVertical: 6,
+    borderRadius: 12,
     borderLeftWidth: 4,
     borderLeftColor: 'transparent',
+    shadowColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   menuIcon: {
-    width: 24,
+    width: 32,
     textAlign: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   menuText: {
     fontSize: 16,
@@ -380,19 +504,57 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 8,
-    margin: 8,
-    gap: 12,
+    padding: 20,
+    borderRadius: 12,
+    margin: 12,
+    gap: 16,
     backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
     borderLeftWidth: 4,
     borderLeftColor: 'transparent',
+    shadowColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   logoutText: {
     fontSize: 16,
     fontWeight: '500',
     color: colors.error.main,
     flex: 1,
+  },
+  quickSettingsSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginHorizontal: 12,
+    marginVertical: 12,
+    borderRadius: 12,
+  },
+  quickSettingsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  quickTogglesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  quickToggleButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  languageFlag: {
+    fontSize: 18,
   },
   mainContent: {
     flex: 1,

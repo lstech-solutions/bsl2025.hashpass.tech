@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useTheme } from '../../hooks/useTheme';
-import DigitalTicketWallet from '../components/DigitalTicketWallet';
-import LoyaltyDashboard from '../components/LoyaltyDashboard';
-import ExchangeView from '../components/ExchangeView';
-import { useTranslation } from '../../i18n/i18n';
+import { useTheme } from '../../../hooks/useTheme';
+import DigitalTicketWallet from '../../components/DigitalTicketWallet';
+import LoyaltyDashboard from '../../components/LoyaltyDashboard';
+import ExchangeView from '../../components/ExchangeView';
+import { useTranslation } from '../../../i18n/i18n';
 
 const WalletScreen = () => {
   const [activeTab, setActiveTab] = useState<'tickets' | 'loyalty' | 'exchange'>('tickets');

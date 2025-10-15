@@ -354,7 +354,7 @@ export default function HomeScreen() {
               <Text style={styles.ctaHeadline}>👋 {t('welcomeBack')} <br />{userName}</Text>
               <Animated.View style={styles.ctaButton}>
                 <TouchableOpacity
-                  onPress={() => router.push('/dashboard/explore')}
+                  onPress={() => router.push('/(shared)/dashboard/explore')}
                   activeOpacity={0.9}
                   onPressIn={() => {
                     buttonAnimation.value = withSpring(1);
@@ -374,7 +374,7 @@ export default function HomeScreen() {
               <Text style={styles.ctaHeadline}>{t('readyToSimplify')}</Text>
               <Animated.View style={styles.ctaButton}>
                 <TouchableOpacity
-                  onPress={() => router.push('/auth')}
+                  onPress={() => router.push('/(shared)/auth' as any)}
                   activeOpacity={0.9}
                   onPressIn={() => {
                     buttonAnimation.value = withSpring(1);

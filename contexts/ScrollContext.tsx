@@ -8,6 +8,7 @@ export interface ScrollContextType {
   headerTint: Animated.AnimatedInterpolation<string>;
   headerBlur: Animated.AnimatedInterpolation<number>;
   headerBorderWidth: Animated.AnimatedInterpolation<number>;
+  headerShadowOpacity: Animated.AnimatedInterpolation<number>;
   headerHeight: number;
   setHeaderHeight: (height: number) => void;
   setScrollY: (value: number) => void;
@@ -29,45 +30,52 @@ export const ScrollProvider = ({ children }: { children: ReactNode }) => {
   // Interpolate header opacity based on scroll position
   // Start with full opacity when not scrolled for better visibility
   const headerOpacity = scrollY.interpolate({
-    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
-    outputRange: [1, 1, 1], // Keep opacity at 1 (fully visible) at all times
+    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.3, HEADER_SCROLL_DISTANCE],
+    outputRange: [0.95, 1, 1], // Start slightly transparent, then fully opaque
     extrapolate: 'clamp',
   });
 
-  // Interpolate header background color with opacity based on scroll position
-  // Start with a semi-transparent background when not scrolled
+  // Interpolate header background color with better contrast
   const headerBackground = scrollY.interpolate({
-    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
+    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.2, HEADER_SCROLL_DISTANCE * 0.6, HEADER_SCROLL_DISTANCE],
     outputRange: [
-      'transparent',              // Start with transparent when not scrolled
-      'rgba(0, 0, 0, 0.7)',      // Semi-transparent when partially scrolled
-      'rgba(0, 0, 0, 0.95)'      // Maximum opacity when fully scrolled
+      'rgba(255, 255, 255, 0.95)',  // Start with very high opacity white for maximum contrast
+      'rgba(255, 255, 255, 0.98)',  // Increase opacity quickly
+      'rgba(255, 255, 255, 0.99)',  // Near full opacity
+      'rgba(255, 255, 255, 1)'      // Full opacity when scrolled
     ],
     extrapolate: 'clamp',
   });
   
-  // Add a blue tint to the header background
+  // Add a very subtle blue tint for branding
   const headerTint = scrollY.interpolate({
-    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
+    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.3, HEADER_SCROLL_DISTANCE],
     outputRange: [
-      'rgba(30, 64, 175, 0)',    // Start with transparent blue when not scrolled
-      'rgba(30, 64, 175, 0.5)',  // Semi-transparent blue when partially scrolled
-      'rgba(30, 64, 175, 0.9)'   // More solid blue when fully scrolled
+      'rgba(0, 122, 255, 0.02)',  // Minimal blue tint when not scrolled
+      'rgba(0, 122, 255, 0.03)',  // Slightly more blue
+      'rgba(0, 122, 255, 0.04)'   // More pronounced blue when scrolled
     ],
     extrapolate: 'clamp',
   });
 
   // Interpolate blur radius based on scroll position
   const headerBlur = scrollY.interpolate({
-    inputRange: [0, HEADER_SCROLL_DISTANCE],
-    outputRange: [0, 10],
+    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.3, HEADER_SCROLL_DISTANCE],
+    outputRange: [8, 12, 15], // Start with some blur for better contrast
     extrapolate: 'clamp',
   });
 
-  // Interpolate header border width
+  // Interpolate header border width and shadow
   const headerBorderWidth = scrollY.interpolate({
-    inputRange: [0, HEADER_SCROLL_DISTANCE],
-    outputRange: [0, 1],
+    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
+    outputRange: [0, 0.5, 1],
+    extrapolate: 'clamp',
+  });
+
+  // Add shadow opacity for better depth
+  const headerShadowOpacity = scrollY.interpolate({
+    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.3, HEADER_SCROLL_DISTANCE],
+    outputRange: [0.1, 0.2, 0.3],
     extrapolate: 'clamp',
   });
 
@@ -80,6 +88,7 @@ export const ScrollProvider = ({ children }: { children: ReactNode }) => {
         headerTint,
         headerBlur,
         headerBorderWidth,
+        headerShadowOpacity,
         headerHeight,
         setHeaderHeight,
         setScrollY,
@@ -96,6 +105,7 @@ export interface ScrollContextType {
   headerTint: Animated.AnimatedInterpolation<string>;
   headerBlur: Animated.AnimatedInterpolation<number>;
   headerBorderWidth: Animated.AnimatedInterpolation<number>;
+  headerShadowOpacity: Animated.AnimatedInterpolation<number>;
   headerHeight: number;
   setHeaderHeight: (height: number) => void;
   setScrollY: (value: number) => void;

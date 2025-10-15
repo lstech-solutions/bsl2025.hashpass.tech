@@ -8,6 +8,8 @@ create table if not exists public.BSL_Audit (
 );
 
 alter table public.BSL_Audit enable row level security;
-create policy if not exists audit_select on public.BSL_Audit for select using (true);
+do $$ begin
+  create policy audit_select on public.BSL_Audit for select using (true);
+exception when duplicate_object then null; end $$;
 
 

@@ -1,14 +1,14 @@
 {
-  "function": {
-    "agendaMonitor": {
-      "build": true,
-      "providerPlugin": "awscloudformation",
-      "service": "Lambda",
-      "dependsOn": [],
-      "parameters": {
-        "functionName": "agendaMonitor",
-        "env": "dev"
-      }
-    }
-  }
+  // "function": {
+  //   "agendaMonitor": {
+  //     "build": true,
+  //     "dependsOn": [],
+  //     "parameters": {
+  //       "env": "dev",
+  //       "functionName": "agendaMonitor"
+  //     },
+  //     "providerPlugin": "awscloudformation",
+  //     "service": "Lambda"
+  //   }
+  // }
 }

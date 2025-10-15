@@ -4,9 +4,9 @@
 const { createClient } = require('@supabase/supabase-js');
 const fetch = require('node-fetch');
 
-// AWS SDK for Parameter Store
-const AWS = require('aws-sdk');
-const ssm = new AWS.SSM({ region: process.env.AWS_REGION || 'us-east-1' });
+// AWS SDK v3 for Parameter Store
+const { SSMClient, GetParametersCommand } = require('@aws-sdk/client-ssm');
+const ssm = new SSMClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 // Configuration
 const config = {
@@ -42,16 +42,18 @@ const logger = {
 // Load credentials from Parameter Store
 async function loadCredentials() {
   try {
-    const parameters = await ssm.getParameters({
+    const command = new GetParametersCommand({
       Names: [
         process.env.SUPABASE_URL_PARAMETER,
         process.env.SUPABASE_KEY_PARAMETER
       ],
       WithDecryption: true
-    }).promise();
+    });
+    const response = await ssm.send(command);
+    const parameters = response.Parameters;
 
-    const urlParam = parameters.Parameters.find(p => p.Name === process.env.SUPABASE_URL_PARAMETER);
-    const keyParam = parameters.Parameters.find(p => p.Name === process.env.SUPABASE_KEY_PARAMETER);
+    const urlParam = parameters.find(p => p.Name === process.env.SUPABASE_URL_PARAMETER);
+    const keyParam = parameters.find(p => p.Name === process.env.SUPABASE_KEY_PARAMETER);
 
     if (!urlParam || !keyParam) {
       throw new Error('Required parameters not found in Parameter Store');

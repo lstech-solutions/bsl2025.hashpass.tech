@@ -29,11 +29,11 @@ frontend:
         # Build and deploy Lambda functions
         - echo "Building Lambda functions..."
         - cd amplify/backend/function/agendaMonitor
-        - npm install --production
+        - npm install --production --no-optional
         - cd ../../../..
         # Deploy Lambda function
         - echo "Deploying Lambda function..."
-        - amplify push --yes
+        - amplify push --yes --no-gql-override
         # List contents for debugging
         - ls -la dist/client/
         - echo "Checking for index.html:"

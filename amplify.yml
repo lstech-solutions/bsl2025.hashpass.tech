@@ -23,7 +23,7 @@ frontend:
         # Build Expo web app in server mode
         - npm run build:web
         # Add cache-busting timestamp to index.html
-        - echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html
+        - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
         # Copy all server files to client directory for Amplify
         - cp -r dist/server/* dist/client/
         # Copy service worker to client directory
@@ -38,7 +38,7 @@ frontend:
         - amplify push --yes --no-gql-override
         # List contents for debugging
         - ls -la dist/client/
-        - echo "Checking for index.html:"
+        - 'echo "Checking for index.html:"'
         - ls -la dist/client/index.html
   artifacts:
     baseDirectory: dist/client

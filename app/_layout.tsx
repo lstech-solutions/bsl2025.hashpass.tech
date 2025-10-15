@@ -100,29 +100,23 @@ function ThemedContent() {
           animationTypeForReplace: 'push',
         }}
       >
-        {!isLoggedIn ? (
-          // Auth flow screens
-          <>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="auth" options={{ headerShown: false }} />
-            <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
-            {/* Public BSL routes */}
-            <Stack.Screen name="bslatam/home" options={{ headerShown: false }} />
-            <Stack.Screen name="bslatam/speakers/[id]" options={{ headerShown: false }} />
-            <Stack.Screen name="bslatam/speakers/calendar" options={{ headerShown: false }} />
-            <Stack.Screen name="bslatam/my-bookings" options={{ headerShown: false }} />
-            <Stack.Screen name="bslatam/speaker-dashboard" options={{ headerShown: false }} />
-            <Stack.Screen name="bslatam/admin" options={{ headerShown: false }} />
-          </>
-        ) : (
-          // Main app screens - use a single Stack.Screen
-          <Stack.Screen 
-            name="dashboard" 
-            options={{ 
-              headerShown: false
-            }}
-          />
-        )}
+        {/* Always register routes to avoid linking mismatches */}
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="dashboard" 
+          options={{ 
+            headerShown: false
+          }}
+        />
+        {/* Public BSL routes */}
+        <Stack.Screen name="bslatam/home" options={{ headerShown: false }} />
+        <Stack.Screen name="bslatam/speakers/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="bslatam/speakers/calendar" options={{ headerShown: false }} />
+        <Stack.Screen name="bslatam/my-bookings" options={{ headerShown: false }} />
+        <Stack.Screen name="bslatam/speaker-dashboard" options={{ headerShown: false }} />
+        <Stack.Screen name="bslatam/admin" options={{ headerShown: false }} />
       </Stack>
       <PWAPrompt />
     </>

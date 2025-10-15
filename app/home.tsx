@@ -5,8 +5,8 @@ import { useRouter } from 'expo-router';
 import Features from './components/Features';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { ThemeAndLanguageSwitcher } from './components/ThemeAndLanguageSwitcher';
-import { BackToTop } from './components/BackToTop';
+import ThemeAndLanguageSwitcher from './components/ThemeAndLanguageSwitcher';
+import BackToTop from './components/BackToTop';
 import Testimonials from './components/Testimonials';
 import Animated, {
   useAnimatedScrollHandler,
@@ -22,8 +22,8 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { InteractiveHoverButton } from './components/InteractiveHoverButton';
-import { FlipWords } from './components/FlipWords';
-import { Newsletter } from './components/Newsletter';
+import FlipWords from './components/FlipWords';
+import Newsletter from './components/Newsletter';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Easing } from 'react-native-reanimated';
 

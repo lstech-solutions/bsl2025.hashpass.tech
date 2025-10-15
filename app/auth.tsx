@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import * as Linking from 'expo-linking';
-import { ThemeAndLanguageSwitcher } from './components/ThemeAndLanguageSwitcher';
+import ThemeAndLanguageSwitcher from './components/ThemeAndLanguageSwitcher';
 import { SplashCursor } from './components/SplashBackground';
 import { useTheme } from '../hooks/useTheme';
 

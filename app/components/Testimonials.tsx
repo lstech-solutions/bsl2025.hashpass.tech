@@ -1,4 +1,4 @@
-import { TestimonialsColumn } from "./TestimonialsColumns";
+import TestimonialsColumn from "./TestimonialsColumns";
 import { motion } from "motion/react";
 import testimonials from "@/i18n/locales/testimonials.json";
 import { useTranslation } from "../../i18n/i18n";

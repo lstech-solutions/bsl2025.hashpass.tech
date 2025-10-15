@@ -13,7 +13,10 @@
     },
     "categories": {
       "function": {
-        "agendaMonitor": {}
+        "agendaMonitor": {
+          "functionName": "agendaMonitor",
+          "env": "dev"
+        }
       }
     }
   }

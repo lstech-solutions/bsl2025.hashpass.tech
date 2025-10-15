@@ -17,18 +17,14 @@ frontend:
       commands:
         # Clean previous builds
         - rm -rf dist
-        # Build Expo web app with service worker
-        - npm run build:web
-        # Create necessary directories
-        - mkdir -p dist/client
-        # Copy built files to dist/client directory if needed
-        - cp -r dist/* dist/client/ || true
-        # Copy service worker to client directory for root access
-        - cp dist/sw.js dist/client/
-        # Copy index.html from server to client as SPA entry point
-        - cp dist/server/index.html dist/client/index.html
+        # Build Expo web app for static export (not server mode)
+        - npx expo export -p web --output-dir dist
+        # Ensure we have the proper static files
+        - ls -la dist/
+        # Copy service worker to root if needed
+        - cp dist/sw.js dist/ || true
   artifacts:
-    baseDirectory: dist/client
+    baseDirectory: dist
     files:
       - '**/*'
     customHeaders:
@@ -54,7 +50,7 @@ frontend:
       - node_modules/**/*
       - $(npm root --global)/**/*
 
-# Client-side routing
+# Client-side routing for SPA
 redirects:
   - source: '/<*>'
     status: 200
@@ -70,10 +66,13 @@ redirects:
     target: '/api/'
   - source: '/dashboard/*'
     status: 200
-    target: '/'
+    target: '/index.html'
   - source: '/auth/*'
     status: 200
-    target: '/'
+    target: '/index.html'
+  - source: '/bslatam/*'
+    status: 200
+    target: '/index.html'
 
 # Error page for 404s
 customErrorResponses:

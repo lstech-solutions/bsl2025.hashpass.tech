@@ -34,7 +34,7 @@ export default function SpeakerProfile() {
   return (
     <View style={{ flex: 1, padding: 16, backgroundColor: colors.background.default }}>
       <View style={{ alignItems: 'center' }}>
-        <Image source={{ uri: speaker.imageUrl || '/assets/images/icon.png' }} style={{ width: 96, height: 96, borderRadius: 48 }} />
+        <Image source={{ uri: speaker.imageUrl || './assets/images/icon.png' }} style={{ width: 96, height: 96, borderRadius: 48 }} />
         <Text style={{ fontSize: 22, fontWeight: '700', marginTop: 8, color: colors.text.primary }}>{speaker.name}</Text>
         {speaker.title ? <Text style={{ color: colors.text.secondary }}>{speaker.title}</Text> : null}
       </View>

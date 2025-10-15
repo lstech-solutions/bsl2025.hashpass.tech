@@ -12,7 +12,7 @@ apply_with_psql() {
   echo "Applying migrations using psql..."
   for f in $(ls -1 ${MIGRATIONS_DIR}/*.sql | sort); do
     echo " - Applying $f"
-    PGPASSWORD="${SUPABASE_DB_PASSWORD:-}" psql "${SUPABASE_DB_URL}" -v ON_ERROR_STOP=1 -f "$f"
+    PGPASSWORD="${SUPABASE_DB_PASSWORD:-}" psql "${EXPO_PUBLIC_SUPABASE_URL}" -v ON_ERROR_STOP=1 -f "$f"
   done
 }
 

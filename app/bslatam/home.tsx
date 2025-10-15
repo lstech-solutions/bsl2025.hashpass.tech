@@ -56,7 +56,7 @@ export default function MatchmakingHome() {
             onPress={() => router.push(`/bslatam/speakers/${item.id}`)}
             style={{ flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 12, borderRadius: 8, backgroundColor: colors.background.paper }}
           >
-            <Image source={{ uri: item.imageUrl || '/assets/images/icon.png' }} style={{ width: 48, height: 48, borderRadius: 24, marginRight: 12 }} />
+            <Image source={{ uri: item.imageUrl || './assets/images/icon.png' }} style={{ width: 48, height: 48, borderRadius: 24, marginRight: 12 }} />
             <View style={{ flex: 1 }}>
               <Text style={{ color: colors.text.primary, fontWeight: '600' }}>{item.name}</Text>
               {item.title ? <Text style={{ color: colors.text.secondary }}>{item.title}</Text> : null}

@@ -93,6 +93,24 @@ if [ -f "amplify/.config/project-config.json" ] && [ -f "amplify/team-provider-i
     }
   fi
   
+  # Check if hosting is configured
+  echo "Checking if hosting is configured..."
+  if ! amplify hosting status >/dev/null 2>&1; then
+    echo "⚠️  Hosting is not configured for this project." 1>&2
+    echo "" 1>&2
+    echo "To fix this, you need to add hosting manually:" 1>&2
+    echo "1. Run: amplify hosting add" 1>&2
+    echo "2. Select the default options when prompted" 1>&2
+    echo "3. Then run this script again" 1>&2
+    echo "" 1>&2
+    echo "Alternatively, you can deploy manually using:" 1>&2
+    echo "- AWS Console: https://console.aws.amazon.com/amplify/" 1>&2
+    echo "- Connect your GitHub repository to Amplify" 1>&2
+    echo "- Set build command: npm run build:web" 1>&2
+    echo "- Set output directory: dist/client" 1>&2
+    exit 1
+  fi
+  
   # Deploy to Amplify hosting
   echo "Publishing to Amplify hosting..."
   amplify publish --yes || {

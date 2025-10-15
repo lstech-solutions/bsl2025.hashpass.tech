@@ -10,7 +10,7 @@ interface Props {
     mode: Mode;
 }
 
-export const Newsletter = ({ mode }: Props) => {
+const Newsletter = ({ mode }: Props) => {
     const { t } = useTranslation('newsletter');
     const [email, setEmail] = useState('');
     const [subscribed, setSubscribed] = useState(false);
@@ -221,3 +221,5 @@ export const Newsletter = ({ mode }: Props) => {
         </div>
     );
 };
+
+export default Newsletter;

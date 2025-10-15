@@ -7,7 +7,7 @@ import { useLanguage } from '../../providers/LanguageProvider';
 import { getAvailableLocales } from '../../i18n/i18n';
 import { useTranslation } from '../../i18n/i18n';
 
-export const ThemeAndLanguageSwitcher = () => {
+const ThemeAndLanguageSwitcher = () => {
   const { toggleTheme, colors, isDark } = useTheme();
   const { locale, setLocale } = useLanguage();
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);

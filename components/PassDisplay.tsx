@@ -29,6 +29,11 @@ export default function PassDisplay({
   const [loading, setLoading] = useState(true);
   const [showPassComparison, setShowPassComparison] = useState(false);
 
+  // Debug log for state changes
+  useEffect(() => {
+    console.log('PassDisplay: showPassComparison state changed to:', showPassComparison);
+  }, [showPassComparison]);
+
   useEffect(() => {
     loadPassInfo();
   }, [user]);
@@ -346,14 +351,18 @@ export default function PassDisplay({
           borderWidth: 1,
           borderColor: colors.divider
         }}
-        onPress={() => setShowPassComparison(!showPassComparison)}
+        onPress={() => {
+          console.log('Toggle pressed, current state:', showPassComparison);
+          setShowPassComparison(!showPassComparison);
+        }}
+        activeOpacity={0.7}
       >
         <Text style={{ 
           fontSize: 14, 
           fontWeight: '600', 
           color: colors.text.primary
         }}>
-          All Pass Types & Pricing
+          All Pass Types & Pricing {showPassComparison ? '(Open)' : '(Closed)'}
         </Text>
         <MaterialIcons 
           name={showPassComparison ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
@@ -373,6 +382,33 @@ export default function PassDisplay({
           }}>
             Compare features and choose the right pass for your needs
           </Text>
+          
+          {/* Current Pass Info */}
+          {passInfo && (
+            <View style={{
+              padding: 12,
+              backgroundColor: `${getPassTypeColor(passInfo.pass_type)}20`,
+              borderRadius: 8,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: getPassTypeColor(passInfo.pass_type)
+            }}>
+              <Text style={{ 
+                fontSize: 14, 
+                fontWeight: '600', 
+                color: colors.text.primary,
+                marginBottom: 4
+              }}>
+                Your Current Pass: {getPassTypeDisplayName(passInfo.pass_type)}
+              </Text>
+              <Text style={{ 
+                fontSize: 12, 
+                color: colors.text.secondary
+              }}>
+                {passInfo.remaining_requests} requests left • {passInfo.remaining_boost.toFixed(0)} VOI boost left
+              </Text>
+            </View>
+          )}
           
           <View style={{ gap: 12 }}>
             {/* General Pass */}

@@ -10,6 +10,7 @@ import { cryptoBoostService, BoostCalculation } from '../../../../lib/crypto-boo
 import { useToastHelpers } from '../../../../contexts/ToastContext';
 import { supabase } from '../../../../lib/supabase';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
+import PassDisplay from '../../../../components/PassDisplay';
 
 interface Speaker {
   id: string;
@@ -619,6 +620,20 @@ export default function SpeakerDetail() {
           <Text style={styles.speakerCompany}>{speaker.company}</Text>
         </View>
       </View>
+
+      {/* Pass Display */}
+      <PassDisplay
+        speakerId={speaker.id}
+        boostAmount={boostAmount}
+        showRequestButton={true}
+        onRequestPress={handleRequestMeeting}
+        onPassInfoLoaded={(passInfo) => {
+          console.log('Pass info loaded:', passInfo);
+        }}
+        onRequestLimitsLoaded={(limits) => {
+          console.log('Request limits loaded:', limits);
+        }}
+      />
 
       {/* Bio Section */}
       {speaker.bio && (

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { passSystemService, PassRequestLimits } from './pass-system';
 
 export interface MeetingRequest {
   id: string;
@@ -140,6 +141,25 @@ class MatchmakingService {
     const speakerId = data.speaker_id;
     console.log('🔵 Using speaker_id as-is:', speakerId);
     
+    // Check if user can make meeting request (pass validation)
+    console.log('🔵 Checking pass validation...');
+    const passLimits = await passSystemService.canMakeMeetingRequest(
+      data.requester_id,
+      speakerId,
+      data.boost_amount || 0
+    );
+    
+    if (!passLimits.can_request) {
+      console.error('❌ Pass validation failed:', passLimits.reason);
+      throw new Error(`Cannot create meeting request: ${passLimits.reason}`);
+    }
+    
+    console.log('✅ Pass validation passed:', {
+      passType: passLimits.pass_type,
+      remainingRequests: passLimits.remaining_requests,
+      remainingBoost: passLimits.remaining_boost
+    });
+    
     const insertData = {
       ...data,
       speaker_id: speakerId, // Use the converted speaker ID
@@ -225,6 +245,21 @@ class MatchmakingService {
     }
 
     return data || [];
+  }
+
+  // Get user's pass information
+  async getUserPassInfo(userId: string) {
+    return await passSystemService.getUserPassInfo(userId);
+  }
+
+  // Check if user can make meeting request
+  async canMakeMeetingRequest(userId: string, speakerId: string, boostAmount: number = 0) {
+    return await passSystemService.canMakeMeetingRequest(userId, speakerId, boostAmount);
+  }
+
+  // Create default pass for user
+  async createDefaultPass(userId: string, passType: 'general' | 'business' | 'vip' = 'general') {
+    return await passSystemService.createDefaultPass(userId, passType);
   }
 
   // Get pending meeting requests for a speaker

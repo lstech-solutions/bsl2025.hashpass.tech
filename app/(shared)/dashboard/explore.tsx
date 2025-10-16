@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import EventBanner from '../../../components/EventBanner';
+import PassesDisplay from '../../../components/PassesDisplay';
 
 // Type definitions
 interface Ticket {
@@ -132,38 +133,7 @@ export default function ExploreScreen() {
   const router = useRouter();
   const styles = getStyles(isDark, colors);
   
-  const [userPasses, setUserPasses] = useState<Pass[]>([]);
-  const [loadingPasses, setLoadingPasses] = useState(true);
-
-  // Fetch user passes
-  useEffect(() => {
-    const fetchUserPasses = async () => {
-      if (event.id === 'bsl2025') {
-        try {
-          setLoadingPasses(true);
-          const response = await fetch(`/api/bslatam/user-passes?userId=edward-calderon-unal&eventId=${event.id}`);
-          const result = await response.json();
-          
-          if (response.ok && result.data) {
-            setUserPasses(result.data);
-          } else {
-            console.error('Failed to fetch user passes:', result.error);
-            setUserPasses([]);
-          }
-        } catch (error) {
-          console.error('Error fetching user passes:', error);
-          setUserPasses([]);
-        } finally {
-          setLoadingPasses(false);
-        }
-      } else {
-        setUserPasses([]);
-        setLoadingPasses(false);
-      }
-    };
-
-    fetchUserPasses();
-  }, [event.id]);
+  // User passes are now handled by PassesDisplay component
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -187,88 +157,7 @@ export default function ExploreScreen() {
     }
   };
 
-  // PassCard component (using TicketCard design)
-  const PassCard = ({ pass }: { pass: Pass }) => {
-    const getPassTypeColor = (type: string) => {
-      switch (type) {
-        case 'business': return '#007AFF';
-        case 'vip': return '#FF9500';
-        case 'general': return '#34A853';
-        default: return '#8E8E93';
-      }
-    };
-
-    const getPassTypeLabel = (type: string) => {
-      switch (type) {
-        case 'business': return 'Business Pass';
-        case 'vip': return 'VIP Pass';
-        case 'general': return 'General Pass';
-        default: return 'Event Pass';
-      }
-    };
-
-    const getPassImage = (type: string) => {
-      switch (type) {
-        case 'business': return 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=400&h=200&fit=crop';
-        case 'vip': return 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=400&h=200&fit=crop';
-        case 'general': return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop';
-        default: return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop';
-      }
-    };
-
-    const getPassAccess = (type: string) => {
-      switch (type) {
-        case 'business': return 'B2B + Closing Party';
-        case 'vip': return 'All VIP Benefits';
-        case 'general': return 'General Access';
-        default: return 'Event Access';
-      }
-    };
-
-    return (
-      <View style={styles.ticketCard}>
-        <View style={styles.ticketHeader}>
-          <View>
-            <Text style={styles.ticketDate}>Nov 12-14, 2025</Text>
-            <Text style={styles.ticketTitle}>{getPassTypeLabel(pass.pass_type)}</Text>
-          </View>
-          <View style={[styles.ticketType, { backgroundColor: getPassTypeColor(pass.pass_type) }]}>
-            <Text style={[styles.ticketTypeText, { color: '#FFFFFF' }]}>
-              {pass.pass_type.toUpperCase()}
-            </Text>
-          </View>
-        </View>
-        
-        <View style={styles.ticketImageContainer}>
-          <Image source={{ uri: getPassImage(pass.pass_type) }} style={styles.ticketImage} />
-          <View style={styles.ticketOverlay}>
-            <Text style={styles.ticketAccessText}>{getPassAccess(pass.pass_type)}</Text>
-            <Text style={styles.ticketPriceText}>${pass.price_usd?.toFixed(0) || '0'}</Text>
-          </View>
-          <View style={styles.logoSeal}>
-            <Text style={styles.logoSealText}>BSL2025</Text>
-          </View>
-        </View>
-        
-        <View style={styles.ticketFooter}>
-          <TouchableOpacity style={styles.actionButton}>
-            <MaterialIcons name="qr-code" size={20} color="#4A90E2" />
-            <Text style={styles.actionButtonText}>Generate QR</Text>
-          </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity style={styles.actionButton}>
-            <MaterialIcons name="info" size={20} color="#4A90E2" />
-            <Text style={styles.actionButtonText}>See Details</Text>
-          </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity style={styles.actionButton}>
-            <MaterialIcons name="share" size={20} color="#4A90E2" />
-            <Text style={styles.actionButtonText}>Share</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
+  // PassCard component is now handled by PassesDisplay component
 
   // TicketCard component
   const TicketCard = ({ ticket }: { ticket: Ticket }) => (
@@ -497,38 +386,10 @@ export default function ExploreScreen() {
         )}
 
         {/* Your Passes Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {isBSL2025Event ? 'Your Event Passes' : 'Your Passes'}
-          </Text>
-          {loadingPasses ? (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading your passes...</Text>
-            </View>
-          ) : userPasses.length > 0 ? (
-            <View style={{ height: 300 }}>
-              <FlatList
-                data={userPasses}
-                renderItem={({ item }) => (
-                  <View style={userPasses.length === 1 ? styles.singlePassContainer : null}>
-                    <PassCard pass={item} />
-                  </View>
-                )}
-                keyExtractor={item => item.id}
-                horizontal={userPasses.length > 1}
-                showsHorizontalScrollIndicator={userPasses.length > 1}
-                contentContainerStyle={styles.passList}
-                scrollEnabled={userPasses.length > 1}
-              />
-            </View>
-          ) : (
-            <View style={styles.noPassesContainer}>
-              <MaterialIcons name="confirmation-number" size={48} color={colors.text.secondary} />
-              <Text style={styles.noPassesText}>No passes found</Text>
-              <Text style={styles.noPassesSubtext}>Contact support to get your event passes</Text>
-            </View>
-          )}
-        </View>
+        <PassesDisplay
+          mode="dashboard"
+          title={isBSL2025Event ? 'Your Event Passes' : 'Your Passes'}
+        />
 
         {/* BSL2025 Quick Access */}
         {isBSL2025Event && (

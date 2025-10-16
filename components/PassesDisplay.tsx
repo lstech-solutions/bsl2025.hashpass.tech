@@ -1,38 +1,48 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, FlatList } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { passSystemService, PassInfo, PassRequestLimits, PassType } from '@/lib/pass-system';
 
-interface PassDisplayProps {
-  onPassInfoLoaded?: (passInfo: PassInfo | null) => void;
-  onRequestLimitsLoaded?: (limits: PassRequestLimits) => void;
+interface PassesDisplayProps {
+  // Display mode
+  mode?: 'dashboard' | 'speaker';
+  
+  // Speaker-specific props
   speakerId?: string;
   boostAmount?: number;
   showRequestButton?: boolean;
   onRequestPress?: () => void;
+  
+  // Callbacks
+  onPassInfoLoaded?: (passInfo: PassInfo | null) => void;
+  onRequestLimitsLoaded?: (limits: PassRequestLimits) => void;
+  
+  // Dashboard-specific props
+  showTitle?: boolean;
+  title?: string;
+  showPassComparison?: boolean;
 }
 
-export default function PassDisplay({
-  onPassInfoLoaded,
-  onRequestLimitsLoaded,
+export default function PassesDisplay({
+  mode = 'dashboard',
   speakerId,
   boostAmount = 0,
   showRequestButton = false,
-  onRequestPress
-}: PassDisplayProps) {
+  onRequestPress,
+  onPassInfoLoaded,
+  onRequestLimitsLoaded,
+  showTitle = true,
+  title,
+  showPassComparison = false
+}: PassesDisplayProps) {
   const { colors } = useTheme();
   const { user } = useAuth();
   const [passInfo, setPassInfo] = useState<PassInfo | null>(null);
   const [requestLimits, setRequestLimits] = useState<PassRequestLimits | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showPassComparison, setShowPassComparison] = useState(false);
-
-  // Debug log for state changes
-  useEffect(() => {
-    console.log('PassDisplay: showPassComparison state changed to:', showPassComparison);
-  }, [showPassComparison]);
+  const [showComparison, setShowComparison] = useState(showPassComparison);
 
   useEffect(() => {
     loadPassInfo();
@@ -103,6 +113,109 @@ export default function PassDisplay({
     return passSystemService.getPassTypeDisplayName(passType as any);
   };
 
+  // Dashboard mode - show passes in list format
+  if (mode === 'dashboard') {
+    if (loading) {
+      return (
+        <View style={{ 
+          padding: 20, 
+          alignItems: 'center',
+          backgroundColor: colors.background.paper,
+          borderRadius: 12,
+          margin: 16
+        }}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={{ color: colors.text.secondary, marginTop: 8 }}>
+            Loading your passes...
+          </Text>
+        </View>
+      );
+    }
+
+    if (!passInfo) {
+      return (
+        <View style={{ 
+          padding: 20, 
+          backgroundColor: colors.background.paper,
+          borderRadius: 12,
+          margin: 16,
+          borderWidth: 1,
+          borderColor: colors.divider
+        }}>
+          {showTitle && (
+            <Text style={{ 
+              fontSize: 18, 
+              fontWeight: '600', 
+              color: colors.text.primary,
+              marginBottom: 16
+            }}>
+              {title || 'Your Event Passes'}
+            </Text>
+          )}
+          
+          <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+            <MaterialIcons name="confirmation-number" size={48} color={colors.text.secondary} />
+            <Text style={{ 
+              fontSize: 16, 
+              fontWeight: '600', 
+              color: colors.text.primary,
+              marginTop: 12,
+              marginBottom: 8
+            }}>
+              No passes found
+            </Text>
+            <Text style={{ 
+              color: colors.text.secondary, 
+              textAlign: 'center',
+              marginBottom: 20
+            }}>
+              Contact support to get your event passes
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    // Dashboard mode with pass - show as single card
+    return (
+      <View style={{ 
+        padding: 20, 
+        backgroundColor: colors.background.paper,
+        borderRadius: 12,
+        margin: 16,
+        borderWidth: 1,
+        borderColor: colors.divider
+      }}>
+        {showTitle && (
+          <Text style={{ 
+            fontSize: 18, 
+            fontWeight: '600', 
+            color: colors.text.primary,
+            marginBottom: 16
+          }}>
+            {title || 'Your Event Passes'}
+          </Text>
+        )}
+        
+        <View style={{ height: 300 }}>
+          <FlatList
+            data={[passInfo]}
+            renderItem={({ item }) => (
+              <View style={{ flex: 1 }}>
+                <PassCard pass={item} />
+              </View>
+            )}
+            keyExtractor={item => item.pass_id}
+            horizontal={false}
+            showsHorizontalScrollIndicator={false}
+            scrollEnabled={false}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  // Speaker mode - show detailed pass info with request functionality
   if (loading) {
     return (
       <View style={{ 
@@ -352,10 +465,7 @@ export default function PassDisplay({
             borderWidth: 1,
             borderColor: colors.divider
           }}
-          onPress={() => {
-            console.log('Toggle pressed, current state:', showPassComparison);
-            setShowPassComparison(!showPassComparison);
-          }}
+          onPress={() => setShowComparison(!showComparison)}
           activeOpacity={0.7}
         >
           <Text style={{ 
@@ -363,10 +473,10 @@ export default function PassDisplay({
             fontWeight: '600', 
             color: colors.text.primary
           }}>
-            All Pass Types & Pricing {showPassComparison ? '(Open)' : '(Closed)'}
+            All Pass Types & Pricing {showComparison ? '(Open)' : '(Closed)'}
           </Text>
           <MaterialIcons 
-            name={showPassComparison ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
+            name={showComparison ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
             size={24} 
             color={colors.text.secondary} 
           />
@@ -374,7 +484,7 @@ export default function PassDisplay({
       )}
 
       {/* Pass Comparison Content - Only show if user has a pass */}
-      {passInfo && showPassComparison && (
+      {passInfo && showComparison && (
         <View style={{ marginBottom: 16 }}>
           <Text style={{ 
             fontSize: 12, 
@@ -586,3 +696,130 @@ export default function PassDisplay({
     </View>
   );
 }
+
+// PassCard component for dashboard mode
+const PassCard = ({ pass }: { pass: PassInfo }) => {
+  const { colors } = useTheme();
+  
+  const getPassTypeColor = (type: string) => {
+    switch (type) {
+      case 'business': return '#007AFF';
+      case 'vip': return '#FF9500';
+      case 'general': return '#34A853';
+      default: return '#8E8E93';
+    }
+  };
+
+  const getPassTypeLabel = (type: string) => {
+    switch (type) {
+      case 'business': return 'Business Pass';
+      case 'vip': return 'VIP Pass';
+      case 'general': return 'General Pass';
+      default: return 'Event Pass';
+    }
+  };
+
+  const getPassImage = (type: string) => {
+    switch (type) {
+      case 'business': return 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=400&h=200&fit=crop';
+      case 'vip': return 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=400&h=200&fit=crop';
+      case 'general': return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop';
+      default: return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop';
+    }
+  };
+
+  const getPassAccess = (type: string) => {
+    switch (type) {
+      case 'business': return 'B2B + Closing Party';
+      case 'vip': return 'All VIP Benefits';
+      case 'general': return 'General Access';
+      default: return 'Event Access';
+    }
+  };
+
+  return (
+    <View style={{
+      backgroundColor: colors.background.paper,
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.divider,
+      shadowColor: colors.text.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <View style={{
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: `${getPassTypeColor(pass.pass_type)}20`,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 12
+        }}>
+          <MaterialIcons 
+            name={pass.pass_type === 'vip' ? 'star' : pass.pass_type === 'business' ? 'business' : 'person'} 
+            size={20} 
+            color={getPassTypeColor(pass.pass_type)} 
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
+            {getPassTypeLabel(pass.pass_type)}
+          </Text>
+          <Text style={{ fontSize: 12, color: colors.text.secondary }}>
+            Pass #{pass.pass_number}
+          </Text>
+        </View>
+        <View style={{
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+          backgroundColor: `${getPassTypeColor(pass.pass_type)}20`,
+          borderRadius: 12
+        }}>
+          <Text style={{ 
+            fontSize: 10, 
+            fontWeight: '600', 
+            color: getPassTypeColor(pass.pass_type)
+          }}>
+            {pass.status.toUpperCase()}
+          </Text>
+        </View>
+      </View>
+      
+      <View style={{ 
+        flexDirection: 'row', 
+        justifyContent: 'space-between',
+        marginBottom: 12
+      }}>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary }}>
+            {pass.remaining_requests}
+          </Text>
+          <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
+            Requests Left
+          </Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary }}>
+            {pass.remaining_boost.toFixed(0)}
+          </Text>
+          <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
+            VOI Boost Left
+          </Text>
+        </View>
+      </View>
+      
+      <Text style={{ 
+        fontSize: 12, 
+        color: colors.text.secondary,
+        textAlign: 'center'
+      }}>
+        {getPassAccess(pass.pass_type)}
+      </Text>
+    </View>
+  );
+};

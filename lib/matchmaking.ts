@@ -178,12 +178,6 @@ class MatchmakingService {
         .single();
 
       if (error) {
-        console.error('❌ Supabase error:', error);
-        console.error('❌ Error code:', error.code);
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Error details:', error.details);
-        console.error('❌ Error hint:', error.hint);
-        
         // Handle specific error cases
         if (error.message.includes('Could not find the table')) {
           throw new Error('Database table not found. Please try again later.');

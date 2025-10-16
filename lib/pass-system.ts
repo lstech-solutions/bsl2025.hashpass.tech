@@ -200,23 +200,49 @@ class PassSystemService {
     switch (passType) {
       case 'vip':
         return {
-          features: ['All Sessions', 'Networking Events', 'Exclusive Events', 'Priority Seating', 'Speaker Access'],
-          perks: ['Concierge Service', 'Exclusive Lounge', 'Premium Swag', 'Priority Support']
+          features: ['All conferences Nov 12-14', 'Networking & B2B sessions', 'VIP networking with speakers', 'VIP lounge access', 'Priority seating'],
+          perks: ['50 meeting requests', 'Concierge Service', 'Premium Swag', 'Official closing party']
         };
       case 'business':
         return {
-          features: ['All Sessions', 'Networking Events', 'Business Events'],
-          perks: ['Business Lounge', 'Networking Tools', 'Business Support']
+          features: ['All conferences Nov 12-14', 'Networking & B2B sessions', 'Business lounge access'],
+          perks: ['20 meeting requests', 'Networking Tools', 'Business Support', 'Official closing party']
         };
       case 'general':
         return {
-          features: ['General Sessions'],
-          perks: ['Basic Swag', 'Standard Support']
+          features: ['All conferences Nov 12-14', 'Access to main event areas'],
+          perks: ['5 meeting requests', 'Official closing party']
         };
       default:
         return {
           features: [],
           perks: []
+        };
+    }
+  }
+
+  // Get pass pricing information
+  getPassPricing(passType: PassType): { price: string; description: string } {
+    switch (passType) {
+      case 'vip':
+        return {
+          price: 'Premium',
+          description: '+ VIP networking with speakers'
+        };
+      case 'business':
+        return {
+          price: '$249',
+          description: '+ Networking & B2B sessions'
+        };
+      case 'general':
+        return {
+          price: '$99',
+          description: 'Conferences only'
+        };
+      default:
+        return {
+          price: 'N/A',
+          description: ''
         };
     }
   }

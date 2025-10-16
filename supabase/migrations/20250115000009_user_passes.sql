@@ -50,3 +50,11 @@ DO $$ BEGIN
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
+
+-- Insert migration record only if it doesn't exist
+INSERT INTO supabase_migrations.schema_migrations(version, name, statements) 
+SELECT '20250115000009', 'user_passes', ARRAY[]::text[]
+WHERE NOT EXISTS (
+    SELECT 1 FROM supabase_migrations.schema_migrations 
+    WHERE version = '20250115000009'
+);

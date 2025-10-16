@@ -33,33 +33,31 @@ async function createTestUserPass() {
 
     console.log('Found user:', testUser.id, testUser.email);
 
-    // Create a pass for the user
-    const passData = {
-      id: `test-pass-${Date.now()}`,
-      user_id: testUser.id,
-      event_id: 'bsl2025',
-      pass_type: 'business',
-      status: 'active',
-      purchase_date: new Date().toISOString(),
-      price_usd: 0.00,
-      access_features: ['all_sessions', 'networking', 'business_events'],
-      max_meeting_requests: 20,
-      used_meeting_requests: 0,
-      max_boost_amount: 500.00,
-      used_boost_amount: 0.00
-    };
-
+    // Create a pass for the user using the create_default_pass function
     const { data, error } = await supabase
-      .from('passes')
-      .insert([passData])
-      .select();
+      .rpc('create_default_pass', {
+        p_user_id: testUser.id,
+        p_pass_type: 'business'
+      });
 
     if (error) {
       console.error('Error creating pass:', error);
       return;
     }
 
-    console.log('✅ Pass created successfully:', data);
+    console.log('✅ Pass created successfully with ID:', data);
+
+    // Now get the pass info to verify it was created correctly
+    const { data: passInfo, error: passInfoError } = await supabase
+      .rpc('get_user_pass_info', {
+        p_user_id: testUser.id
+      });
+
+    if (passInfoError) {
+      console.error('Error getting pass info:', passInfoError);
+    } else {
+      console.log('✅ Pass info retrieved:', passInfo);
+    }
   } catch (error) {
     console.error('Error:', error);
   }

@@ -135,6 +135,63 @@ class PassSystemService {
     }
   }
 
+  // Get actual meeting request status for a user and speaker
+  async getMeetingRequestStatus(
+    userId: string,
+    speakerId: string
+  ): Promise<any | null> {
+    try {
+      console.log('🔍 Getting meeting request status for user:', userId, 'speaker:', speakerId);
+      
+      // Try direct table query first (more reliable)
+      const { data, error } = await supabase
+        .from('meeting_requests')
+        .select('*')
+        .eq('requester_id', userId)
+        .eq('speaker_id', speakerId)
+        .in('status', ['pending', 'approved', 'declined'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('❌ Direct query error:', error);
+        return null;
+      }
+
+      console.log('🔍 Direct query result:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Error in getMeetingRequestStatus:', error);
+      return null;
+    }
+  }
+
+  // Cancel a meeting request
+  async cancelMeetingRequest(
+    userId: string,
+    requestId: string
+  ): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .rpc('cancel_meeting_request', {
+          p_user_id: userId,
+          p_request_id: requestId
+        })
+        .single();
+
+      if (error) {
+        console.error('Error cancelling meeting request:', error);
+        return false;
+      }
+
+      return data as boolean;
+    } catch (error) {
+      console.error('Error in cancelMeetingRequest:', error);
+      return false;
+    }
+  }
+
   // Create default pass for user
   async createDefaultPass(userId: string, passType: PassType = 'general'): Promise<string | null> {
     try {
@@ -150,7 +207,7 @@ class PassSystemService {
         return null;
       }
 
-      return data;
+      return data as string;
     } catch (error) {
       console.error('Error in createDefaultPass:', error);
       return null;
@@ -267,7 +324,7 @@ class PassSystemService {
         return false;
       }
 
-      return data;
+      return data as boolean;
     } catch (error) {
       console.error('Error in toggleUserBlock:', error);
       return false;

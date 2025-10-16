@@ -171,10 +171,22 @@ class MatchmakingService {
     console.log('🔵 Insert data:', insertData);
     
     try {
+      // Use the RPC function to handle type casting properly
       const { data: result, error } = await supabase
-        .from('meeting_requests')
-        .insert([insertData])
-        .select()
+        .rpc('insert_meeting_request', {
+          p_requester_id: data.requester_id,
+          p_speaker_id: speakerId,
+          p_speaker_name: data.speaker_name,
+          p_requester_name: data.requester_name,
+          p_requester_company: data.requester_company || null,
+          p_requester_title: data.requester_title || null,
+          p_requester_ticket_type: data.requester_ticket_type,
+          p_meeting_type: data.meeting_type,
+          p_message: data.message || '',
+          p_note: data.note || null,
+          p_boost_amount: data.boost_amount || 0,
+          p_duration_minutes: data.duration_minutes || 15
+        })
         .single();
 
       if (error) {

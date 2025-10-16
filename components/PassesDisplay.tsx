@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, FlatList, ImageBackground } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,7 +42,11 @@ export default function PassesDisplay({
   const [passInfo, setPassInfo] = useState<PassInfo | null>(null);
   const [requestLimits, setRequestLimits] = useState<PassRequestLimits | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [showComparison, setShowComparison] = useState(showPassComparison);
+  
+  // Demo mode check
+  const isDemoMode = process.env.NODE_ENV === 'development';
 
   useEffect(() => {
     loadPassInfo();
@@ -57,17 +61,25 @@ export default function PassesDisplay({
   const loadPassInfo = async () => {
     if (!user) {
       setLoading(false);
+      setPassInfo(null);
+      setInitialLoad(false);
       return;
     }
 
+    setLoading(true);
     try {
       const info = await passSystemService.getUserPassInfo(user.id);
       setPassInfo(info);
       onPassInfoLoaded?.(info);
     } catch (error) {
       console.error('Error loading pass info:', error);
+      setPassInfo(null);
     } finally {
       setLoading(false);
+      // Add a small delay to prevent flash of "No Pass Found"
+      setTimeout(() => {
+        setInitialLoad(false);
+      }, 300);
     }
   };
 
@@ -86,6 +98,7 @@ export default function PassesDisplay({
       console.error('Error loading request limits:', error);
     }
   };
+
 
   const createDefaultPass = async (passType: 'general' | 'business' | 'vip' = 'general') => {
     if (!user) return;
@@ -115,14 +128,16 @@ export default function PassesDisplay({
 
   // Dashboard mode - show passes in list format
   if (mode === 'dashboard') {
-    if (loading) {
+    if (loading || initialLoad) {
       return (
         <View style={{ 
           padding: 20, 
           alignItems: 'center',
           backgroundColor: colors.background.paper,
           borderRadius: 12,
-          margin: 16
+          margin: 16,
+          borderWidth: 1,
+          borderColor: colors.divider
         }}>
           <ActivityIndicator size="small" color={colors.primary} />
           <Text style={{ color: colors.text.secondary, marginTop: 8 }}>
@@ -176,7 +191,7 @@ export default function PassesDisplay({
       );
     }
 
-    // Dashboard mode with pass - show as single card
+    // Dashboard mode with pass - show as horizontal scrollable cards
     return (
       <View style={{ 
         padding: 20, 
@@ -201,14 +216,15 @@ export default function PassesDisplay({
           <FlatList
             data={[passInfo]}
             renderItem={({ item }) => (
-              <View style={{ flex: 1 }}>
+              <View style={{ width: 280, marginRight: 16 }}>
                 <PassCard pass={item} />
               </View>
             )}
             keyExtractor={item => item.pass_id}
-            horizontal={false}
-            showsHorizontalScrollIndicator={false}
-            scrollEnabled={false}
+            horizontal={true}
+            showsHorizontalScrollIndicator={true}
+            scrollEnabled={true}
+            contentContainerStyle={{ paddingRight: 16 }}
           />
         </View>
       </View>
@@ -216,18 +232,20 @@ export default function PassesDisplay({
   }
 
   // Speaker mode - show detailed pass info with request functionality
-  if (loading) {
+  if (loading || initialLoad) {
     return (
       <View style={{ 
         padding: 20, 
         alignItems: 'center',
         backgroundColor: colors.background.paper,
         borderRadius: 12,
-        margin: 16
+        margin: 16,
+        borderWidth: 1,
+        borderColor: colors.divider
       }}>
         <ActivityIndicator size="small" color={colors.primary} />
         <Text style={{ color: colors.text.secondary, marginTop: 8 }}>
-          Loading pass information...
+          Loading your pass information...
         </Text>
       </View>
     );
@@ -260,112 +278,352 @@ export default function PassesDisplay({
           marginBottom: 16,
           lineHeight: 20
         }}>
-          You need a pass to request meetings with speakers. Without a pass, you cannot send meeting requests. Choose your pass type:
+          {isDemoMode 
+            ? "You need a pass to request meetings with speakers. Without a pass, you cannot send meeting requests. Choose your pass type:"
+            : "You need a valid event pass to request meetings with speakers. Please purchase a pass to continue."
+          }
         </Text>
 
-        <View style={{ gap: 12 }}>
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 16,
-              backgroundColor: colors.background.default,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: colors.divider
-            }}
-            onPress={() => createDefaultPass('general')}
-          >
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: '#34A85320',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 12
-            }}>
-              <MaterialIcons name="person" size={20} color="#34A853" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
-                General Pass
+        {isDemoMode ? (
+          <>
+            {/* Pass Comparison Toggle - Demo Mode Only */}
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: 12,
+                backgroundColor: colors.background.default,
+                borderRadius: 8,
+                marginBottom: 16,
+                borderWidth: 1,
+                borderColor: colors.divider
+              }}
+              onPress={() => setShowComparison(!showComparison)}
+              activeOpacity={0.7}
+            >
+              <Text style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color: colors.text.primary
+              }}>
+                All Pass Types & Pricing {showComparison ? '(Open)' : '(Closed)'}
               </Text>
-              <Text style={{ fontSize: 12, color: colors.text.secondary }}>
-                5 meeting requests • $100 VOI boost
-              </Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={20} color={colors.text.secondary} />
-          </TouchableOpacity>
+              <MaterialIcons
+                name={showComparison ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+                size={24}
+                color={colors.text.secondary}
+              />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 16,
-              backgroundColor: colors.background.default,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: colors.divider
-            }}
-            onPress={() => createDefaultPass('business')}
-          >
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: '#007AFF20',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 12
+            {/* Pass Comparison Content - Demo Mode Only */}
+            {showComparison && (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{
+              fontSize: 12,
+              color: colors.text.secondary,
+              marginBottom: 12,
+              textAlign: 'center'
             }}>
-              <MaterialIcons name="business" size={20} color="#007AFF" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
-                Business Pass
-              </Text>
-              <Text style={{ fontSize: 12, color: colors.text.secondary }}>
-                20 meeting requests • $500 VOI boost
-              </Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={20} color={colors.text.secondary} />
-          </TouchableOpacity>
+              Compare features and choose the right pass for your needs
+            </Text>
 
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
+            <View style={{ gap: 12 }}>
+              {/* General Pass */}
+              <TouchableOpacity
+                style={{
+                  padding: 16,
+                  backgroundColor: colors.background.default,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: colors.divider
+                }}
+                onPress={() => createDefaultPass('general')}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
+                    General Pass
+                  </Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#34A853' }}>
+                    $99
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: colors.text.secondary, marginBottom: 12 }}>
+                  Conferences only
+                </Text>
+                <View style={{ gap: 6 }}>
+                  {passSystemService.getPassPerks('general').features.map((feature, index) => (
+                    <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="check-circle" size={16} color="#4CAF50" />
+                      <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 8 }}>
+                        {feature}
+                      </Text>
+                    </View>
+                  ))}
+                  {passSystemService.getPassPerks('general').perks.map((perk, index) => (
+                    <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="check-circle" size={16} color="#4CAF50" />
+                      <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 8 }}>
+                        {perk}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </TouchableOpacity>
+
+              {/* Business Pass */}
+              <TouchableOpacity
+                style={{
+                  padding: 16,
+                  backgroundColor: colors.background.default,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: colors.divider
+                }}
+                onPress={() => createDefaultPass('business')}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
+                    Business Pass
+                  </Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#007AFF' }}>
+                    $249
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: colors.text.secondary, marginBottom: 12 }}>
+                  + Networking & B2B sessions
+                </Text>
+                <View style={{ gap: 6 }}>
+                  {passSystemService.getPassPerks('business').features.map((feature, index) => (
+                    <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="check-circle" size={16} color="#4CAF50" />
+                      <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 8 }}>
+                        {feature}
+                      </Text>
+                    </View>
+                  ))}
+                  {passSystemService.getPassPerks('business').perks.map((perk, index) => (
+                    <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="check-circle" size={16} color="#4CAF50" />
+                      <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 8 }}>
+                        {perk}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </TouchableOpacity>
+
+              {/* VIP Pass */}
+              <TouchableOpacity
+                style={{
+                  padding: 16,
+                  backgroundColor: colors.background.default,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: colors.divider
+                }}
+                onPress={() => createDefaultPass('vip')}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
+                    VIP Pass
+                  </Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFD700' }}>
+                    Premium
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: colors.text.secondary, marginBottom: 12 }}>
+                  + VIP networking with speakers
+                </Text>
+                <View style={{ gap: 6 }}>
+                  {passSystemService.getPassPerks('vip').features.map((feature, index) => (
+                    <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="check-circle" size={16} color="#4CAF50" />
+                      <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 8 }}>
+                        {feature}
+                      </Text>
+                    </View>
+                  ))}
+                  {passSystemService.getPassPerks('vip').perks.map((perk, index) => (
+                    <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="check-circle" size={16} color="#4CAF50" />
+                      <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 8 }}>
+                        {perk}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+          </>
+        ) : (
+          /* Production Mode - Show Payment Options */
+          <View style={{ marginBottom: 16 }}>
+            <View style={{
               padding: 16,
               backgroundColor: colors.background.default,
               borderRadius: 8,
               borderWidth: 1,
-              borderColor: colors.divider
-            }}
-            onPress={() => createDefaultPass('vip')}
-          >
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: '#FFD70020',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 12
+              borderColor: colors.divider,
+              marginBottom: 12
             }}>
-              <MaterialIcons name="star" size={20} color="#FFD700" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
-                VIP Pass
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: colors.text.primary,
+                marginBottom: 8
+              }}>
+                Purchase Event Pass
               </Text>
-              <Text style={{ fontSize: 12, color: colors.text.secondary }}>
-                50 meeting requests • $1000 VOI boost
+              <Text style={{
+                fontSize: 14,
+                color: colors.text.secondary,
+                marginBottom: 12
+              }}>
+                Choose from our available pass types to access speaker meetings and networking opportunities.
               </Text>
+              
+              <View style={{ gap: 8 }}>
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: 12,
+                    backgroundColor: colors.background.paper,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: colors.divider
+                  }}
+                  onPress={() => {
+                    // TODO: Implement real payment flow
+                    Alert.alert('Payment Integration', 'Payment system will be implemented here');
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: '#34A85320',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 8
+                    }}>
+                      <MaterialIcons name="person" size={16} color="#34A853" />
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.primary }}>
+                      General Pass
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#34A853' }}>
+                    $99
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: 12,
+                    backgroundColor: colors.background.paper,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: colors.divider
+                  }}
+                  onPress={() => {
+                    // TODO: Implement real payment flow
+                    Alert.alert('Payment Integration', 'Payment system will be implemented here');
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: '#007AFF20',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 8
+                    }}>
+                      <MaterialIcons name="business" size={16} color="#007AFF" />
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.primary }}>
+                      Business Pass
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#007AFF' }}>
+                    $249
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: 12,
+                    backgroundColor: colors.background.paper,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: colors.divider
+                  }}
+                  onPress={() => {
+                    // TODO: Implement real payment flow
+                    Alert.alert('Payment Integration', 'Payment system will be implemented here');
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: '#FFD70020',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 8
+                    }}>
+                      <MaterialIcons name="star" size={16} color="#FFD700" />
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.primary }}>
+                      VIP Pass
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFD700' }}>
+                    Premium
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <MaterialIcons name="chevron-right" size={20} color={colors.text.secondary} />
+          </View>
+        )}
+
+        {/* Request Button - Always show but disabled when no pass */}
+        {showRequestButton && onRequestPress && (
+          <TouchableOpacity
+            style={{
+              backgroundColor: colors.divider,
+              paddingVertical: 12,
+              paddingHorizontal: 24,
+              borderRadius: 8,
+              alignItems: 'center',
+              opacity: 0.5,
+              marginTop: 16
+            }}
+            disabled={true}
+          >
+            <Text style={{ 
+              color: colors.text.secondary,
+              fontSize: 16,
+              fontWeight: '600'
+            }}>
+              Pass Required
+            </Text>
           </TouchableOpacity>
-        </View>
+        )}
       </View>
     );
   }
@@ -451,8 +709,8 @@ export default function PassesDisplay({
         </View>
       </View>
 
-      {/* Pass Comparison Toggle - Only show if user has a pass */}
-      {passInfo && (
+      {/* Pass Comparison Toggle - Only show if user has a pass AND in demo mode */}
+      {passInfo && isDemoMode && (
         <TouchableOpacity 
           style={{
             flexDirection: 'row',
@@ -483,8 +741,8 @@ export default function PassesDisplay({
         </TouchableOpacity>
       )}
 
-      {/* Pass Comparison Content - Only show if user has a pass */}
-      {passInfo && showComparison && (
+      {/* Pass Comparison Content - Only show if user has a pass AND in demo mode */}
+      {passInfo && showComparison && isDemoMode && (
         <View style={{ marginBottom: 16 }}>
           <Text style={{ 
             fontSize: 12, 
@@ -654,7 +912,7 @@ export default function PassesDisplay({
           <Text style={{ 
             fontSize: 14, 
             fontWeight: '600', 
-            color: requestLimits.can_request ? colors.primary : colors.error,
+            color: requestLimits.can_request ? colors.primary : colors.error.main,
             marginBottom: 4
           }}>
             {requestLimits.can_request ? '✅ Can Request Meeting' : '❌ Cannot Request Meeting'}
@@ -688,7 +946,7 @@ export default function PassesDisplay({
             fontWeight: '600'
           }}>
             {!passInfo ? 'Pass Required' : 
-             !requestLimits?.can_request ? 'Limit Reached' : 
+             !requestLimits?.can_request ? 'Limit Reached' :
              'Request Meeting'}
           </Text>
         </TouchableOpacity>
@@ -697,7 +955,7 @@ export default function PassesDisplay({
   );
 }
 
-// PassCard component for dashboard mode
+// PassCard component for dashboard mode - enhanced ticket-style design
 const PassCard = ({ pass }: { pass: PassInfo }) => {
   const { colors } = useTheme();
   
@@ -740,71 +998,155 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
   return (
     <View style={{
       backgroundColor: colors.background.paper,
-      borderRadius: 12,
-      padding: 16,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.divider,
       shadowColor: colors.text.primary,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 5,
+      overflow: 'hidden',
     }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-        <View style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: `${getPassTypeColor(pass.pass_type)}20`,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginRight: 12
-        }}>
-          <MaterialIcons 
-            name={pass.pass_type === 'vip' ? 'star' : pass.pass_type === 'business' ? 'business' : 'person'} 
-            size={20} 
-            color={getPassTypeColor(pass.pass_type)} 
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
+      {/* Ticket Header */}
+      <View style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.divider
+      }}>
+        <View>
+          <Text style={{ fontSize: 12, color: colors.text.secondary, marginBottom: 2 }}>
+            Nov 12-14, 2025
+          </Text>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary }}>
             {getPassTypeLabel(pass.pass_type)}
           </Text>
-          <Text style={{ fontSize: 12, color: colors.text.secondary }}>
-            Pass #{pass.pass_number}
-          </Text>
         </View>
         <View style={{
-          paddingHorizontal: 8,
-          paddingVertical: 4,
-          backgroundColor: `${getPassTypeColor(pass.pass_type)}20`,
-          borderRadius: 12
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          backgroundColor: getPassTypeColor(pass.pass_type),
+          borderRadius: 16
         }}>
           <Text style={{ 
-            fontSize: 10, 
-            fontWeight: '600', 
-            color: getPassTypeColor(pass.pass_type)
+            fontSize: 12, 
+            fontWeight: '700', 
+            color: '#FFFFFF'
           }}>
-            {pass.status.toUpperCase()}
+            {pass.pass_type.toUpperCase()}
           </Text>
         </View>
       </View>
       
+      {/* Ticket Image Container */}
+      <ImageBackground
+        source={{ uri: getPassImage(pass.pass_type) }}
+        style={{
+          height: 120,
+          position: 'relative',
+        }}
+        imageStyle={{
+          opacity: 0.3,
+        }}
+      >
+        <View style={{
+          height: 120,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: `${getPassTypeColor(pass.pass_type)}20`
+        }} />
+        <View style={{
+          position: 'absolute',
+          bottom: 12,
+          left: 16,
+          right: 16,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end'
+        }}>
+          <View>
+            <Text style={{ 
+              fontSize: 14, 
+              fontWeight: '600', 
+              color: colors.text.primary,
+              marginBottom: 2
+            }}>
+              {getPassAccess(pass.pass_type)}
+            </Text>
+            <Text style={{ 
+              fontSize: 12, 
+              color: colors.text.secondary 
+            }}>
+              Pass #{pass.pass_number}
+            </Text>
+          </View>
+          <View style={{
+            backgroundColor: colors.background.paper,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: colors.divider
+          }}>
+            <Text style={{ 
+              fontSize: 12, 
+              fontWeight: '600', 
+              color: getPassTypeColor(pass.pass_type)
+            }}>
+              {pass.status.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+        
+        {/* BSL2025 Logo Seal */}
+        <View style={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: colors.background.paper,
+          borderWidth: 2,
+          borderColor: getPassTypeColor(pass.pass_type),
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Text style={{ 
+            fontSize: 8, 
+            fontWeight: '700', 
+            color: getPassTypeColor(pass.pass_type)
+          }}>
+            BSL2025
+          </Text>
+        </View>
+      </ImageBackground>
+      
+      {/* Ticket Stats */}
       <View style={{ 
         flexDirection: 'row', 
-        justifyContent: 'space-between',
-        marginBottom: 12
+        justifyContent: 'space-around',
+        padding: 16,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: colors.divider
       }}>
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary }}>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text.primary }}>
             {pass.remaining_requests}
           </Text>
           <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
             Requests Left
           </Text>
         </View>
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary }}>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text.primary }}>
             {pass.remaining_boost.toFixed(0)}
           </Text>
           <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
@@ -813,13 +1155,68 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
         </View>
       </View>
       
-      <Text style={{ 
-        fontSize: 12, 
-        color: colors.text.secondary,
-        textAlign: 'center'
+      {/* Ticket Footer Actions */}
+      <View style={{
+        flexDirection: 'row',
+        borderTopWidth: 1,
+        borderTopColor: colors.divider
       }}>
-        {getPassAccess(pass.pass_type)}
-      </Text>
+        <TouchableOpacity style={{
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: 12,
+          borderRightWidth: 1,
+          borderRightColor: colors.divider
+        }}>
+          <MaterialIcons name="qr-code" size={16} color="#4A90E2" />
+          <Text style={{ 
+            fontSize: 12, 
+            fontWeight: '600', 
+            color: '#4A90E2',
+            marginLeft: 4
+          }}>
+            QR Code
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={{
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: 12,
+          borderRightWidth: 1,
+          borderRightColor: colors.divider
+        }}>
+          <MaterialIcons name="info" size={16} color="#4A90E2" />
+          <Text style={{ 
+            fontSize: 12, 
+            fontWeight: '600', 
+            color: '#4A90E2',
+            marginLeft: 4
+          }}>
+            Details
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={{
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: 12
+        }}>
+          <MaterialIcons name="share" size={16} color="#4A90E2" />
+          <Text style={{ 
+            fontSize: 12, 
+            fontWeight: '600', 
+            color: '#4A90E2',
+            marginLeft: 4
+          }}>
+            Share
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };

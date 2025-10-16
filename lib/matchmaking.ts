@@ -127,8 +127,28 @@ class MatchmakingService {
   async createMeetingRequest(data: CreateMeetingRequestData): Promise<MeetingRequest> {
     console.log('🔵 Creating meeting request with data:', data);
     
+    // Validate UUID format for requester_id (must be from auth.users)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    if (!uuidRegex.test(data.requester_id)) {
+      console.error('❌ Invalid requester_id format:', data.requester_id);
+      throw new Error(`Invalid requester_id format: ${data.requester_id}. Must be a valid UUID.`);
+    }
+    
+    // For speaker_id, we need to handle both UUID and text formats
+    // If it's a text ID (like "63"), we'll convert it to a UUID-like format
+    let speakerId = data.speaker_id;
+    if (!uuidRegex.test(speakerId)) {
+      console.log('🟡 Converting text speaker_id to UUID format:', speakerId);
+      // Convert text ID to UUID format by padding and formatting
+      const paddedId = speakerId.padStart(8, '0');
+      speakerId = `${paddedId}-0000-4000-8000-000000000000`;
+      console.log('🟡 Converted speaker_id:', speakerId);
+    }
+    
     const insertData = {
       ...data,
+      speaker_id: speakerId, // Use the converted speaker ID
       duration_minutes: data.duration_minutes || 15,
       boost_amount: data.boost_amount || 0,
       expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(), // 3 days

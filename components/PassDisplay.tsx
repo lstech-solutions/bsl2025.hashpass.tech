@@ -558,59 +558,30 @@ export default function PassDisplay({
         </View>
       )}
 
-      {/* Request Button - Only show if user has a pass */}
-      {showRequestButton && onRequestPress && passInfo && (
+      {/* Request Button - Always show but disabled when no pass or limit reached */}
+      {showRequestButton && onRequestPress && (
         <TouchableOpacity
           style={{
-            backgroundColor: requestLimits?.can_request ? colors.primary : colors.divider,
+            backgroundColor: (passInfo && requestLimits?.can_request) ? colors.primary : colors.divider,
             paddingVertical: 12,
             paddingHorizontal: 24,
             borderRadius: 8,
             alignItems: 'center',
-            opacity: requestLimits?.can_request ? 1 : 0.5
+            opacity: (passInfo && requestLimits?.can_request) ? 1 : 0.5
           }}
-          onPress={requestLimits?.can_request ? onRequestPress : undefined}
-          disabled={!requestLimits?.can_request}
+          onPress={(passInfo && requestLimits?.can_request) ? onRequestPress : undefined}
+          disabled={!passInfo || !requestLimits?.can_request}
         >
           <Text style={{ 
-            color: requestLimits?.can_request ? 'white' : colors.text.secondary,
+            color: (passInfo && requestLimits?.can_request) ? 'white' : colors.text.secondary,
             fontSize: 16,
             fontWeight: '600'
           }}>
-            Request Meeting
+            {!passInfo ? 'Pass Required' : 
+             !requestLimits?.can_request ? 'Limit Reached' : 
+             'Request Meeting'}
           </Text>
         </TouchableOpacity>
-      )}
-
-      {/* No Pass Message - Show when no pass and request button would be shown */}
-      {showRequestButton && !passInfo && (
-        <View style={{
-          padding: 16,
-          backgroundColor: `${colors.error}10`,
-          borderRadius: 8,
-          alignItems: 'center',
-          borderWidth: 1,
-          borderColor: colors.error.main
-        }}>
-          <MaterialIcons name="block" size={24} color={colors.error} />
-          <Text style={{ 
-            color: colors.error,
-            fontSize: 16,
-            fontWeight: '600',
-            marginTop: 8,
-            textAlign: 'center'
-          }}>
-            Pass Required
-          </Text>
-          <Text style={{ 
-            color: colors.text.secondary,
-            fontSize: 14,
-            marginTop: 4,
-            textAlign: 'center'
-          }}>
-            You need a pass to request meetings with speakers
-          </Text>
-        </View>
       )}
     </View>
   );

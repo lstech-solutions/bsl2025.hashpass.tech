@@ -590,7 +590,7 @@ export default function PassDisplay({
           borderRadius: 8,
           alignItems: 'center',
           borderWidth: 1,
-          borderColor: colors.error
+          borderColor: colors.error.main
         }}>
           <MaterialIcons name="block" size={24} color={colors.error} />
           <Text style={{ 

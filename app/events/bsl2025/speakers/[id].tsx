@@ -304,10 +304,7 @@ export default function SpeakerDetail() {
   const handleRequestMeeting = async () => {
     console.log('🔵 handleRequestMeeting called');
     console.log('User:', user?.id);
-    console.log('UserTicket:', userTicket);
     console.log('Speaker:', speaker?.id);
-    console.log('Access:', access);
-    console.log('RequestLimits:', requestLimits);
     
     if (!user) {
       console.log('❌ No user found');
@@ -315,19 +312,14 @@ export default function SpeakerDetail() {
       return;
     }
 
-    if (!userTicket || !speaker) {
-      console.log('❌ Missing userTicket or speaker');
-      showError('Missing Information', 'Missing required information');
-      return;
-    }
-
-    if (!access.canRequestMeeting) {
-      console.log('❌ Cannot request meeting - access denied');
-      showWarning('Cannot Request Meeting', 'Meeting requests not available for your ticket type');
+    if (!speaker) {
+      console.log('❌ Missing speaker');
+      showError('Missing Information', 'Missing speaker information');
       return;
     }
 
     // Show the meeting request modal directly
+    // Pass validation is now handled by PassDisplay component
     console.log('🟡 Showing meeting request modal...');
     setShowMeetingModal(true);
     console.log('🟢 Modal should now be visible');
@@ -336,14 +328,13 @@ export default function SpeakerDetail() {
   const submitMeetingRequestDirectly = async () => {
     console.log('🔵 submitMeetingRequestDirectly called');
     
-    if (!user || !speaker || !userTicket) {
-      console.log('❌ Missing required data:', { user: !!user, speaker: !!speaker, userTicket: !!userTicket });
+    if (!user || !speaker) {
+      console.log('❌ Missing required data:', { user: !!user, speaker: !!speaker });
       return;
     }
 
     console.log('🔵 User data:', { id: user.id, email: user.email });
     console.log('🔵 Speaker data:', { id: speaker.id, name: speaker.name });
-    console.log('🔵 User ticket:', userTicket);
 
     setIsRequestingMeeting(true);
 
@@ -355,11 +346,11 @@ export default function SpeakerDetail() {
         requester_name: user.email || 'Anonymous',
         requester_company: 'Your Company',
         requester_title: 'Your Title',
-        requester_ticket_type: userTicket.type,
+        requester_ticket_type: 'general', // Default ticket type, will be validated by pass system
         meeting_type: 'networking',
         message: '', // No message
         note: '', // No note
-        boost_amount: 0 // No boost
+        boost_amount: boostAmount || 0 // Use boost amount from state
       };
 
       console.log('🔵 Request data to send:', requestData);
@@ -730,46 +721,7 @@ export default function SpeakerDetail() {
         </View>
 
 
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity 
-            style={[
-              styles.actionButton, 
-              !access.canRequestMeeting && styles.disabledButton
-            ]}
-            onPress={() => {
-              console.log('🔴 Button pressed!');
-              console.log('access.canRequestMeeting:', access.canRequestMeeting);
-              console.log('isRequestingMeeting:', isRequestingMeeting);
-              console.log('requestLimits:', requestLimits);
-              console.log('requestLimits?.canSendRequest:', requestLimits?.canSendRequest);
-              handleRequestMeeting();
-            }}
-            disabled={!access.canRequestMeeting || isRequestingMeeting}
-          >
-            <MaterialIcons 
-              name="event" 
-              size={20} 
-              color={access.canRequestMeeting ? "#FFFFFF" : "#999"} 
-            />
-            <Text style={[
-              styles.actionButtonText,
-              !access.canRequestMeeting && styles.disabledButtonText
-            ]}>
-              {isRequestingMeeting ? 'Sending...' : 'Request Meeting'}
-            </Text>
-        </TouchableOpacity>
-
-
-        </View>
-
-        {/* Availability Status */}
-        {!access.canRequestMeeting && (
-          <View style={styles.availabilityWarning}>
-            <MaterialIcons name="warning" size={20} color="#FF9500" />
-            <Text style={styles.availabilityWarningText}>Meeting requests not available for your ticket type</Text>
-          </View>
-        )}
+        {/* Action buttons are now handled by PassDisplay component */}
 
       </View>
 

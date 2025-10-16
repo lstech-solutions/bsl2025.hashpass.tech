@@ -89,7 +89,7 @@ class PassSystemService {
         return null;
       }
 
-      return data;
+      return data as PassInfo;
     } catch (error) {
       console.error('Error in getUserPassInfo:', error);
       return null;
@@ -122,7 +122,7 @@ class PassSystemService {
         };
       }
 
-      return data;
+      return data as PassRequestLimits;
     } catch (error) {
       console.error('Error in canMakeMeetingRequest:', error);
       return {

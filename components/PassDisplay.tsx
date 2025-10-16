@@ -147,7 +147,7 @@ export default function PassDisplay({
           marginBottom: 16,
           lineHeight: 20
         }}>
-          You need a pass to request meetings with speakers. Choose your pass type:
+          You need a pass to request meetings with speakers. Without a pass, you cannot send meeting requests. Choose your pass type:
         </Text>
 
         <View style={{ gap: 12 }}>
@@ -338,41 +338,43 @@ export default function PassDisplay({
         </View>
       </View>
 
-      {/* Pass Comparison Toggle */}
-      <TouchableOpacity 
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: 12,
-          backgroundColor: colors.background.default,
-          borderRadius: 8,
-          marginBottom: 16,
-          borderWidth: 1,
-          borderColor: colors.divider
-        }}
-        onPress={() => {
-          console.log('Toggle pressed, current state:', showPassComparison);
-          setShowPassComparison(!showPassComparison);
-        }}
-        activeOpacity={0.7}
-      >
-        <Text style={{ 
-          fontSize: 14, 
-          fontWeight: '600', 
-          color: colors.text.primary
-        }}>
-          All Pass Types & Pricing {showPassComparison ? '(Open)' : '(Closed)'}
-        </Text>
-        <MaterialIcons 
-          name={showPassComparison ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
-          size={24} 
-          color={colors.text.secondary} 
-        />
-      </TouchableOpacity>
+      {/* Pass Comparison Toggle - Only show if user has a pass */}
+      {passInfo && (
+        <TouchableOpacity 
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: 12,
+            backgroundColor: colors.background.default,
+            borderRadius: 8,
+            marginBottom: 16,
+            borderWidth: 1,
+            borderColor: colors.divider
+          }}
+          onPress={() => {
+            console.log('Toggle pressed, current state:', showPassComparison);
+            setShowPassComparison(!showPassComparison);
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={{ 
+            fontSize: 14, 
+            fontWeight: '600', 
+            color: colors.text.primary
+          }}>
+            All Pass Types & Pricing {showPassComparison ? '(Open)' : '(Closed)'}
+          </Text>
+          <MaterialIcons 
+            name={showPassComparison ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
+            size={24} 
+            color={colors.text.secondary} 
+          />
+        </TouchableOpacity>
+      )}
 
-      {/* Pass Comparison Content */}
-      {showPassComparison && (
+      {/* Pass Comparison Content - Only show if user has a pass */}
+      {passInfo && showPassComparison && (
         <View style={{ marginBottom: 16 }}>
           <Text style={{ 
             fontSize: 12, 
@@ -531,8 +533,8 @@ export default function PassDisplay({
         </View>
       )}
 
-      {/* Request Limits */}
-      {requestLimits && (
+      {/* Request Limits - Only show if user has a pass */}
+      {passInfo && requestLimits && (
         <View style={{ 
           padding: 12,
           backgroundColor: requestLimits.can_request ? `${colors.primary}10` : `${colors.error}10`,
@@ -556,28 +558,59 @@ export default function PassDisplay({
         </View>
       )}
 
-      {/* Request Button */}
-      {showRequestButton && onRequestPress && requestLimits && (
+      {/* Request Button - Only show if user has a pass */}
+      {showRequestButton && onRequestPress && passInfo && (
         <TouchableOpacity
           style={{
-            backgroundColor: requestLimits.can_request ? colors.primary : colors.divider,
+            backgroundColor: requestLimits?.can_request ? colors.primary : colors.divider,
             paddingVertical: 12,
             paddingHorizontal: 24,
             borderRadius: 8,
             alignItems: 'center',
-            opacity: requestLimits.can_request ? 1 : 0.5
+            opacity: requestLimits?.can_request ? 1 : 0.5
           }}
-          onPress={requestLimits.can_request ? onRequestPress : undefined}
-          disabled={!requestLimits.can_request}
+          onPress={requestLimits?.can_request ? onRequestPress : undefined}
+          disabled={!requestLimits?.can_request}
         >
           <Text style={{ 
-            color: requestLimits.can_request ? 'white' : colors.text.secondary,
+            color: requestLimits?.can_request ? 'white' : colors.text.secondary,
             fontSize: 16,
             fontWeight: '600'
           }}>
             Request Meeting
           </Text>
         </TouchableOpacity>
+      )}
+
+      {/* No Pass Message - Show when no pass and request button would be shown */}
+      {showRequestButton && !passInfo && (
+        <View style={{
+          padding: 16,
+          backgroundColor: `${colors.error}10`,
+          borderRadius: 8,
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: colors.error
+        }}>
+          <MaterialIcons name="block" size={24} color={colors.error} />
+          <Text style={{ 
+            color: colors.error,
+            fontSize: 16,
+            fontWeight: '600',
+            marginTop: 8,
+            textAlign: 'center'
+          }}>
+            Pass Required
+          </Text>
+          <Text style={{ 
+            color: colors.text.secondary,
+            fontSize: 14,
+            marginTop: 4,
+            textAlign: 'center'
+          }}>
+            You need a pass to request meetings with speakers
+          </Text>
+        </View>
       )}
     </View>
   );

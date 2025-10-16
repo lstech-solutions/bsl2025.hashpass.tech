@@ -135,16 +135,10 @@ class MatchmakingService {
       throw new Error(`Invalid requester_id format: ${data.requester_id}. Must be a valid UUID.`);
     }
     
-    // For speaker_id, we need to handle both UUID and text formats
-    // If it's a text ID (like "63"), we'll convert it to a UUID-like format
-    let speakerId = data.speaker_id;
-    if (!uuidRegex.test(speakerId)) {
-      console.log('🟡 Converting text speaker_id to UUID format:', speakerId);
-      // Convert text ID to UUID format by padding and formatting
-      const paddedId = speakerId.padStart(8, '0');
-      speakerId = `${paddedId}-0000-4000-8000-000000000000`;
-      console.log('🟡 Converted speaker_id:', speakerId);
-    }
+    // For speaker_id, we now use the original text format from BSL_Speakers
+    // No conversion needed since the database now accepts text IDs
+    const speakerId = data.speaker_id;
+    console.log('🔵 Using speaker_id as-is:', speakerId);
     
     const insertData = {
       ...data,

@@ -22,15 +22,31 @@ CREATE INDEX IF NOT EXISTS idx_passes_status ON public.passes(status);
 ALTER TABLE public.passes ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for passes
-CREATE POLICY "Users can view their own passes" ON public.passes
-    FOR SELECT USING (user_id = auth.uid()::text);
+DO $$ BEGIN
+    CREATE POLICY "Users can view their own passes" ON public.passes
+        FOR SELECT USING (user_id = auth.uid()::text);
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE POLICY "Users can insert their own passes" ON public.passes
-    FOR INSERT WITH CHECK (user_id = auth.uid()::text);
+DO $$ BEGIN
+    CREATE POLICY "Users can insert their own passes" ON public.passes
+        FOR INSERT WITH CHECK (user_id = auth.uid()::text);
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE POLICY "Users can update their own passes" ON public.passes
-    FOR UPDATE USING (user_id = auth.uid()::text);
+DO $$ BEGIN
+    CREATE POLICY "Users can update their own passes" ON public.passes
+        FOR UPDATE USING (user_id = auth.uid()::text);
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- Create updated_at trigger
-CREATE TRIGGER update_passes_updated_at BEFORE UPDATE ON public.passes
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    CREATE TRIGGER update_passes_updated_at BEFORE UPDATE ON public.passes
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;

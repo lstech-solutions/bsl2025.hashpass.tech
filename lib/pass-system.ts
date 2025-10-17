@@ -106,7 +106,7 @@ class PassSystemService {
     try {
       const { data, error } = await supabase
         .rpc('can_make_meeting_request', {
-          p_user_id: userId,
+          p_user_id: userId, // This should be UUID from auth
           p_speaker_id: speakerId,
           p_boost_amount: boostAmount
         })

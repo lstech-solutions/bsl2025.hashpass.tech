@@ -374,7 +374,7 @@ export default function SpeakerDetail() {
       
       // Use the pass system's can_make_meeting_request function
       const { data, error } = await supabase.rpc('can_make_meeting_request', {
-        p_user_id: user.id,
+        p_user_id: user.id, // This should be UUID from auth
         p_speaker_id: speaker.id,
         p_boost_amount: 0
       });

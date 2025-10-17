@@ -47,6 +47,7 @@ export interface UserBlock {
 
 export interface PassRequestLimits {
   can_request: boolean;
+  canSendRequest?: boolean; // Alias for can_request for compatibility
   reason: string;
   pass_type: PassType | null;
   remaining_requests: number;
@@ -122,11 +123,14 @@ class PassSystemService {
         };
       }
 
-      return data as PassRequestLimits;
+      const result = data as PassRequestLimits;
+      result.canSendRequest = result.can_request; // Set alias for compatibility
+      return result;
     } catch (error) {
       console.error('Error in canMakeMeetingRequest:', error);
       return {
         can_request: false,
+        canSendRequest: false,
         reason: 'Error checking limits',
         pass_type: null,
         remaining_requests: 0,

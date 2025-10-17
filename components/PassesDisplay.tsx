@@ -905,17 +905,17 @@ export default function PassesDisplay({
       {passInfo && requestLimits && (
         <View style={{ 
           padding: 12,
-          backgroundColor: requestLimits.can_request ? `${colors.primary}10` : `${colors.error}10`,
+          backgroundColor: requestLimits.canSendRequest ? `${colors.primary}10` : `${colors.error}10`,
           borderRadius: 8,
           marginBottom: 16
         }}>
           <Text style={{ 
             fontSize: 14, 
             fontWeight: '600', 
-            color: requestLimits.can_request ? colors.primary : colors.error.main,
+            color: requestLimits.canSendRequest ? colors.primary : colors.error.main,
             marginBottom: 4
           }}>
-            {requestLimits.can_request ? '✅ Can Request Meeting' : '❌ Cannot Request Meeting'}
+            {requestLimits.canSendRequest ? '✅ Can Request Meeting' : '❌ Cannot Request Meeting'}
           </Text>
           <Text style={{ 
             fontSize: 12, 
@@ -930,23 +930,23 @@ export default function PassesDisplay({
       {showRequestButton && onRequestPress && (
         <TouchableOpacity
           style={{
-            backgroundColor: (passInfo && requestLimits?.can_request) ? colors.primary : colors.divider,
+            backgroundColor: (passInfo && requestLimits?.canSendRequest) ? colors.primary : colors.divider,
             paddingVertical: 12,
             paddingHorizontal: 24,
             borderRadius: 8,
             alignItems: 'center',
-            opacity: (passInfo && requestLimits?.can_request) ? 1 : 0.5
+            opacity: (passInfo && requestLimits?.canSendRequest) ? 1 : 0.5
           }}
-          onPress={(passInfo && requestLimits?.can_request) ? onRequestPress : undefined}
-          disabled={!passInfo || !requestLimits?.can_request}
+          onPress={(passInfo && requestLimits?.canSendRequest) ? onRequestPress : undefined}
+          disabled={!passInfo || !requestLimits?.canSendRequest}
         >
           <Text style={{ 
-            color: (passInfo && requestLimits?.can_request) ? 'white' : colors.text.secondary,
+            color: (passInfo && requestLimits?.canSendRequest) ? 'white' : colors.text.secondary,
             fontSize: 16,
             fontWeight: '600'
           }}>
             {!passInfo ? 'Pass Required' : 
-             !requestLimits?.can_request ? 'Limit Reached' :
+             !requestLimits?.canSendRequest ? 'Limit Reached' :
              'Request Meeting'}
           </Text>
         </TouchableOpacity>

@@ -6,7 +6,6 @@ import { useEvent } from '../../../../contexts/EventContext';
 import { useAuth } from '../../../../hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
 import { matchmakingService, CreateMeetingRequestData } from '../../../../lib/matchmaking';
-import { cryptoBoostService, BoostCalculation } from '../../../../lib/crypto-boost';
 import { useToastHelpers } from '../../../../contexts/ToastContext';
 import { supabase } from '../../../../lib/supabase';
 import { passSystemService } from '../../../../lib/pass-system';
@@ -57,11 +56,8 @@ export default function SpeakerDetail() {
   useEffect(() => {
     console.log('🔍 Modal state changed:', showMeetingModal);
   }, [showMeetingModal]);
-  const [showBoostModal, setShowBoostModal] = useState(false);
   const [meetingMessage, setMeetingMessage] = useState('');
   const [selectedIntentions, setSelectedIntentions] = useState<string[]>(['none']);
-  const [boostAmount, setBoostAmount] = useState(0);
-  const [boostCalculation, setBoostCalculation] = useState<BoostCalculation | null>(null);
   const [requestLimits, setRequestLimits] = useState<{
     ticketType: 'general' | 'business' | 'vip';
     totalRequests: number;
@@ -69,6 +65,7 @@ export default function SpeakerDetail() {
     nextRequestAllowedAt?: string;
     canSendRequest: boolean;
     requestLimit: number;
+    reason?: string;
   } | null>(null);
   const [showTicketComparison, setShowTicketComparison] = useState(false);
 
@@ -196,6 +193,7 @@ export default function SpeakerDetail() {
     if (user && speaker) {
       loadMeetingRequestStatus();
       loadCancelledRequests();
+      loadRequestLimits();
     }
   }, [user, speaker]);
 
@@ -365,120 +363,60 @@ export default function SpeakerDetail() {
     }
   };
 
-  const handleBoostRequest = async () => {
-    if (!user || !meetingRequest) return;
 
-    // Show boost amount picker
-    Alert.alert(
-      'Boost Your Request',
-      'Add VOI boost points to increase your request priority. Higher boost = higher priority!',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: '+5 BOOST',
-          onPress: () => updateRequestBoost(5)
-        },
-        {
-          text: '+10 BOOST',
-          onPress: () => updateRequestBoost(10)
-        },
-        {
-          text: '+25 BOOST',
-          onPress: () => updateRequestBoost(25)
-        },
-        {
-          text: 'Custom Amount',
-          onPress: () => showCustomBoostInput()
-        }
-      ]
-    );
-  };
 
-  const updateRequestBoost = async (boostAmount: number) => {
-    if (!user || !meetingRequest) return;
 
+  const loadRequestLimits = async () => {
+    if (!user || !speaker) return;
+    
     try {
-      console.log('Attempting to boost request:', meetingRequest.id, 'by', boostAmount);
+      console.log('🔄 Loading request limits for user:', user.id, 'speaker:', speaker.id);
       
-      // Update the meeting request with new boost amount
-      const { error } = await supabase
-        .from('meeting_requests')
-        .update({ 
-          boost_amount: meetingRequest.boost_amount + boostAmount,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', meetingRequest.id)
-        .eq('requester_id', user.id);
+      // Use the pass system's can_make_meeting_request function
+      const { data, error } = await supabase.rpc('can_make_meeting_request', {
+        p_user_id: user.id,
+        p_speaker_id: speaker.id,
+        p_boost_amount: 0
+      });
 
       if (error) {
-        console.error('Boost update failed:', error);
+        console.error('❌ Error calling can_make_meeting_request:', error);
         throw error;
       }
 
-      console.log('Request boosted successfully');
-      showSuccess(
-        'Request Boosted!',
-        `Added +${boostAmount} VOI boost to your request. New total: ${meetingRequest.boost_amount + boostAmount} points.`
-      );
+      console.log('🔄 can_make_meeting_request result:', data);
 
-      // Refresh the request status
-      await loadMeetingRequestStatus();
-      // Refresh request limits
-      await loadRequestLimits();
+      if (data && data.length > 0) {
+        const result = data[0];
+        setRequestLimits({
+          ticketType: result.pass_type || 'business',
+          totalRequests: 0, // This will be calculated from pass info
+          remainingRequests: result.remaining_requests || 0,
+          canSendRequest: result.can_request || false,
+          requestLimit: result.remaining_requests || 0,
+          reason: result.reason || 'Unknown reason',
+        });
+      } else {
+        // No pass found or other issue
+        setRequestLimits({
+          ticketType: 'business',
+          totalRequests: 0,
+          remainingRequests: 0,
+          canSendRequest: false,
+          requestLimit: 0,
+          reason: 'No active pass found',
+        });
+      }
     } catch (error) {
-      console.error('Error boosting request:', error);
-      showError(
-        'Boost Failed',
-        'Failed to boost your request. Please try again.'
-      );
-    }
-  };
-
-  const showCustomBoostInput = () => {
-    Alert.prompt(
-      'Custom Boost Amount',
-      'Enter the number of VOI boost points to add:',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Add Boost',
-          onPress: (text) => {
-            const amount = parseInt(text || '0');
-            if (amount > 0) {
-              updateRequestBoost(amount);
-            } else {
-              showError('Invalid Amount', 'Please enter a valid boost amount.');
-            }
-          }
-        }
-      ],
-      'plain-text',
-      '',
-      'numeric'
-    );
-  };
-
-  const loadRequestLimits = async () => {
-    if (!user) return;
-    
-    try {
-      const limits = await matchmakingService.getRequestLimitsSummary(user.id);
-      setRequestLimits(limits);
-    } catch (error) {
-      console.error('Error loading request limits:', error);
-      // Set default limits to allow meeting requests even if database is unavailable
+      console.error('❌ Error loading request limits:', error);
+      // Set default limits to prevent meeting requests if database is unavailable
       setRequestLimits({
-        ticketType: 'business', // Default to business, will be replaced by pass system
+        ticketType: 'business',
         totalRequests: 0,
-        remainingRequests: 20, // Default value, will be replaced by pass system
-        canSendRequest: true,
-        requestLimit: 20 // Default value, will be replaced by pass system
+        remainingRequests: 0,
+        canSendRequest: false,
+        requestLimit: 0,
+        reason: 'Error loading request limits',
       });
     }
   };
@@ -575,7 +513,7 @@ export default function SpeakerDetail() {
         meeting_type: 'networking',
         message: '', // No message
         note: '', // No note
-        boost_amount: boostAmount || 0 // Use boost amount from state
+        boost_amount: 0 // No boost system yet
       };
 
       console.log('🔵 Request data to send:', requestData);
@@ -677,7 +615,7 @@ export default function SpeakerDetail() {
         meeting_type: 'networking',
         message: meetingMessage || '', // Allow empty message
         note: getSelectedIntentionsText(),
-        boost_amount: boostAmount,
+        boost_amount: 0, // No boost system yet
       };
 
       const meetingRequest = await matchmakingService.createMeetingRequest(meetingData);
@@ -686,7 +624,6 @@ export default function SpeakerDetail() {
       setShowMeetingModal(false);
       setMeetingMessage('');
       setSelectedIntentions([]);
-      setBoostAmount(0);
       
           // Refresh request limits and meeting request status after sending
           await loadRequestLimits();
@@ -711,7 +648,6 @@ export default function SpeakerDetail() {
       setShowMeetingModal(false);
       setMeetingMessage('');
       setSelectedIntentions([]);
-      setBoostAmount(0);
       
       // Show specific error messages based on the error type
       if (error instanceof Error) {
@@ -740,74 +676,6 @@ export default function SpeakerDetail() {
     }
   };
 
-  const handleBoostAmountChange = (amount: number) => {
-    setBoostAmount(amount);
-    
-    if (amount > 0) {
-      const calculation = cryptoBoostService.calculateBoost(
-        50, // Base priority
-        amount,
-        'business' // Default to business pass type
-      );
-      setBoostCalculation(calculation);
-    } else {
-      setBoostCalculation(null);
-    }
-  };
-
-  const handleBoostPayment = async () => {
-    if (!user || !speaker) return;
-
-    try {
-      const boostTransaction = await cryptoBoostService.generateBoostTransaction(
-        boostAmount,
-        'USER_WALLET_ADDRESS', // Would come from user's connected wallet
-        'meeting_request_id' // Would be the actual meeting request ID
-      );
-
-      Alert.alert(
-        'Boost Payment Instructions',
-        boostTransaction.instructions,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'I\'ve Sent Payment', 
-            onPress: () => {
-              // In real app, user would paste transaction hash
-              Alert.prompt(
-                'Transaction Hash',
-                'Please enter your transaction hash:',
-                (hash) => {
-                  if (hash) {
-                    verifyBoostTransaction(hash);
-                  }
-                }
-              );
-            }
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('Error generating boost transaction:', error);
-      Alert.alert('Error', 'Failed to generate boost transaction');
-    }
-  };
-
-  const verifyBoostTransaction = async (transactionHash: string) => {
-    try {
-      const result = await cryptoBoostService.verifyTransaction(transactionHash);
-      
-      if (result.isValid) {
-        Alert.alert('Boost Confirmed!', 'Your boost payment has been verified and applied.');
-        setShowBoostModal(false);
-      } else {
-        Alert.alert('Verification Failed', result.error || 'Transaction could not be verified');
-      }
-    } catch (error) {
-      console.error('Error verifying transaction:', error);
-      Alert.alert('Error', 'Failed to verify transaction');
-    }
-  };
 
 
   const handleLinkedIn = () => {
@@ -912,12 +780,6 @@ export default function SpeakerDetail() {
                 </View>
               )}
               
-              {meetingRequest.boost_amount > 0 && (
-                <View style={styles.requestDetailRow}>
-                  <Text style={styles.requestDetailLabel}>VOI Boost:</Text>
-                  <Text style={styles.requestDetailValue}>${meetingRequest.boost_amount}</Text>
-                </View>
-              )}
             </View>
 
             {meetingRequest.status === 'pending' && (
@@ -945,25 +807,10 @@ export default function SpeakerDetail() {
                     </Text>
                   </View>
                   
-                  {meetingRequest.boost_amount > 0 && (
-                    <View style={styles.boostBadge}>
-                      <MaterialIcons name="flash-on" size={14} color="#FF6B35" />
-                      <Text style={styles.boostText}>
-                        +{meetingRequest.boost_amount} BOOST
-                      </Text>
-                    </View>
-                  )}
                 </View>
 
                 {/* Action Buttons */}
                 <View style={styles.requestActions}>
-                  <TouchableOpacity
-                    style={styles.boostButton}
-                    onPress={() => handleBoostRequest()}
-                  >
-                    <MaterialIcons name="flash-on" size={16} color="#FF6B35" />
-                    <Text style={styles.boostButtonText}>Boost Request</Text>
-                  </TouchableOpacity>
                   
                   <TouchableOpacity
                     style={styles.cancelButton}
@@ -1047,7 +894,6 @@ export default function SpeakerDetail() {
       <PassesDisplay
         mode="speaker"
         speakerId={speaker.id}
-        boostAmount={boostAmount}
         showRequestButton={true}
         onRequestPress={handleRequestMeeting}
         onPassInfoLoaded={(passInfo) => {
@@ -1249,55 +1095,6 @@ export default function SpeakerDetail() {
               </View>
             </View>
 
-            {/* Boost Section */}
-            <View style={styles.boostSection}>
-              <View style={styles.boostHeader}>
-                <MaterialIcons name="trending-up" size={20} color="#FF2D92" />
-                <Text style={styles.boostTitle}>Boost Your Request</Text>
-              </View>
-              <Text style={styles.boostDescription}>
-                Send $VOI tokens to increase your priority in the speaker's queue
-              </Text>
-
-              <View style={styles.boostAmounts}>
-                {[5, 10, 25, 50].map((amount) => (
-                  <TouchableOpacity
-                    key={amount}
-                    style={[
-                      styles.boostAmountButton,
-                      boostAmount === amount && styles.boostAmountButtonActive
-                    ]}
-                    onPress={() => handleBoostAmountChange(amount)}
-                  >
-                    <Text style={[
-                      styles.boostAmountText,
-                      boostAmount === amount && styles.boostAmountTextActive
-                    ]}>
-                      {amount} $VOI
-                    </Text>
-                    <Text style={[
-                      styles.boostAmountUSD,
-                      boostAmount === amount && styles.boostAmountUSDActive
-                    ]}>
-                      ${(amount * 0.05).toFixed(2)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {boostCalculation && (
-                <View style={styles.boostCalculation}>
-                  <Text style={styles.boostCalculationTitle}>Boost Effect:</Text>
-                  <Text style={styles.boostCalculationText}>
-                    Priority Score: {boostCalculation.finalPriority} 
-                    (Est. Position: #{boostCalculation.estimatedPosition})
-                  </Text>
-                  <Text style={styles.boostCalculationCost}>
-                    Cost: {cryptoBoostService.formatBoostCost(boostAmount)}
-                  </Text>
-                </View>
-              )}
-            </View>
           </ScrollView>
 
           <View style={styles.modalFooter}>
@@ -1837,87 +1634,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: '#007AFF',
     fontWeight: '500',
   },
-  boostSection: {
-    backgroundColor: colors.background.paper,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  boostHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  boostTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginLeft: 8,
-  },
-  boostDescription: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginBottom: 16,
-  },
-  boostAmounts: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
-  },
-  boostAmountButton: {
-    backgroundColor: colors.background.default,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    alignItems: 'center',
-    minWidth: 80,
-  },
-  boostAmountButtonActive: {
-    backgroundColor: '#FF2D92',
-    borderColor: '#FF2D92',
-  },
-  boostAmountText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text.primary,
-  },
-  boostAmountTextActive: {
-    color: '#FFFFFF',
-  },
-  boostAmountUSD: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    marginTop: 2,
-  },
-  boostAmountUSDActive: {
-    color: '#FFFFFF',
-  },
-  boostCalculation: {
-    backgroundColor: colors.background.default,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  boostCalculationTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: 4,
-  },
-  boostCalculationText: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginBottom: 4,
-  },
-  boostCalculationCost: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#FF2D92',
-  },
   modalFooter: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -2010,55 +1726,11 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     marginLeft: 4,
     letterSpacing: 0.5,
   },
-  boostBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FF6B3510',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FF6B35',
-  },
-  boostText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FF6B35',
-    marginLeft: 4,
-    letterSpacing: 0.5,
-  },
   // Action Buttons Styles
   requestActions: {
     flexDirection: 'row',
     gap: 12,
     marginTop: 8,
-  },
-  boostButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#FF6B35',
-    shadowColor: '#FF6B35',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  boostButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: 'white',
-    marginLeft: 6,
-    letterSpacing: 0.5,
   },
   cancelButton: {
     flex: 1,

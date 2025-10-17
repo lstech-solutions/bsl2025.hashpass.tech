@@ -693,18 +693,18 @@ export default function PassesDisplay({
       }}>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text.primary }}>
-            {passInfo.remaining_requests}
+            {passInfo.pass_type === 'general' ? '5' : passInfo.pass_type === 'business' ? '20' : '50'}
           </Text>
           <Text style={{ fontSize: 12, color: colors.text.secondary, textAlign: 'center' }}>
-            Requests Left
+            Meeting Requests
           </Text>
         </View>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text.primary }}>
-            {passInfo.remaining_boost.toFixed(0)}
+            {passInfo.pass_type === 'general' ? '100' : passInfo.pass_type === 'business' ? '300' : '500'}
           </Text>
           <Text style={{ fontSize: 12, color: colors.text.secondary, textAlign: 'center' }}>
-            VOI Boost Left
+            VOI Boost
           </Text>
         </View>
       </View>
@@ -771,11 +771,11 @@ export default function PassesDisplay({
               }}>
                 Your Current Pass: {getPassTypeDisplayName(passInfo.pass_type)}
               </Text>
-              <Text style={{ 
+              <Text style={{
                 fontSize: 12, 
                 color: colors.text.secondary
               }}>
-                {passInfo.remaining_requests} requests left • {passInfo.remaining_boost.toFixed(0)} VOI boost left
+                {passInfo.pass_type === 'general' ? '5' : passInfo.pass_type === 'business' ? '20' : '50'} meeting requests • {passInfo.pass_type === 'general' ? '100' : passInfo.pass_type === 'business' ? '300' : '500'} VOI boost
               </Text>
             </View>
           )}
@@ -1139,18 +1139,18 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
       }}>
         <View style={{ alignItems: 'center' }}>
           <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text.primary }}>
-            {pass.remaining_requests}
+            {pass.pass_type === 'general' ? '5' : pass.pass_type === 'business' ? '20' : '50'}
           </Text>
           <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
-            Requests Left
+            Meeting Requests
           </Text>
         </View>
         <View style={{ alignItems: 'center' }}>
           <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text.primary }}>
-            {pass.remaining_boost.toFixed(0)}
+            {pass.pass_type === 'general' ? '100' : pass.pass_type === 'business' ? '300' : '500'}
           </Text>
           <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
-            VOI Boost Left
+            VOI Boost
           </Text>
         </View>
       </View>

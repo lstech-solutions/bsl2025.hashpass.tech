@@ -171,10 +171,10 @@ class MatchmakingService {
     console.log('🔵 Insert data:', insertData);
     
     try {
-      // Use the RPC function to handle type casting properly
+      // Use the RPC function with TEXT input (compatible with current function)
       const { data: result, error } = await supabase
         .rpc('insert_meeting_request', {
-          p_requester_id: data.requester_id,
+          p_requester_id: data.requester_id.toString(), // Pass as TEXT string
           p_speaker_id: speakerId,
           p_speaker_name: data.speaker_name,
           p_requester_name: data.requester_name,
@@ -222,6 +222,7 @@ class MatchmakingService {
             duration_minutes: insertData.duration_minutes,
             expires_at: insertData.expires_at,
             status: 'pending',
+            priority_score: 0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
@@ -231,7 +232,7 @@ class MatchmakingService {
       }
 
       console.log('✅ Meeting request created successfully:', result);
-      return result;
+      return result as MeetingRequest;
     } catch (error) {
       console.error('❌ Error in createMeetingRequest:', error);
       throw error;
@@ -474,7 +475,7 @@ class MatchmakingService {
       if (accessibleSlots.length === 0) {
         return {
           canRequest: false,
-          reason: `Your ${ticket_type} ticket doesn't provide access to this speaker's available time slots`
+          reason: `Your ${ticketType} ticket doesn't provide access to this speaker's available time slots`
         };
       }
 

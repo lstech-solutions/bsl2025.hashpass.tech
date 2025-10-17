@@ -263,6 +263,7 @@ export default function SpeakerDetail() {
       console.log('🔍 IDs match?', user.id === meetingRequest.requester_id);
       
       // Update the meeting request status to cancelled
+      // Handle both UUID and numeric ID formats
       let { data, error: updateError } = await supabase
         .from('meeting_requests')
         .update({ 
@@ -270,7 +271,7 @@ export default function SpeakerDetail() {
           updated_at: new Date().toISOString()
         })
         .eq('id', meetingRequest.id)
-        .eq('requester_id', user.id)
+        .eq('requester_id', user.id.toString()) // Convert to string to handle type mismatches
         .select('*');
 
       console.log('🔄 Update response - data:', data);
@@ -292,7 +293,7 @@ export default function SpeakerDetail() {
             status: 'cancelled',
             updated_at: new Date().toISOString()
           })
-          .eq('id', meetingRequest.id)
+          .eq('id', meetingRequest.id.toString()) // Convert to string
           .select('*');
 
         console.log('🔄 Fallback response - data:', fallbackData);
@@ -373,11 +374,11 @@ export default function SpeakerDetail() {
       console.log('🔄 Loading request limits for user:', user.id, 'speaker:', speaker.id);
       
       // Use the pass system's can_make_meeting_request function
-      const { data, error } = await supabase.rpc('can_make_meeting_request', {
-        p_user_id: user.id, // This should be UUID from auth
-        p_speaker_id: speaker.id,
-        p_boost_amount: 0
-      });
+    const { data, error } = await supabase.rpc('can_make_meeting_request', {
+      p_user_id: user.id.toString(), // Convert to TEXT to avoid type casting issues
+      p_speaker_id: speaker.id,
+      p_boost_amount: 0
+    });
 
       if (error) {
         console.error('❌ Error calling can_make_meeting_request:', error);

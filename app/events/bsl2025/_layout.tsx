@@ -10,13 +10,6 @@ export default function BSL2025Layout() {
         headerShown: true,
         headerStyle: {
           backgroundColor: colors.background.paper,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.divider,
-          shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 3,
         },
         headerTintColor: colors.text.primary,
         headerTitleStyle: {
@@ -46,7 +39,6 @@ export default function BSL2025Layout() {
         options={{
           title: 'Admin Panel',
           headerBackTitle: 'BSL2025',
-          headerBackTitleVisible: true,
         }}
       />
       <Stack.Screen 
@@ -54,7 +46,6 @@ export default function BSL2025Layout() {
         options={{
           title: 'My Bookings',
           headerBackTitle: 'BSL2025',
-          headerBackTitleVisible: true,
         }}
       />
       <Stack.Screen 
@@ -62,7 +53,6 @@ export default function BSL2025Layout() {
         options={{
           title: 'Speaker Dashboard',
           headerBackTitle: 'BSL2025',
-          headerBackTitleVisible: true,
         }}
       />
       <Stack.Screen 
@@ -76,7 +66,6 @@ export default function BSL2025Layout() {
         options={{
           title: 'Event Agenda',
           headerBackTitle: 'BSL2025',
-          headerBackTitleVisible: true,
         }}
       />
       <Stack.Screen 
@@ -84,7 +73,41 @@ export default function BSL2025Layout() {
         options={{
           title: 'Event Information',
           headerBackTitle: 'BSL2025',
-          headerBackTitleVisible: true,
+        }}
+      />
+      <Stack.Screen 
+        name="networking" 
+        options={{
+          title: 'Networking Center',
+          headerBackTitle: 'BSL2025',
+        }}
+      />
+      <Stack.Screen 
+        name="networking/my-requests" 
+        options={{
+          title: 'My Meeting Requests',
+          headerBackTitle: 'Networking',
+        }}
+      />
+      <Stack.Screen 
+        name="networking/analytics" 
+        options={{
+          title: 'System Analytics',
+          headerBackTitle: 'Networking',
+        }}
+      />
+      <Stack.Screen 
+        name="networking/schedule" 
+        options={{
+          title: 'My Schedule',
+          headerBackTitle: 'Networking',
+        }}
+      />
+      <Stack.Screen 
+        name="networking/blocked" 
+        options={{
+          title: 'Blocked Users',
+          headerBackTitle: 'Networking',
         }}
       />
     </Stack>

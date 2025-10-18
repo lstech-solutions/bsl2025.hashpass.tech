@@ -78,21 +78,105 @@ export interface PassTypeLimits {
 }
 
 class PassSystemService {
-  // Get user's pass information
+  // Get user's pass information with real meeting request counts
   async getUserPassInfo(userId: string): Promise<PassInfo | null> {
     try {
+      // First, try to get the actual pass information from the passes table
+      // Get the most recent active pass (in case user has multiple passes)
+      const { data: passData, error: passError } = await supabase
+        .from('passes')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('event_id', 'bsl2025')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (passError) {
+        console.error('Error getting pass data:', passError);
+        // Fallback to the counting function
+        return await this.getUserPassInfoFromCounts(userId);
+      }
+
+      // Get meeting request counts
+      const { data: countsData, error: countsError } = await supabase
+        .rpc('get_user_meeting_request_counts', { p_user_id: userId })
+        .single();
+
+      if (countsError) {
+        console.error('Error getting counts:', countsError);
+        // Use pass data with default counts
+        return {
+          pass_id: passData.id,
+          pass_type: passData.pass_type,
+          status: passData.status,
+          pass_number: passData.pass_number || 'Unknown',
+          max_requests: passData.max_meeting_requests || 0,
+          used_requests: passData.used_meeting_requests || 0,
+          remaining_requests: (passData.max_meeting_requests || 0) - (passData.used_meeting_requests || 0),
+          max_boost: passData.max_boost_amount || 0,
+          used_boost: passData.used_boost_amount || 0,
+          remaining_boost: (passData.max_boost_amount || 0) - (passData.used_boost_amount || 0),
+          access_features: passData.access_features || [],
+          special_perks: passData.special_perks || []
+        };
+      }
+
+      const counts = countsData as any;
+      
+      // Combine pass data with real counts
+      return {
+        pass_id: passData.id,
+        pass_type: passData.pass_type,
+        status: passData.status,
+        pass_number: passData.pass_number || 'Unknown',
+        max_requests: passData.max_meeting_requests || 0,
+        used_requests: counts.total_requests || 0,
+        remaining_requests: counts.remaining_requests || 0,
+        max_boost: passData.max_boost_amount || 0,
+        used_boost: passData.used_boost_amount || 0,
+        remaining_boost: counts.remaining_boost || 0,
+        access_features: passData.access_features || [],
+        special_perks: passData.special_perks || []
+      };
+    } catch (error) {
+      console.error('Error in getUserPassInfo:', error);
+      return null;
+    }
+  }
+
+  // Fallback method using only the counts function
+  private async getUserPassInfoFromCounts(userId: string): Promise<PassInfo | null> {
+    try {
       const { data, error } = await supabase
-        .rpc('get_user_pass_info', { p_user_id: userId })
+        .rpc('get_user_meeting_request_counts', { p_user_id: userId })
         .single();
 
       if (error) {
-        console.error('Error getting user pass info:', error);
+        console.error('Error getting user pass info from counts:', error);
         return null;
       }
 
-      return data as PassInfo;
+      const result = data as any;
+      
+      // Convert to PassInfo format
+      return {
+        pass_id: 'unknown',
+        pass_type: result.pass_type || 'general',
+        status: 'active',
+        pass_number: 'Unknown',
+        max_requests: result.max_requests || 0,
+        used_requests: result.total_requests || 0,
+        remaining_requests: result.remaining_requests || 0,
+        max_boost: result.max_boost || 0,
+        used_boost: result.used_boost || 0,
+        remaining_boost: result.remaining_boost || 0,
+        access_features: [],
+        special_perks: []
+      };
     } catch (error) {
-      console.error('Error in getUserPassInfo:', error);
+      console.error('Error in getUserPassInfoFromCounts:', error);
       return null;
     }
   }

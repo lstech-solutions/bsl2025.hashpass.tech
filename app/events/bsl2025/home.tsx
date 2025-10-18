@@ -20,6 +20,38 @@ export default function BSL2025Home() {
       route: '/events/bsl2025/speakers'
     },
     {
+      id: 'networking',
+      title: 'Networking Center',
+      subtitle: 'Connect & meet',
+      icon: 'people-alt',
+      color: '#4CAF50',
+      route: '/events/bsl2025/networking'
+    },
+    {
+      id: 'my-requests',
+      title: 'My Requests',
+      subtitle: 'Meeting requests',
+      icon: 'mail',
+      color: '#FF9800',
+      route: '/events/bsl2025/networking/my-requests'
+    },
+    {
+      id: 'my-schedule',
+      title: 'My Schedule',
+      subtitle: 'Scheduled meetings',
+      icon: 'event-note',
+      color: '#9C27B0',
+      route: '/events/bsl2025/networking/schedule'
+    },
+    {
+      id: 'analytics',
+      title: 'Analytics',
+      subtitle: 'System insights',
+      icon: 'bar-chart',
+      color: '#607D8B',
+      route: '/events/bsl2025/networking/analytics'
+    },
+    {
       id: 'agenda',
       title: 'Event Agenda',
       subtitle: '3 Days Schedule',
@@ -77,7 +109,7 @@ export default function BSL2025Home() {
         </Text>
       </View>
 
-      {/* Quick Access Grid */}
+      {/* Quick Access Horizontal Scroll */}
       <View style={{ padding: 20 }}>
         <Text style={{ 
           fontSize: 20, 
@@ -88,17 +120,18 @@ export default function BSL2025Home() {
           Quick Access
         </Text>
         
-        <View style={{ 
-          flexDirection: 'row', 
-          flexWrap: 'wrap', 
-          justifyContent: 'space-between',
-          gap: 12
-        }}>
-          {quickAccessItems.map((item) => (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingRight: 20,
+          }}
+        >
+          {quickAccessItems.map((item, index) => (
             <TouchableOpacity
               key={item.id}
               style={{
-                width: '48%',
+                width: 140,
                 backgroundColor: colors.background.paper,
                 borderRadius: 12,
                 padding: 16,
@@ -110,6 +143,7 @@ export default function BSL2025Home() {
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
                 elevation: 3,
+                marginLeft: index === 0 ? 0 : 12,
               }}
               onPress={() => router.push(item.route as any)}
             >
@@ -125,7 +159,7 @@ export default function BSL2025Home() {
                 <MaterialIcons name={item.icon as any} size={24} color={item.color} />
               </View>
               <Text style={{
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: '600',
                 color: colors.text.primary,
                 textAlign: 'center',
@@ -134,15 +168,16 @@ export default function BSL2025Home() {
                 {item.title}
               </Text>
               <Text style={{
-                fontSize: 12,
+                fontSize: 11,
                 color: colors.text.secondary,
-                textAlign: 'center'
+                textAlign: 'center',
+                lineHeight: 14
               }}>
                 {item.subtitle}
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       {/* Event Banner */}

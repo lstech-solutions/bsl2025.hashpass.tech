@@ -22,8 +22,8 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202510151600,
-  releaseDate: '2025-10-15',
+  buildNumber: 202510181800,
+  releaseDate: '2025-10-18',
   releaseType: 'beta',
   environment: 'development',
   features: [
@@ -38,7 +38,16 @@ export const CURRENT_VERSION: VersionInfo = {
     'Agenda tabbed interface',
     'Real-time countdown system',
     'Meeting request system with Supabase integration',
-    'Speaker availability and booking system'
+    'Speaker availability and booking system',
+    'NEW: Complete networking center with horizontal scrolling',
+    'NEW: My Requests view for managing sent meeting requests',
+    'NEW: My Schedule view for scheduled meetings',
+    'NEW: System Analytics with comprehensive statistics',
+    'NEW: Blocked Users management system',
+    'NEW: Horizontal scrolling quick access menu',
+    'NEW: Enhanced networking statistics and insights',
+    'NEW: Speaker dashboard for incoming request management',
+    'NEW: Real-time networking activity tracking'
   ],
   bugfixes: [
     'Fixed SVG logo rendering issues',
@@ -53,7 +62,13 @@ export const CURRENT_VERSION: VersionInfo = {
     'Fixed 404 errors in Supabase database functions',
     'Resolved UUID/TEXT type mismatch in meeting request system',
     'Fixed can_make_meeting_request function type casting issues',
-    'Updated database functions to handle mixed column types properly'
+    'Updated database functions to handle mixed column types properly',
+    'Fixed React Navigation headerBackTitleVisible property error',
+    'Fixed headerStyle borderBottomWidth property error',
+    'Fixed pass number display showing "unknown" in explorer view',
+    'Fixed speaker dashboard loading stuck issue',
+    'Fixed get_speaker_meeting_requests SQL GROUP BY error',
+    'Improved networking icon visibility in quick access menu'
   ],
   breakingChanges: [],
   notes: 'Fixed critical 404 errors in Supabase meeting request system and resolved database type mismatches'
@@ -61,6 +76,34 @@ export const CURRENT_VERSION: VersionInfo = {
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.2.3': {
+    version: '1.2.3',
+    buildNumber: 202510181800,
+    releaseDate: '2025-10-18',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'NEW: Complete networking center with horizontal scrolling',
+      'NEW: My Requests view for managing sent meeting requests',
+      'NEW: My Schedule view for scheduled meetings',
+      'NEW: System Analytics with comprehensive statistics',
+      'NEW: Blocked Users management system',
+      'NEW: Horizontal scrolling quick access menu',
+      'NEW: Enhanced networking statistics and insights',
+      'NEW: Speaker dashboard for incoming request management',
+      'NEW: Real-time networking activity tracking'
+    ],
+    bugfixes: [
+      'Fixed React Navigation headerBackTitleVisible property error',
+      'Fixed headerStyle borderBottomWidth property error',
+      'Fixed pass number display showing "unknown" in explorer view',
+      'Fixed speaker dashboard loading stuck issue',
+      'Fixed get_speaker_meeting_requests SQL GROUP BY error',
+      'Improved networking icon visibility in quick access menu'
+    ],
+    breakingChanges: [],
+    notes: 'Major networking system update with comprehensive meeting request management and analytics'
+  },
   '1.2.2': {
     version: '1.2.2',
     buildNumber: 202510151600,

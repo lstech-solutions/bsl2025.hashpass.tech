@@ -231,7 +231,34 @@ class MatchmakingService {
         throw new Error(`Failed to create meeting request: ${error.message}`);
       }
 
-      console.log('✅ Meeting request created successfully:', result);
+      // Handle the JSON response from the function
+      if (result && typeof result === 'object' && 'success' in result) {
+        if ((result as any).success === false) {
+          console.error('❌ Function returned error:', (result as any).error);
+          throw new Error(`Failed to create meeting request: ${(result as any).error}`);
+        }
+        
+        if ((result as any).success === true && (result as any).request_id) {
+          console.log('✅ Meeting request created successfully with ID:', (result as any).request_id);
+          
+          // Fetch the created request from the database to get all fields
+          const { data: createdRequest, error: fetchError } = await supabase
+            .from('meeting_requests')
+            .select('*')
+            .eq('id', (result as any).request_id)
+            .single();
+          
+          if (fetchError) {
+            console.error('❌ Error fetching created request:', fetchError);
+            throw new Error(`Failed to fetch created meeting request: ${fetchError.message}`);
+          }
+          
+          return createdRequest as MeetingRequest;
+        }
+      }
+      
+      // Fallback: if result is not in expected format, treat as success
+      console.log('✅ Meeting request created successfully (fallback):', result);
       return result as MeetingRequest;
     } catch (error) {
       console.error('❌ Error in createMeetingRequest:', error);

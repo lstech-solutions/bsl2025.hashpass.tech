@@ -11,6 +11,7 @@ import { supabase } from '../../../../lib/supabase';
 import { passSystemService } from '../../../../lib/pass-system';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
 import PassesDisplay from '../../../../components/PassesDisplay';
+import { getSpeakerAvatarUrl, getSpeakerLinkedInUrl, getSpeakerTwitterUrl } from '../../../../lib/string-utils';
 
 interface Speaker {
   id: string;
@@ -48,6 +49,7 @@ export default function SpeakerDetail() {
   const [meetingRequests, setMeetingRequests] = useState<any[]>([]);
   const [loadingRequestStatus, setLoadingRequestStatus] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isCurrentUserSpeaker, setIsCurrentUserSpeaker] = useState(false);
   const [isCancellingRequest, setIsCancellingRequest] = useState(false);
   const [cancelledRequests, setCancelledRequests] = useState<any[]>([]);
   const [loadingCancelledRequests, setLoadingCancelledRequests] = useState(false);
@@ -76,6 +78,31 @@ export default function SpeakerDetail() {
 
   // mockUserTicket removed - now using pass system
 
+  const checkIfCurrentUserIsSpeaker = async () => {
+    if (!user) {
+      setIsCurrentUserSpeaker(false);
+      return;
+    }
+
+    try {
+      const { data: speakerData, error } = await supabase
+        .from('bsl_speakers')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('id', id) // Check if this specific speaker is the current user
+        .single();
+
+      if (!error && speakerData) {
+        setIsCurrentUserSpeaker(true);
+      } else {
+        setIsCurrentUserSpeaker(false);
+      }
+    } catch (error) {
+      console.log('Error checking if user is speaker:', error);
+      setIsCurrentUserSpeaker(false);
+    }
+  };
+
   const loadSpeaker = async () => {
     try {
       // First try to fetch from the database with timeout
@@ -103,9 +130,9 @@ export default function SpeakerDetail() {
             title: dbSpeaker.title,
             company: dbSpeaker.company || '',
             bio: dbSpeaker.bio || `Experienced professional in ${dbSpeaker.title}.`,
-            image: dbSpeaker.imageurl || `https://blockchainsummit.la/wp-content/uploads/2025/09/foto-${dbSpeaker.name.toLowerCase().replace(/\s+/g, '-')}.png`,
-            linkedin: dbSpeaker.linkedin || `https://linkedin.com/in/${dbSpeaker.name.toLowerCase().replace(/\s+/g, '-')}`,
-            twitter: dbSpeaker.twitter || `https://twitter.com/${dbSpeaker.name.toLowerCase().replace(/\s+/g, '-')}`,
+            image: dbSpeaker.imageurl || getSpeakerAvatarUrl(dbSpeaker.name),
+            linkedin: dbSpeaker.linkedin || getSpeakerLinkedInUrl(dbSpeaker.name),
+            twitter: dbSpeaker.twitter || getSpeakerTwitterUrl(dbSpeaker.name),
             tags: dbSpeaker.tags || ['Blockchain', 'FinTech', 'Innovation'],
             availability: dbSpeaker.availability || {
               monday: { start: '09:00', end: '17:00' },
@@ -133,9 +160,9 @@ export default function SpeakerDetail() {
           title: foundSpeaker.title,
           company: foundSpeaker.company,
           bio: `Experienced professional in ${foundSpeaker.title} at ${foundSpeaker.company}.`,
-          image: `https://blockchainsummit.la/wp-content/uploads/2025/09/foto-${foundSpeaker.name.toLowerCase().replace(/\s+/g, '-')}.png`,
-          linkedin: `https://linkedin.com/in/${foundSpeaker.name.toLowerCase().replace(/\s+/g, '-')}`,
-          twitter: `https://twitter.com/${foundSpeaker.name.toLowerCase().replace(/\s+/g, '-')}`,
+          image: getSpeakerAvatarUrl(foundSpeaker.name),
+          linkedin: getSpeakerLinkedInUrl(foundSpeaker.name),
+          twitter: getSpeakerTwitterUrl(foundSpeaker.name),
           tags: ['Blockchain', 'FinTech', 'Innovation'],
           availability: {
             monday: { start: '09:00', end: '17:00' },
@@ -162,9 +189,9 @@ export default function SpeakerDetail() {
           title: foundSpeaker.title,
           company: foundSpeaker.company,
           bio: `Experienced professional in ${foundSpeaker.title} at ${foundSpeaker.company}.`,
-          image: `https://blockchainsummit.la/wp-content/uploads/2025/09/foto-${foundSpeaker.name.toLowerCase().replace(/\s+/g, '-')}.png`,
-          linkedin: `https://linkedin.com/in/${foundSpeaker.name.toLowerCase().replace(/\s+/g, '-')}`,
-          twitter: `https://twitter.com/${foundSpeaker.name.toLowerCase().replace(/\s+/g, '-')}`,
+          image: getSpeakerAvatarUrl(foundSpeaker.name),
+          linkedin: getSpeakerLinkedInUrl(foundSpeaker.name),
+          twitter: getSpeakerTwitterUrl(foundSpeaker.name),
           tags: ['Blockchain', 'FinTech', 'Innovation'],
           availability: {
             monday: { start: '09:00', end: '17:00' },
@@ -185,6 +212,7 @@ export default function SpeakerDetail() {
     if (!id) return;
     
     loadSpeaker();
+    checkIfCurrentUserIsSpeaker();
     
     // User ticket removed - now using pass system
     
@@ -223,7 +251,7 @@ export default function SpeakerDetail() {
             // Add new request to UI
             const newRequest = payload.new;
             if (newRequest.speaker_id === speaker.id) {
-              setMeetingRequests(prev => [newRequest, ...prev]);
+              setMeetingRequests(prev => [newRequest, ...(Array.isArray(prev) ? prev : [])]);
               console.log('✅ New meeting request added to UI');
             }
           } else if (payload.eventType === 'UPDATE') {
@@ -231,7 +259,7 @@ export default function SpeakerDetail() {
             const updatedRequest = payload.new;
             if (updatedRequest.speaker_id === speaker.id) {
               setMeetingRequests(prev => 
-                prev.map(req => 
+                (Array.isArray(prev) ? prev : []).map(req => 
                   req.id === updatedRequest.id ? updatedRequest : req
                 )
               );
@@ -242,7 +270,7 @@ export default function SpeakerDetail() {
             const deletedRequest = payload.old;
             if (deletedRequest.speaker_id === speaker.id) {
               setMeetingRequests(prev => 
-                prev.filter(req => req.id !== deletedRequest.id)
+                (Array.isArray(prev) ? prev : []).filter(req => req.id !== deletedRequest.id)
               );
               console.log('✅ Meeting request removed from UI');
             }
@@ -294,8 +322,10 @@ export default function SpeakerDetail() {
         }
       } else {
         console.log('✅ Meeting requests result:', data);
-        console.log('📊 Number of requests found:', data?.length || 0);
-        setMeetingRequests(data || []);
+        // Handle both direct array and wrapped response
+        const requests = Array.isArray(data) ? data : (data?.requests || []);
+        console.log('📊 Number of requests found:', requests.length);
+        setMeetingRequests(requests);
       }
     } catch (error) {
       console.error('❌ Error in loadMeetingRequestStatus:', error);
@@ -703,7 +733,7 @@ export default function SpeakerDetail() {
         };
         
         // Add to the beginning of the array
-        setMeetingRequests(prev => [newRequest, ...prev]);
+        setMeetingRequests(prev => [newRequest, ...(Array.isArray(prev) ? prev : [])]);
       }
       
       // Always close modal and reset form on success
@@ -773,7 +803,7 @@ export default function SpeakerDetail() {
 
   const handleSpeakerDashboard = () => {
     // Check if current user is this speaker
-    if (user && speaker && user.email === 'ecalderon@unal.edu.co') {
+    if (user && speaker && isCurrentUserSpeaker) {
       router.push('/events/bsl2025/speakers/dashboard');
     } else {
       Alert.alert(
@@ -814,8 +844,8 @@ export default function SpeakerDetail() {
         </View>
       </View>
 
-      {/* Speaker Dashboard Access - Only for Edward Calderon */}
-      {user && user.email === 'ecalderon@unal.edu.co' && (
+      {/* Speaker Dashboard Access - Only for the speaker themselves */}
+      {user && isCurrentUserSpeaker && (
         <View style={styles.section}>
           <TouchableOpacity
             style={styles.dashboardButton}

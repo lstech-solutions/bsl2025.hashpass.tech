@@ -5,7 +5,7 @@ import { useTheme } from '../hooks/useTheme';
 
 interface SpeakerAvatarProps {
   imageUrl?: string;
-  name: string;
+  name?: string;
   size?: number;
   style?: any;
   showBorder?: boolean;
@@ -26,7 +26,10 @@ export default function SpeakerAvatar({
   const styles = getStyles(isDark, colors, size, showBorder);
 
   // Generate initials from name
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | undefined) => {
+    if (!name || typeof name !== 'string') {
+      return '??';
+    }
     return name
       .split(' ')
       .map(word => word.charAt(0))

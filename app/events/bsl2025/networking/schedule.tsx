@@ -6,30 +6,35 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Modal,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { useTheme } from '../../../../hooks/useTheme';
 import { useAuth } from '../../../../hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../../../../lib/supabase';
 import { useToastHelpers } from '../../../../contexts/ToastContext';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
+import MeetingChat from '../../../../components/MeetingChat';
 
 interface ScheduledMeeting {
   id: string;
+  meeting_request_id?: string;
   speaker_id: string;
+  requester_id: string;
   speaker_name: string;
-  speaker_imageurl?: string;
   requester_name: string;
-  requester_company: string;
-  meeting_type: string;
-  message: string;
-  note: string;
-  duration_minutes: number;
+  requester_company?: string;
+  requester_title?: string;
+  meeting_type?: string;
+  scheduled_at?: string;
+  location?: string;
+  meeting_link?: string;
+  notes?: string;
   status: string;
   created_at: string;
-  speaker_response_at: string;
-  scheduled_time?: string;
+  updated_at: string;
+  is_speaker: boolean; // Whether current user is the speaker
 }
 
 export default function ScheduleView() {
@@ -42,45 +47,89 @@ export default function ScheduleView() {
   const [meetings, setMeetings] = useState<ScheduledMeeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
+  const [showChatModal, setShowChatModal] = useState(false);
 
   useEffect(() => {
-    loadScheduledMeetings();
-  }, []);
+    if (user) {
+      loadScheduledMeetings();
+    }
+  }, [user]);
 
   const loadScheduledMeetings = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
       console.log('🔄 Loading scheduled meetings...');
 
-      // Get accepted/approved meeting requests
-      const { data, error } = await supabase
-        .from('meeting_requests')
-        .select(`
-          *,
-          speakers:speaker_id (
-            id,
-            name,
-            title,
-            imageurl
-          )
-        `)
-        .eq('requester_id', user.id)
-        .in('status', ['accepted', 'approved'])
-        .order('speaker_response_at', { ascending: false });
+      // Try RPC function first
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('get_user_meetings', { p_user_id: user.id });
 
-      if (error) {
-        console.error('❌ Error loading meetings:', error);
-        throw error;
+      if (rpcError) {
+        console.warn('⚠️ RPC function failed, trying direct query:', rpcError);
+        
+        // Fallback to direct query
+        const { data: directData, error: directError } = await supabase
+          .from('meetings')
+          .select('*')
+          .or(`requester_id.eq.${user.id},speaker_id.in.(SELECT id FROM bsl_speakers WHERE user_id.eq.${user.id})`)
+          .order('created_at', { ascending: false });
+
+        if (directError) {
+          console.error('❌ Direct query also failed:', directError);
+          throw directError;
+        }
+
+        // Process direct query results
+        const meetingsWithSpeakerStatus = await Promise.all((directData || []).map(async (m: any) => {
+          const { data: speakerData } = await supabase
+            .from('bsl_speakers')
+            .select('user_id')
+            .eq('id', m.speaker_id)
+            .single();
+
+          return {
+            ...m,
+            is_speaker: speakerData?.user_id === user.id,
+          };
+        }));
+
+        console.log('📋 Scheduled meetings loaded via direct query:', meetingsWithSpeakerStatus.length);
+        setMeetings(meetingsWithSpeakerStatus);
+        return;
       }
 
-      console.log('📋 Scheduled meetings loaded:', data?.length || 0);
-      setMeetings(data || []);
+      // Process RPC results
+      if (rpcData && rpcData.success && rpcData.meetings) {
+        const meetingsWithSpeakerStatus = await Promise.all(rpcData.meetings.map(async (m: any) => {
+          const { data: speakerData } = await supabase
+            .from('bsl_speakers')
+            .select('user_id')
+            .eq('id', m.speaker_id)
+            .single();
+
+          return {
+            ...m,
+            is_speaker: speakerData?.user_id === user.id,
+          };
+        }));
+
+        console.log('📋 Scheduled meetings loaded via RPC:', meetingsWithSpeakerStatus.length);
+        setMeetings(meetingsWithSpeakerStatus);
+      } else {
+        console.log('📋 No meetings found');
+        setMeetings([]);
+      }
 
     } catch (error) {
       console.error('❌ Error loading scheduled meetings:', error);
-      showError('Error Loading Schedule', 'Failed to load your scheduled meetings');
+      showError('Error Loading Schedule', 'Failed to load your scheduled meetings. Please try again.');
+      setMeetings([]);
     } finally {
       setLoading(false);
     }
@@ -90,6 +139,16 @@ export default function ScheduleView() {
     setRefreshing(true);
     await loadScheduledMeetings();
     setRefreshing(false);
+  };
+
+  const handleOpenChat = (meetingId: string) => {
+    setSelectedMeetingId(meetingId);
+    setShowChatModal(true);
+  };
+
+  const handleCloseChat = () => {
+    setShowChatModal(false);
+    setSelectedMeetingId(null);
   };
 
   const formatDate = (dateString: string) => {
@@ -104,9 +163,11 @@ export default function ScheduleView() {
 
   const getMeetingStatusColor = (status: string) => {
     switch (status) {
-      case 'accepted': return '#4CAF50';
-      case 'approved': return '#4CAF50';
-      default: return '#9E9E9E';
+      case 'scheduled': return '#2196F3';
+      case 'confirmed': return '#4CAF50';
+      case 'completed': return '#9E9E9E';
+      case 'cancelled': return '#F44336';
+      default: return '#FF9800';
     }
   };
 
@@ -115,59 +176,74 @@ export default function ScheduleView() {
       <View style={styles.meetingHeader}>
         <View style={styles.speakerInfo}>
           <SpeakerAvatar
-            speaker={{
-              id: meeting.speaker_id,
-              name: meeting.speaker_name,
-              imageurl: meeting.speakers?.imageurl || null,
-            }}
+            name={meeting.is_speaker ? meeting.requester_name : meeting.speaker_name}
+            imageUrl={null}
             size={50}
           />
           <View style={styles.speakerDetails}>
-            <Text style={styles.speakerName}>{meeting.speaker_name}</Text>
-            <Text style={styles.meetingType}>{meeting.meeting_type}</Text>
+            <Text style={styles.speakerName}>
+              {meeting.is_speaker ? meeting.requester_name : meeting.speaker_name}
+            </Text>
+            <Text style={styles.meetingType}>
+              {meeting.is_speaker ? 'Meeting with attendee' : 'Meeting with speaker'}
+            </Text>
+            {meeting.meeting_type && (
+              <Text style={styles.meetingTypeDetail}>{meeting.meeting_type}</Text>
+            )}
           </View>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getMeetingStatusColor(meeting.status) }]}>
           <MaterialIcons name="check-circle" size={16} color="white" />
-          <Text style={styles.statusText}>SCHEDULED</Text>
+          <Text style={styles.statusText}>{meeting.status.toUpperCase()}</Text>
         </View>
       </View>
 
       <View style={styles.meetingContent}>
-        <Text style={styles.meetingMessage} numberOfLines={2}>
-          {meeting.message || 'No message provided'}
-        </Text>
-        
-        {meeting.note && (
-          <View style={styles.intentionsContainer}>
-            <Text style={styles.intentionsLabel}>Intentions:</Text>
-            <Text style={styles.intentionsText} numberOfLines={2}>
-              {meeting.note}
+        {meeting.notes && (
+          <View style={styles.notesContainer}>
+            <Text style={styles.notesLabel}>Notes:</Text>
+            <Text style={styles.notesText} numberOfLines={2}>
+              {meeting.notes}
             </Text>
           </View>
         )}
 
         <View style={styles.meetingMeta}>
-          <View style={styles.metaItem}>
-            <MaterialIcons name="schedule" size={16} color={colors.textSecondary} />
-            <Text style={styles.metaText}>{meeting.duration_minutes} minutes</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <MaterialIcons name="event" size={16} color={colors.textSecondary} />
-            <Text style={styles.metaText}>
-              {formatDate(meeting.speaker_response_at)}
-            </Text>
-          </View>
+          {meeting.scheduled_at && (
+            <View style={styles.metaItem}>
+              <MaterialIcons name="schedule" size={16} color={colors.textSecondary} />
+              <Text style={styles.metaText}>
+                {formatDate(meeting.scheduled_at)}
+              </Text>
+            </View>
+          )}
+          {meeting.location && (
+            <View style={styles.metaItem}>
+              <MaterialIcons name="location-on" size={16} color={colors.textSecondary} />
+              <Text style={styles.metaText}>{meeting.location}</Text>
+            </View>
+          )}
+          {meeting.meeting_link && (
+            <View style={styles.metaItem}>
+              <MaterialIcons name="link" size={16} color={colors.textSecondary} />
+              <Text style={styles.metaText}>Meeting Link Available</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.meetingActions}>
-          <TouchableOpacity style={styles.actionButton}>
-            <MaterialIcons name="videocam" size={20} color={colors.primary} />
-            <Text style={styles.actionButtonText}>Join Meeting</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <MaterialIcons name="message" size={20} color={colors.primary} />
-            <Text style={styles.actionButtonText}>Message</Text>
+          {meeting.meeting_link && (
+            <TouchableOpacity style={styles.actionButton}>
+              <MaterialIcons name="videocam" size={20} color={colors.primary} />
+              <Text style={styles.actionButtonText}>Join Meeting</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.chatButton]}
+            onPress={() => handleOpenChat(meeting.id)}
+          >
+            <MaterialIcons name="chat" size={20} color="white" />
+            <Text style={[styles.actionButtonText, { color: 'white' }]}>Open Chat</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -185,16 +261,12 @@ export default function ScheduleView() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <MaterialIcons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Schedule</Text>
-        <View style={styles.headerRight} />
-      </View>
+      <Stack.Screen 
+        options={{ 
+          title: 'My Schedule',
+          headerBackTitle: 'Networking',
+        }} 
+      />
 
       <ScrollView
         style={styles.content}
@@ -227,15 +299,15 @@ export default function ScheduleView() {
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={[styles.summaryValue, { color: '#4CAF50' }]}>
-                    {meetings.filter(m => m.status === 'approved').length}
+                    {meetings.filter(m => m.status === 'confirmed').length}
                   </Text>
                   <Text style={styles.summaryLabel}>Confirmed</Text>
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={[styles.summaryValue, { color: '#FF9800' }]}>
-                    {meetings.filter(m => m.status === 'accepted').length}
+                    {meetings.filter(m => m.status === 'scheduled').length}
                   </Text>
-                  <Text style={styles.summaryLabel}>Pending</Text>
+                  <Text style={styles.summaryLabel}>Scheduled</Text>
                 </View>
               </View>
             </View>
@@ -244,6 +316,21 @@ export default function ScheduleView() {
           </>
         )}
       </ScrollView>
+
+      {/* Meeting Chat Modal */}
+      {showChatModal && selectedMeetingId && (
+        <Modal
+          animationType="slide"
+          transparent={false}
+          visible={showChatModal}
+          onRequestClose={handleCloseChat}
+        >
+          <MeetingChat
+            meetingId={selectedMeetingId}
+            onClose={handleCloseChat}
+          />
+        </Modal>
+      )}
     </View>
   );
 }
@@ -251,38 +338,18 @@ export default function ScheduleView() {
 const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.background?.default || (isDark ? '#000000' : '#ffffff'),
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.background?.default || (isDark ? '#000000' : '#ffffff'),
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: colors.text,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  headerRight: {
-    width: 40,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
   },
   content: {
     flex: 1,
@@ -296,13 +363,13 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
     marginTop: 16,
     marginBottom: 8,
   },
   emptyDescription: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
@@ -319,15 +386,20 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontWeight: '600',
   },
   summaryCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.card?.default || (isDark ? '#1a1a1a' : '#ffffff'),
     margin: 16,
     padding: 16,
     borderRadius: 12,
+    shadowColor: isDark ? '#000000' : '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDark ? 0.3 : 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   summaryTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
     marginBottom: 12,
   },
   summaryStats: {
@@ -340,19 +412,24 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   summaryValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
   },
   summaryLabel: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
     marginTop: 4,
   },
   meetingCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.card?.default || (isDark ? '#1a1a1a' : '#ffffff'),
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 12,
     padding: 16,
+    shadowColor: isDark ? '#000000' : '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDark ? 0.3 : 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   meetingHeader: {
     flexDirection: 'row',
@@ -372,12 +449,18 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   speakerName: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
   },
   meetingType: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
     marginTop: 2,
+  },
+  meetingTypeDetail: {
+    fontSize: 10,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    marginTop: 1,
+    fontStyle: 'italic',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -400,6 +483,20 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: colors.text,
     lineHeight: 20,
     marginBottom: 8,
+  },
+  notesContainer: {
+    marginBottom: 8,
+  },
+  notesLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    marginBottom: 2,
+  },
+  notesText: {
+    fontSize: 12,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    fontStyle: 'italic',
   },
   intentionsContainer: {
     marginBottom: 8,
@@ -427,7 +524,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
     marginLeft: 4,
   },
   meetingActions: {
@@ -439,7 +536,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.background?.paper || (isDark ? '#2a2a2a' : '#f5f5f5'),
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
@@ -450,5 +547,9 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  chatButton: {
+    backgroundColor: '#2196F3',
+    borderColor: '#2196F3',
   },
 });

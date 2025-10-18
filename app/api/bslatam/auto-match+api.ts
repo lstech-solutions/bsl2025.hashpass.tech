@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   if (!attendeeId) return new Response(JSON.stringify({ error: 'attendeeId required' }), { status: 400 });
 
   // Simple heuristic: pick first speaker that shares a tag
-  const { data: speakers, error } = await supabase.from('BSL_Speakers').select('id, name, tags, availability');
+  const { data: speakers, error } = await supabase.from('bsl_speakers').select('id, name, tags, availability');
   if (error) return new Response(JSON.stringify({ error: 'Failed to load speakers' }), { status: 500 });
   const normalized = (x: string) => x.toLowerCase();
   const match = (speakers || []).find(s => (s.tags || []).some((t: string) => interests.map(normalized).includes(normalized(t))));

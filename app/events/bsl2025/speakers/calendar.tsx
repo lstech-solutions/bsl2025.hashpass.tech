@@ -8,6 +8,7 @@ import { supabase } from '../../../../lib/supabase';
 import EventBanner from '../../../../components/EventBanner';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
 import SpeakerSearchAndSort from '../../../../components/SpeakerSearchAndSort';
+import { getSpeakerAvatarUrl } from '../../../../lib/string-utils';
 
 // Type definitions
 interface Speaker {
@@ -82,8 +83,8 @@ export default function SpeakersCalendar() {
             }));
             
             // Remove duplicates based on ID
-            const uniqueSpeakers = formattedSpeakers.filter((speaker, index, self) => 
-              index === self.findIndex(s => s.id === speaker.id)
+            const uniqueSpeakers = formattedSpeakers.filter((speaker: Speaker, index: number, self: Speaker[]) => 
+              index === self.findIndex((s: Speaker) => s.id === speaker.id)
             );
             
             setSpeakers(uniqueSpeakers);
@@ -103,7 +104,7 @@ export default function SpeakersCalendar() {
           title: s.title,
           company: s.company,
           bio: `Experienced professional in ${s.title} at ${s.company}.`,
-          image: `https://blockchainsummit.la/wp-content/uploads/2025/09/foto-${s.name.toLowerCase().replace(/\s+/g, '-')}.png`
+          image: getSpeakerAvatarUrl(s.name)
         }));
         
         // Remove duplicates based on ID
@@ -123,7 +124,7 @@ export default function SpeakersCalendar() {
           title: s.title,
           company: s.company,
           bio: `Experienced professional in ${s.title} at ${s.company}.`,
-          image: `https://blockchainsummit.la/wp-content/uploads/2025/09/foto-${s.name.toLowerCase().replace(/\s+/g, '-')}.png`
+          image: getSpeakerAvatarUrl(s.name)
         }));
         
         // Remove duplicates based on ID

@@ -1,11 +1,13 @@
 import { Stack } from 'expo-router';
 import { useTheme } from '../../../hooks/useTheme';
+import { ScrollProvider } from '../../../contexts/ScrollContext';
 
 export default function BSL2025Layout() {
   const { isDark, colors } = useTheme();
 
   return (
-    <Stack
+    <ScrollProvider>
+      <Stack
       screenOptions={{
         headerShown: true,
         headerStyle: {
@@ -51,8 +53,7 @@ export default function BSL2025Layout() {
       <Stack.Screen 
         name="speaker-dashboard" 
         options={{
-          title: 'Speaker Dashboard',
-          headerBackTitle: 'BSL2025',
+          headerShown: false, // Hide header as dashboard has its own custom header
         }}
       />
       <Stack.Screen 
@@ -110,6 +111,7 @@ export default function BSL2025Layout() {
           headerBackTitle: 'Networking',
         }}
       />
-    </Stack>
+      </Stack>
+    </ScrollProvider>
   );
 }

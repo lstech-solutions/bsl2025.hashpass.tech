@@ -1,5 +1,5 @@
 -- Fix meeting_requests speaker_id foreign key constraint
--- Allow speaker_id to reference BSL_Speakers instead of auth.users
+-- Allow speaker_id to reference bsl_speakers instead of auth.users
 
 -- First, drop all policies that depend on speaker_id
 DROP POLICY IF EXISTS "Users can view their own meeting requests" ON meeting_requests;
@@ -10,14 +10,14 @@ DROP POLICY IF EXISTS "Users can create meeting requests" ON meeting_requests;
 ALTER TABLE meeting_requests 
 DROP CONSTRAINT IF EXISTS meeting_requests_speaker_id_fkey;
 
--- Change speaker_id to TEXT to match BSL_Speakers.id format
+-- Change speaker_id to TEXT to match bsl_speakers.id format
 ALTER TABLE meeting_requests 
 ALTER COLUMN speaker_id TYPE TEXT;
 
--- Add a new foreign key constraint to reference BSL_Speakers
+-- Add a new foreign key constraint to reference bsl_speakers
 ALTER TABLE meeting_requests 
 ADD CONSTRAINT meeting_requests_speaker_id_fkey 
-FOREIGN KEY (speaker_id) REFERENCES BSL_Speakers(id) ON DELETE CASCADE;
+FOREIGN KEY (speaker_id) REFERENCES bsl_speakers(id) ON DELETE CASCADE;
 
 -- Recreate policies that work with the new constraint
 CREATE POLICY "Users can view their own meeting requests" ON meeting_requests

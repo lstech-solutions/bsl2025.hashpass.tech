@@ -8,7 +8,7 @@ import {
   RefreshControl,
   Modal,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { useTheme } from '../../../../hooks/useTheme';
 import { useAuth } from '../../../../hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -20,6 +20,7 @@ interface MeetingRequest {
   id: string;
   speaker_id: string;
   speaker_name: string;
+  speaker_image?: string;
   requester_name: string;
   requester_company: string;
   requester_title: string;
@@ -49,48 +50,156 @@ export default function MyRequestsView() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<MeetingRequest | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('date'); // 'date', 'speaker', 'status'
 
   useEffect(() => {
-    loadMyRequests();
-  }, []);
+    console.log('🔄 useEffect triggered, user:', user ? 'present' : 'null');
+    if (user) {
+      console.log('🔄 User found, calling loadMyRequests...');
+      loadMyRequests();
+    } else {
+      console.log('⚠️ No user found, setting loading to false');
+      setLoading(false);
+    }
+    
+    // Add timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('⚠️ My requests loading timeout, setting empty state');
+        setLoading(false);
+        setRequests([]);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [user]);
 
   const loadMyRequests = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found, skipping requests load');
+      setLoading(false);
+      return;
+    }
 
     try {
+      console.log('🔄 Starting loadMyRequests...');
       setLoading(true);
-      console.log('🔄 Loading my meeting requests...');
+      console.log('Loading my meeting requests for user:', user.id);
+      console.log('User ID type:', typeof user.id);
+      console.log('User email:', user.email);
 
-      // Get all meeting requests sent by the user
-      const { data, error } = await supabase
+      // First, let's check what's in the database
+      const { data: allRequests, error: allError } = await supabase
         .from('meeting_requests')
-        .select(`
-          *,
-          speakers:speaker_id (
-            id,
-            name,
-            title,
-            imageurl
-          )
-        `)
+        .select('id, requester_id, speaker_id, status, created_at')
+        .limit(10);
+
+      console.log('All meeting requests in DB (sample):', allRequests);
+      console.log('All requests error:', allError);
+
+      // Try different query approaches
+      console.log('Trying query with user.id as string...');
+      const { data: data1, error: error1 } = await supabase
+        .from('meeting_requests')
+        .select('*')
+        .eq('requester_id', user.id.toString())
+        .order('created_at', { ascending: false });
+
+      console.log('String query result:', data1);
+      console.log('String query error:', error1);
+
+      console.log('Trying query with user.id as UUID...');
+      const { data: data2, error: error2 } = await supabase
+        .from('meeting_requests')
+        .select('*')
         .eq('requester_id', user.id)
         .order('created_at', { ascending: false });
 
+      console.log('UUID query result:', data2);
+      console.log('UUID query error:', error2);
+
+      // Use whichever query worked (prioritize non-empty results)
+      const data = (data1 && data1.length > 0) ? data1 : data2;
+      const error = (data1 && data1.length > 0) ? error1 : error2;
+
       if (error) {
-        console.error('❌ Error loading requests:', error);
-        throw error;
+        console.error('Error loading requests:', error);
+        showError('Database Error', `Failed to load requests: ${error.message}`);
+        setRequests([]);
+        return;
       }
 
-      console.log('📋 My requests loaded:', data?.length || 0);
-      setRequests(data || []);
+      // If no data found, check if there are any requests at all
+      if (!data || data.length === 0) {
+        console.log('No requests found for user, checking if any requests exist...');
+        
+        // Try a broader search to see if there are any requests
+        const { data: broadData, error: broadError } = await supabase
+          .from('meeting_requests')
+          .select('id, requester_id, speaker_id, status, created_at')
+          .limit(5);
+
+        console.log('Broad search result:', broadData);
+        console.log('Broad search error:', broadError);
+        
+        if (broadData && broadData.length > 0) {
+          console.log('Found requests in database but none match current user');
+          console.log('Sample requester IDs:', broadData.map(req => req.requester_id));
+          console.log('Current user ID:', user.id);
+        }
+      }
+
+      console.log('My requests loaded:', data?.length || 0, 'requests');
+      console.log('Sample request data:', data?.[0] || 'No requests found');
+      console.log('User ID used for query:', user.id);
+      console.log('Full data response:', data);
+      
+      // Fetch speaker images for each request
+      if (data && data.length > 0) {
+        console.log('Fetching speaker images...');
+        const requestsWithImages = await Promise.all(
+          data.map(async (request) => {
+            try {
+              // Get speaker image from bsl_speakers table
+              const { data: speakerData, error: speakerError } = await supabase
+                .from('bsl_speakers')
+                .select('imageurl')
+                .eq('id', request.speaker_id)
+                .single();
+
+              if (speakerError) {
+                console.log(`No speaker image found for ${request.speaker_name}:`, speakerError.message);
+                return request;
+              }
+
+              return {
+                ...request,
+                speaker_image: speakerData?.imageurl || null
+              };
+            } catch (error) {
+              console.log(`Error fetching image for ${request.speaker_name}:`, error);
+              return request;
+            }
+          })
+        );
+        
+        console.log('Requests with images loaded:', requestsWithImages.length);
+        setRequests(requestsWithImages);
+      } else {
+        setRequests(data || []);
+      }
 
     } catch (error) {
       console.error('❌ Error loading my requests:', error);
       showError('Error Loading Requests', 'Failed to load your meeting requests');
+      setRequests([]);
     } finally {
+      console.log('✅ Setting loading to false in finally block');
       setLoading(false);
     }
   };
+
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -163,6 +272,41 @@ export default function MyRequestsView() {
     });
   };
 
+  const getFilteredAndSortedRequests = () => {
+    let filtered = requests;
+
+    // Filter by status
+    if (filterStatus !== 'all') {
+      filtered = requests.filter(request => request.status === filterStatus);
+    }
+
+    // Sort by selected criteria
+    switch (sortBy) {
+      case 'speaker':
+        filtered = [...filtered].sort((a, b) => a.speaker_name.localeCompare(b.speaker_name));
+        break;
+      case 'status':
+        filtered = [...filtered].sort((a, b) => a.status.localeCompare(b.status));
+        break;
+      case 'date':
+      default:
+        filtered = [...filtered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+    }
+
+    return filtered;
+  };
+
+  const getStatusCounts = () => {
+    return {
+      all: requests.length,
+      pending: requests.filter(r => r.status === 'pending').length,
+      accepted: requests.filter(r => r.status === 'accepted' || r.status === 'approved').length,
+      declined: requests.filter(r => r.status === 'declined').length,
+      cancelled: requests.filter(r => r.status === 'cancelled').length,
+    };
+  };
+
   const renderRequestCard = (request: MeetingRequest) => (
     <TouchableOpacity
       key={request.id}
@@ -172,12 +316,10 @@ export default function MyRequestsView() {
       <View style={styles.requestHeader}>
         <View style={styles.speakerInfo}>
           <SpeakerAvatar
-            speaker={{
-              id: request.speaker_id,
-              name: request.speaker_name,
-              imageurl: request.speakers?.imageurl || null,
-            }}
+            name={request.speaker_name}
+            imageUrl={request.speaker_image}
             size={40}
+            showBorder={false}
           />
           <View style={styles.speakerDetails}>
             <Text style={styles.speakerName}>{request.speaker_name}</Text>
@@ -206,11 +348,11 @@ export default function MyRequestsView() {
 
         <View style={styles.requestMeta}>
           <View style={styles.metaItem}>
-            <MaterialIcons name="business" size={16} color={colors.textSecondary} />
+            <MaterialIcons name="business" size={16} color={colors.text?.secondary || (isDark ? '#cccccc' : '#666666')} />
             <Text style={styles.metaText}>{request.requester_company}</Text>
           </View>
           <View style={styles.metaItem}>
-            <MaterialIcons name="schedule" size={16} color={colors.textSecondary} />
+            <MaterialIcons name="schedule" size={16} color={colors.text?.secondary || (isDark ? '#cccccc' : '#666666')} />
             <Text style={styles.metaText}>{request.duration_minutes} min</Text>
           </View>
           {request.boost_amount > 0 && (
@@ -237,7 +379,7 @@ export default function MyRequestsView() {
             style={styles.closeButton}
             onPress={() => setShowDetailModal(false)}
           >
-            <MaterialIcons name="close" size={24} color={colors.text} />
+            <MaterialIcons name="close" size={24} color={colors.text?.primary || (isDark ? '#ffffff' : '#000000')} />
           </TouchableOpacity>
         </View>
 
@@ -247,12 +389,10 @@ export default function MyRequestsView() {
               <Text style={styles.detailLabel}>Speaker</Text>
               <View style={styles.speakerDetail}>
                 <SpeakerAvatar
-                  speaker={{
-                    id: selectedRequest.speaker_id,
-                    name: selectedRequest.speaker_name,
-                    imageurl: selectedRequest.speakers?.imageurl || null,
-                  }}
+                  name={selectedRequest.speaker_name}
+                  imageUrl={selectedRequest.speaker_image}
                   size={60}
+                  showBorder={true}
                 />
                 <View style={styles.speakerDetailInfo}>
                   <Text style={styles.speakerDetailName}>{selectedRequest.speaker_name}</Text>
@@ -351,27 +491,25 @@ export default function MyRequestsView() {
   );
 
   if (loading) {
+    console.log('🔄 Rendering loading state...');
     return (
       <View style={styles.loadingContainer}>
         <MaterialIcons name="send" size={48} color={colors.primary} />
         <Text style={styles.loadingText}>Loading your requests...</Text>
+        <Text style={styles.loadingSubtext}>Please wait while we fetch your data</Text>
+        <Text style={styles.loadingSubtext}>User: {user?.email || 'No user'}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <MaterialIcons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Meeting Requests</Text>
-        <View style={styles.headerRight} />
-      </View>
-
+      <Stack.Screen 
+        options={{ 
+          title: 'My Meeting Requests',
+          headerBackTitle: 'Back'
+        }} 
+      />
       <ScrollView
         style={styles.content}
         refreshControl={
@@ -380,17 +518,30 @@ export default function MyRequestsView() {
       >
         {requests.length === 0 ? (
           <View style={styles.emptyState}>
-            <MaterialIcons name="send" size={64} color={colors.textSecondary} />
+            <MaterialIcons name="send" size={64} color={colors.secondary} />
             <Text style={styles.emptyTitle}>No Meeting Requests</Text>
             <Text style={styles.emptyDescription}>
-              You haven't sent any meeting requests yet. Start networking by browsing speakers!
+              You haven't sent any meeting requests yet. Start networking by browsing speakers and requesting meetings!
             </Text>
-            <TouchableOpacity
-              style={styles.browseButton}
-              onPress={() => router.push('/events/bsl2025/speakers')}
-            >
-              <Text style={styles.browseButtonText}>Browse Speakers</Text>
-            </TouchableOpacity>
+            <Text style={styles.emptyInstructions}>
+              💡 To create a meeting request: Go to a speaker's profile and tap "Request Meeting"
+            </Text>
+            <View style={styles.emptyActions}>
+              <TouchableOpacity
+                style={styles.browseButton}
+                onPress={() => router.push('/events/bsl2025/speakers')}
+              >
+                <MaterialIcons name="search" size={20} color="white" />
+                <Text style={styles.browseButtonText}>Browse Speakers</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.exploreButton}
+                onPress={() => router.push('/events/bsl2025/explore')}
+              >
+                <MaterialIcons name="explore" size={20} color={colors.primary} />
+                <Text style={styles.exploreButtonText}>Explore Events</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <>
@@ -416,7 +567,79 @@ export default function MyRequestsView() {
               </View>
             </View>
 
-            {requests.map(renderRequestCard)}
+            {/* Filter and Sort Controls */}
+            <View style={styles.controlsContainer}>
+              {/* Status Filter */}
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterContainer}
+              >
+                {[
+                  { key: 'all', label: 'All', count: getStatusCounts().all },
+                  { key: 'pending', label: 'Pending', count: getStatusCounts().pending },
+                  { key: 'accepted', label: 'Accepted', count: getStatusCounts().accepted },
+                  { key: 'declined', label: 'Declined', count: getStatusCounts().declined },
+                  { key: 'cancelled', label: 'Cancelled', count: getStatusCounts().cancelled },
+                ].map((filter) => (
+                  <TouchableOpacity
+                    key={filter.key}
+                    style={[
+                      styles.filterButton,
+                      filterStatus === filter.key && styles.filterButtonActive
+                    ]}
+                    onPress={() => setFilterStatus(filter.key)}
+                  >
+                    <Text style={[
+                      styles.filterButtonText,
+                      filterStatus === filter.key && styles.filterButtonTextActive
+                    ]}>
+                      {filter.label} ({filter.count})
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {/* Sort Options */}
+              <View style={styles.sortContainer}>
+                <Text style={styles.sortLabel}>Sort by:</Text>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.sortButtons}
+                >
+                  {[
+                    { key: 'date', label: 'Date', icon: 'schedule' },
+                    { key: 'speaker', label: 'Speaker', icon: 'person' },
+                    { key: 'status', label: 'Status', icon: 'flag' },
+                  ].map((sort) => (
+                    <TouchableOpacity
+                      key={sort.key}
+                      style={[
+                        styles.sortButton,
+                        sortBy === sort.key && styles.sortButtonActive
+                      ]}
+                      onPress={() => setSortBy(sort.key)}
+                    >
+                      <MaterialIcons 
+                        name={sort.icon as any} 
+                        size={16} 
+                        color={sortBy === sort.key ? colors.primary : (colors.text?.secondary || (isDark ? '#cccccc' : '#666666'))} 
+                      />
+                      <Text style={[
+                        styles.sortButtonText,
+                        sortBy === sort.key && styles.sortButtonTextActive
+                      ]}>
+                        {sort.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            {/* Filtered and Sorted Requests */}
+            {getFilteredAndSortedRequests().map(renderRequestCard)}
           </>
         )}
       </ScrollView>
@@ -429,38 +652,24 @@ export default function MyRequestsView() {
 const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.background?.default || (isDark ? '#000000' : '#ffffff'),
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.background?.default || (isDark ? '#000000' : '#ffffff'),
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
+  loadingSubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
     textAlign: 'center',
-  },
-  headerRight: {
-    width: 40,
   },
   content: {
     flex: 1,
@@ -474,38 +683,144 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
     marginTop: 16,
     marginBottom: 8,
   },
   emptyDescription: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 16,
+  },
+  emptyInstructions: {
+    fontSize: 12,
+    color: colors.secondary,
+    textAlign: 'center',
+    lineHeight: 18,
     marginBottom: 24,
+    fontStyle: 'italic',
+  },
+  emptyActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
   },
   browseButton: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   browseButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
+  exploreButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  exploreButtonText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   summaryCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.card?.default || (isDark ? '#1e1e1e' : '#ffffff'),
     margin: 16,
     padding: 16,
     borderRadius: 12,
+    borderWidth: isDark ? 1 : 0,
+    borderColor: isDark ? '#404040' : 'transparent',
+    shadowColor: isDark ? '#000000' : '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDark ? 0.3 : 0.1,
+    shadowRadius: 4,
+    elevation: isDark ? 4 : 2,
+  },
+  controlsContainer: {
+    marginBottom: 16,
+  },
+  filterContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  filterButton: {
+    backgroundColor: colors.card?.default || (isDark ? '#1a1a1a' : '#f5f5f5'),
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderWidth: isDark ? 1 : 0,
+    borderColor: isDark ? '#333333' : 'transparent',
+  },
+  filterButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+  },
+  filterButtonTextActive: {
+    color: '#ffffff',
+  },
+  sortContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  sortLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
+    marginRight: 12,
+  },
+  sortButtons: {
+    flexDirection: 'row',
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card?.default || (isDark ? '#1a1a1a' : '#f5f5f5'),
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    borderWidth: isDark ? 1 : 0,
+    borderColor: isDark ? '#333333' : 'transparent',
+  },
+  sortButtonActive: {
+    backgroundColor: colors.primary + '20',
+    borderColor: colors.primary,
+    borderWidth: 1,
+  },
+  sortButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    marginLeft: 4,
+  },
+  sortButtonTextActive: {
+    color: colors.primary,
   },
   summaryTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
     marginBottom: 12,
   },
   summaryStats: {
@@ -518,19 +833,26 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   summaryValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
   },
   summaryLabel: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
     marginTop: 4,
   },
   requestCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.card?.default || (isDark ? '#1e1e1e' : '#ffffff'),
     marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: 12,
     padding: 16,
+    borderWidth: isDark ? 1 : 0,
+    borderColor: isDark ? '#404040' : 'transparent',
+    shadowColor: isDark ? '#000000' : '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDark ? 0.3 : 0.1,
+    shadowRadius: 4,
+    elevation: isDark ? 4 : 2,
   },
   requestHeader: {
     flexDirection: 'row',
@@ -550,32 +872,38 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   speakerName: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
   },
   requestDate: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
     marginTop: 2,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   statusText: {
     color: 'white',
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     marginLeft: 4,
+    letterSpacing: 0.5,
   },
   requestContent: {
     flex: 1,
   },
   requestMessage: {
     fontSize: 14,
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -585,12 +913,12 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   intentionsLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: colors.secondary,
     marginBottom: 2,
   },
   intentionsText: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.secondary,
     fontStyle: 'italic',
   },
   requestMeta: {
@@ -604,12 +932,12 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.secondary,
     marginLeft: 4,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.background?.default || (isDark ? '#000000' : '#ffffff'),
   },
   modalHeader: {
     flexDirection: 'row',
@@ -617,12 +945,13 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: isDark ? '#404040' : '#e0e0e0',
+    backgroundColor: colors.card?.default || (isDark ? '#1e1e1e' : '#ffffff'),
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
   },
   closeButton: {
     padding: 8,
@@ -637,12 +966,12 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   detailLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
     marginBottom: 8,
   },
   detailValue: {
     fontSize: 16,
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
     lineHeight: 22,
   },
   speakerDetail: {
@@ -655,11 +984,11 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   speakerDetailName: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
   },
   speakerDetailTitle: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
     marginTop: 2,
   },
   statusDetail: {
@@ -677,9 +1006,11 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     marginLeft: 8,
   },
   meetingDetails: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.card?.default || (isDark ? '#2a2a2a' : '#f5f5f5'),
     padding: 12,
     borderRadius: 8,
+    borderWidth: isDark ? 1 : 0,
+    borderColor: isDark ? '#404040' : 'transparent',
   },
   detailRow: {
     flexDirection: 'row',
@@ -688,34 +1019,36 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   detailRowLabel: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
   },
   detailRowValue: {
     fontSize: 14,
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
     fontWeight: '500',
   },
   timeline: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.card?.default || (isDark ? '#2a2a2a' : '#f5f5f5'),
     padding: 12,
     borderRadius: 8,
+    borderWidth: isDark ? 1 : 0,
+    borderColor: isDark ? '#404040' : 'transparent',
   },
   timelineItem: {
     marginBottom: 8,
   },
   timelineDate: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
     fontWeight: '600',
   },
   timelineText: {
     fontSize: 14,
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
     marginTop: 2,
   },
   responseDate: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
     marginTop: 4,
     fontStyle: 'italic',
   },

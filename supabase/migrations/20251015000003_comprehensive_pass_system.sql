@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS public.subpasses (
 -- User blocks table (speakers can block users)
 CREATE TABLE IF NOT EXISTS public.user_blocks (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    speaker_id TEXT NOT NULL REFERENCES public.BSL_Speakers(id) ON DELETE CASCADE,
+    speaker_id TEXT NOT NULL REFERENCES public.bsl_speakers(id) ON DELETE CASCADE,
     blocked_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     reason TEXT,
     blocked_at TIMESTAMPTZ DEFAULT NOW(),
@@ -314,7 +314,7 @@ CREATE POLICY "Users can view blocks affecting them" ON public.user_blocks
 
 CREATE POLICY "Speakers can manage blocks" ON public.user_blocks
     FOR ALL USING (speaker_id IN (
-        SELECT id FROM BSL_Speakers WHERE id = speaker_id
+        SELECT id FROM bsl_speakers WHERE id = speaker_id
     ));
 
 -- RLS Policies for pass_request_limits

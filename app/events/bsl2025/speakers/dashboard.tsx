@@ -11,7 +11,7 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { useTheme } from '../../../../hooks/useTheme';
 import { useAuth } from '../../../../hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -34,11 +34,14 @@ interface MeetingRequest {
   status: string;
   created_at: string;
   expires_at: string;
+  meeting_id?: string; // Link to the created meeting
+  has_meeting?: boolean; // Boolean to check if meeting exists
+  meeting_status?: string; // Status of the linked meeting
 }
 
 export default function SpeakerDashboard() {
   const { isDark, colors } = useTheme();
-  const { user } = useAuth();
+  const { user, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
   const { showSuccess, showError } = useToastHelpers();
   const styles = getStyles(isDark, colors);
@@ -51,24 +54,86 @@ export default function SpeakerDashboard() {
   const [responseType, setResponseType] = useState<'accepted' | 'declined'>('accepted');
   const [speakerMessage, setSpeakerMessage] = useState('');
   const [responding, setResponding] = useState(false);
+  const [speakerId, setSpeakerId] = useState<string | null>(null);
+
+  const getSpeakerId = async () => {
+    if (!user) {
+      console.log('❌ No user found in getSpeakerId');
+      return null;
+    }
+
+    console.log('🔍 Getting speaker ID for user:', user.id, user.email);
+
+    try {
+      const { data: speakerData, error } = await supabase
+        .from('bsl_speakers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      console.log('📊 Speaker query result:', { speakerData, error });
+
+      if (!error && speakerData) {
+        console.log('✅ Speaker found:', speakerData.id);
+        setSpeakerId(speakerData.id);
+        return speakerData.id;
+      } else {
+        console.error('❌ Error getting speaker ID:', error);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Exception in getSpeakerId:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
-    loadMeetingRequests();
-  }, []);
+    const initializeDashboard = async () => {
+      console.log('🚀 Initializing speaker dashboard...');
+      console.log('👤 User state:', { user: user?.id, email: user?.email, isLoggedIn, isLoading });
+      
+      // Wait for authentication to complete
+      if (isLoading) {
+        console.log('⏳ Authentication still loading, waiting...');
+        return;
+      }
+      
+      // Check if user is authenticated
+      if (!user || !isLoggedIn) {
+        console.log('❌ User not authenticated, redirecting...');
+        showError('Authentication Required', 'Please log in to access the speaker dashboard.');
+        router.back();
+        return;
+      }
+      
+      const currentSpeakerId = await getSpeakerId();
+      console.log('🎯 Speaker ID result:', currentSpeakerId);
+      
+      if (currentSpeakerId) {
+        console.log('✅ Speaker authorized, loading meeting requests...');
+        loadMeetingRequests(currentSpeakerId);
+      } else {
+        console.log('❌ Speaker not authorized, showing error...');
+        showError('Access Denied', 'You are not authorized to access the speaker dashboard.');
+        router.back();
+      }
+    };
 
-  const loadMeetingRequests = async () => {
-    if (!user) return;
+    initializeDashboard();
+  }, [user, isLoggedIn, isLoading]);
+
+  const loadMeetingRequests = async (currentSpeakerId?: string) => {
+    const idToUse = currentSpeakerId || speakerId;
+    if (!user || !idToUse) return;
 
     try {
       setLoading(true);
       console.log('🔄 Loading meeting requests for speaker...');
 
-      // Get speaker ID from user (assuming it's stored in user metadata or we use a mapping)
-      const speakerId = 'edward-calderon-speaker'; // This should be dynamic based on user
-
       const { data, error } = await supabase
-        .rpc('get_speaker_meeting_requests', {
-          p_speaker_id: speakerId
+        .rpc('get_meeting_requests_for_speaker', {
+          p_speaker_id: idToUse,
+          p_user_id: user.id
         });
 
       if (error) {
@@ -104,22 +169,48 @@ export default function SpeakerDashboard() {
     setShowResponseModal(true);
   };
 
+  const handleOpenChat = (meetingId: string) => {
+    // Navigate to meeting chat - using replace to avoid back button issues
+    router.push('/events/bsl2025/networking' as any);
+    // TODO: Implement proper meeting chat navigation
+    console.log('Opening chat for meeting:', meetingId);
+  };
+
   const confirmResponse = async () => {
-    if (!selectedRequest || !user) return;
+    if (!selectedRequest || !user || !speakerId) return;
 
     setResponding(true);
     try {
       console.log('🔄 Responding to meeting request:', selectedRequest.id, 'with:', responseType);
 
-      const speakerId = 'edward-calderon-speaker'; // This should be dynamic
+      let data, error;
 
-      const { data, error } = await supabase
-        .rpc('respond_to_meeting_request', {
-          p_request_id: selectedRequest.id,
-          p_speaker_id: speakerId,
-          p_response: responseType,
-          p_speaker_message: speakerMessage || null
-        });
+      if (responseType === 'accepted') {
+        // Accept the meeting request and create a meeting
+        const result = await supabase
+          .rpc('accept_meeting_request', {
+            p_meeting_request_id: selectedRequest.id,
+            p_speaker_id: speakerId,
+            p_scheduled_at: null, // Will default to tomorrow
+            p_location: null,
+            p_meeting_link: null,
+            p_notes: speakerMessage || null
+          });
+        
+        data = result.data;
+        error = result.error;
+      } else {
+        // Decline the meeting request
+        const result = await supabase
+          .rpc('decline_meeting_request', {
+            p_meeting_request_id: selectedRequest.id,
+            p_speaker_id: speakerId,
+            p_reason: speakerMessage || null
+          });
+        
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) {
         console.error('❌ Error responding to request:', error);
@@ -129,10 +220,28 @@ export default function SpeakerDashboard() {
       console.log('📋 Response result:', data);
 
       if (data && data.success) {
-        showSuccess(
-          `Request ${responseType === 'accepted' ? 'Accepted' : 'Declined'}`,
-          `You have ${responseType} the meeting request from ${selectedRequest.requester_name}.`
-        );
+        if (responseType === 'accepted') {
+          // Add initial chat message after meeting is created
+          try {
+            const { data: chatData, error: chatError } = await supabase
+              .rpc('add_meeting_chat_message', {
+                p_meeting_id: data.meeting_id,
+                p_sender_id: user.id,
+                p_message: 'Meeting accepted! You can now coordinate the details here.',
+                p_message_type: 'system'
+              });
+
+            if (chatError) {
+              console.warn('⚠️ Could not add initial chat message:', chatError);
+            }
+          } catch (chatError) {
+            console.warn('⚠️ Could not add initial chat message:', chatError);
+          }
+
+          showSuccess('Meeting Accepted!', `Meeting created successfully. You can now coordinate details in the meeting chat.`);
+        } else {
+          showSuccess('Request Declined', 'Meeting request declined successfully');
+        }
 
         // Refresh the requests list
         await loadMeetingRequests();
@@ -155,11 +264,11 @@ export default function SpeakerDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return colors.warning;
+      case 'pending': return '#f59e0b'; // warning color
       case 'accepted':
-      case 'approved': return colors.primary;
-      case 'declined': return colors.error.main;
-      default: return colors.text.secondary;
+      case 'approved': return '#10b981'; // success color
+      case 'declined': return '#ef4444'; // error color
+      default: return '#6b7280'; // secondary text color
     }
   };
 
@@ -189,6 +298,15 @@ export default function SpeakerDashboard() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading authentication...</Text>
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -200,26 +318,25 @@ export default function SpeakerDashboard() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <MaterialIcons name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Speaker Dashboard</Text>
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={handleRefresh}
-          disabled={refreshing}
-        >
-          <MaterialIcons 
-            name="refresh" 
-            size={24} 
-            color={refreshing ? colors.text.secondary : colors.primary} 
-          />
-        </TouchableOpacity>
-      </View>
+      <Stack.Screen 
+        options={{ 
+          title: 'Speaker Dashboard',
+          headerBackTitle: 'Networking',
+          headerRight: () => (
+            <TouchableOpacity
+              style={styles.headerRefreshButton}
+              onPress={handleRefresh}
+              disabled={refreshing}
+            >
+              <MaterialIcons 
+                name="refresh" 
+                size={24} 
+                color={refreshing ? colors.text.secondary : colors.primary} 
+              />
+            </TouchableOpacity>
+          ),
+        }} 
+      />
 
       <ScrollView
         style={styles.content}
@@ -358,6 +475,18 @@ export default function SpeakerDashboard() {
                     </TouchableOpacity>
                   </View>
                 )}
+
+                {request.status === 'accepted' && request.has_meeting && request.meeting_id && (
+                  <View style={styles.requestActions}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.chatButton]}
+                      onPress={() => handleOpenChat(request.meeting_id!)}
+                    >
+                      <MaterialIcons name="chat" size={20} color="white" />
+                      <Text style={styles.actionButtonText}>Open Chat</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             ))}
           </View>
@@ -469,26 +598,9 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: colors.text.secondary,
     marginTop: 16,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-    backgroundColor: colors.background.paper,
-  },
-  backButton: {
+  headerRefreshButton: {
     padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text.primary,
-  },
-  refreshButton: {
-    padding: 8,
+    marginRight: 8,
   },
   content: {
     flex: 1,
@@ -660,6 +772,9 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   declineButton: {
     backgroundColor: colors.error.main,
+  },
+  chatButton: {
+    backgroundColor: '#2196F3',
   },
   actionButtonText: {
     color: 'white',

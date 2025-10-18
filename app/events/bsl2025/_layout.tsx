@@ -111,6 +111,13 @@ export default function BSL2025Layout() {
           headerBackTitle: 'Networking',
         }}
       />
+      <Stack.Screen 
+        name="meeting-chat" 
+        options={{
+          title: 'Meeting Chat',
+          headerBackTitle: 'Speaker Dashboard',
+        }}
+      />
       </Stack>
     </ScrollProvider>
   );

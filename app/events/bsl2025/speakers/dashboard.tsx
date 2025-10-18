@@ -170,10 +170,11 @@ export default function SpeakerDashboard() {
   };
 
   const handleOpenChat = (meetingId: string) => {
-    // Navigate to meeting chat - using replace to avoid back button issues
-    router.push('/events/bsl2025/networking' as any);
-    // TODO: Implement proper meeting chat navigation
-    console.log('Opening chat for meeting:', meetingId);
+    // Navigate to meeting chat with the meeting ID as a parameter
+    router.push({
+      pathname: '/events/bsl2025/meeting-chat',
+      params: { meetingId }
+    } as any);
   };
 
   const confirmResponse = async () => {
@@ -425,6 +426,13 @@ export default function SpeakerDashboard() {
                         {request.requester_ticket_type.toUpperCase()}
                       </Text>
                     </View>
+                    
+                    {request.status === 'accepted' && request.has_meeting && (
+                      <View style={styles.meetingCreatedBadge}>
+                        <MaterialIcons name="event" size={14} color="#4CAF50" />
+                        <Text style={styles.meetingCreatedText}>MEETING CREATED</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
 
@@ -484,6 +492,13 @@ export default function SpeakerDashboard() {
                     >
                       <MaterialIcons name="chat" size={20} color="white" />
                       <Text style={styles.actionButtonText}>Open Chat</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.viewButton]}
+                      onPress={() => router.push('/events/bsl2025/networking/schedule' as any)}
+                    >
+                      <MaterialIcons name="event" size={20} color="white" />
+                      <Text style={styles.actionButtonText}>View Meeting</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -716,6 +731,21 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
+  meetingCreatedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E8',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  meetingCreatedText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#4CAF50',
+    marginLeft: 4,
+  },
   requestContent: {
     marginBottom: 12,
   },
@@ -775,6 +805,9 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   chatButton: {
     backgroundColor: '#2196F3',
+  },
+  viewButton: {
+    backgroundColor: '#4CAF50',
   },
   actionButtonText: {
     color: 'white',

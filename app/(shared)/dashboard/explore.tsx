@@ -177,23 +177,23 @@ export default function ExploreScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Event Banner */}
-      <EventBanner 
-        title={(event as any)?.title || (selectedEvent as any)?.title || 'Blockchain Summit Latin America 2025'}
-        subtitle={(event as any)?.subtitle || (selectedEvent as any)?.subtitle || 'November 12-14, 2025 • Universidad EAFIT, Medellín'}
-        date={(event as any)?.date || "November 12-14, 2025"}
-        showCountdown={true}
-        showLiveIndicator={true}
-        eventStartDate="2025-11-12T09:00:00Z"
-      />
-      
       <Animated.ScrollView
         style={styles.scrollView}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={{ paddingBottom: 40 }}
       >
+        {/* Event Banner (now scrolls with content) */}
+        <EventBanner 
+          title={(event as any)?.title || (selectedEvent as any)?.title || 'Blockchain Summit Latin America 2025'}
+          subtitle={(event as any)?.subtitle || (selectedEvent as any)?.subtitle || 'November 12-14, 2025 • Universidad EAFIT, Medellín'}
+          date={(event as any)?.date || "November 12-14, 2025"}
+          showCountdown={true}
+          showLiveIndicator={true}
+          eventStartDate="2025-11-12T09:00:00Z"
+        />
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
@@ -259,8 +259,7 @@ export default function ExploreScreen() {
         </View>
 
 
-        {/* Bottom Spacing */}
-        <View style={styles.bottomSpacing} />
+        {/* Bottom Spacing handled via contentContainerStyle paddingBottom */}
       </Animated.ScrollView>
     </View>
   );

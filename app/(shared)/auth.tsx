@@ -31,16 +31,42 @@ export default function AuthScreen() {
   });
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
-        if (session) {
+    const handleAuthChange = async (event: AuthChangeEvent, session: Session | null) => {
+      if (session?.user) {
+        // Check if this is a new user
+        if (event === 'SIGNED_IN') {
+          try {
+            // Create a default pass for the new user
+            const { data: pass, error } = await supabase
+              .rpc('create_default_pass', {
+                p_user_id: session.user.id,
+                p_pass_type: 'general'
+              });
+              
+            if (error) {
+              console.error('Error creating default pass:', error);
+              // Still let them in even if pass creation fails
+              router.replace('/(shared)/dashboard/explore');
+            } else {
+              console.log('Default pass created:', pass);
+              router.replace('/(shared)/dashboard/explore');
+            }
+          } catch (error) {
+            console.error('Error in pass creation:', error);
+            // Still let them in even if pass creation fails
+            router.replace('/(shared)/dashboard/explore');
+          }
+        } else {
+          // Existing user signing in
           router.replace('/(shared)/dashboard/explore');
         }
       }
-    );
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
 
     return () => {
-      authListener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 

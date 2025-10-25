@@ -571,13 +571,13 @@ export default function NetworkingView() {
 const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background?.default || (isDark ? '#000000' : '#ffffff'),
+    backgroundColor: colors.background?.default || (isDark ? '#121212' : '#ffffff'),
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background?.default || (isDark ? '#000000' : '#ffffff'),
+    backgroundColor: colors.background?.default || (isDark ? '#121212' : '#ffffff'),
   },
   loadingText: {
     marginTop: 16,
@@ -588,7 +588,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border?.default || (isDark ? '#333333' : '#e0e0e0'),
+    borderBottomColor: colors.divider || (isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.08)'),
   },
   headerTitle: {
     fontSize: 24,
@@ -598,7 +598,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 14,
-    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    color: colors.text?.secondary || (isDark ? '#F0F0F0' : '#666666'),
     marginTop: 4,
   },
   section: {
@@ -622,12 +622,12 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: colors.card?.default || (isDark ? '#1a1a1a' : '#ffffff'),
+    backgroundColor: colors.background?.paper || (isDark ? '#1E1E1E' : '#F5F5F7'),
     borderRadius: 12,
     marginBottom: 8,
-    borderWidth: isDark ? 1 : 0,
-    borderColor: isDark ? '#404040' : 'transparent',
-    shadowColor: isDark ? '#000000' : '#000000',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: isDark ? 0.3 : 0.1,
     shadowRadius: 4,
@@ -656,7 +656,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   tipsSummary: {
     fontSize: 14,
-    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    color: colors.text?.secondary || (isDark ? '#F0F0F0' : '#666666'),
     fontStyle: 'italic',
     flex: 1,
   },
@@ -673,13 +673,13 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   statsCard: {
     width: '30%',
-    backgroundColor: colors.card?.default || (isDark ? '#1a1a1a' : '#ffffff'),
+    backgroundColor: colors.background?.paper || (isDark ? '#1E1E1E' : '#F5F5F7'),
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
     marginBottom: 12,
-    borderWidth: isDark ? 1 : 0,
-    borderColor: isDark ? '#333333' : 'transparent',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
   },
   statsIcon: {
     width: 40,
@@ -697,19 +697,19 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   statsTitle: {
     fontSize: 12,
-    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    color: colors.text?.secondary || (isDark ? '#F0F0F0' : '#666666'),
     textAlign: 'center',
   },
   activityCard: {
     flexDirection: 'row',
-    backgroundColor: colors.card?.default || (isDark ? '#1a1a1a' : '#ffffff'),
+    backgroundColor: colors.background?.paper || (isDark ? '#1E1E1E' : '#F5F5F7'),
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',
-    borderWidth: isDark ? 1 : 0,
-    borderColor: isDark ? '#333333' : 'transparent',
-    shadowColor: isDark ? '#000000' : '#000000',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: isDark ? 0.3 : 0.1,
     shadowRadius: 4,
@@ -727,7 +727,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   activityDescription: {
     fontSize: 14,
-    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    color: colors.text?.secondary || (isDark ? '#F0F0F0' : '#666666'),
   },
   tipItem: {
     flexDirection: 'row',
@@ -735,7 +735,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: isDark ? '#333333' : '#f0f0f0',
+    borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
   },
   lastTipItem: {
     borderBottomWidth: 0,
@@ -756,7 +756,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   tipDescription: {
     fontSize: 14,
-    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    color: colors.text?.secondary || (isDark ? '#F0F0F0' : '#666666'),
     lineHeight: 20,
   },
   // Error state styles
@@ -776,7 +776,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   errorMessage: {
     fontSize: 16,
-    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    color: colors.text?.secondary || (isDark ? '#F0F0F0' : '#666666'),
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
@@ -798,12 +798,12 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   lastUpdatedText: {
     fontSize: 12,
-    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    color: colors.text?.secondary || (isDark ? '#F0F0F0' : '#666666'),
     fontStyle: 'italic',
   },
   retryText: {
     fontSize: 14,
-    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    color: colors.text?.secondary || (isDark ? '#F0F0F0' : '#666666'),
     marginTop: 8,
     textAlign: 'center',
   },

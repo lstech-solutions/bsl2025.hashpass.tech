@@ -29,7 +29,7 @@ interface SystemStats {
   topSpeakers: Array<{
     speaker_id: string;
     speaker_name: string;
-    request_count: number;
+    count: number;
   }>;
   requestsByDay: Array<{
     date: string;
@@ -342,34 +342,34 @@ export default function AnalyticsView() {
 const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.background?.default || (isDark ? '#121212' : '#FFFFFF'),
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.background?.default || (isDark ? '#121212' : '#FFFFFF'),
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000'),
   },
   header: {
     padding: 20,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.divider || (isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.08)'),
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000'),
     marginTop: 8,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.textSecondary || (isDark ? '#F0F0F0' : '#666666'),
     marginTop: 4,
   },
   section: {
@@ -378,7 +378,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000'),
     marginBottom: 16,
   },
   statsGrid: {
@@ -388,11 +388,13 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   statCard: {
     width: '48%',
-    backgroundColor: colors.card,
+    backgroundColor: colors.background?.paper || (isDark ? '#1E1E1E' : '#F5F5F7'),
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
   },
   statIcon: {
     width: 48,
@@ -405,18 +407,20 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000'),
     marginBottom: 4,
   },
   statTitle: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.textSecondary || (isDark ? '#F0F0F0' : '#666666'),
     textAlign: 'center',
   },
   performanceCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.background?.paper || (isDark ? '#1E1E1E' : '#F5F5F7'),
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
   },
   performanceItem: {
     flexDirection: 'row',
@@ -430,17 +434,19 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   performanceValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000'),
   },
   performanceLabel: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.textSecondary || (isDark ? '#F0F0F0' : '#666666'),
     marginTop: 2,
   },
   topSpeakersCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.background?.paper || (isDark ? '#1E1E1E' : '#F5F5F7'),
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
   },
   topSpeakerItem: {
     flexDirection: 'row',
@@ -467,17 +473,19 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   speakerName: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000'),
   },
   speakerCount: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.textSecondary || (isDark ? '#F0F0F0' : '#666666'),
     marginTop: 2,
   },
   chartCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.background?.paper || (isDark ? '#1E1E1E' : '#F5F5F7'),
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
   },
   chartContainer: {
     flexDirection: 'row',
@@ -497,18 +505,20 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   chartLabel: {
     fontSize: 10,
-    color: colors.textSecondary,
+    color: colors.textSecondary || (isDark ? '#F0F0F0' : '#666666'),
     marginBottom: 2,
   },
   chartValue: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000'),
   },
   healthCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.background?.paper || (isDark ? '#1E1E1E' : '#F5F5F7'),
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
   },
   healthItem: {
     flexDirection: 'row',
@@ -517,12 +527,12 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   healthText: {
     fontSize: 14,
-    color: colors.text,
+    color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000'),
     marginLeft: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.textSecondary || (isDark ? '#F0F0F0' : '#666666'),
     textAlign: 'center',
     fontStyle: 'italic',
   },

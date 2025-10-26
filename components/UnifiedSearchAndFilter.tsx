@@ -103,21 +103,22 @@ export default function UnifiedSearchAndFilter<T extends BaseItem>({
     });
   };
 
-  // Apply filters and search
-  const applyFiltersAndSearch = () => {
+  // Apply filters and search (supports overrides to avoid stale state)
+  const applyFiltersAndSearch = (
+    filtersOverride?: { [key: string]: any },
+    queryOverride?: string
+  ) => {
+    const filtersToUse = filtersOverride ?? activeFilters;
+    const queryToUse = queryOverride ?? searchQuery;
     let filtered = data;
-    
-    // Apply custom filter logic if provided
+
     if (customFilterLogic) {
-      filtered = customFilterLogic(data, activeFilters, searchQuery);
+      filtered = customFilterLogic(data, filtersToUse, queryToUse);
     } else {
-      // Apply default search
-      filtered = defaultSearchLogic(filtered, searchQuery);
-      
-      // Apply default filters
-      filtered = defaultFilterLogic(filtered, activeFilters);
+      filtered = defaultSearchLogic(filtered, queryToUse);
+      filtered = defaultFilterLogic(filtered, filtersToUse);
     }
-    
+
     onFilteredData(filtered);
   };
 
@@ -125,22 +126,22 @@ export default function UnifiedSearchAndFilter<T extends BaseItem>({
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
     onSearchChange(query);
-    applyFiltersAndSearch();
+    applyFiltersAndSearch(undefined, query);
   };
 
   // Handle filter change
   const handleFilterChange = (filterKey: string, value: any) => {
     const newFilters = { ...activeFilters };
-    
+
     if (value === '' || value === null || (Array.isArray(value) && value.length === 0)) {
       delete newFilters[filterKey];
     } else {
       newFilters[filterKey] = value;
     }
-    
+
     setActiveFilters(newFilters);
     if (onFilterChange) onFilterChange(newFilters);
-    applyFiltersAndSearch();
+    applyFiltersAndSearch(newFilters, undefined);
   };
 
   // Clear all filters
@@ -309,16 +310,18 @@ export default function UnifiedSearchAndFilter<T extends BaseItem>({
       {showResultsCount && hasActiveFilters && (
         <View style={styles.resultsCount}>
           <Text style={styles.resultsCountText}>
-            Showing {data.filter(item => {
+            Showing {(() => {
+              const filtersToUse = activeFilters;
+              const queryToUse = searchQuery;
               let filtered = data;
               if (customFilterLogic) {
-                filtered = customFilterLogic(data, activeFilters, searchQuery);
+                filtered = customFilterLogic(data, filtersToUse, queryToUse);
               } else {
-                filtered = defaultSearchLogic(filtered, searchQuery);
-                filtered = defaultFilterLogic(filtered, activeFilters);
+                filtered = defaultSearchLogic(filtered, queryToUse);
+                filtered = defaultFilterLogic(filtered, filtersToUse);
               }
-              return filtered.includes(item);
-            }).length} of {data.length} items
+              return filtered.length;
+            })()} of {data.length} items
           </Text>
         </View>
       )}

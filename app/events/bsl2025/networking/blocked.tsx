@@ -128,7 +128,7 @@ export default function BlockedUsersView() {
     <View key={blockedUser.id} style={styles.blockedUserCard}>
       <View style={styles.userInfo}>
         <View style={styles.userAvatar}>
-          <MaterialIcons name="person" size={24} color={colors.textSecondary} />
+          <MaterialIcons name="person" size={24} color={colors.text.textSecondary} />
         </View>
         <View style={styles.userDetails}>
           <Text style={styles.userEmail}>{blockedUser.blocked_user_email}</Text>
@@ -168,7 +168,7 @@ export default function BlockedUsersView() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <MaterialIcons name="arrow-back" size={24} color={colors.text} />
+          <MaterialIcons name="arrow-back" size={24} color={colors.text.textSecondary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Blocked Users</Text>
         <View style={styles.headerRight} />
@@ -182,7 +182,7 @@ export default function BlockedUsersView() {
       >
         {blockedUsers.length === 0 ? (
           <View style={styles.emptyState}>
-            <MaterialIcons name="block" size={64} color={colors.textSecondary} />
+            <MaterialIcons name="block" size={64} color={colors.text.textSecondary} />
             <Text style={styles.emptyTitle}>No Blocked Users</Text>
             <Text style={styles.emptyDescription}>
               You haven't blocked any users yet. Blocked users won't be able to send you meeting requests.

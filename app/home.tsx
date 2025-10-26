@@ -3,12 +3,9 @@ import { useTranslation, getCurrentLocale } from '../i18n/i18n';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Features from './components/Features';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import ThemeAndLanguageSwitcher from './components/ThemeAndLanguageSwitcher';
-import BackToTop from './components/BackToTop';
-import Testimonials from './components/Testimonials';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -21,12 +18,17 @@ import Animated, {
   withSpring,
   withRepeat,
   withSequence,
+  Easing,
 } from 'react-native-reanimated';
-import { InteractiveHoverButton } from './components/InteractiveHoverButton';
-import FlipWords from './components/FlipWords';
-import Newsletter from './components/Newsletter';
-import { useIsMobile } from '@/hooks/useIsMobile';
-import { Easing } from 'react-native-reanimated';
+
+// Import components using relative paths
+import Features from '../components/Features';
+import ThemeAndLanguageSwitcher from '../components/ThemeAndLanguageSwitcher';
+import BackToTop from '../components/BackToTop';
+import Testimonials from '../components/Testimonials';
+import { InteractiveHoverButton } from '../components/InteractiveHoverButton';
+import FlipWords from '../components/FlipWords';
+import Newsletter from '../components/Newsletter';
 
 export default function HomeScreen() {
   const AnimatedImage = Animated.createAnimatedComponent(Image);

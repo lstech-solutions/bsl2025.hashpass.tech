@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
   RefreshControl,
   Animated,
 } from 'react-native';
@@ -16,36 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { useToastHelpers } from '../../../contexts/ToastContext';
 import QuickAccessGrid from '../../../components/explorer/QuickAccessGrid';
-import MeetingsList from '../../../components/MeetingsList';
-
-// No longer need responsive calculations for tips since we're using a list format
-
-interface NetworkingStats {
-  totalRequests: number;
-  pendingRequests: number;
-  acceptedRequests: number;
-  declinedRequests: number;
-  cancelledRequests: number;
-  blockedUsers: number;
-  scheduledMeetings: number;
-}
-
-interface StatsState {
-  data: NetworkingStats;
-  loading: boolean;
-  error: string | null;
-  lastUpdated: Date | null;
-  retryCount: number;
-}
-
-interface QuickAccessItem {
-  id: string;
-  title: string;
-  icon: string;
-  color: string;
-  route: string;
-  subtitle?: string;
-}
+import { NetworkingStats, StatsState, QuickAccessItem } from '@/types/networking';
 
 export default function NetworkingView() {
   const { isDark, colors } = useTheme();
@@ -72,7 +42,6 @@ export default function NetworkingView() {
   const [refreshing, setRefreshing] = useState(false);
   const [tipsExpanded, setTipsExpanded] = useState(false);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
-  const [showMeetings, setShowMeetings] = useState(false);
   const animatedHeight = useRef(new Animated.Value(0)).current;
   const animatedOpacity = useRef(new Animated.Value(0)).current;
   const tipSliderOpacity = useRef(new Animated.Value(1)).current;
@@ -140,8 +109,8 @@ export default function NetworkingView() {
       title: 'My Schedule',
       icon: 'event-note',
       color: '#9C27B0',
-      route: '/events/bsl2025/networking/schedule',
-      subtitle: 'View scheduled meetings',
+      route: '/events/bsl2025/networking/my-schedule',
+      subtitle: 'View and manage your schedule',
     },
     {
       id: 'blocked-users',
@@ -158,14 +127,6 @@ export default function NetworkingView() {
       color: '#607D8B',
       route: '/events/bsl2025/networking/analytics',
       subtitle: 'View networking statistics',
-    },
-    {
-      id: 'meetings',
-      title: 'My Meetings',
-      icon: 'event',
-      color: '#8B5CF6',
-      route: 'meetings',
-      subtitle: 'View and manage your meetings',
     },
   ];
 
@@ -361,12 +322,6 @@ export default function NetworkingView() {
       return;
     }
 
-    // Handle meetings specially
-    if (item.id === 'meetings') {
-      setShowMeetings(true);
-      return;
-    }
-
     router.push(item.route as any);
   };
 
@@ -559,11 +514,6 @@ export default function NetworkingView() {
           </View>
         </Animated.View>
       </View>
-
-      {/* Meetings Modal */}
-      {showMeetings && (
-        <MeetingsList onClose={() => setShowMeetings(false)} />
-      )}
     </ScrollView>
   );
 }

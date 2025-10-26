@@ -15,28 +15,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../../../../lib/supabase';
 import { useToastHelpers } from '../../../../contexts/ToastContext';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
+import { MeetingRequest } from '@/types/networking';
 
-interface MeetingRequest {
-  id: string;
-  speaker_id: string;
-  speaker_name: string;
-  speaker_image?: string;
-  requester_name: string;
-  requester_company: string;
-  requester_title: string;
-  requester_ticket_type: string;
-  meeting_type: string;
-  message: string;
-  note: string;
-  boost_amount: number;
-  duration_minutes: number;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  expires_at: string;
-  speaker_response?: string;
-  speaker_response_at?: string;
-}
 
 export default function MyRequestsView() {
   const { isDark, colors } = useTheme();
@@ -243,10 +223,9 @@ export default function MyRequestsView() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return '#FF9800';
+      case 'requested': return '#FF9800';
       case 'accepted': return '#4CAF50';
-      case 'approved': return '#4CAF50';
-      case 'declined': return '#F44336';
+      case 'rejected': return '#F44336';
       case 'cancelled': return '#9E9E9E';
       default: return '#9E9E9E';
     }
@@ -254,11 +233,10 @@ export default function MyRequestsView() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending': return 'schedule';
+      case 'requested': return 'schedule';
       case 'accepted': return 'check-circle';
-      case 'approved': return 'check-circle';
-      case 'declined': return 'cancel';
-      case 'cancelled': return 'close';
+      case 'rejected': return 'cancel';
+      case 'cancelled': return 'block';
       default: return 'help';
     }
   };
@@ -300,9 +278,9 @@ export default function MyRequestsView() {
   const getStatusCounts = () => {
     return {
       all: requests.length,
-      pending: requests.filter(r => r.status === 'pending').length,
-      accepted: requests.filter(r => r.status === 'accepted' || r.status === 'approved').length,
-      declined: requests.filter(r => r.status === 'declined').length,
+      requested: requests.filter(r => r.status === 'requested').length,
+      accepted: requests.filter(r => r.status === 'accepted').length,
+      rejected: requests.filter(r => r.status === 'rejected').length,
       cancelled: requests.filter(r => r.status === 'cancelled').length,
     };
   };
@@ -355,7 +333,7 @@ export default function MyRequestsView() {
             <MaterialIcons name="schedule" size={16} color={colors.text?.secondary || (isDark ? '#cccccc' : '#666666')} />
             <Text style={styles.metaText}>{request.duration_minutes} min</Text>
           </View>
-          {request.boost_amount > 0 && (
+          {request.boost_amount && request.boost_amount > 0 && (
             <View style={styles.metaItem}>
               <MaterialIcons name="flash-on" size={16} color="#FFC107" />
               <Text style={styles.metaText}>{request.boost_amount} boost</Text>
@@ -475,7 +453,7 @@ export default function MyRequestsView() {
               </View>
             )}
 
-            {selectedRequest.status === 'pending' && (
+            {selectedRequest.status === 'requested' && (
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => handleCancelRequest(selectedRequest)}
@@ -501,6 +479,14 @@ export default function MyRequestsView() {
       </View>
     );
   }
+
+  const statusFilters = [
+    { key: 'all', label: 'All', count: getStatusCounts().all },
+    { key: 'requested', label: 'Requested', count: getStatusCounts().requested },
+    { key: 'accepted', label: 'Accepted', count: getStatusCounts().accepted },
+    { key: 'rejected', label: 'Rejected', count: getStatusCounts().rejected },
+    { key: 'cancelled', label: 'Cancelled', count: getStatusCounts().cancelled },
+  ];
 
   return (
     <View style={styles.container}>
@@ -554,13 +540,13 @@ export default function MyRequestsView() {
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={[styles.summaryValue, { color: '#FF9800' }]}>
-                    {requests.filter(r => r.status === 'pending').length}
+                    {requests.filter(r => r.status === 'requested').length}
                   </Text>
                   <Text style={styles.summaryLabel}>Pending</Text>
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={[styles.summaryValue, { color: '#4CAF50' }]}>
-                    {requests.filter(r => r.status === 'accepted' || r.status === 'approved').length}
+                    {requests.filter(r => r.status === 'accepted').length}
                   </Text>
                   <Text style={styles.summaryLabel}>Accepted</Text>
                 </View>
@@ -575,13 +561,7 @@ export default function MyRequestsView() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.filterContainer}
               >
-                {[
-                  { key: 'all', label: 'All', count: getStatusCounts().all },
-                  { key: 'pending', label: 'Pending', count: getStatusCounts().pending },
-                  { key: 'accepted', label: 'Accepted', count: getStatusCounts().accepted },
-                  { key: 'declined', label: 'Declined', count: getStatusCounts().declined },
-                  { key: 'cancelled', label: 'Cancelled', count: getStatusCounts().cancelled },
-                ].map((filter) => (
+                {statusFilters.map((filter) => (
                   <TouchableOpacity
                     key={filter.key}
                     style={[

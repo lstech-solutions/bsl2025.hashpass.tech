@@ -37,26 +37,54 @@ export default function QuickAccessGrid({
   
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(showScrollArrows);
+  const [scrollX, setScrollX] = useState(0);
+  const [maxScrollX, setMaxScrollX] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
   const handleScroll = (event: any) => {
-    if (!showScrollArrows) return;
-    
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const scrollX = contentOffset.x;
-    const maxScrollX = contentSize.width - layoutMeasurement.width;
-    
-    setShowLeftArrow(scrollX > 0);
-    setShowRightArrow(scrollX < maxScrollX - 10);
+    const x = contentOffset.x;
+    const maxX = Math.max(0, contentSize.width - layoutMeasurement.width);
+    setScrollX(x);
+    setMaxScrollX(maxX);
+    setViewportWidth(layoutMeasurement.width);
+    if (showScrollArrows) {
+      setShowLeftArrow(x > 0);
+      setShowRightArrow(x < maxX - 10);
+    }
   };
 
   const scrollTo = (direction: 'left' | 'right') => {
-    const scrollAmount = 200;
+    const delta = Math.max(160, viewportWidth - cardSpacing);
+    const target = direction === 'left' ? scrollX - delta : scrollX + delta;
+    const nextX = Math.max(0, Math.min(target, maxScrollX));
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        x: direction === 'left' ? -scrollAmount : scrollAmount,
-        animated: true
-      });
+      scrollRef.current.scrollTo({ x: nextX, animated: true });
+    }
+  };
+
+  const handleLayout = (e: any) => {
+    const w = e?.nativeEvent?.layout?.width || 0;
+    setViewportWidth(w);
+    setMaxScrollX(Math.max(0, contentWidth - w));
+  };
+
+  const handleContentSizeChange = (w: number, _h: number) => {
+    setContentWidth(w);
+    setMaxScrollX(Math.max(0, w - viewportWidth));
+  };
+
+  const handleWheel = (e: any) => {
+    // RN Web: map wheel vertical/horizontal delta to horizontal scroll
+    const dx = e?.nativeEvent?.deltaX ?? e?.deltaX ?? 0;
+    const dy = e?.nativeEvent?.deltaY ?? e?.deltaY ?? 0;
+    const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+    const nextX = Math.max(0, Math.min(scrollX + delta, maxScrollX));
+    if (typeof e?.preventDefault === 'function') e.preventDefault();
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ x: nextX, animated: false });
     }
   };
 
@@ -106,6 +134,14 @@ export default function QuickAccessGrid({
           contentContainerStyle={styles.horizontalScroll}
           onScroll={handleScroll}
           scrollEventThrottle={16}
+          decelerationRate="fast"
+          snapToInterval={cardWidth + cardSpacing}
+          snapToAlignment="start"
+          disableIntervalMomentum
+          onLayout={handleLayout}
+          onContentSizeChange={handleContentSizeChange}
+          // @ts-ignore - onWheel supported in RN Web
+          onWheel={handleWheel}
         >
           {items.map((item, index) => renderQuickAccessItem(item, index))}
         </ScrollView>

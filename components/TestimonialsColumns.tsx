@@ -2,7 +2,7 @@
 import React from "react";
 import { motion } from "motion/react";
 
-export const TestimonialsColumn = (props: {
+const TestimonialsColumn = (props: {
   className?: string;
   testimonials: any;
   duration?: number;
@@ -51,4 +51,4 @@ export const TestimonialsColumn = (props: {
   );
 };
 
-;
+export default TestimonialsColumn;

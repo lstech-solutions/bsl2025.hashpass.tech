@@ -60,6 +60,12 @@ export default function SpeakersLayout() {
           headerTitle: 'Speaker Details',
         })}
       />
+      <Stack.Screen 
+        name="dashboard" 
+        options={{
+          headerShown: true, // Show native header for consistency
+        }}
+      />
     </Stack>
   );
 }

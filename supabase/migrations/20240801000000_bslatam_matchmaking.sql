@@ -1,7 +1,7 @@
 -- BSLatam 2025 Matchmaking schema (Supabase/Postgres)
--- Tables: BSL_Speakers, BSL_Bookings, BSL_Tickets
+-- Tables: bsl_speakers, BSL_Bookings, BSL_Tickets
 
-create table if not exists public.BSL_Speakers (
+create table if not exists public.bsl_speakers (
   id text primary key,
   name text not null,
   title text,
@@ -31,7 +31,7 @@ exception when duplicate_object then null; end $$;
 
 create table if not exists public.BSL_Bookings (
   id uuid primary key default gen_random_uuid(),
-  speakerId text not null references public.BSL_Speakers(id) on delete cascade,
+  speakerId text not null references public.bsl_speakers(id) on delete cascade,
   attendeeId uuid references auth.users(id) on delete set null,
   start timestamptz not null,
   "end" timestamptz not null,
@@ -41,13 +41,13 @@ create table if not exists public.BSL_Bookings (
 );
 
 -- Basic RLS (optional simple policies; adjust if RLS is enabled)
-alter table public.BSL_Speakers enable row level security;
+alter table public.bsl_speakers enable row level security;
 alter table public.BSL_Tickets enable row level security;
 alter table public.BSL_Bookings enable row level security;
 
 -- Speakers readable by all
 do $$ begin
-  create policy speakers_select on public.BSL_Speakers for select using (true);
+  create policy speakers_select on public.bsl_speakers for select using (true);
 exception when duplicate_object then null; end $$;
 
 -- Tickets: user can select own ticket rows
@@ -59,7 +59,7 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   create policy bookings_select on public.BSL_Bookings for select using (
     attendeeId = auth.uid() or exists (
-      select 1 from public.BSL_Speakers s where s.id = BSL_Bookings.speakerId
+      select 1 from public.bsl_speakers s where s.id = BSL_Bookings.speakerId
     )
   );
 exception when duplicate_object then null; end $$;

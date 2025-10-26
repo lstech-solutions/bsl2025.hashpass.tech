@@ -6,12 +6,12 @@ import { useEvent } from '../../../../contexts/EventContext';
 import { useAuth } from '../../../../hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
 import { matchmakingService, CreateMeetingRequestData } from '../../../../lib/matchmaking';
-import { cryptoBoostService, BoostCalculation } from '../../../../lib/crypto-boost';
 import { useToastHelpers } from '../../../../contexts/ToastContext';
 import { supabase } from '../../../../lib/supabase';
 import { passSystemService } from '../../../../lib/pass-system';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
 import PassesDisplay from '../../../../components/PassesDisplay';
+import { getSpeakerAvatarUrl, getSpeakerLinkedInUrl, getSpeakerTwitterUrl } from '../../../../lib/string-utils';
 
 interface Speaker {
   id: string;
@@ -46,22 +46,23 @@ export default function SpeakerDetail() {
   // userTicket removed - now using pass system
   const [isRequestingMeeting, setIsRequestingMeeting] = useState(false);
   const [showMeetingModal, setShowMeetingModal] = useState(false);
-  const [meetingRequest, setMeetingRequest] = useState<any>(null);
+  const [meetingRequests, setMeetingRequests] = useState<any[]>([]);
   const [loadingRequestStatus, setLoadingRequestStatus] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isCurrentUserSpeaker, setIsCurrentUserSpeaker] = useState(false);
   const [isCancellingRequest, setIsCancellingRequest] = useState(false);
   const [cancelledRequests, setCancelledRequests] = useState<any[]>([]);
   const [loadingCancelledRequests, setLoadingCancelledRequests] = useState(false);
+  const [selectedRequestToCancel, setSelectedRequestToCancel] = useState<any>(null);
+  const [showRequestDetailModal, setShowRequestDetailModal] = useState(false);
+  const [selectedRequestDetail, setSelectedRequestDetail] = useState<any>(null);
   
   // Debug modal state changes
   useEffect(() => {
     console.log('🔍 Modal state changed:', showMeetingModal);
   }, [showMeetingModal]);
-  const [showBoostModal, setShowBoostModal] = useState(false);
   const [meetingMessage, setMeetingMessage] = useState('');
   const [selectedIntentions, setSelectedIntentions] = useState<string[]>(['none']);
-  const [boostAmount, setBoostAmount] = useState(0);
-  const [boostCalculation, setBoostCalculation] = useState<BoostCalculation | null>(null);
   const [requestLimits, setRequestLimits] = useState<{
     ticketType: 'general' | 'business' | 'vip';
     totalRequests: number;
@@ -69,12 +70,38 @@ export default function SpeakerDetail() {
     nextRequestAllowedAt?: string;
     canSendRequest: boolean;
     requestLimit: number;
+    reason?: string;
   } | null>(null);
   const [showTicketComparison, setShowTicketComparison] = useState(false);
 
   // Mock user ticket data removed - now using pass system
 
   // mockUserTicket removed - now using pass system
+
+  const checkIfCurrentUserIsSpeaker = async () => {
+    if (!user) {
+      setIsCurrentUserSpeaker(false);
+      return;
+    }
+
+    try {
+      const { data: speakerData, error } = await supabase
+        .from('bsl_speakers')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('id', id) // Check if this specific speaker is the current user
+        .single();
+
+      if (!error && speakerData) {
+        setIsCurrentUserSpeaker(true);
+      } else {
+        setIsCurrentUserSpeaker(false);
+      }
+    } catch (error) {
+      console.log('Error checking if user is speaker:', error);
+      setIsCurrentUserSpeaker(false);
+    }
+  };
 
   const loadSpeaker = async () => {
     try {
@@ -103,9 +130,9 @@ export default function SpeakerDetail() {
             title: dbSpeaker.title,
             company: dbSpeaker.company || '',
             bio: dbSpeaker.bio || `Experienced professional in ${dbSpeaker.title}.`,
-            image: dbSpeaker.imageurl || `https://blockchainsummit.la/wp-content/uploads/2025/09/foto-${dbSpeaker.name.toLowerCase().replace(/\s+/g, '-')}.png`,
-            linkedin: dbSpeaker.linkedin || `https://linkedin.com/in/${dbSpeaker.name.toLowerCase().replace(/\s+/g, '-')}`,
-            twitter: dbSpeaker.twitter || `https://twitter.com/${dbSpeaker.name.toLowerCase().replace(/\s+/g, '-')}`,
+            image: dbSpeaker.imageurl || getSpeakerAvatarUrl(dbSpeaker.name),
+            linkedin: dbSpeaker.linkedin || getSpeakerLinkedInUrl(dbSpeaker.name),
+            twitter: dbSpeaker.twitter || getSpeakerTwitterUrl(dbSpeaker.name),
             tags: dbSpeaker.tags || ['Blockchain', 'FinTech', 'Innovation'],
             availability: dbSpeaker.availability || {
               monday: { start: '09:00', end: '17:00' },
@@ -133,9 +160,9 @@ export default function SpeakerDetail() {
           title: foundSpeaker.title,
           company: foundSpeaker.company,
           bio: `Experienced professional in ${foundSpeaker.title} at ${foundSpeaker.company}.`,
-          image: `https://blockchainsummit.la/wp-content/uploads/2025/09/foto-${foundSpeaker.name.toLowerCase().replace(/\s+/g, '-')}.png`,
-          linkedin: `https://linkedin.com/in/${foundSpeaker.name.toLowerCase().replace(/\s+/g, '-')}`,
-          twitter: `https://twitter.com/${foundSpeaker.name.toLowerCase().replace(/\s+/g, '-')}`,
+          image: getSpeakerAvatarUrl(foundSpeaker.name),
+          linkedin: getSpeakerLinkedInUrl(foundSpeaker.name),
+          twitter: getSpeakerTwitterUrl(foundSpeaker.name),
           tags: ['Blockchain', 'FinTech', 'Innovation'],
           availability: {
             monday: { start: '09:00', end: '17:00' },
@@ -162,9 +189,9 @@ export default function SpeakerDetail() {
           title: foundSpeaker.title,
           company: foundSpeaker.company,
           bio: `Experienced professional in ${foundSpeaker.title} at ${foundSpeaker.company}.`,
-          image: `https://blockchainsummit.la/wp-content/uploads/2025/09/foto-${foundSpeaker.name.toLowerCase().replace(/\s+/g, '-')}.png`,
-          linkedin: `https://linkedin.com/in/${foundSpeaker.name.toLowerCase().replace(/\s+/g, '-')}`,
-          twitter: `https://twitter.com/${foundSpeaker.name.toLowerCase().replace(/\s+/g, '-')}`,
+          image: getSpeakerAvatarUrl(foundSpeaker.name),
+          linkedin: getSpeakerLinkedInUrl(foundSpeaker.name),
+          twitter: getSpeakerTwitterUrl(foundSpeaker.name),
           tags: ['Blockchain', 'FinTech', 'Innovation'],
           availability: {
             monday: { start: '09:00', end: '17:00' },
@@ -185,6 +212,7 @@ export default function SpeakerDetail() {
     if (!id) return;
     
     loadSpeaker();
+    checkIfCurrentUserIsSpeaker();
     
     // User ticket removed - now using pass system
     
@@ -196,7 +224,65 @@ export default function SpeakerDetail() {
     if (user && speaker) {
       loadMeetingRequestStatus();
       loadCancelledRequests();
+      loadRequestLimits();
     }
+  }, [user, speaker]);
+
+  // Real-time subscription for meeting requests
+  useEffect(() => {
+    if (!user || !speaker) return;
+
+    console.log('🔄 Setting up real-time subscription for meeting requests...');
+    
+    const subscription = supabase
+      .channel('meeting_requests_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'meeting_requests',
+          filter: `requester_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('🔄 Real-time update received:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            // Add new request to UI
+            const newRequest = payload.new;
+            if (newRequest.speaker_id === speaker.id) {
+              setMeetingRequests(prev => [newRequest, ...(Array.isArray(prev) ? prev : [])]);
+              console.log('✅ New meeting request added to UI');
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            // Update existing request in UI
+            const updatedRequest = payload.new;
+            if (updatedRequest.speaker_id === speaker.id) {
+              setMeetingRequests(prev => 
+                (Array.isArray(prev) ? prev : []).map(req => 
+                  req.id === updatedRequest.id ? updatedRequest : req
+                )
+              );
+              console.log('✅ Meeting request updated in UI');
+            }
+          } else if (payload.eventType === 'DELETE') {
+            // Remove deleted request from UI
+            const deletedRequest = payload.old;
+            if (deletedRequest.speaker_id === speaker.id) {
+              setMeetingRequests(prev => 
+                (Array.isArray(prev) ? prev : []).filter(req => req.id !== deletedRequest.id)
+              );
+              console.log('✅ Meeting request removed from UI');
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔄 Cleaning up real-time subscription...');
+      subscription.unsubscribe();
+    };
   }, [user, speaker]);
 
   const loadMeetingRequestStatus = async () => {
@@ -204,12 +290,46 @@ export default function SpeakerDetail() {
 
     setLoadingRequestStatus(true);
     try {
-      console.log('🔄 Loading meeting request status for user:', user.id, 'speaker:', speaker.id);
-      const request = await passSystemService.getMeetingRequestStatus(user.id, speaker.id);
-      console.log('🔄 Meeting request status result:', request);
-      setMeetingRequest(request);
+      console.log('🔄 Loading meeting requests for user:', user.id, 'speaker:', speaker.id);
+      
+      // Use the new function to get all meeting requests for this speaker
+      const { data, error } = await supabase
+        .rpc('get_meeting_requests_for_speaker', {
+          p_user_id: user.id.toString(),
+          p_speaker_id: speaker.id
+        });
+
+      if (error) {
+        console.error('❌ Error loading meeting requests:', error);
+        console.error('❌ Error details:', error.details);
+        console.error('❌ Error hint:', error.hint);
+        
+        // Fallback to direct query
+        console.log('🔄 Trying fallback query...');
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('meeting_requests')
+          .select('*')
+          .eq('requester_id', user.id)
+          .eq('speaker_id', speaker.id)
+          .order('created_at', { ascending: false });
+
+        if (fallbackError) {
+          console.error('❌ Fallback query also failed:', fallbackError);
+          setMeetingRequests([]);
+        } else {
+          console.log('✅ Fallback query result:', fallbackData);
+          setMeetingRequests(fallbackData || []);
+        }
+      } else {
+        console.log('✅ Meeting requests result:', data);
+        // Handle both direct array and wrapped response
+        const requests = Array.isArray(data) ? data : (data?.requests || []);
+        console.log('📊 Number of requests found:', requests.length);
+        setMeetingRequests(requests);
+      }
     } catch (error) {
       console.error('❌ Error in loadMeetingRequestStatus:', error);
+      setMeetingRequests([]);
     } finally {
       setLoadingRequestStatus(false);
     }
@@ -244,78 +364,49 @@ export default function SpeakerDetail() {
     }
   };
 
-  const handleCancelRequest = () => {
-    if (!user || !meetingRequest) return;
+  const handleCancelRequest = (request: any) => {
+    if (!user || !request) return;
+    setSelectedRequestToCancel(request);
     setShowCancelModal(true);
   };
 
+  const handleRequestCardPress = (request: any) => {
+    console.log('🔍 Opening request details:', request);
+    setSelectedRequestDetail(request);
+    setShowRequestDetailModal(true);
+  };
+
   const confirmCancelRequest = async () => {
-    if (!user || !meetingRequest || isCancellingRequest) return;
+    if (!user || !selectedRequestToCancel || isCancellingRequest) return;
 
     setIsCancellingRequest(true);
 
     try {
-      console.log('🔄 Attempting to cancel request:', meetingRequest.id);
+      console.log('🔄 Attempting to cancel request:', selectedRequestToCancel.id);
       console.log('🔄 User ID:', user.id);
       
-      // First, let's check the current request details
-      console.log('🔍 Current meeting request details:', meetingRequest);
-      console.log('🔍 User ID from auth:', user.id);
-      console.log('🔍 Requester ID from request:', meetingRequest.requester_id);
-      console.log('🔍 IDs match?', user.id === meetingRequest.requester_id);
-      
-      // Update the meeting request status to cancelled
-      let { data, error: updateError } = await supabase
-        .from('meeting_requests')
-        .update({ 
-          status: 'cancelled',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', meetingRequest.id)
-        .eq('requester_id', user.id)
-        .select('*');
+      // Use the new RPC function to cancel the meeting request
+      const { data: cancelResult, error: cancelError } = await supabase
+        .rpc('cancel_meeting_request', {
+          p_request_id: selectedRequestToCancel.id.toString(),
+          p_user_id: user.id.toString()
+        });
 
-      console.log('🔄 Update response - data:', data);
-      console.log('🔄 Update response - error:', updateError);
+      console.log('🔄 Cancel response - data:', cancelResult);
+      console.log('🔄 Cancel response - error:', cancelError);
 
-      if (updateError) {
-        console.error('❌ Database update error:', updateError);
-        throw updateError;
+      if (cancelError) {
+        console.error('❌ Cancel function error:', cancelError);
+        throw cancelError;
       }
 
-      if (!data || data.length === 0) {
-        console.error('❌ No rows updated - trying fallback approach');
-        
-        // Try fallback: update without requester_id check (in case of type mismatch)
-        console.log('🔄 Trying fallback update without requester_id check...');
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('meeting_requests')
-          .update({ 
-            status: 'cancelled',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', meetingRequest.id)
-          .select('*');
-
-        console.log('🔄 Fallback response - data:', fallbackData);
-        console.log('🔄 Fallback response - error:', fallbackError);
-
-        if (fallbackError) {
-          console.error('❌ Fallback update also failed:', fallbackError);
-          throw fallbackError;
-        }
-
-        if (!fallbackData || fallbackData.length === 0) {
-          console.error('❌ Fallback update also returned no rows');
-          throw new Error('Request not found or you do not have permission to cancel it');
-        }
-
-        console.log('✅ Fallback update successful:', fallbackData[0]);
-        // Use fallback data for success flow
-        data = fallbackData;
+      if (!cancelResult || !cancelResult.success) {
+        const errorMessage = cancelResult?.error || 'Failed to cancel meeting request';
+        console.error('❌ Cancel failed:', errorMessage);
+        throw new Error(errorMessage);
       }
 
-      console.log('✅ Request cancelled successfully:', data[0]);
+      console.log('✅ Request cancelled successfully:', cancelResult);
 
       // Close the modal first
       setShowCancelModal(false);
@@ -365,120 +456,57 @@ export default function SpeakerDetail() {
     }
   };
 
-  const handleBoostRequest = async () => {
-    if (!user || !meetingRequest) return;
 
-    // Show boost amount picker
-    Alert.alert(
-      'Boost Your Request',
-      'Add VOI boost points to increase your request priority. Higher boost = higher priority!',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: '+5 BOOST',
-          onPress: () => updateRequestBoost(5)
-        },
-        {
-          text: '+10 BOOST',
-          onPress: () => updateRequestBoost(10)
-        },
-        {
-          text: '+25 BOOST',
-          onPress: () => updateRequestBoost(25)
-        },
-        {
-          text: 'Custom Amount',
-          onPress: () => showCustomBoostInput()
-        }
-      ]
-    );
-  };
 
-  const updateRequestBoost = async (boostAmount: number) => {
-    if (!user || !meetingRequest) return;
 
+  const loadRequestLimits = async () => {
+    if (!user || !speaker) return;
+    
     try {
-      console.log('Attempting to boost request:', meetingRequest.id, 'by', boostAmount);
+      console.log('🔄 Loading request limits for user:', user.id, 'speaker:', speaker.id);
       
-      // Update the meeting request with new boost amount
-      const { error } = await supabase
-        .from('meeting_requests')
-        .update({ 
-          boost_amount: meetingRequest.boost_amount + boostAmount,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', meetingRequest.id)
-        .eq('requester_id', user.id);
+      // Use the new function that counts actual meeting requests
+      const { data, error } = await supabase.rpc('get_user_meeting_request_counts', {
+        p_user_id: user.id.toString()
+      });
 
       if (error) {
-        console.error('Boost update failed:', error);
+        console.error('❌ Error calling get_user_meeting_request_counts:', error);
         throw error;
       }
 
-      console.log('Request boosted successfully');
-      showSuccess(
-        'Request Boosted!',
-        `Added +${boostAmount} VOI boost to your request. New total: ${meetingRequest.boost_amount + boostAmount} points.`
-      );
+      console.log('🔄 get_user_meeting_request_counts result:', data);
 
-      // Refresh the request status
-      await loadMeetingRequestStatus();
-      // Refresh request limits
-      await loadRequestLimits();
+      if (data) {
+        setRequestLimits({
+          ticketType: data.pass_type || 'business',
+          totalRequests: data.total_requests || 0,
+          remainingRequests: data.remaining_requests || 0,
+          canSendRequest: (data.remaining_requests || 0) > 0,
+          requestLimit: data.max_requests || 0,
+          reason: data.remaining_requests > 0 ? 'Request allowed' : 'No remaining requests',
+        });
+      } else {
+        // No pass found or other issue
+        setRequestLimits({
+          ticketType: 'business',
+          totalRequests: 0,
+          remainingRequests: 0,
+          canSendRequest: false,
+          requestLimit: 0,
+          reason: 'No active pass found',
+        });
+      }
     } catch (error) {
-      console.error('Error boosting request:', error);
-      showError(
-        'Boost Failed',
-        'Failed to boost your request. Please try again.'
-      );
-    }
-  };
-
-  const showCustomBoostInput = () => {
-    Alert.prompt(
-      'Custom Boost Amount',
-      'Enter the number of VOI boost points to add:',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Add Boost',
-          onPress: (text) => {
-            const amount = parseInt(text || '0');
-            if (amount > 0) {
-              updateRequestBoost(amount);
-            } else {
-              showError('Invalid Amount', 'Please enter a valid boost amount.');
-            }
-          }
-        }
-      ],
-      'plain-text',
-      '',
-      'numeric'
-    );
-  };
-
-  const loadRequestLimits = async () => {
-    if (!user) return;
-    
-    try {
-      const limits = await matchmakingService.getRequestLimitsSummary(user.id);
-      setRequestLimits(limits);
-    } catch (error) {
-      console.error('Error loading request limits:', error);
-      // Set default limits to allow meeting requests even if database is unavailable
+      console.error('❌ Error loading request limits:', error);
+      // Set default limits to prevent meeting requests if database is unavailable
       setRequestLimits({
-        ticketType: 'business', // Default to business, will be replaced by pass system
+        ticketType: 'business',
         totalRequests: 0,
-        remainingRequests: 20, // Default value, will be replaced by pass system
-        canSendRequest: true,
-        requestLimit: 20 // Default value, will be replaced by pass system
+        remainingRequests: 0,
+        canSendRequest: false,
+        requestLimit: 0,
+        reason: 'Error loading request limits',
       });
     }
   };
@@ -575,7 +603,7 @@ export default function SpeakerDetail() {
         meeting_type: 'networking',
         message: '', // No message
         note: '', // No note
-        boost_amount: boostAmount || 0 // Use boost amount from state
+        boost_amount: 0 // No boost system yet
       };
 
       console.log('🔵 Request data to send:', requestData);
@@ -677,23 +705,48 @@ export default function SpeakerDetail() {
         meeting_type: 'networking',
         message: meetingMessage || '', // Allow empty message
         note: getSelectedIntentionsText(),
-        boost_amount: boostAmount,
+        boost_amount: 0, // No boost system yet
       };
 
       const meetingRequest = await matchmakingService.createMeetingRequest(meetingData);
+      
+      // OPTIMISTIC UPDATE: Add the new request to UI immediately
+      if (meetingRequest && meetingRequest.id) {
+        const newRequest = {
+          id: meetingRequest.id,
+          requester_id: user.id,
+          speaker_id: speaker.id,
+          speaker_name: speaker.name,
+          requester_name: user.email || 'Anonymous',
+          requester_company: 'Your Company',
+          requester_title: 'Your Title',
+          requester_ticket_type: 'business',
+          meeting_type: 'networking',
+          message: meetingMessage || '',
+          note: getSelectedIntentionsText(),
+          boost_amount: 0,
+          duration_minutes: 15,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        };
+        
+        // Add to the beginning of the array
+        setMeetingRequests(prev => [newRequest, ...(Array.isArray(prev) ? prev : [])]);
+      }
       
       // Always close modal and reset form on success
       setShowMeetingModal(false);
       setMeetingMessage('');
       setSelectedIntentions([]);
-      setBoostAmount(0);
       
-          // Refresh request limits and meeting request status after sending
-          await loadRequestLimits();
-          await loadMeetingRequestStatus();
+      // Refresh request limits and meeting request status after sending (for data consistency)
+      await loadRequestLimits();
+      await loadMeetingRequestStatus();
       
       // Check if this is a demo response
-      if (meetingRequest && meetingRequest.id && meetingRequest.id.startsWith('demo-')) {
+      if (selectedRequestToCancel && selectedRequestToCancel.id && selectedRequestToCancel.id.startsWith('demo-')) {
         showSuccess(
           'Demo Request Sent! 🎉', 
           `Your demo request has been sent to ${speaker.name}. This is a demonstration - the speaker is not in the database.`
@@ -711,7 +764,6 @@ export default function SpeakerDetail() {
       setShowMeetingModal(false);
       setMeetingMessage('');
       setSelectedIntentions([]);
-      setBoostAmount(0);
       
       // Show specific error messages based on the error type
       if (error instanceof Error) {
@@ -740,80 +792,25 @@ export default function SpeakerDetail() {
     }
   };
 
-  const handleBoostAmountChange = (amount: number) => {
-    setBoostAmount(amount);
-    
-    if (amount > 0) {
-      const calculation = cryptoBoostService.calculateBoost(
-        50, // Base priority
-        amount,
-        'business' // Default to business pass type
-      );
-      setBoostCalculation(calculation);
-    } else {
-      setBoostCalculation(null);
-    }
-  };
-
-  const handleBoostPayment = async () => {
-    if (!user || !speaker) return;
-
-    try {
-      const boostTransaction = await cryptoBoostService.generateBoostTransaction(
-        boostAmount,
-        'USER_WALLET_ADDRESS', // Would come from user's connected wallet
-        'meeting_request_id' // Would be the actual meeting request ID
-      );
-
-      Alert.alert(
-        'Boost Payment Instructions',
-        boostTransaction.instructions,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'I\'ve Sent Payment', 
-            onPress: () => {
-              // In real app, user would paste transaction hash
-              Alert.prompt(
-                'Transaction Hash',
-                'Please enter your transaction hash:',
-                (hash) => {
-                  if (hash) {
-                    verifyBoostTransaction(hash);
-                  }
-                }
-              );
-            }
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('Error generating boost transaction:', error);
-      Alert.alert('Error', 'Failed to generate boost transaction');
-    }
-  };
-
-  const verifyBoostTransaction = async (transactionHash: string) => {
-    try {
-      const result = await cryptoBoostService.verifyTransaction(transactionHash);
-      
-      if (result.isValid) {
-        Alert.alert('Boost Confirmed!', 'Your boost payment has been verified and applied.');
-        setShowBoostModal(false);
-      } else {
-        Alert.alert('Verification Failed', result.error || 'Transaction could not be verified');
-      }
-    } catch (error) {
-      console.error('Error verifying transaction:', error);
-      Alert.alert('Error', 'Failed to verify transaction');
-    }
-  };
 
 
   const handleLinkedIn = () => {
     if (speaker?.social?.linkedin) {
       // In a real app, you'd open the LinkedIn URL
       Alert.alert('LinkedIn', `Opening ${speaker.name}'s LinkedIn profile...`);
+    }
+  };
+
+  const handleSpeakerDashboard = () => {
+    // Check if current user is this speaker
+    if (user && speaker && isCurrentUserSpeaker) {
+      router.push('/events/bsl2025/speakers/dashboard');
+    } else {
+      Alert.alert(
+        'Speaker Dashboard',
+        'This feature is only available to the speaker themselves.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -847,6 +844,25 @@ export default function SpeakerDetail() {
         </View>
       </View>
 
+      {/* Speaker Dashboard Access - Only for the speaker themselves */}
+      {user && isCurrentUserSpeaker && (
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.dashboardButton}
+            onPress={handleSpeakerDashboard}
+          >
+            <View style={styles.dashboardButtonContent}>
+              <MaterialIcons name="dashboard" size={24} color="white" />
+              <View style={styles.dashboardButtonText}>
+                <Text style={styles.dashboardButtonTitle}>Speaker Dashboard</Text>
+                <Text style={styles.dashboardButtonSubtitle}>Manage your meeting requests</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="white" />
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* About Section - First */}
       {speaker.bio && (
         <View style={styles.section}>
@@ -859,140 +875,108 @@ export default function SpeakerDetail() {
       )}
 
         {/* Your Request Status - Show if there's an existing request */}
-        {meetingRequest && (
+        {meetingRequests.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <MaterialIcons name="assignment" size={24} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Your Request Status</Text>
-            </View>
-          
-          <View style={[
-            styles.requestStatusCard,
-            {
-              backgroundColor: meetingRequest.status === 'approved' ? `${colors.primary}10` : 
-                              meetingRequest.status === 'declined' ? `${colors.error}10` : 
-                              `${colors.warning}10`,
-              borderColor: meetingRequest.status === 'approved' ? colors.primary : 
-                          meetingRequest.status === 'declined' ? colors.error.main : 
-                          '#FF9500'
-            }
-          ]}>
-            <View style={styles.requestStatusHeader}>
-              <Text style={[
-                styles.requestStatusTitle,
-                {
-                  color: meetingRequest.status === 'approved' ? colors.primary : 
-                         meetingRequest.status === 'declined' ? colors.error.main : 
-                         '#FF9500'
-                }
-              ]}>
-                {meetingRequest.status === 'approved' ? '✅ Meeting Request Approved' :
-                 meetingRequest.status === 'declined' ? '❌ Meeting Request Declined' :
-                 '⏳ Meeting Request Pending'}
-              </Text>
+              <Text style={styles.sectionTitle}>Your Meeting Requests ({meetingRequests.length})</Text>
+              <TouchableOpacity 
+                onPress={loadMeetingRequestStatus}
+                disabled={loadingRequestStatus}
+                style={styles.refreshButton}
+              >
+                <MaterialIcons 
+                  name="refresh" 
+                  size={20} 
+                  color={loadingRequestStatus ? colors.text.secondary : colors.primary} 
+                />
+              </TouchableOpacity>
             </View>
             
-            <View style={styles.requestDetails}>
-              <View style={styles.requestDetailRow}>
-                <Text style={styles.requestDetailLabel}>Request ID:</Text>
-                <Text style={styles.requestDetailValue}>{meetingRequest.id}</Text>
+            {/* Show scroll hint when there are many requests */}
+            {meetingRequests.length > 2 && (
+              <View style={styles.scrollHint}>
+                <MaterialIcons name="keyboard-arrow-down" size={16} color={colors.text.secondary} />
+                <Text style={styles.scrollHintText}>Scroll to see all requests</Text>
               </View>
-              
-              <View style={styles.requestDetailRow}>
-                <Text style={styles.requestDetailLabel}>Sent:</Text>
-                <Text style={styles.requestDetailValue}>
-                  {new Date(meetingRequest.created_at).toLocaleDateString()}
-                </Text>
-              </View>
-              
-              {meetingRequest.message && (
-                <View style={styles.requestDetailRow}>
-                  <Text style={styles.requestDetailLabel}>Message:</Text>
-                  <Text style={styles.requestDetailValue}>{meetingRequest.message}</Text>
+            )}
+          
+          {/* Scrollable container for meeting requests */}
+          <ScrollView 
+            style={styles.meetingRequestsScrollContainer}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+            contentContainerStyle={styles.scrollContentContainer}
+          >
+            {meetingRequests.map((request, index) => (
+            <TouchableOpacity 
+              key={request.id} 
+              style={[
+                styles.simpleRequestCard,
+                {
+                  backgroundColor: request.status === 'approved' ? `${colors.primary}10` : 
+                                  request.status === 'declined' ? `${colors.error}10` : 
+                                  `${colors.warning}10`,
+                  borderColor: request.status === 'approved' ? colors.primary : 
+                              request.status === 'declined' ? colors.error.main : 
+                              '#FF9500'
+                }
+              ]}
+              onPress={() => handleRequestCardPress(request)}
+            >
+              <View style={styles.simpleRequestHeader}>
+                <View style={styles.simpleRequestInfo}>
+                  <Text style={[
+                    styles.simpleRequestStatus,
+                    {
+                      color: request.status === 'approved' ? colors.primary : 
+                             request.status === 'declined' ? colors.error.main : 
+                             '#FF9500'
+                    }
+                  ]}>
+                    {request.status === 'approved' ? '✅ Approved' :
+                     request.status === 'declined' ? '❌ Declined' :
+                     '⏳ Pending'}
+                  </Text>
+                  <Text style={styles.simpleRequestDate}>
+                    {new Date(request.created_at).toLocaleDateString()}
+                  </Text>
                 </View>
-              )}
-              
-              {meetingRequest.boost_amount > 0 && (
-                <View style={styles.requestDetailRow}>
-                  <Text style={styles.requestDetailLabel}>VOI Boost:</Text>
-                  <Text style={styles.requestDetailValue}>${meetingRequest.boost_amount}</Text>
-                </View>
-              )}
-            </View>
-
-            {meetingRequest.status === 'pending' && (
-              <View style={styles.requestStatusMessage}>
-                <Text style={styles.requestStatusText}>
-                  Your request is waiting for {speaker.name}'s response. You will be notified when they reply.
-                </Text>
                 
-                {/* Request Priority & Boost Info */}
-                <View style={styles.requestPriorityInfo}>
-                  <View style={styles.priorityBadge}>
-                    <MaterialIcons 
-                      name={meetingRequest.requester_ticket_type === 'vip' ? 'star' : 
-                            meetingRequest.requester_ticket_type === 'business' ? 'business' : 'person'} 
-                      size={14} 
-                      color={meetingRequest.requester_ticket_type === 'vip' ? '#FFD700' : 
-                             meetingRequest.requester_ticket_type === 'business' ? '#4CAF50' : colors.text.secondary} 
-                    />
-                    <Text style={[
-                      styles.priorityText,
-                      { color: meetingRequest.requester_ticket_type === 'vip' ? '#FFD700' : 
-                               meetingRequest.requester_ticket_type === 'business' ? '#4CAF50' : colors.text.secondary }
-                    ]}>
-                      {meetingRequest.requester_ticket_type?.toUpperCase() || 'GENERAL'}
-                    </Text>
-                  </View>
-                  
-                  {meetingRequest.boost_amount > 0 && (
-                    <View style={styles.boostBadge}>
-                      <MaterialIcons name="flash-on" size={14} color="#FF6B35" />
-                      <Text style={styles.boostText}>
-                        +{meetingRequest.boost_amount} BOOST
-                      </Text>
-                    </View>
+                <View style={styles.simpleRequestActions}>
+                  {request.status === 'pending' && (
+                    <TouchableOpacity
+                      style={styles.simpleCancelButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleCancelRequest(request);
+                      }}
+                    >
+                      <MaterialIcons name="close" size={16} color={colors.error.main} />
+                    </TouchableOpacity>
                   )}
-                </View>
-
-                {/* Action Buttons */}
-                <View style={styles.requestActions}>
-                  <TouchableOpacity
-                    style={styles.boostButton}
-                    onPress={() => handleBoostRequest()}
-                  >
-                    <MaterialIcons name="flash-on" size={16} color="#FF6B35" />
-                    <Text style={styles.boostButtonText}>Boost Request</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={handleCancelRequest}
-                  >
-                    <MaterialIcons name="close" size={16} color="white" />
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                  </TouchableOpacity>
+                  <MaterialIcons name="chevron-right" size={20} color={colors.text.secondary} />
                 </View>
               </View>
-            )}
-
-            {meetingRequest.status === 'approved' && (
-              <View style={[styles.requestStatusMessage, { borderColor: colors.primary }]}>
-                <Text style={styles.requestStatusText}>
-                  🎉 Great! {speaker.name} has approved your meeting request. Check your notifications for meeting details.
+              
+              {request.message && (
+                <Text style={styles.simpleRequestMessage} numberOfLines={2}>
+                  {request.message}
                 </Text>
-              </View>
-            )}
-
-            {meetingRequest.status === 'declined' && (
-              <View style={[styles.requestStatusMessage, { borderColor: colors.error.main }]}>
-                <Text style={styles.requestStatusText}>
-                  {speaker.name} has declined your meeting request. You can try requesting a meeting with other speakers.
-                </Text>
-              </View>
-            )}
-
-          </View>
+              )}
+              
+              {request.note && (
+                <View style={styles.simpleRequestIntentions}>
+                  <Text style={styles.simpleRequestIntentionsLabel}>Intentions:</Text>
+                  <Text style={styles.simpleRequestIntentionsText} numberOfLines={1}>
+                    {request.note.split('; ').slice(0, 2).join(', ')}
+                    {request.note.split('; ').length > 2 && '...'}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       )}
 
@@ -1001,10 +985,16 @@ export default function SpeakerDetail() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MaterialIcons name="history" size={24} color={colors.text.secondary} />
-            <Text style={styles.sectionTitle}>Request History</Text>
+            <Text style={styles.sectionTitle}>Request History ({cancelledRequests.length})</Text>
           </View>
           
-          <View style={styles.cancelledRequestsList}>
+          {/* Scrollable container for cancelled requests */}
+          <ScrollView 
+            style={styles.cancelledRequestsScrollContainer}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+            contentContainerStyle={styles.scrollContentContainer}
+          >
             {cancelledRequests.map((request, index) => (
               <View key={request.id} style={styles.cancelledRequestCard}>
                 <View style={styles.cancelledRequestHeader}>
@@ -1039,7 +1029,7 @@ export default function SpeakerDetail() {
                 </View>
               </View>
             ))}
-          </View>
+          </ScrollView>
         </View>
       )}
 
@@ -1047,7 +1037,6 @@ export default function SpeakerDetail() {
       <PassesDisplay
         mode="speaker"
         speakerId={speaker.id}
-        boostAmount={boostAmount}
         showRequestButton={true}
         onRequestPress={handleRequestMeeting}
         onPassInfoLoaded={(passInfo) => {
@@ -1249,55 +1238,6 @@ export default function SpeakerDetail() {
               </View>
             </View>
 
-            {/* Boost Section */}
-            <View style={styles.boostSection}>
-              <View style={styles.boostHeader}>
-                <MaterialIcons name="trending-up" size={20} color="#FF2D92" />
-                <Text style={styles.boostTitle}>Boost Your Request</Text>
-              </View>
-              <Text style={styles.boostDescription}>
-                Send $VOI tokens to increase your priority in the speaker's queue
-              </Text>
-
-              <View style={styles.boostAmounts}>
-                {[5, 10, 25, 50].map((amount) => (
-                  <TouchableOpacity
-                    key={amount}
-                    style={[
-                      styles.boostAmountButton,
-                      boostAmount === amount && styles.boostAmountButtonActive
-                    ]}
-                    onPress={() => handleBoostAmountChange(amount)}
-                  >
-                    <Text style={[
-                      styles.boostAmountText,
-                      boostAmount === amount && styles.boostAmountTextActive
-                    ]}>
-                      {amount} $VOI
-                    </Text>
-                    <Text style={[
-                      styles.boostAmountUSD,
-                      boostAmount === amount && styles.boostAmountUSDActive
-                    ]}>
-                      ${(amount * 0.05).toFixed(2)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {boostCalculation && (
-                <View style={styles.boostCalculation}>
-                  <Text style={styles.boostCalculationTitle}>Boost Effect:</Text>
-                  <Text style={styles.boostCalculationText}>
-                    Priority Score: {boostCalculation.finalPriority} 
-                    (Est. Position: #{boostCalculation.estimatedPosition})
-                  </Text>
-                  <Text style={styles.boostCalculationCost}>
-                    Cost: {cryptoBoostService.formatBoostCost(boostAmount)}
-                  </Text>
-                </View>
-              )}
-            </View>
           </ScrollView>
 
           <View style={styles.modalFooter}>
@@ -1377,6 +1317,176 @@ export default function SpeakerDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Request Detail Modal */}
+      <Modal
+        visible={showRequestDetailModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowRequestDetailModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowRequestDetailModal(false)}
+            >
+              <MaterialIcons name="close" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Meeting Request Details</Text>
+            <View style={styles.modalHeaderSpacer} />
+          </View>
+
+          {selectedRequestDetail && (
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              {/* Request Status */}
+              <View style={[
+                styles.detailStatusCard,
+                {
+                  backgroundColor: selectedRequestDetail.status === 'approved' ? `${colors.primary}10` : 
+                                  selectedRequestDetail.status === 'declined' ? `${colors.error}10` : 
+                                  `${colors.warning}10`,
+                  borderColor: selectedRequestDetail.status === 'approved' ? colors.primary : 
+                              selectedRequestDetail.status === 'declined' ? colors.error.main : 
+                              '#FF9500'
+                }
+              ]}>
+                <View style={styles.detailStatusHeader}>
+                  <MaterialIcons 
+                    name={selectedRequestDetail.status === 'approved' ? 'check-circle' : 
+                          selectedRequestDetail.status === 'declined' ? 'cancel' : 
+                          'schedule'} 
+                    size={24} 
+                    color={selectedRequestDetail.status === 'approved' ? colors.primary : 
+                           selectedRequestDetail.status === 'declined' ? colors.error.main : 
+                           '#FF9500'} 
+                  />
+                  <Text style={[
+                    styles.detailStatusTitle,
+                    {
+                      color: selectedRequestDetail.status === 'approved' ? colors.primary : 
+                             selectedRequestDetail.status === 'declined' ? colors.error.main : 
+                             '#FF9500'
+                    }
+                  ]}>
+                    {selectedRequestDetail.status === 'approved' ? 'Meeting Request Approved' :
+                     selectedRequestDetail.status === 'declined' ? 'Meeting Request Declined' :
+                     'Meeting Request Pending'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Request Information */}
+              <View style={styles.detailInfoSection}>
+                <Text style={styles.detailSectionTitle}>Request Information</Text>
+                
+                <View style={styles.detailInfoRow}>
+                  <Text style={styles.detailInfoLabel}>Request ID:</Text>
+                  <Text style={styles.detailInfoValue}>{selectedRequestDetail.id}</Text>
+                </View>
+                
+                <View style={styles.detailInfoRow}>
+                  <Text style={styles.detailInfoLabel}>Speaker:</Text>
+                  <Text style={styles.detailInfoValue}>{selectedRequestDetail.speaker_name}</Text>
+                </View>
+                
+                <View style={styles.detailInfoRow}>
+                  <Text style={styles.detailInfoLabel}>Meeting Type:</Text>
+                  <Text style={styles.detailInfoValue}>{selectedRequestDetail.meeting_type}</Text>
+                </View>
+                
+                <View style={styles.detailInfoRow}>
+                  <Text style={styles.detailInfoLabel}>Duration:</Text>
+                  <Text style={styles.detailInfoValue}>{selectedRequestDetail.duration_minutes} minutes</Text>
+                </View>
+                
+                <View style={styles.detailInfoRow}>
+                  <Text style={styles.detailInfoLabel}>Sent:</Text>
+                  <Text style={styles.detailInfoValue}>
+                    {new Date(selectedRequestDetail.created_at).toLocaleString()}
+                  </Text>
+                </View>
+                
+                <View style={styles.detailInfoRow}>
+                  <Text style={styles.detailInfoLabel}>Expires:</Text>
+                  <Text style={styles.detailInfoValue}>
+                    {new Date(selectedRequestDetail.expires_at).toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Message */}
+              {selectedRequestDetail.message && (
+                <View style={styles.detailInfoSection}>
+                  <Text style={styles.detailSectionTitle}>Your Message</Text>
+                  <Text style={styles.detailMessage}>{selectedRequestDetail.message}</Text>
+                </View>
+              )}
+
+              {/* Note/Intentions */}
+              {selectedRequestDetail.note && (
+                <View style={styles.detailInfoSection}>
+                  <Text style={styles.detailSectionTitle}>Meeting Intentions</Text>
+                  <View style={styles.detailIntentionsContainer}>
+                    {selectedRequestDetail.note.split('; ').map((intention: string, index: number) => (
+                      <View key={index} style={styles.detailIntentionItem}>
+                        <Text style={styles.detailIntentionText}>{intention.trim()}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Status-specific content */}
+              {selectedRequestDetail.status === 'pending' && (
+                <View style={styles.detailInfoSection}>
+                  <Text style={styles.detailSectionTitle}>What's Next?</Text>
+                  <Text style={styles.detailMessage}>
+                    Your meeting request is waiting for {selectedRequestDetail.speaker_name}'s response. 
+                    You will be notified when they reply. You can cancel this request at any time.
+                  </Text>
+                </View>
+              )}
+
+              {selectedRequestDetail.status === 'approved' && (
+                <View style={styles.detailInfoSection}>
+                  <Text style={styles.detailSectionTitle}>Great News! 🎉</Text>
+                  <Text style={styles.detailMessage}>
+                    {selectedRequestDetail.speaker_name} has approved your meeting request! 
+                    Check your notifications for meeting details and next steps.
+                  </Text>
+                </View>
+              )}
+
+              {selectedRequestDetail.status === 'declined' && (
+                <View style={styles.detailInfoSection}>
+                  <Text style={styles.detailSectionTitle}>Request Declined</Text>
+                  <Text style={styles.detailMessage}>
+                    {selectedRequestDetail.speaker_name} has declined this meeting request. 
+                    You can try requesting a meeting with other speakers.
+                  </Text>
+                </View>
+              )}
+
+              {/* Action Buttons */}
+              {selectedRequestDetail.status === 'pending' && (
+                <View style={styles.detailActions}>
+                  <TouchableOpacity
+                    style={styles.detailCancelButton}
+                    onPress={() => {
+                      setShowRequestDetailModal(false);
+                      handleCancelRequest(selectedRequestDetail);
+                    }}
+                  >
+                    <MaterialIcons name="close" size={20} color="white" />
+                    <Text style={styles.detailCancelButtonText}>Cancel Request</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -1440,6 +1550,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 12,
   },
   sectionTitle: {
@@ -1447,6 +1558,14 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontWeight: '600',
     color: colors.text.primary,
     marginLeft: 8,
+    flex: 1,
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: colors.background.paper,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
   sectionSubtitle: {
     fontSize: 14,
@@ -1837,87 +1956,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: '#007AFF',
     fontWeight: '500',
   },
-  boostSection: {
-    backgroundColor: colors.background.paper,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  boostHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  boostTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginLeft: 8,
-  },
-  boostDescription: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginBottom: 16,
-  },
-  boostAmounts: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
-  },
-  boostAmountButton: {
-    backgroundColor: colors.background.default,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    alignItems: 'center',
-    minWidth: 80,
-  },
-  boostAmountButtonActive: {
-    backgroundColor: '#FF2D92',
-    borderColor: '#FF2D92',
-  },
-  boostAmountText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text.primary,
-  },
-  boostAmountTextActive: {
-    color: '#FFFFFF',
-  },
-  boostAmountUSD: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    marginTop: 2,
-  },
-  boostAmountUSDActive: {
-    color: '#FFFFFF',
-  },
-  boostCalculation: {
-    backgroundColor: colors.background.default,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  boostCalculationTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: 4,
-  },
-  boostCalculationText: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginBottom: 4,
-  },
-  boostCalculationCost: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#FF2D92',
-  },
   modalFooter: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -1945,6 +1983,210 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     marginTop: 12,
+  },
+  meetingRequestsScrollContainer: {
+    maxHeight: 400, // Maximum height for the scrollable area
+    paddingRight: 4, // Add some padding for the scroll indicator
+  },
+  scrollContentContainer: {
+    paddingBottom: 8, // Add some bottom padding for better scrolling experience
+  },
+  scrollHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    paddingVertical: 4,
+    backgroundColor: colors.background.paper,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  scrollHintText: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    marginLeft: 4,
+    fontStyle: 'italic',
+  },
+  // Simple Request Card Styles
+  simpleRequestCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  simpleRequestHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  simpleRequestInfo: {
+    flex: 1,
+  },
+  simpleRequestStatus: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  simpleRequestDate: {
+    fontSize: 12,
+    color: colors.text.secondary,
+  },
+  simpleRequestActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  simpleCancelButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: `${colors.error.main}10`,
+  },
+  simpleRequestMessage: {
+    fontSize: 14,
+    color: colors.text.primary,
+    lineHeight: 18,
+  },
+  simpleRequestIntentions: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  simpleRequestIntentionsLabel: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  simpleRequestIntentionsText: {
+    fontSize: 12,
+    color: colors.text.primary,
+    lineHeight: 16,
+  },
+  // Detail Modal Styles
+  detailStatusCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  detailStatusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailStatusTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 12,
+  },
+  detailInfoSection: {
+    marginBottom: 24,
+  },
+  detailSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 12,
+  },
+  detailInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    paddingVertical: 4,
+  },
+  detailInfoLabel: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    flex: 1,
+  },
+  detailInfoValue: {
+    fontSize: 14,
+    color: colors.text.primary,
+    flex: 2,
+    textAlign: 'right',
+    fontWeight: '500',
+  },
+  detailMessage: {
+    fontSize: 14,
+    color: colors.text.primary,
+    lineHeight: 20,
+    backgroundColor: colors.background.paper,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  detailIntentionsContainer: {
+    gap: 8,
+  },
+  detailIntentionItem: {
+    backgroundColor: colors.background.paper,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+  },
+  detailIntentionText: {
+    fontSize: 14,
+    color: colors.text.primary,
+    lineHeight: 18,
+  },
+  detailActions: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  detailCancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.error.main,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  detailCancelButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalCloseButton: {
+    padding: 8,
+    borderRadius: 8,
+  },
+  modalHeaderSpacer: {
+    width: 40, // Same width as close button to center the title
+  },
+  // Speaker Dashboard Button Styles
+  dashboardButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+  },
+  dashboardButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dashboardButtonText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  dashboardButtonTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  dashboardButtonSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
   },
   requestStatusHeader: {
     marginBottom: 12,
@@ -2010,55 +2252,11 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     marginLeft: 4,
     letterSpacing: 0.5,
   },
-  boostBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FF6B3510',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FF6B35',
-  },
-  boostText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FF6B35',
-    marginLeft: 4,
-    letterSpacing: 0.5,
-  },
   // Action Buttons Styles
   requestActions: {
     flexDirection: 'row',
     gap: 12,
     marginTop: 8,
-  },
-  boostButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#FF6B35',
-    shadowColor: '#FF6B35',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  boostButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: 'white',
-    marginLeft: 6,
-    letterSpacing: 0.5,
   },
   cancelButton: {
     flex: 1,
@@ -2203,6 +2401,10 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   // Cancelled Requests History Styles
   cancelledRequestsList: {
     gap: 12,
+  },
+  cancelledRequestsScrollContainer: {
+    maxHeight: 300, // Maximum height for the cancelled requests scrollable area
+    paddingRight: 4, // Add some padding for the scroll indicator
   },
   cancelledRequestCard: {
     backgroundColor: colors.background.paper,

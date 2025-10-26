@@ -10,6 +10,7 @@ import { ThemeProvider } from '../providers/ThemeProvider';
 import { LanguageProvider } from '../providers/LanguageProvider';
 import { EventProvider } from '../contexts/EventContext';
 import { ToastProvider } from '../contexts/ToastContext';
+import { ScrollProvider } from '../contexts/ScrollContext';
 import { useTheme, useThemeProvider } from '../hooks/useTheme';
 import { StatusBar } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
@@ -34,7 +35,9 @@ export default function RootLayout() {
           <EventProvider>
             <LanguageProvider>
               <ToastProvider>
-                <ThemedContent />
+                <ScrollProvider>
+                  <ThemedContent />
+                </ScrollProvider>
               </ToastProvider>
             </LanguageProvider>
           </EventProvider>

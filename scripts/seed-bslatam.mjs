@@ -20,7 +20,7 @@ async function main() {
   const raw = fs.readFileSync(fileArg, 'utf-8');
   const speakers = JSON.parse(raw);
   for (const s of speakers) {
-    const { error } = await supabase.from('BSL_Speakers').upsert({
+    const { error } = await supabase.from('bsl_speakers').upsert({
       id: s.id,
       name: s.name,
       title: s.title,

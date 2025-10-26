@@ -693,18 +693,18 @@ export default function PassesDisplay({
       }}>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text.primary }}>
-            {passInfo.remaining_requests}
+            {passInfo.pass_type === 'general' ? '5' : passInfo.pass_type === 'business' ? '20' : '50'}
           </Text>
           <Text style={{ fontSize: 12, color: colors.text.secondary, textAlign: 'center' }}>
-            Requests Left
+            Meeting Requests
           </Text>
         </View>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text.primary }}>
-            {passInfo.remaining_boost.toFixed(0)}
+            {passInfo.pass_type === 'general' ? '100' : passInfo.pass_type === 'business' ? '300' : '500'}
           </Text>
           <Text style={{ fontSize: 12, color: colors.text.secondary, textAlign: 'center' }}>
-            VOI Boost Left
+            VOI Boost
           </Text>
         </View>
       </View>
@@ -771,11 +771,11 @@ export default function PassesDisplay({
               }}>
                 Your Current Pass: {getPassTypeDisplayName(passInfo.pass_type)}
               </Text>
-              <Text style={{ 
+              <Text style={{
                 fontSize: 12, 
                 color: colors.text.secondary
               }}>
-                {passInfo.remaining_requests} requests left • {passInfo.remaining_boost.toFixed(0)} VOI boost left
+                {passInfo.pass_type === 'general' ? '5' : passInfo.pass_type === 'business' ? '20' : '50'} meeting requests • {passInfo.pass_type === 'general' ? '100' : passInfo.pass_type === 'business' ? '300' : '500'} VOI boost
               </Text>
             </View>
           )}
@@ -905,17 +905,17 @@ export default function PassesDisplay({
       {passInfo && requestLimits && (
         <View style={{ 
           padding: 12,
-          backgroundColor: requestLimits.can_request ? `${colors.primary}10` : `${colors.error}10`,
+          backgroundColor: requestLimits.canSendRequest ? `${colors.primary}10` : `${colors.error}10`,
           borderRadius: 8,
           marginBottom: 16
         }}>
           <Text style={{ 
             fontSize: 14, 
             fontWeight: '600', 
-            color: requestLimits.can_request ? colors.primary : colors.error.main,
+            color: requestLimits.canSendRequest ? colors.primary : colors.error.main,
             marginBottom: 4
           }}>
-            {requestLimits.can_request ? '✅ Can Request Meeting' : '❌ Cannot Request Meeting'}
+            {requestLimits.canSendRequest ? '✅ Can Request Meeting' : '❌ Cannot Request Meeting'}
           </Text>
           <Text style={{ 
             fontSize: 12, 
@@ -930,23 +930,23 @@ export default function PassesDisplay({
       {showRequestButton && onRequestPress && (
         <TouchableOpacity
           style={{
-            backgroundColor: (passInfo && requestLimits?.can_request) ? colors.primary : colors.divider,
+            backgroundColor: (passInfo && requestLimits?.canSendRequest) ? colors.primary : colors.divider,
             paddingVertical: 12,
             paddingHorizontal: 24,
             borderRadius: 8,
             alignItems: 'center',
-            opacity: (passInfo && requestLimits?.can_request) ? 1 : 0.5
+            opacity: (passInfo && requestLimits?.canSendRequest) ? 1 : 0.5
           }}
-          onPress={(passInfo && requestLimits?.can_request) ? onRequestPress : undefined}
-          disabled={!passInfo || !requestLimits?.can_request}
+          onPress={(passInfo && requestLimits?.canSendRequest) ? onRequestPress : undefined}
+          disabled={!passInfo || !requestLimits?.canSendRequest}
         >
           <Text style={{ 
-            color: (passInfo && requestLimits?.can_request) ? 'white' : colors.text.secondary,
+            color: (passInfo && requestLimits?.canSendRequest) ? 'white' : colors.text.secondary,
             fontSize: 16,
             fontWeight: '600'
           }}>
             {!passInfo ? 'Pass Required' : 
-             !requestLimits?.can_request ? 'Limit Reached' :
+             !requestLimits?.canSendRequest ? 'Limit Reached' :
              'Request Meeting'}
           </Text>
         </TouchableOpacity>
@@ -1139,18 +1139,18 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
       }}>
         <View style={{ alignItems: 'center' }}>
           <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text.primary }}>
-            {pass.remaining_requests}
+            {pass.pass_type === 'general' ? '5' : pass.pass_type === 'business' ? '20' : '50'}
           </Text>
           <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
-            Requests Left
+            Meeting Requests
           </Text>
         </View>
         <View style={{ alignItems: 'center' }}>
           <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text.primary }}>
-            {pass.remaining_boost.toFixed(0)}
+            {pass.pass_type === 'general' ? '100' : pass.pass_type === 'business' ? '300' : '500'}
           </Text>
           <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
-            VOI Boost Left
+            VOI Boost
           </Text>
         </View>
       </View>

@@ -22,8 +22,8 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202510151510,
-  releaseDate: '2025-10-15',
+  buildNumber: 202510181800,
+  releaseDate: '2025-10-18',
   releaseType: 'beta',
   environment: 'development',
   features: [
@@ -36,7 +36,18 @@ export const CURRENT_VERSION: VersionInfo = {
     'Event banner component',
     'Pass card UI with BSL branding',
     'Agenda tabbed interface',
-    'Real-time countdown system'
+    'Real-time countdown system',
+    'Meeting request system with Supabase integration',
+    'Speaker availability and booking system',
+    'NEW: Complete networking center with horizontal scrolling',
+    'NEW: My Requests view for managing sent meeting requests',
+    'NEW: My Schedule view for scheduled meetings',
+    'NEW: System Analytics with comprehensive statistics',
+    'NEW: Blocked Users management system',
+    'NEW: Horizontal scrolling quick access menu',
+    'NEW: Enhanced networking statistics and insights',
+    'NEW: Speaker dashboard for incoming request management',
+    'NEW: Real-time networking activity tracking'
   ],
   bugfixes: [
     'Fixed SVG logo rendering issues',
@@ -47,14 +58,122 @@ export const CURRENT_VERSION: VersionInfo = {
     'Resolved navigation routing problems',
     'Fixed Lambda deployment parameter issues',
     'Updated AWS SDK to v3 for better performance',
-    'Resolved CloudFormation stack deployment errors'
+    'Resolved CloudFormation stack deployment errors',
+    'Fixed 404 errors in Supabase database functions',
+    'Resolved UUID/TEXT type mismatch in meeting request system',
+    'Fixed can_make_meeting_request function type casting issues',
+    'Updated database functions to handle mixed column types properly',
+    'Fixed React Navigation headerBackTitleVisible property error',
+    'Fixed headerStyle borderBottomWidth property error',
+    'Fixed pass number display showing "unknown" in explorer view',
+    'Fixed speaker dashboard loading stuck issue',
+    'Fixed get_speaker_meeting_requests SQL GROUP BY error',
+    'Improved networking icon visibility in quick access menu'
   ],
   breakingChanges: [],
-  notes: 'UI display fixes and automatic version management'
+  notes: 'Fixed critical 404 errors in Supabase meeting request system and resolved database type mismatches'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.2.3': {
+    version: '1.2.3',
+    buildNumber: 202510181800,
+    releaseDate: '2025-10-18',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'NEW: Complete networking center with horizontal scrolling',
+      'NEW: My Requests view for managing sent meeting requests',
+      'NEW: My Schedule view for scheduled meetings',
+      'NEW: System Analytics with comprehensive statistics',
+      'NEW: Blocked Users management system',
+      'NEW: Horizontal scrolling quick access menu',
+      'NEW: Enhanced networking statistics and insights',
+      'NEW: Speaker dashboard for incoming request management',
+      'NEW: Real-time networking activity tracking'
+    ],
+    bugfixes: [
+      'Fixed React Navigation headerBackTitleVisible property error',
+      'Fixed headerStyle borderBottomWidth property error',
+      'Fixed pass number display showing "unknown" in explorer view',
+      'Fixed speaker dashboard loading stuck issue',
+      'Fixed get_speaker_meeting_requests SQL GROUP BY error',
+      'Improved networking icon visibility in quick access menu'
+    ],
+    breakingChanges: [],
+    notes: 'Major networking system update with comprehensive meeting request management and analytics'
+  },
+  '1.2.2': {
+    version: '1.2.2',
+    buildNumber: 202510151600,
+    releaseDate: '2025-10-15',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'User pass management system',
+      'BSL 2025 event integration',
+      'Speaker profile system with avatars',
+      'Event agenda with live updates',
+      'Unified search and filter system',
+      'Dark mode support',
+      'Event banner component',
+      'Pass card UI with BSL branding',
+      'Agenda tabbed interface',
+      'Real-time countdown system',
+      'Meeting request system with Supabase integration',
+      'Speaker availability and booking system'
+    ],
+    bugfixes: [
+      'Fixed SVG logo rendering issues',
+      'Resolved TypeScript undefined property errors',
+      'Fixed agenda data grouping logic',
+      'Corrected speaker count discrepancies',
+      'Fixed dark mode contrast issues',
+      'Resolved navigation routing problems',
+      'Fixed Lambda deployment parameter issues',
+      'Updated AWS SDK to v3 for better performance',
+      'Resolved CloudFormation stack deployment errors',
+      'Fixed 404 errors in Supabase database functions',
+      'Resolved UUID/TEXT type mismatch in meeting request system',
+      'Fixed can_make_meeting_request function type casting issues',
+      'Updated database functions to handle mixed column types properly'
+    ],
+    breakingChanges: [],
+    notes: 'Fixed critical 404 errors in Supabase meeting request system and resolved database type mismatches'
+  },
+  '1.2.1': {
+    version: '1.2.1',
+    buildNumber: 202510151510,
+    releaseDate: '2025-10-15',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'User pass management system',
+      'BSL 2025 event integration',
+      'Speaker profile system with avatars',
+      'Event agenda with live updates',
+      'Unified search and filter system',
+      'Dark mode support',
+      'Event banner component',
+      'Pass card UI with BSL branding',
+      'Agenda tabbed interface',
+      'Real-time countdown system'
+    ],
+    bugfixes: [
+      'Fixed SVG logo rendering issues',
+      'Resolved TypeScript undefined property errors',
+      'Fixed agenda data grouping logic',
+      'Corrected speaker count discrepancies',
+      'Fixed dark mode contrast issues',
+      'Resolved navigation routing problems',
+      'Fixed Lambda deployment parameter issues',
+      'Updated AWS SDK to v3 for better performance',
+      'Resolved CloudFormation stack deployment errors'
+    ],
+    breakingChanges: [],
+    notes: 'UI display fixes and automatic version management'
+  },
   '1.1.9': {
     version: '1.1.9',
     buildNumber: 202510151510,

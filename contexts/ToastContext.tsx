@@ -74,11 +74,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     const baseStyles = {
       backgroundColor: colors.background.paper,
       borderLeftWidth: 4,
-      shadowColor: isDark ? '#000' : '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 8,
+      // Shadow will be applied via className in the component
     };
 
     switch (type) {
@@ -228,7 +224,7 @@ const ToastItem: React.FC<ToastItemProps> = ({
         },
       ]}
     >
-      <View style={[styles.toast, toastStyles]}>
+      <View style={[styles.toast, toastStyles]} className="shadow-lg">
         <View style={styles.toastContent}>
           <View style={styles.toastHeader}>
             <MaterialIcons
@@ -295,14 +291,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     minHeight: 60,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    // Shadow is now handled by className in the component
   },
   toastContent: {
     flex: 1,

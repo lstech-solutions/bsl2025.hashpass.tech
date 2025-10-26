@@ -193,14 +193,7 @@ export default function PassesDisplay({
 
     // Dashboard mode with pass - show as horizontal scrollable cards
     return (
-      <View style={{ 
-        padding: 20, 
-        backgroundColor: colors.background.paper,
-        borderRadius: 12,
-        margin: 16,
-        borderWidth: 1,
-        borderColor: colors.divider
-      }}>
+      <View>
         {showTitle && (
           <Text style={{ 
             fontSize: 18, 
@@ -970,10 +963,10 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
 
   const getPassTypeLabel = (type: string) => {
     switch (type) {
-      case 'business': return 'Business Pass';
-      case 'vip': return 'VIP Pass';
-      case 'general': return 'General Pass';
-      default: return 'Event Pass';
+      case 'business': return 'Business';
+      case 'vip': return 'VIP';
+      case 'general': return 'General';
+      default: return 'Event';
     }
   };
 
@@ -1002,35 +995,58 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
       borderWidth: 1,
       borderColor: colors.divider,
       shadowColor: colors.text.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 5,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+      elevation: 3,
       overflow: 'hidden',
+      marginBottom: 24, // Increased bottom margin for better spacing
+      marginHorizontal: 4
     }}>
       {/* Ticket Header */}
       <View style={{
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
-        paddingBottom: 12,
+        padding: 14,
+        paddingBottom: 10,
         borderBottomWidth: 1,
         borderBottomColor: colors.divider
       }}>
-        <View>
-          <Text style={{ fontSize: 12, color: colors.text.secondary, marginBottom: 2 }}>
-            Nov 12-14, 2025
+        <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
+          <Text 
+            style={{ 
+              fontSize: 12,
+              fontWeight: '700',
+              color: colors.text.primary,
+              maxWidth: '100%',
+              flexShrink: 1,
+              lineHeight: 16,
+              letterSpacing: -0.1,
+              marginBottom: 1
+            }}
+            numberOfLines={1}
+            ellipsizeMode="middle"
+            minimumFontScale={0.8}
+            adjustsFontSizeToFit
+          >
+            {getPassTypeLabel(pass.pass_type)} Pass
           </Text>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary }}>
-            {getPassTypeLabel(pass.pass_type)}
+          <Text style={{ 
+            fontSize: 9, 
+            color: colors.text.secondary,
+            opacity: 0.8
+          }}>
+            Nov 12-14, 2025
           </Text>
         </View>
         <View style={{
-          paddingHorizontal: 12,
-          paddingVertical: 6,
+          paddingHorizontal: 10,
+          paddingVertical: 4,
           backgroundColor: getPassTypeColor(pass.pass_type),
-          borderRadius: 16
+          borderRadius: 16,
+          marginLeft: 8, // Add some spacing between title and badge
+          flexShrink: 0 // Prevent badge from shrinking
         }}>
           <Text style={{ 
             fontSize: 12, 
@@ -1079,11 +1095,19 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             }}>
               {getPassAccess(pass.pass_type)}
             </Text>
-            <Text style={{ 
-              fontSize: 12, 
-              color: colors.text.secondary 
-            }}>
-              Pass #{pass.pass_number}
+            <Text 
+              style={{ 
+                fontSize: 12, 
+                color: colors.text.secondary,
+                maxWidth: 120,
+                fontFamily: 'monospace' // Use monospace for better character alignment
+              }}
+              numberOfLines={1}
+              ellipsizeMode="head"
+            >
+              {pass.pass_number.length > 12 
+                ? `#${pass.pass_number.slice(0, 6)}...${pass.pass_number.slice(-4)}` 
+                : `#${pass.pass_number}}`}
             </Text>
           </View>
           <View style={{

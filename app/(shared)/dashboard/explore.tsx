@@ -209,7 +209,7 @@ export default function ExploreScreen() {
         </View>
 
         {/* User Passes */}
-        <View style={styles.section}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
           <Text style={styles.sectionTitle}>Your Pass</Text>
           <PassesDisplay 
             mode="dashboard"

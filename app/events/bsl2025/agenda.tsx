@@ -186,7 +186,7 @@ export default function BSL2025AgendaScreen() {
     };
 
     loadAgenda();
-  }, [event.agenda]);
+  }, [event?.agenda]);
 
   // Ensure filteredAgenda is populated when agenda loads
   useEffect(() => {

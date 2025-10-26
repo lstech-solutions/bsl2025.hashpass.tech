@@ -606,14 +606,6 @@ export default function BSL2025AgendaScreen() {
       )}
 
 
-      {/* Service Status Warning - Below tabs */}
-      {!loading && !isLive && serviceStatus === 'stopped' && (
-        <View style={styles.serviceWarningContainer}>
-          <MaterialIcons name="warning" size={16} color={colors.warning.main} />
-          <Text style={styles.serviceWarningText}>Agenda monitoring service is not running</Text>
-        </View>
-      )}
-
       {/* Unified Search and Filter Section */}
       {!loading && agenda.length > 0 && (
         <UnifiedSearchAndFilter
@@ -702,17 +694,17 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   tabScrollContent: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    height: 110, // Fixed height for scroll container
+    height: 100, // Slightly reduced height for mobile
     paddingHorizontal: 8,
   },
   tab: {
-    width: 140, // Fixed width for all tabs
-    height: 90, // Fixed height for all tabs
+    width: 120, // Reduced width for mobile
+    height: 80, // Reduced height for mobile
     paddingHorizontal: 4,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: 6,
+    paddingBottom: 6,
     marginHorizontal: 4,
     borderRadius: 8,
     backgroundColor: colors.background.paper,
@@ -723,6 +715,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    minWidth: 100, // Minimum width for touch targets
   },
   activeTab: {
     backgroundColor: '#007AFF',
@@ -733,48 +726,48 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     elevation: 4,
   },
   tabLabel: {
-    fontSize: 13,
+    fontSize: 12, // Slightly smaller font for mobile
     fontWeight: '600',
     color: colors.text.primary,
     textAlign: 'center',
     width: '100%',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    paddingHorizontal: 4,
-    height: 18, // Fixed height
-    lineHeight: 16,
+    paddingHorizontal: 2, // Reduced padding
+    height: 16, // Reduced height
+    lineHeight: 14, // Adjusted line height
   },
   activeTabLabel: {
     color: '#FFFFFF',
   },
   tabTheme: {
-    fontSize: 10,
+    fontSize: 9, // Slightly smaller font for mobile
     color: colors.text.secondary,
     fontWeight: '500',
     textAlign: 'center',
     width: '100%',
-    height: 14, // Fixed height
-    lineHeight: 12,
-    marginBottom: 4,
+    height: 12, // Reduced height
+    lineHeight: 11,
+    marginBottom: 3, // Reduced margin
     overflow: 'hidden',
   },
   activeTabTheme: {
     color: 'rgba(255, 255, 255, 0.9)',
   },
   tabCount: {
-    fontSize: 10,
+    fontSize: 9, // Slightly smaller font for mobile
     color: colors.text.secondary,
     fontWeight: '600',
     backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
-    paddingHorizontal: 6,
+    paddingHorizontal: 4, // Reduced padding
     paddingVertical: 1,
     borderRadius: 4,
     overflow: 'hidden',
     marginTop: 2,
-    minWidth: 60,
+    minWidth: 50, // Reduced minimum width
     textAlign: 'center',
-    height: 16, // Fixed height
-    lineHeight: 14,
+    height: 14, // Reduced height
+    lineHeight: 12, // Adjusted line height
   },
   activeTabCount: {
     color: 'rgba(255, 255, 255, 0.8)',

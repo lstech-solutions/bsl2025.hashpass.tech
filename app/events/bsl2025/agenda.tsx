@@ -142,7 +142,7 @@ export default function BSL2025AgendaScreen() {
             setAgenda(result.data);
           } else {
             console.warn('⚠️ Status showed data but fetch failed, using JSON fallback');
-            const fallbackAgenda = event.agenda || EVENTS.bsl2025.agenda || [];
+            const fallbackAgenda = event?.agenda || EVENTS.bsl2025.agenda || [];
             setAgenda(fallbackAgenda);
             setIsLive(false);
             setUsingJsonFallback(true);
@@ -151,9 +151,9 @@ export default function BSL2025AgendaScreen() {
         } else if (statusResponse.ok && !statusResult.hasData) {
           console.warn('⚠️ No live agenda data in database, showing JSON fallback');
           console.log('📄 Event object:', event);
-          console.log('📄 JSON fallback data:', event.agenda?.length || 0, 'items');
+          console.log('📄 JSON fallback data:', event?.agenda?.length || 0, 'items');
           // No live data - show JSON fallback with "not live" indicator
-          const fallbackAgenda = event.agenda || EVENTS.bsl2025.agenda || [];
+          const fallbackAgenda = event?.agenda || EVENTS.bsl2025.agenda || [];
           console.log('📄 Setting fallback agenda:', fallbackAgenda.length, 'items');
           setAgenda(fallbackAgenda);
           setIsLive(false);
@@ -162,9 +162,9 @@ export default function BSL2025AgendaScreen() {
           setServiceStatus('stopped');
         } else {
           console.warn('⚠️ Database error, using JSON fallback');
-          console.log('📄 JSON fallback data:', event.agenda?.length || 0, 'items');
+          console.log('📄 JSON fallback data:', event?.agenda?.length || 0, 'items');
           // Database error - use JSON fallback
-          const fallbackAgenda = event.agenda || EVENTS.bsl2025.agenda || [];
+          const fallbackAgenda = event?.agenda || EVENTS.bsl2025.agenda || [];
           setAgenda(fallbackAgenda);
           setIsLive(false);
           setUsingJsonFallback(true);
@@ -173,9 +173,9 @@ export default function BSL2025AgendaScreen() {
       } catch (error) {
         console.error('❌ Network error loading agenda from database:', error);
         console.log('🔄 Using JSON fallback due to network error');
-        console.log('📄 JSON fallback data:', event.agenda?.length || 0, 'items');
+        console.log('📄 JSON fallback data:', event?.agenda?.length || 0, 'items');
         // Network error - use JSON fallback
-        const fallbackAgenda = event.agenda || EVENTS.bsl2025.agenda || [];
+        const fallbackAgenda = event?.agenda || EVENTS.bsl2025.agenda || [];
         setAgenda(fallbackAgenda);
         setIsLive(false);
         setUsingJsonFallback(true);
@@ -513,112 +513,69 @@ export default function BSL2025AgendaScreen() {
   );
   return (
     <View style={styles.container}>
-      {/* Event Header */}
-      <EventBanner
-        title="Event Agenda"
-        subtitle={`Conference Schedule • ${agenda.length} Sessions`}
-        date="November 12-14, 2025 • Medellín, Colombia"
-        showCountdown={true}
-        showLiveIndicator={isLive}
-      />
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+      >
+        {/* Event Header */}
+        <EventBanner
+          title="Event Agenda"
+          subtitle={`Conference Schedule • ${agenda.length} Sessions`}
+          date="November 12-14, 2025 • Medellín, Colombia"
+          showCountdown={true}
+          showLiveIndicator={isLive}
+        />
 
-      {/* Tab Navigation */}
-      {Object.keys(agendaByDay).length > 0 && (
-        <View style={styles.tabContainer}>
-          <View style={styles.tabScrollContent}>
-            {Object.keys(agendaByDay).map((dayKey) => (
-              <TouchableOpacity
-                key={dayKey}
-                style={[
-                  styles.tab,
-                  activeTab === dayKey && styles.activeTab
-                ]}
-                onPress={() => setActiveTab(dayKey)}
+        {/* Tab Navigation - Centered with consistent sizing */}
+        {Object.keys(agendaByDay).length > 0 && (
+          <View style={styles.tabContainer}>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <ScrollView 
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tabScrollContent}
+                contentInset={{ left: 0, right: 0 }}
+                contentOffset={{ x: 0, y: 0 }}
+                snapToInterval={128} // 120 (width) + 8 (margin)
+                decelerationRate="fast"
+                snapToAlignment="center"
               >
-                <Text style={[
-                  styles.tabLabel,
-                  activeTab === dayKey && styles.activeTabLabel
-                ]}>
-                  {getTabLabel(dayKey)}
-                </Text>
-                <Text style={[
-                  styles.tabTheme,
-                  activeTab === dayKey && styles.activeTabTheme
-                ]}>
-                  {getTabTheme(dayKey)}
-                </Text>
-                <Text style={[
-                  styles.tabCount,
-                  activeTab === dayKey && styles.activeTabCount
-                ]}>
-                  {agendaByDay[dayKey].length} sessions
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* Status Indicator - Positioned at top right */}
-      {!loading && agenda.length > 0 && (
-        <View style={styles.statusIndicatorContainer}>
-          {isLive && isEventPeriod ? (
-            <View style={[styles.statusBadge, styles.liveBadge]}>
-              <MaterialIcons name="fiber-manual-record" size={12} color="#fff" />
-              <Text style={styles.statusBadgeText}>LIVE</Text>
+              {Object.keys(agendaByDay).map((dayKey) => (
+                <TouchableOpacity
+                  key={dayKey}
+                  style={[
+                    styles.tab,
+                    activeTab === dayKey && styles.activeTab
+                  ]}
+                  onPress={() => setActiveTab(dayKey)}
+                >
+                  <Text style={[
+                    styles.tabLabel,
+                    activeTab === dayKey && styles.activeTabLabel
+                  ]}>
+                    {getTabLabel(dayKey)}
+                  </Text>
+                  <Text style={[
+                    styles.tabTheme,
+                    activeTab === dayKey && styles.activeTabTheme
+                  ]}>
+                    {getTabTheme(dayKey)}
+                  </Text>
+                  <Text style={[
+                    styles.tabCount,
+                    activeTab === dayKey && styles.activeTabCount
+                  ]}>
+                    {agendaByDay[dayKey].length} sessions
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              </ScrollView>
             </View>
-          ) : (
-            <>
-              <TouchableOpacity 
-                style={[styles.statusBadge, styles.notLiveBadge]}
-                onPress={() => setShowNotLiveDetails(!showNotLiveDetails)}
-              >
-                <MaterialIcons name="stop" size={12} color="#fff" />
-                <Text style={styles.statusBadgeText}>NOT LIVE</Text>
-                <MaterialIcons 
-                  name={showNotLiveDetails ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
-                  size={12} 
-                  color="#fff" 
-                />
-              </TouchableOpacity>
-              
-              {/* Not Live Details Dropdown */}
-              {showNotLiveDetails && (
-                <View style={styles.notLiveDetailsDropdown}>
-                  <View style={styles.notLiveDetailsContent}>
-                    <View style={styles.notLiveDetailsRow}>
-                      <View style={styles.notLiveIconContainer}>
-                        <MaterialIcons name="event" size={16} color="#007AFF" />
-                      </View>
-                      <Text style={styles.notLiveDetailsText}>
-                        Live updates start Nov 12, 2025
-                      </Text>
-                    </View>
-                    
-                    <View style={styles.notLiveDetailsRow}>
-                      <View style={styles.notLiveIconContainer}>
-                        <MaterialIcons name="update" size={16} color="#007AFF" />
-                      </View>
-                      <Text style={styles.notLiveDetailsText}>
-                        Auto-refresh every 5 minutes
-                      </Text>
-                    </View>
-                    
-                    <View style={styles.notLiveDetailsRow}>
-                      <View style={styles.notLiveIconContainer}>
-                        <MaterialIcons name="info" size={16} color="#007AFF" />
-                      </View>
-                      <Text style={styles.notLiveDetailsText}>
-                        Showing preview data
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-            </>
-          )}
-        </View>
-      )}
+          </View>
+        )}
+
 
       {/* Live Status Details - Only during event period */}
       {!loading && isLive && isEventPeriod && agenda.length > 0 && (
@@ -672,13 +629,7 @@ export default function BSL2025AgendaScreen() {
       )}
 
       {/* Tab Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={true}
-        nestedScrollEnabled={true}
-        bounces={true}
-      >
+      <View style={styles.contentContainer}>
         {loading ? (
           <View style={styles.loadingContainer}>
             <MaterialIcons name="schedule" size={48} color={colors.text.secondary} />
@@ -720,8 +671,9 @@ export default function BSL2025AgendaScreen() {
             </View>
           </View>
         )}
-      </ScrollView>
-    </View>
+      </View>
+    </ScrollView>
+  </View>
   );
 }
 
@@ -738,31 +690,39 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 40,
   },
-  // Tab Styles - Full width with better spacing
+  contentContainer: {
+    paddingBottom: 40,
+  },
+  // Tab Styles - Consistent sizing and centering
   tabContainer: {
     backgroundColor: colors.background.default,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
+    width: '100%',
   },
   tabScrollContent: {
-    paddingHorizontal: 20,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 110, // Fixed height for scroll container
+    paddingHorizontal: 8,
   },
   tab: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    marginHorizontal: 6,
-    borderRadius: 16,
+    width: 140, // Fixed width for all tabs
+    height: 90, // Fixed height for all tabs
+    paddingHorizontal: 4,
+    paddingTop: 8,
+    paddingBottom: 8,
+    marginHorizontal: 4,
+    borderRadius: 8,
     backgroundColor: colors.background.paper,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   activeTab: {
     backgroundColor: '#007AFF',
@@ -773,11 +733,16 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     elevation: 4,
   },
   tabLabel: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: colors.text.primary,
-    marginBottom: 2,
-    letterSpacing: 0.3,
+    textAlign: 'center',
+    width: '100%',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    paddingHorizontal: 4,
+    height: 18, // Fixed height
+    lineHeight: 16,
   },
   activeTabLabel: {
     color: '#FFFFFF',
@@ -785,9 +750,13 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   tabTheme: {
     fontSize: 10,
     color: colors.text.secondary,
-    marginBottom: 4,
     fontWeight: '500',
     textAlign: 'center',
+    width: '100%',
+    height: 14, // Fixed height
+    lineHeight: 12,
+    marginBottom: 4,
+    overflow: 'hidden',
   },
   activeTabTheme: {
     color: 'rgba(255, 255, 255, 0.9)',
@@ -798,9 +767,14 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontWeight: '600',
     backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
     paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
     overflow: 'hidden',
+    marginTop: 2,
+    minWidth: 60,
+    textAlign: 'center',
+    height: 16, // Fixed height
+    lineHeight: 14,
   },
   activeTabCount: {
     color: 'rgba(255, 255, 255, 0.8)',

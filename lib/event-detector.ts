@@ -17,10 +17,10 @@ export interface EventInfo {
 export const AVAILABLE_EVENTS: EventInfo[] = [
   {
     id: 'bsl2025',
-    title: 'Blockchain Summit Latin America 2025',
-    subtitle: 'November 12-14, 2025 • Universidad EAFIT, Medellín',
+    title: 'Blockchain Summit Latam 2025',
+    subtitle: 'Universidad EAFIT, Medellín',
     image: 'https://blockchainsummit.la/wp-content/uploads/2025/09/bsl2025-banner.jpg',
-    color: '#4CAF50',
+    color: '#2196F3',
     route: '/events/bsl2025/home',
     available: true, // Always available in BSL2025 branch
   },

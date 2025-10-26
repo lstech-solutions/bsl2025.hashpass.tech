@@ -96,7 +96,6 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@expo/metro-config": "^0.20.17",
-    "@supabase/supabase-js": "^2.76.1",
     "@types/expo-localization": "^1.0.1",
     "@types/jest": "^29.5.14",
     "@types/next": "^8.0.7",

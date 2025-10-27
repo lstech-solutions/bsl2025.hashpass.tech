@@ -123,8 +123,13 @@ export default function BSL2025AgendaScreen() {
         setServiceStatus('unknown');
         console.log('📅 Attempting to load agenda from database...');
         
-        // First check agenda status - remove any trailing slashes before query params
-        const statusResponse = await fetch('/api/bslatam/agenda-status?eventId=bsl2025'.replace(/\/+\?/, '?'));
+        // Use relative paths without leading slash for Expo Router
+        const statusUrl = `api/bslatam/agenda-status?eventId=bsl2025`;
+        const statusResponse = await fetch(statusUrl, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
         const statusResult = await statusResponse.json();
         
         if (statusResponse.ok && statusResult.hasData) {
@@ -133,8 +138,13 @@ export default function BSL2025AgendaScreen() {
           setLastUpdated(statusResult.lastUpdated);
           setServiceStatus('running');
           
-          // Load the actual agenda data - remove any trailing slashes before query params
-          const response = await fetch('/api/bslatam/agenda?eventId=bsl2025'.replace(/\/+\?/, '?'));
+          // Fetch agenda data
+          const agendaUrl = `api/bslatam/agenda?eventId=bsl2025`;
+          const response = await fetch(agendaUrl, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
           const result = await response.json();
           
           if (response.ok && result.data && result.data.length > 0) {

@@ -67,10 +67,12 @@ export const EVENTS: Record<string, EventConfig> = {
     api: {
       basePath: '/api/bslatam',
       endpoints: {
-        speakers: '/api/bslatam/speakers',
-        bookings: '/api/bslatam/bookings',
-        verifyTicket: '/api/bslatam/verify-ticket',
-        autoMatch: '/api/bslatam/auto-match'
+        speakers: 'speakers',
+        bookings: 'bookings',
+        'verify-ticket': 'verify-ticket',
+        'auto-match': 'auto-match',
+        'agenda': 'agenda',
+        'agenda-status': 'agenda-status'
       }
     },
     routes: {

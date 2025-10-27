@@ -7,7 +7,7 @@ export interface VersionInfo {
   version: string;
   buildNumber: number;
   releaseDate: string;
-  releaseType: 'stable' | 'beta' | 'rc' | 'stable';
+  releaseType: 'stable' | 'beta' | 'rc' | 'alpha';
   environment: 'development' | 'staging' | 'production';
   features: string[];
   bugfixes: string[];
@@ -22,10 +22,10 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202510181800,
-  releaseDate: '2025-10-18',
+  buildNumber: 202510272149, // Updated to current date
+  releaseDate: '2025-10-27',
   releaseType: 'beta',
-  environment: 'development',
+  environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
     'User pass management system',
     'BSL 2025 event integration',
@@ -71,11 +71,40 @@ export const CURRENT_VERSION: VersionInfo = {
     'Improved networking icon visibility in quick access menu'
   ],
   breakingChanges: [],
-  notes: 'Fixed critical 404 errors in Supabase meeting request system and resolved database type mismatches'
+  notes: 'Updated version display and changelog automation'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.3.2': {
+    version: '1.3.2',
+    buildNumber: 202510272149,
+    releaseDate: '2025-10-27',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'User pass management system',
+      'BSL 2025 event integration',
+      'Speaker profile system with avatars',
+      'Event agenda with live updates',
+      'Unified search and filter system',
+      'Dark mode support',
+      'Event banner component',
+      'Pass card UI with BSL branding',
+      'Agenda tabbed interface',
+      'Real-time countdown system'
+    ],
+    bugfixes: [
+      'Fixed SVG logo rendering issues',
+      'Resolved TypeScript undefined property errors',
+      'Fixed agenda data grouping logic',
+      'Corrected speaker count discrepancies',
+      'Fixed dark mode contrast issues',
+      'Resolved navigation routing problems'
+    ],
+    breakingChanges: [],
+    notes: 'Updated version display and changelog automation'
+  },
   '1.2.3': {
     version: '1.2.3',
     buildNumber: 202510181800,
@@ -203,10 +232,10 @@ export const VERSION_HISTORY: VersionHistory = {
     breakingChanges: [],
     notes: 'UI display fixes and automatic version management'
   },
-  '1.1.8': {
-    version: '1.1.8',
-    buildNumber: 202510150934,
-    releaseDate: '2025-10-15',
+  [packageJson.version]: {
+    version: packageJson.version,
+    buildNumber: 202510270000,
+    releaseDate: '2025-10-27',
     releaseType: 'beta',
     environment: 'development',
     features: [

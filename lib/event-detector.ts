@@ -1,8 +1,9 @@
 // Event Detection Utility
 // This utility detects available events based on the current deployment context
 
-export interface EventInfo {
-  id: string;
+import { EventConfig } from '../config/events';
+
+export interface EventInfo extends Omit<EventConfig, 'name' | 'domain'> {
   title: string;
   subtitle: string;
   image: string;
@@ -23,6 +24,24 @@ export const AVAILABLE_EVENTS: EventInfo[] = [
     color: '#2196F3',
     route: '/events/bsl2025/home',
     available: true, // Always available in BSL2025 branch
+    api: {
+      basePath: '/api/bslatam',
+      endpoints: {
+        agenda: '/agenda',
+        speakers: '/speakers',
+        bookings: '/bookings',
+      },
+    },
+    routes: {
+      home: '/events/bsl2025/home',
+      speakers: '/events/bsl2025/speakers',
+      bookings: '/events/bsl2025/bookings',
+    },
+    features: [],
+    branding: {
+      primaryColor: '#2196F3',
+      logo: '/assets/logos/bsl-logo.png',
+    },
   },
   // Future events - only available in main repo
   // {

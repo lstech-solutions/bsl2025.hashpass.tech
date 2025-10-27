@@ -51,6 +51,40 @@ console.log(`🚀 Updating version to ${newVersion} (${releaseType})`);
 const buildNumber = parseInt(new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12));
 const releaseDate = new Date().toISOString().split('T')[0];
 
+// Function to update the CHANGELOG.md file
+function updateChangelog(version, releaseType, notes = '') {
+  const changelogPath = path.join(projectRoot, 'CHANGELOG.md');
+  if (!fs.existsSync(changelogPath)) {
+    console.log('ℹ️ CHANGELOG.md not found, creating a new one');
+    const initialContent = `# Changelog\n\nAll notable changes to the BSL 2025 HashPass application will be documented in this file.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),\nand this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n\n## [${version}] - ${releaseDate}\n\n### ${releaseType === 'stable' ? 'Released' : releaseType.charAt(0).toUpperCase() + releaseType.slice(1)}\n- ${notes || `Version ${version} release`}\n\n### Technical Details\n- Version: ${version}\n- Release Type: ${releaseType}\n- Build Number: ${buildNumber}\n- Release Date: ${new Date().toISOString()}\n`;
+    fs.writeFileSync(changelogPath, initialContent);
+    return;
+  }
+
+  let content = fs.readFileSync(changelogPath, 'utf8');
+  
+  // Check if the changelog already has this version
+  if (content.includes(`## [${version}]`)) {
+    console.log(`ℹ️ Version ${version} already exists in CHANGELOG.md, skipping update`);
+    return;
+  }
+
+  // Add the new version at the top of the changelog
+  const today = new Date().toISOString().split('T')[0];
+  const newEntry = `## [${version}] - ${today}\n\n### ${releaseType === 'stable' ? 'Released' : releaseType.charAt(0).toUpperCase() + releaseType.slice(1)}\n- ${notes || `Version ${version} release`}\n\n### Technical Details\n- Version: ${version}\n- Release Type: ${releaseType}\n- Build Number: ${buildNumber}\n- Release Date: ${new Date().toISOString()}\n\n`;
+  
+  // Insert the new version after the changelog header
+  const headerEnd = content.indexOf('\n## [');
+  if (headerEnd !== -1) {
+    content = content.slice(0, headerEnd) + '\n' + newEntry + content.slice(headerEnd);
+  } else {
+    content = newEntry + '\n' + content;
+  }
+  
+  fs.writeFileSync(changelogPath, content);
+  console.log(`✅ Updated CHANGELOG.md with version ${version}`);
+}
+
 // Files to update
 const filesToUpdate = [
   {
@@ -164,6 +198,9 @@ for (const file of filesToUpdate) {
     allUpdated = false;
   }
 }
+
+// Update CHANGELOG.md
+updateChangelog(newVersion, releaseType, releaseNotes);
 
 // Update version history in version.ts
 try {

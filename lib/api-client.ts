@@ -4,13 +4,17 @@
  */
 
 import React from 'react';
-import { getCurrentEvent, getEventApiEndpoint } from './event-detector';
+import { getCurrentEvent } from './event-detector';
 import { supabase } from './supabase';
 
-export interface ApiResponse<T = any> {
+export type ApiResponse<T = any> = {
   data: T;
-  error?: string;
-  success: boolean;
+  error?: never;
+  success: true;
+} | {
+  data?: T | null;
+  error: string;
+  success: false;
 }
 
 export interface ApiRequestOptions {
@@ -19,6 +23,8 @@ export interface ApiRequestOptions {
   body?: any;
   timeout?: number;
   retries?: number;
+  endpoint?: string;
+  params?: Record<string, any>;
 }
 
 export class EventApiClient {
@@ -29,7 +35,19 @@ export class EventApiClient {
 
   constructor() {
     const event = getCurrentEvent();
-    this.baseURL = event.api.basePath;
+    if (!event?.api?.basePath) {
+      console.error('Event API configuration is missing');
+      this.baseURL = '/api';
+    } else {
+      // Ensure basePath starts with a slash and doesn't end with one
+      this.baseURL = event.api.basePath.startsWith('/') 
+        ? event.api.basePath 
+        : `/${event.api.basePath}`;
+      this.baseURL = this.baseURL.endsWith('/') 
+        ? this.baseURL.slice(0, -1) 
+        : this.baseURL;
+    }
+    
     this.defaultHeaders = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -42,9 +60,44 @@ export class EventApiClient {
    * Make an API request with automatic event endpoint resolution
    */
   async request<T = any>(
-    endpoint: string,
+    path: string,
     options: ApiRequestOptions = {}
   ): Promise<ApiResponse<T>> {
+    // Get the event configuration
+    const event = getCurrentEvent();
+    
+    // Determine the base URL
+    const baseUrl = event?.api?.basePath || this.baseURL;
+    
+    // Build the final URL
+    let url: string;
+    
+    // If an endpoint is specified in options and exists in the event config
+    if (options.endpoint && event?.api?.endpoints?.[options.endpoint]) {
+      const endpointPath = event.api.endpoints[options.endpoint].replace(/^\/+/, '');
+      const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      url = `${cleanBase}/${endpointPath}`.replace(/([^:]\/)\/+/g, '$1');
+    } else {
+      // Otherwise, build the URL from the base URL and path
+      const cleanPath = path.replace(/^\/+/, '');
+      const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      url = `${cleanBase}/${cleanPath}`.replace(/([^:]\/)\/+/g, '$1');
+    }
+    
+    // Add query parameters if provided
+    if (options.params) {
+      const queryParams = new URLSearchParams();
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, String(value));
+        }
+      });
+      const queryString = queryParams.toString();
+      if (queryString) {
+        url += (url.includes('?') ? '&' : '?') + queryString;
+      }
+    }
+    
     const {
       method = 'GET',
       headers = {},
@@ -52,8 +105,7 @@ export class EventApiClient {
       timeout = this.timeout,
       retries = this.retries
     } = options;
-
-    const url = getEventApiEndpoint(endpoint);
+    
     const requestHeaders = { ...this.defaultHeaders, ...headers };
 
     // Add authentication header if available
@@ -151,7 +203,8 @@ export class EventApiClient {
     const formData = new FormData();
     formData.append('file', file);
 
-    const url = getEventApiEndpoint(endpoint);
+     const event = getCurrentEvent();
+    const url = `${event?.api?.basePath || ''}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
     const { data: { session } } = await supabase.auth.getSession();
     
     const headers: Record<string, string> = {};
@@ -177,7 +230,7 @@ export class EventApiClient {
       };
     } catch (error) {
       return {
-        data: null,
+        data: null as unknown as T,  // Type assertion to handle generic type with null
         error: (error as Error).message,
         success: false
       };

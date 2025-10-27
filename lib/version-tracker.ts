@@ -85,17 +85,37 @@ class VersionTracker {
   }
 
   public getCurrentVersion(): VersionInfo {
-    // Always return the version from package.json to ensure sync
+    // Get the current version from package.json
+    const currentVersion = packageJson.version;
+    
+    // If we have this version in history, return it
+    if (VERSION_HISTORY[currentVersion]) {
+      return VERSION_HISTORY[currentVersion];
+    }
+    
+    // Otherwise, return the CURRENT_VERSION with updated version number
     return {
       ...CURRENT_VERSION,
-      version: packageJson.version
+      version: currentVersion,
+      // Update the build number to current timestamp if not set
+      buildNumber: CURRENT_VERSION.buildNumber || Date.now(),
+      // Update the release date to today if not set
+      releaseDate: CURRENT_VERSION.releaseDate || new Date().toISOString().split('T')[0]
     };
   }
 
   public getVersionHistory(): VersionInfo[] {
-    return Object.values(VERSION_HISTORY).sort((a, b) => 
-      b.buildNumber - a.buildNumber
-    );
+    // Get all versions from history
+    const history = Object.values(VERSION_HISTORY);
+    
+    // Add current version if not in history
+    const currentVersion = this.getCurrentVersion();
+    if (!history.some(v => v.version === currentVersion.version)) {
+      history.push(currentVersion);
+    }
+    
+    // Sort by build number in descending order (newest first)
+    return history.sort((a, b) => b.buildNumber - a.buildNumber);
   }
 
   public getBuildInfo(): BuildInfo | null {

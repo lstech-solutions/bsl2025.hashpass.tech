@@ -6,19 +6,73 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import EventBanner from '../../../components/EventBanner';
 import UnifiedSearchAndFilter from '../../../components/UnifiedSearchAndFilter';
-import { EVENTS } from '../../../config/events';
+import { apiClient } from '@/lib/api-client';
 import { 
-  AgendaItem, 
   AgendaType,
   getAgendaTypeColor,
-  getAgendaTypeIcon,
-  getDefaultDurationMinutes,
-  formatClock,
   parseEventISO,
-  formatTimeRange
+  formatTimeRange,
+  AgendaItem
 } from '../../../types/agenda';
+import { EVENTS } from '../../../config/events';
 
 const { width } = Dimensions.get('window');
+
+// Custom filter logic for agenda items
+const customAgendaFilterLogic = (
+  data: AgendaItem[], 
+  filters: { [key: string]: any },
+  searchQuery: string
+): AgendaItem[] => {
+  if (!data) return [];
+  
+  return data.filter(item => {
+    // If no filters are active, include all items
+    if (!filters || Object.keys(filters).length === 0) return true;
+
+    // Check each filter group
+    for (const [key, value] of Object.entries(filters)) {
+      if (!value || value.length === 0) continue;
+
+      switch (key) {
+        case 'type':
+          if (value.length > 0 && !value.includes(item.type)) {
+            return false;
+          }
+          break;
+        case 'speakers':
+          if (value.length > 0 && !item.speakers?.some(speakerId => 
+            value.includes(speakerId)
+          )) {
+            return false;
+          }
+          break;
+        case 'time':
+          // Add time-based filtering logic if needed
+          break;
+        // Add more filter cases as needed
+      }
+    }
+
+    // Handle search query if provided
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesTitle = item.title?.toLowerCase().includes(query) ?? false;
+      const matchesDescription = item.description?.toLowerCase().includes(query) ?? false;
+      
+      // Since we only have speaker IDs, we can only match against the ID itself
+      const matchesSpeaker = item.speakers?.some(speakerId => 
+        speakerId.toLowerCase().includes(query)
+      ) ?? false;
+      
+      if (!matchesTitle && !matchesDescription && !matchesSpeaker) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+};
 
 export default function BSL2025AgendaScreen() {
   const { event } = useEvent();
@@ -32,6 +86,8 @@ export default function BSL2025AgendaScreen() {
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState<AgendaType | 'all'>('all');
   const [usingJsonFallback, setUsingJsonFallback] = useState(false);
   const [serviceStatus, setServiceStatus] = useState<'running' | 'stopped' | 'unknown'>('unknown');
   const [nextUpdateCountdown, setNextUpdateCountdown] = useState<number | null>(null);
@@ -90,26 +146,21 @@ export default function BSL2025AgendaScreen() {
     },
   ];
 
-  const customAgendaFilterLogic = (
-    data: AgendaItem[],
-    filters: { [key: string]: any },
-    searchQuery: string
-  ) => {
-    let items = data;
-    const q = (searchQuery || '').trim().toLowerCase();
-    if (q) {
-      items = items.filter((it) =>
-        (it.title && it.title.toLowerCase().includes(q)) ||
+  const filterAgendaItems = (items: AgendaItem[], filters: { search?: string; type?: AgendaType | 'all'; speakers?: string }) => {
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      items = items.filter((it: AgendaItem) =>
+        it.title.toLowerCase().includes(q) ||
         (it.description && it.description.toLowerCase().includes(q)) ||
         (it.type && it.type.toLowerCase().includes(q)) ||
-        ((it.speakers || []).some((s) => s.toLowerCase().includes(q)))
+        ((it.speakers || []).some((s: string) => s.toLowerCase().includes(q)))
       );
     }
     if (filters?.type) {
       items = items.filter((it) => it.type === filters.type);
     }
     if (filters?.speakers) {
-      items = items.filter((it) => (it.speakers || []).includes(filters.speakers));
+      items = items.filter((it) => (it.speakers || []).includes(filters?.speakers || ''));
     }
     return items;
   };
@@ -123,77 +174,103 @@ export default function BSL2025AgendaScreen() {
         setServiceStatus('unknown');
         console.log('📅 Attempting to load agenda from database...');
         
-        // Determine base URL based on environment
-        const isDev = process.env.NODE_ENV === 'development';
-        const baseUrl = isDev ? 'http://localhost:8081' : '';
-        
-        // Build API URLs with proper base URL
-        const statusUrl = `${baseUrl}/api/bslatam/agenda-status?eventId=bsl2025`;
-        console.log('Fetching status from:', statusUrl);
-        
-        const statusResponse = await fetch(statusUrl, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        const statusResult = await statusResponse.json();
-        
-        if (statusResponse.ok && statusResult.hasData) {
-          console.log('✅ Live agenda data available:', statusResult.itemCount, 'items');
-          setIsLive(true);
-          setLastUpdated(statusResult.lastUpdated);
-          setServiceStatus('running');
+        try {
+          // Try to fetch agenda directly first
+          console.log('🌐 Fetching agenda data...');
+          const response = await apiClient.request('agenda');
           
-          // Fetch agenda data
-          const agendaUrl = `${baseUrl}/api/bslatam/agenda?eventId=bsl2025`;
-          console.log('Fetching agenda from:', agendaUrl);
+          // Handle the API response format: { data: [...] }
+          let agendaData = [];
           
-          const response = await fetch(agendaUrl, {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-          const result = await response.json();
-          
-          if (response.ok && result.data && result.data.length > 0) {
-            console.log('✅ Loaded live agenda from database:', result.data.length, 'items');
-            setAgenda(result.data);
-          } else {
-            console.warn('⚠️ Status showed data but fetch failed, using JSON fallback');
-            const fallbackAgenda = event?.agenda || EVENTS.bsl2025.agenda || [];
-            setAgenda(fallbackAgenda);
-            setIsLive(false);
-            setUsingJsonFallback(true);
-            setServiceStatus('stopped');
+          try {
+            // Check if response is already the data array
+            if (Array.isArray(response)) {
+              agendaData = response;
+            }
+            // Check if response has a data property that is an array
+            else if (response?.data) {
+              if (Array.isArray(response.data)) {
+                agendaData = response.data;
+              } else if (response.data.data && Array.isArray(response.data.data)) {
+                // Handle nested data structure
+                agendaData = response.data.data;
+              }
+            }
+            
+            console.log('📊 Parsed agenda data:', agendaData);
+          } catch (error) {
+            console.error('❌ Error parsing agenda data:', error);
+            throw error; // Re-throw to trigger the fallback
           }
-        } else if (statusResponse.ok && !statusResult.hasData) {
-          console.warn('⚠️ No live agenda data in database, showing JSON fallback');
-          console.log('📄 Event object:', event);
-          console.log('📄 JSON fallback data:', event?.agenda?.length || 0, 'items');
-          // No live data - show JSON fallback with "not live" indicator
-          const fallbackAgenda = event?.agenda || EVENTS.bsl2025.agenda || [];
-          console.log('📄 Setting fallback agenda:', fallbackAgenda.length, 'items');
-          setAgenda(fallbackAgenda);
-          setIsLive(false);
-          setLastUpdated(null);
-          setUsingJsonFallback(true);
-          setServiceStatus('stopped');
-        } else {
-          console.warn('⚠️ Database error, using JSON fallback');
-          console.log('📄 JSON fallback data:', event?.agenda?.length || 0, 'items');
-          // Database error - use JSON fallback
-          const fallbackAgenda = event?.agenda || EVENTS.bsl2025.agenda || [];
-          setAgenda(fallbackAgenda);
-          setIsLive(false);
-          setUsingJsonFallback(true);
-          setServiceStatus('stopped');
+          
+          if (agendaData.length > 0) {
+            console.log('✅ Loaded live agenda from database:', agendaData.length, 'items');
+            setAgenda(agendaData);
+            setIsLive(true);
+            setLastUpdated(new Date().toISOString());
+            setServiceStatus('running');
+            return;
+          }
+        } catch (error) {
+          console.error('❌ Error loading agenda:', error);
+          console.log('🔄 Using JSON fallback due to error');
         }
-      } catch (error) {
-        console.error('❌ Network error loading agenda from database:', error);
-        console.log('🔄 Using JSON fallback due to network error');
+        
+        // If we get here but no data, try with status endpoint
+        console.log('ℹ️ No data in direct response, trying status endpoint...');
+        try {
+          const statusResponse = await apiClient.request('agenda-status');
+          // Handle status response format: { data: { hasData: true } }
+          const statusData = statusResponse?.data || {};
+          
+          if (statusData?.hasData) {
+            const agendaResponse = await apiClient.request('agenda');
+            let agendaItems = [];
+            
+            // Handle agenda response format: { data: [...] }
+            if (agendaResponse?.data && Array.isArray(agendaResponse.data)) {
+              agendaItems = agendaResponse.data;
+            } else if (Array.isArray(agendaResponse)) {
+              agendaItems = agendaResponse;
+            }
+            
+            console.log('📊 Parsed agenda items from status check:', agendaItems);
+            
+            if (agendaItems.length > 0) {
+              console.log('✅ Loaded agenda with eventId:', agendaItems.length, 'items');
+              setAgenda(agendaItems);
+              setIsLive(true);
+              setLastUpdated(statusData.lastUpdated || new Date().toISOString());
+              setServiceStatus('running');
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error loading agenda:', error);
+          console.log('🔄 Using JSON fallback due to error');
+        }
+        
+        // If we get here, no data was found through any method
+        console.warn('⚠️ No agenda data found, showing JSON fallback');
+        console.log('📄 Event object:', event);
         console.log('📄 JSON fallback data:', event?.agenda?.length || 0, 'items');
-        // Network error - use JSON fallback
+        
+        // Use fallback data
         const fallbackAgenda = event?.agenda || EVENTS.bsl2025.agenda || [];
+        console.log('📄 Setting fallback agenda:', fallbackAgenda.length, 'items');
+        setAgenda(fallbackAgenda);
+        setIsLive(false);
+        setLastUpdated(null);
+        setUsingJsonFallback(true);
+        setServiceStatus('stopped');
+      } catch (error) {
+        console.error('❌ Error loading agenda:', error);
+        console.log('🔄 Using JSON fallback due to error');
+        
+        // Use fallback data
+        const fallbackAgenda = event?.agenda || EVENTS.bsl2025.agenda || [];
+        console.log('📋 Using fallback agenda with', fallbackAgenda.length, 'items');
+        console.log('📄 JSON fallback data:', fallbackAgenda.length, 'items');
         setAgenda(fallbackAgenda);
         setIsLive(false);
         setUsingJsonFallback(true);

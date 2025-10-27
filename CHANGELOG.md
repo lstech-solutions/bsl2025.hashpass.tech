@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.2] - 2025-10-27
+
+### Beta
+- Updated version display and changelog automation
+
+### Technical Details
+- Version: 1.3.2
+- Release Type: beta
+- Build Number: 202510272149
+- Release Date: 2025-10-27T21:49:11.400Z
+
+
 ## [1.2.9] - 2025-10-26
 
 ### Bug Fixes

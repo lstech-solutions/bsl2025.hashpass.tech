@@ -53,43 +53,91 @@ for dir in "${BUILD_DIRS[@]}"; do
     echo "[5.2/5] Processing build output from: $dir"
     
     # Handle different possible build output structures
+    echo "Processing build output from: $dir"
+    
+    # Create a temporary directory for staging the build
+    TEMP_DIR=$(mktemp -d)
+    
+    # Function to safely copy files
+    safe_copy() {
+      local src=$1
+      local dest=$2
+      
+      # Skip if source and destination are the same
+      if [ "$src" = "$dest" ]; then
+        echo "  Skipping copy: source and destination are the same"
+        return 0
+      fi
+      
+      # Create destination directory
+      mkdir -p "$dest"
+      
+      # Use rsync if available, otherwise use cp
+      if command -v rsync >/dev/null 2>&1; then
+        echo "  Copying files using rsync..."
+        rsync -a --exclude='client' "$src/" "$dest/"
+      else
+        echo "  Copying files using cp..."
+        # Use find to get all files and copy them one by one
+        find "$src" -mindepth 1 -maxdepth 1 -not -name "client" -exec cp -r {} "$dest/" \;
+      fi
+    }
+    
+    # Check different possible build output structures
     if [ -f "$dir/index.html" ]; then
-      # If index.html is directly in the build directory
       echo "Found index.html in $dir, copying to dist/client/"
-      mkdir -p dist/client
-      cp -r "$dir/"* dist/client/
+      safe_copy "$dir" "dist/client"
     elif [ -f "$dir/web-build/index.html" ]; then
-      # If using the new web-build structure
       echo "Found web-build directory with index.html, copying to dist/client/"
-      mkdir -p dist/client
-      cp -r "$dir/web-build/"* dist/client/
+      safe_copy "$dir/web-build" "dist/client"
     elif [ -d "$dir/dist" ]; then
-      # If there's a dist subdirectory
       echo "Found dist subdirectory, copying contents to dist/client/"
-      mkdir -p dist/client
-      cp -r "$dir/dist/"* dist/client/
+      safe_copy "$dir/dist" "dist/client"
     else
-      # Fallback: copy everything to dist/client
       echo "No standard build structure found, copying all files to dist/client/"
-      mkdir -p dist/client
-      cp -r "$dir/"* dist/client/
+      safe_copy "$dir" "dist/client"
     fi
+    
+    # Clean up temp directory
+    rm -rf "$TEMP_DIR"
     
     # Ensure index.html exists in the root of dist/client
     echo "[5.3/5] Verifying build output..."
     
+    # Debug: Show directory structure
+    echo "Current directory structure:"
+    find . -maxdepth 4 -type d | sort
+    
     # Look for index.html in various possible locations
-    if [ -f "dist/client/index.html" ]; then
-      echo "Found index.html in dist/client/"
-    elif [ -f "dist/client/web-build/index.html" ]; then
-      echo "Found index.html in dist/client/web-build/, moving to root..."
-      mv dist/client/web-build/* dist/client/
-      rmdir dist/client/web-build 2>/dev/null || true
-    elif [ -f "dist/client/dist/index.html" ]; then
-      echo "Found index.html in dist/client/dist/, moving to root..."
-      mv dist/client/dist/* dist/client/
-      rmdir dist/client/dist 2>/dev/null || true
-    else
+    INDEX_FOUND=false
+    
+    # Check common locations for index.html
+    for path in \
+      "dist/client/index.html" \
+      "dist/client/web-build/index.html" \
+      "dist/client/dist/index.html" \
+      "web-build/index.html" \
+      "out/index.html" \
+      "build/index.html" \
+      "dist/index.html"; do
+      
+      if [ -f "$path" ]; then
+        echo "Found index.html at: $path"
+        # Get the directory containing index.html
+        dir=$(dirname "$path")
+        # If not already in dist/client, copy it there
+        if [ "$dir" != "dist/client" ]; then
+          echo "Copying contents from $dir to dist/client/"
+          mkdir -p dist/client
+          cp -r "$dir/"* dist/client/
+        fi
+        INDEX_FOUND=true
+        break
+      fi
+    done
+    
+    # If index.html still not found, create a default one
+    if [ "$INDEX_FOUND" = false ]; then
       echo "[5.4/5] Creating default index.html..."
       mkdir -p dist/client
       cat > dist/client/index.html <<EOL
@@ -101,23 +149,34 @@ for dir in "${BUILD_DIRS[@]}"; do
     <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">BSL 2025 - Loading...</div>
     <script src="/static/js/bundle.js"></script>
   </body>
 </html>
 EOL
     fi
     
-    # Verify index.html exists and is in the right place
+    # Final verification
     if [ ! -f "dist/client/index.html" ]; then
-      echo "[ERROR] Failed to create index.html in dist/client/"
-      echo "Current directory structure:"
+      echo "[ERROR] Critical: Failed to create or find index.html"
+      echo "Final directory structure:"
+      find . -type f -name "*.html" -o -type d | sort
+      echo "Files in dist/:"
       find dist -type f | sort
       exit 1
     fi
     
-    # Make sure the index.html has the correct permissions
-    chmod 644 dist/client/index.html
+    # Ensure proper permissions
+    chmod 644 dist/client/index.html 2>/dev/null || true
+    
+    # Verify the file is accessible
+    if [ ! -r "dist/client/index.html" ]; then
+      echo "[ERROR] index.html exists but is not readable. Check permissions."
+      ls -la dist/client/
+      exit 1
+    fi
+    
+    echo "Build output verified successfully. index.html is ready."
     
     break
   fi

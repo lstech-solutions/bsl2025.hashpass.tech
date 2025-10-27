@@ -23,6 +23,7 @@ echo "[3/5] Building Expo web application..."
 
 # Build for web
 echo "[3.1/5] Building web assets..."
+# First try the new export command, fall back to the old one if it fails
 if ! npx expo export:web; then
   echo "[WARNING] expo export:web failed, trying alternative build method..."
   if ! npx expo export -p web; then
@@ -39,7 +40,7 @@ find . -maxdepth 3 -type d | sort
 echo "[5/5] Preparing build artifacts..."
 
 # Check possible build output directories
-BUILD_DIRS=("web-build" "dist" "build" "out")
+BUILD_DIRS=("web-build" "dist/web-build" "dist" "build" "out" "dist/out")
 FOUND_BUILD=false
 
 for dir in "${BUILD_DIRS[@]}"; do
@@ -49,45 +50,46 @@ for dir in "${BUILD_DIRS[@]}"; do
     
         echo "[5.2/5] Preparing build output..."
     
-    # If the source directory is dist, we need to handle it specially
-    if [ "$dir" = "dist" ]; then
-      # Create the client directory if it doesn't exist
+    echo "[5.2/5] Processing build output from: $dir"
+    
+    # Handle different possible build output structures
+    if [ -f "$dir/index.html" ]; then
+      # If index.html is directly in the build directory
+      echo "Found index.html in $dir, copying to dist/client/"
       mkdir -p dist/client
-      
-      # Move all files from dist/ to dist/client/ except the client directory itself
-      for item in "$dir"/*; do
-        item_name=$(basename "$item")
-        if [ "$item_name" != "client" ] && [ -e "$item" ]; then
-          dest="dist/client/$item_name"
-          if [ -d "$item" ] && [ -d "$dest" ]; then
-            # If both source and destination are directories, merge them
-            cp -r "$item"/. "$dest"/
-            rm -r "$item"
-          else
-            # Otherwise, just move the item
-            mv "$item" "$dest"
-          fi
-        fi
-      done
+      cp -r "$dir/"* dist/client/
+    elif [ -f "$dir/web-build/index.html" ]; then
+      # If using the new web-build structure
+      echo "Found web-build directory with index.html, copying to dist/client/"
+      mkdir -p dist/client
+      cp -r "$dir/web-build/"* dist/client/
+    elif [ -d "$dir/dist" ]; then
+      # If there's a dist subdirectory
+      echo "Found dist subdirectory, copying contents to dist/client/"
+      mkdir -p dist/client
+      cp -r "$dir/dist/"* dist/client/
     else
-      # For other directories, copy everything to dist/client
+      # Fallback: copy everything to dist/client
+      echo "No standard build structure found, copying all files to dist/client/"
       mkdir -p dist/client
-      cp -r "$dir"/. "dist/client/"
+      cp -r "$dir/"* dist/client/
     fi
     
     # Ensure index.html exists in the root of dist/client
-    if [ -f "dist/client/dist/index.html" ]; then
-      echo "[5.3/5] Moving index.html to correct location..."
-      mv dist/client/dist/index.html dist/client/
-      # Move other files from dist/client/dist/ to dist/client/
-      if [ -d "dist/client/dist" ]; then
-        mv dist/client/dist/* dist/client/ 2>/dev/null || true
-        rmdir dist/client/dist 2>/dev/null || true
-      fi
-    fi
-
-    # Create default index.html if it still doesn't exist
-    if [ ! -f "dist/client/index.html" ]; then
+    echo "[5.3/5] Verifying build output..."
+    
+    # Look for index.html in various possible locations
+    if [ -f "dist/client/index.html" ]; then
+      echo "Found index.html in dist/client/"
+    elif [ -f "dist/client/web-build/index.html" ]; then
+      echo "Found index.html in dist/client/web-build/, moving to root..."
+      mv dist/client/web-build/* dist/client/
+      rmdir dist/client/web-build 2>/dev/null || true
+    elif [ -f "dist/client/dist/index.html" ]; then
+      echo "Found index.html in dist/client/dist/, moving to root..."
+      mv dist/client/dist/* dist/client/
+      rmdir dist/client/dist 2>/dev/null || true
+    else
       echo "[5.4/5] Creating default index.html..."
       mkdir -p dist/client
       cat > dist/client/index.html <<EOL
@@ -113,6 +115,9 @@ EOL
       find dist -type f | sort
       exit 1
     fi
+    
+    # Make sure the index.html has the correct permissions
+    chmod 644 dist/client/index.html
     
     break
   fi

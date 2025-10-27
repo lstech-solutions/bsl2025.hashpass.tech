@@ -123,8 +123,14 @@ export default function BSL2025AgendaScreen() {
         setServiceStatus('unknown');
         console.log('📅 Attempting to load agenda from database...');
         
-        // Use relative paths without leading slash for Expo Router
-        const statusUrl = `api/bslatam/agenda-status?eventId=bsl2025`;
+        // Determine base URL based on environment
+        const isDev = process.env.NODE_ENV === 'development';
+        const baseUrl = isDev ? 'http://localhost:8081' : '';
+        
+        // Build API URLs with proper base URL
+        const statusUrl = `${baseUrl}/api/bslatam/agenda-status?eventId=bsl2025`;
+        console.log('Fetching status from:', statusUrl);
+        
         const statusResponse = await fetch(statusUrl, {
           headers: {
             'Content-Type': 'application/json',
@@ -139,7 +145,9 @@ export default function BSL2025AgendaScreen() {
           setServiceStatus('running');
           
           // Fetch agenda data
-          const agendaUrl = `api/bslatam/agenda?eventId=bsl2025`;
+          const agendaUrl = `${baseUrl}/api/bslatam/agenda?eventId=bsl2025`;
+          console.log('Fetching agenda from:', agendaUrl);
+          
           const response = await fetch(agendaUrl, {
             headers: {
               'Content-Type': 'application/json',

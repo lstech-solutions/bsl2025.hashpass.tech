@@ -123,8 +123,8 @@ export default function BSL2025AgendaScreen() {
         setServiceStatus('unknown');
         console.log('📅 Attempting to load agenda from database...');
         
-        // First check agenda status
-        const statusResponse = await fetch('/api/bslatam/agenda-status?eventId=bsl2025');
+        // First check agenda status - remove any trailing slashes before query params
+        const statusResponse = await fetch('/api/bslatam/agenda-status?eventId=bsl2025'.replace(/\/+\?/, '?'));
         const statusResult = await statusResponse.json();
         
         if (statusResponse.ok && statusResult.hasData) {
@@ -133,8 +133,8 @@ export default function BSL2025AgendaScreen() {
           setLastUpdated(statusResult.lastUpdated);
           setServiceStatus('running');
           
-          // Load the actual agenda data
-          const response = await fetch('/api/bslatam/agenda?eventId=bsl2025');
+          // Load the actual agenda data - remove any trailing slashes before query params
+          const response = await fetch('/api/bslatam/agenda?eventId=bsl2025'.replace(/\/+\?/, '?'));
           const result = await response.json();
           
           if (response.ok && result.data && result.data.length > 0) {

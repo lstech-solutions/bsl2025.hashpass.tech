@@ -104,9 +104,21 @@ for dir in "${BUILD_DIRS[@]}"; do
     # Ensure index.html exists in the root of dist/client
     echo "[5.3/5] Verifying build output..."
     
-    # Debug: Show directory structure
-    echo "Current directory structure:"
+    # Debug: Show detailed directory structure and files
+    echo "=== DEBUG: Current directory structure ==="
     find . -maxdepth 4 -type d | sort
+    echo "\n=== DEBUG: All HTML files in build dir ==="
+    find . -name "*.html" -type f | sort
+    echo "\n=== DEBUG: Contents of build dir ==="
+    ls -la "$dir" 2>/dev/null || echo "Build directory not found: $dir"
+    echo "\n=== DEBUG: Contents of dist/ ==="
+    ls -la dist/ 2>/dev/null || echo "dist/ directory not found"
+    echo "\n=== DEBUG: Contents of dist/client/ ==="
+    ls -la dist/client/ 2>/dev/null || echo "dist/client/ directory not found"
+    echo "\n=== DEBUG: Environment ==="
+    echo "PWD: $(pwd)"
+    echo "USER: $(whoami)"
+    echo "PATH: $PATH"
     
     # Look for index.html in various possible locations
     INDEX_FOUND=false

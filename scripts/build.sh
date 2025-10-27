@@ -47,30 +47,32 @@ for dir in "${BUILD_DIRS[@]}"; do
     echo "[5.1/5] Found build output in $dir"
     FOUND_BUILD=true
     
-    # Copy all files to dist/client, but skip if source is the same as destination
-    echo "[5.2/5] Copying files from $dir to dist/client..."
-    mkdir -p dist/client
+        echo "[5.2/5] Preparing build output..."
     
-    # If the source directory is dist, we need to exclude the client directory to prevent recursion
+    # If the source directory is dist, we need to handle it specially
     if [ "$dir" = "dist" ]; then
-      # Create a temporary directory outside of the dist directory
-      TEMP_DIR=$(mktemp -d)
-      # Copy all files except the client directory
-      find "$dir" -mindepth 1 -maxdepth 1 ! -name "client" -exec cp -r {} "$TEMP_DIR/" \;
-      # Move the contents to dist/client, creating it if it doesn't exist
+      # Create the client directory if it doesn't exist
       mkdir -p dist/client
-      # Use rsync to handle the move with proper directory merging
-      if command -v rsync &> /dev/null; then
-        rsync -a "$TEMP_DIR/" dist/client/
-      else
-        # Fallback to cp if rsync is not available
-        cp -r "$TEMP_DIR/"* dist/client/ 2>/dev/null || true
-      fi
-      # Clean up the temporary directory
-      rm -rf "$TEMP_DIR"
+      
+      # Move all files from dist/ to dist/client/ except the client directory itself
+      for item in "$dir"/*; do
+        item_name=$(basename "$item")
+        if [ "$item_name" != "client" ] && [ -e "$item" ]; then
+          dest="dist/client/$item_name"
+          if [ -d "$item" ] && [ -d "$dest" ]; then
+            # If both source and destination are directories, merge them
+            cp -r "$item"/. "$dest"/
+            rm -r "$item"
+          else
+            # Otherwise, just move the item
+            mv "$item" "$dest"
+          fi
+        fi
+      done
     else
-      # For other directories, copy everything normally
-      cp -r $dir/* dist/client/
+      # For other directories, copy everything to dist/client
+      mkdir -p dist/client
+      cp -r "$dir"/. "dist/client/"
     fi
     
     # Ensure index.html exists

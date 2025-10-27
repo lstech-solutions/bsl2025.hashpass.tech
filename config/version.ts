@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202510272149, // Updated to current date
+  buildNumber: 202510272149, // Updated to current timestamp
   releaseDate: '2025-10-27',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -39,15 +39,16 @@ export const CURRENT_VERSION: VersionInfo = {
     'Real-time countdown system',
     'Meeting request system with Supabase integration',
     'Speaker availability and booking system',
-    'NEW: Complete networking center with horizontal scrolling',
-    'NEW: My Requests view for managing sent meeting requests',
-    'NEW: My Schedule view for scheduled meetings',
-    'NEW: System Analytics with comprehensive statistics',
-    'NEW: Blocked Users management system',
-    'NEW: Horizontal scrolling quick access menu',
-    'NEW: Enhanced networking statistics and insights',
-    'NEW: Speaker dashboard for incoming request management',
-    'NEW: Real-time networking activity tracking'
+    'Complete networking center with horizontal scrolling',
+    'My Requests view for managing sent meeting requests',
+    'My Schedule view for scheduled meetings',
+    'System Analytics with comprehensive statistics',
+    'Blocked Users management system',
+    'Horizontal scrolling quick access menu',
+    'Enhanced networking statistics and insights',
+    'Speaker dashboard for incoming request management',
+    'Real-time networking activity tracking',
+    'Automated version management and changelog updates'
   ],
   bugfixes: [
     'Fixed SVG logo rendering issues',
@@ -56,22 +57,17 @@ export const CURRENT_VERSION: VersionInfo = {
     'Corrected speaker count discrepancies',
     'Fixed dark mode contrast issues',
     'Resolved navigation routing problems',
-    'Fixed Lambda deployment parameter issues',
-    'Updated AWS SDK to v3 for better performance',
-    'Resolved CloudFormation stack deployment errors',
-    'Fixed 404 errors in Supabase database functions',
-    'Resolved UUID/TEXT type mismatch in meeting request system',
-    'Fixed can_make_meeting_request function type casting issues',
-    'Updated database functions to handle mixed column types properly',
     'Fixed React Navigation headerBackTitleVisible property error',
     'Fixed headerStyle borderBottomWidth property error',
     'Fixed pass number display showing "unknown" in explorer view',
     'Fixed speaker dashboard loading stuck issue',
     'Fixed get_speaker_meeting_requests SQL GROUP BY error',
-    'Improved networking icon visibility in quick access menu'
+    'Improved networking icon visibility in quick access menu',
+    'Updated version display and changelog automation',
+    'Fixed version history dates and formatting'
   ],
   breakingChanges: [],
-  notes: 'Updated version display and changelog automation'
+  notes: 'Updated version display and changelog automation with fixed version history'
 };
 
 // Version History
@@ -81,29 +77,31 @@ export const VERSION_HISTORY: VersionHistory = {
     buildNumber: 202510272149,
     releaseDate: '2025-10-27',
     releaseType: 'beta',
-    environment: 'development',
+    environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     features: [
-      'User pass management system',
-      'BSL 2025 event integration',
-      'Speaker profile system with avatars',
-      'Event agenda with live updates',
-      'Unified search and filter system',
-      'Dark mode support',
-      'Event banner component',
-      'Pass card UI with BSL branding',
-      'Agenda tabbed interface',
-      'Real-time countdown system'
+      'Automated version management and changelog updates',
+      'Improved version display in UI'
     ],
     bugfixes: [
-      'Fixed SVG logo rendering issues',
-      'Resolved TypeScript undefined property errors',
-      'Fixed agenda data grouping logic',
-      'Corrected speaker count discrepancies',
-      'Fixed dark mode contrast issues',
-      'Resolved navigation routing problems'
+      'Fixed version history dates and formatting',
+      'Updated version display to show correct information'
     ],
     breakingChanges: [],
-    notes: 'Updated version display and changelog automation'
+    notes: 'Updated version display and changelog automation with fixed version history'
+  },
+  '1.2.9': {
+    version: '1.2.9',
+    buildNumber: 202510261852,
+    releaseDate: '2025-10-26',
+    releaseType: 'beta',
+    environment: 'production',
+    features: [],
+    bugfixes: [
+      'Fixed TypeScript error where "event" was possibly null in agenda.tsx',
+      'Updated dependency array to use optional chaining for event.agenda'
+    ],
+    breakingChanges: [],
+    notes: 'Fixed TypeScript errors and improved error handling'
   },
   '1.2.3': {
     version: '1.2.3',
@@ -112,24 +110,16 @@ export const VERSION_HISTORY: VersionHistory = {
     releaseType: 'beta',
     environment: 'development',
     features: [
-      'NEW: Complete networking center with horizontal scrolling',
-      'NEW: My Requests view for managing sent meeting requests',
-      'NEW: My Schedule view for scheduled meetings',
-      'NEW: System Analytics with comprehensive statistics',
-      'NEW: Blocked Users management system',
-      'NEW: Horizontal scrolling quick access menu',
-      'NEW: Enhanced networking statistics and insights',
-      'NEW: Speaker dashboard for incoming request management',
-      'NEW: Real-time networking activity tracking'
+      'Complete networking center with horizontal scrolling',
+      'My Requests view for managing sent meeting requests',
+      'My Schedule view for scheduled meetings',
+      'System Analytics with comprehensive statistics',
+      'Blocked Users management system',
+      'Enhanced networking statistics and insights',
+      'Speaker dashboard for incoming request management',
+      'Real-time networking activity tracking'
     ],
-    bugfixes: [
-      'Fixed React Navigation headerBackTitleVisible property error',
-      'Fixed headerStyle borderBottomWidth property error',
-      'Fixed pass number display showing "unknown" in explorer view',
-      'Fixed speaker dashboard loading stuck issue',
-      'Fixed get_speaker_meeting_requests SQL GROUP BY error',
-      'Improved networking icon visibility in quick access menu'
-    ],
+    bugfixes: [],
     breakingChanges: [],
     notes: 'Major networking system update with comprehensive meeting request management and analytics'
   },
@@ -138,28 +128,11 @@ export const VERSION_HISTORY: VersionHistory = {
     buildNumber: 202510151600,
     releaseDate: '2025-10-15',
     releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'User pass management system',
-      'BSL 2025 event integration',
-      'Speaker profile system with avatars',
-      'Event agenda with live updates',
-      'Unified search and filter system',
-      'Dark mode support',
-      'Event banner component',
-      'Pass card UI with BSL branding',
-      'Agenda tabbed interface',
-      'Real-time countdown system',
-      'Meeting request system with Supabase integration',
-      'Speaker availability and booking system'
-    ],
+    environment: 'production',
+    features: [],
     bugfixes: [
-      'Fixed SVG logo rendering issues',
-      'Resolved TypeScript undefined property errors',
-      'Fixed agenda data grouping logic',
-      'Corrected speaker count discrepancies',
-      'Fixed dark mode contrast issues',
-      'Resolved navigation routing problems',
+      'Fixed critical 404 errors in Supabase meeting request system',
+      'Resolved database type mismatches',
       'Fixed Lambda deployment parameter issues',
       'Updated AWS SDK to v3 for better performance',
       'Resolved CloudFormation stack deployment errors',
@@ -176,122 +149,49 @@ export const VERSION_HISTORY: VersionHistory = {
     buildNumber: 202510151510,
     releaseDate: '2025-10-15',
     releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'User pass management system',
-      'BSL 2025 event integration',
-      'Speaker profile system with avatars',
-      'Event agenda with live updates',
-      'Unified search and filter system',
-      'Dark mode support',
-      'Event banner component',
-      'Pass card UI with BSL branding',
-      'Agenda tabbed interface',
-      'Real-time countdown system'
-    ],
+    environment: 'production',
+    features: [],
     bugfixes: [
-      'Fixed SVG logo rendering issues',
-      'Resolved TypeScript undefined property errors',
-      'Fixed agenda data grouping logic',
-      'Corrected speaker count discrepancies',
-      'Fixed dark mode contrast issues',
-      'Resolved navigation routing problems',
-      'Fixed Lambda deployment parameter issues',
-      'Updated AWS SDK to v3 for better performance',
-      'Resolved CloudFormation stack deployment errors'
+      'Fixed React Navigation headerBackTitleVisible property error',
+      'Fixed headerStyle borderBottomWidth property error',
+      'Fixed pass number display showing "unknown" in explorer view',
+      'Fixed speaker dashboard loading stuck issue',
+      'Fixed get_speaker_meeting_requests SQL GROUP BY error',
+      'Improved networking icon visibility in quick access menu'
     ],
     breakingChanges: [],
     notes: 'UI display fixes and automatic version management'
   },
-  '1.1.9': {
-    version: '1.1.9',
-    buildNumber: 202510151510,
-    releaseDate: '2025-10-15',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'User pass management system',
-      'BSL 2025 event integration',
-      'Speaker profile system with avatars',
-      'Event agenda with live updates',
-      'Unified search and filter system',
-      'Dark mode support',
-      'Event banner component',
-      'Pass card UI with BSL branding',
-      'Agenda tabbed interface',
-      'Real-time countdown system'
-    ],
-    bugfixes: [
-      'Fixed SVG logo rendering issues',
-      'Resolved TypeScript undefined property errors',
-      'Fixed agenda data grouping logic',
-      'Corrected speaker count discrepancies',
-      'Fixed dark mode contrast issues',
-      'Resolved navigation routing problems'
-    ],
-    breakingChanges: [],
-    notes: 'UI display fixes and automatic version management'
-  },
-  [packageJson.version]: {
-    version: packageJson.version,
-    buildNumber: 202510270000,
-    releaseDate: '2025-10-27',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'User pass management system',
-      'BSL 2025 event integration',
-      'Speaker profile system with avatars',
-      'Event agenda with live updates',
-      'Unified search and filter system',
-      'Dark mode support',
-      'Event banner component',
-      'Pass card UI with BSL branding',
-      'Agenda tabbed interface',
-      'Real-time countdown system'
-    ],
-    bugfixes: [
-      'Fixed SVG logo rendering issues',
-      'Resolved TypeScript undefined property errors',
-      'Fixed agenda data grouping logic',
-      'Corrected speaker count discrepancies',
-      'Fixed dark mode contrast issues',
-      'Resolved navigation routing problems',
-      'Fixed Lambda deployment parameter issues',
-      'Updated AWS SDK to v3 for better performance',
-      'Resolved CloudFormation stack deployment errors'
-    ],
-    breakingChanges: [],
-    notes: 'Lambda deployment fixes and AWS SDK v3 migration for improved stability'
-  },
-  [packageJson.version]: {
-    version: packageJson.version,
-    buildNumber: 2025011501,
+  '1.2.0': {
+    version: '1.2.0',
+    buildNumber: 202501150000,
     releaseDate: '2025-01-15',
     releaseType: 'beta',
-    environment: 'development',
+    environment: 'production',
     features: [
-      'User pass management system',
-      'BSL 2025 event integration',
-      'Speaker profile system with avatars',
-      'Event agenda with live updates',
-      'Unified search and filter system',
-      'Dark mode support',
-      'Event banner component',
-      'Pass card UI with BSL branding',
-      'Agenda tabbed interface',
-      'Real-time countdown system'
+      'User pass management system with database integration',
+      'BSL 2025 event integration with live agenda updates',
+      'Speaker profile system with avatar support and search functionality',
+      'Event agenda with tabbed interface and real-time countdown',
+      'Unified search and filter system across all views',
+      'Dark mode support with proper contrast adjustments',
+      'Event banner component for consistent branding',
+      'Pass card UI with BSL2025 branding and logo seal',
+      'Real-time countdown system for event timing',
+      'Version tracking and display system'
     ],
     bugfixes: [
-      'Fixed SVG logo rendering issues',
-      'Resolved TypeScript undefined property errors',
-      'Fixed agenda data grouping logic',
-      'Corrected speaker count discrepancies',
-      'Fixed dark mode contrast issues',
-      'Resolved navigation routing problems'
+      'Fixed SVG logo rendering issues by implementing text-based fallback',
+      'Resolved TypeScript undefined property errors with proper null checking',
+      'Fixed agenda data grouping logic for proper day distribution',
+      'Corrected speaker count discrepancies and duplicate entries',
+      'Fixed dark mode contrast issues across all components',
+      'Resolved navigation routing problems between views',
+      'Fixed alphabetical dividers in speaker list',
+      'Corrected filter and search system consistency'
     ],
     breakingChanges: [],
-    notes: 'Major UI overhaul with BSL 2025 branding and improved user experience'
+    notes: 'Initial beta release with core event features'
   }
 };
 
@@ -309,50 +209,39 @@ export const getLatestVersion = (): VersionInfo => {
 
 export const getVersionHistory = (): VersionInfo[] => {
   return Object.values(VERSION_HISTORY).sort((a, b) => 
-    b.buildNumber - a.buildNumber
+    new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
   );
 };
 
-export const getVersionBadgeColor = (releaseType: string): string => {
+export const getVersionBadgeColor = (releaseType: VersionInfo['releaseType']): string => {
   switch (releaseType) {
     case 'stable': return '#34A853';
-    case 'rc': return '#FF9500';
     case 'beta': return '#007AFF';
+    case 'rc': return '#FF9500';
     case 'alpha': return '#FF3B30';
     default: return '#8E8E93';
   }
 };
 
-export const getVersionBadgeText = (releaseType: string): string => {
-  switch (releaseType) {
-    case 'stable': return 'STABLE';
-    case 'rc': return 'RC';
-    case 'beta': return 'BETA';
-    case 'alpha': return 'ALPHA';
-    default: return 'DEV';
-  }
+export const getVersionBadgeText = (releaseType: VersionInfo['releaseType']): string => {
+  return releaseType.toUpperCase();
 };
 
 // Environment Configuration
 export const ENVIRONMENT_CONFIG = {
   development: {
     showVersion: true,
-    showDebugInfo: true,
-    enableHotReload: true,
+    enableAnalytics: false,
     logLevel: 'debug'
   },
   staging: {
     showVersion: true,
-    showDebugInfo: false,
-    enableHotReload: false,
+    enableAnalytics: true,
     logLevel: 'info'
   },
   production: {
     showVersion: false,
-    showDebugInfo: false,
-    enableHotReload: false,
-    logLevel: 'error'
+    enableAnalytics: true,
+    logLevel: 'warn'
   }
-};
-
-export default CURRENT_VERSION;
+} as const;

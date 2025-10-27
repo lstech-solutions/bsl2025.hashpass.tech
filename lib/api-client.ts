@@ -74,14 +74,15 @@ export class EventApiClient {
     
     // If an endpoint is specified in options and exists in the event config
     if (options.endpoint && event?.api?.endpoints?.[options.endpoint]) {
-      const endpointPath = event.api.endpoints[options.endpoint].replace(/^\/+/, '');
+      const endpointPath = event.api.endpoints[options.endpoint];
       const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-      url = `${cleanBase}/${endpointPath}`.replace(/([^:]\/)\/+/g, '$1');
+      const cleanPath = endpointPath.startsWith('/') ? endpointPath.slice(1) : endpointPath;
+      url = `${cleanBase}/${cleanPath}`;
     } else {
       // Otherwise, build the URL from the base URL and path
-      const cleanPath = path.replace(/^\/+/, '');
       const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-      url = `${cleanBase}/${cleanPath}`.replace(/([^:]\/)\/+/g, '$1');
+      const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+      url = `${cleanBase}/${cleanPath}`;
     }
     
     // Add query parameters if provided

@@ -27,9 +27,9 @@ export const AVAILABLE_EVENTS: EventInfo[] = [
     api: {
       basePath: '/api/bslatam',
       endpoints: {
-        agenda: '/agenda',
-        speakers: '/speakers',
-        bookings: '/bookings',
+        agenda: 'agenda',
+        speakers: 'speakers',
+        bookings: 'bookings',
       },
     },
     routes: {

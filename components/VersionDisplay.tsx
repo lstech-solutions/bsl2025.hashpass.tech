@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
-import { versionTracker } from '../lib/version-tracker';
-import { VersionInfo } from '../config/version';
+import { versionService } from '../lib/services/version-service';
+
+type VersionInfo = ReturnType<typeof versionService.getCurrentVersion>;
 
 interface VersionDisplayProps {
   showInSidebar?: boolean;
@@ -15,10 +16,10 @@ export default function VersionDisplay({ showInSidebar = false, compact = false 
   const [showDetails, setShowDetails] = useState(false);
   const styles = getStyles(isDark, colors);
 
-  const versionInfo = versionTracker.getCurrentVersion();
-  const buildInfo = versionTracker.getBuildInfo();
-  const versionHistory = versionTracker.getVersionHistory();
-  const badgeInfo = versionTracker.getVersionBadgeInfo();
+  const versionInfo = versionService.getCurrentVersion();
+  const buildInfo = versionService.getBuildInfo();
+  const versionHistory = versionService.getVersionHistory();
+  const badgeInfo = versionService.getVersionBadgeInfo(versionInfo.releaseType);
 
   const VersionBadge = () => (
     <View style={[styles.versionBadge, { backgroundColor: badgeInfo.color }]}>

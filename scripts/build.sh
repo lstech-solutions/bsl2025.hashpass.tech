@@ -75,9 +75,21 @@ for dir in "${BUILD_DIRS[@]}"; do
       cp -r "$dir"/. "dist/client/"
     fi
     
-    # Ensure index.html exists
+    # Ensure index.html exists in the root of dist/client
+    if [ -f "dist/client/dist/index.html" ]; then
+      echo "[5.3/5] Moving index.html to correct location..."
+      mv dist/client/dist/index.html dist/client/
+      # Move other files from dist/client/dist/ to dist/client/
+      if [ -d "dist/client/dist" ]; then
+        mv dist/client/dist/* dist/client/ 2>/dev/null || true
+        rmdir dist/client/dist 2>/dev/null || true
+      fi
+    fi
+
+    # Create default index.html if it still doesn't exist
     if [ ! -f "dist/client/index.html" ]; then
-      echo "[5.3/5] Creating default index.html..."
+      echo "[5.4/5] Creating default index.html..."
+      mkdir -p dist/client
       cat > dist/client/index.html <<EOL
 <!DOCTYPE html>
 <html>
@@ -92,6 +104,14 @@ for dir in "${BUILD_DIRS[@]}"; do
   </body>
 </html>
 EOL
+    fi
+    
+    # Verify index.html exists and is in the right place
+    if [ ! -f "dist/client/index.html" ]; then
+      echo "[ERROR] Failed to create index.html in dist/client/"
+      echo "Current directory structure:"
+      find dist -type f | sort
+      exit 1
     fi
     
     break

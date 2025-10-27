@@ -64,11 +64,51 @@ export const parseEventISO = (s: string): Date => {
 
 export const formatTimeRange = (item: { time: string; duration_minutes?: number; type?: string }): string => {
   try {
-    const start = parseEventISO(item.time);
+    // If the time is already in format "HH:MM - HH:MM", format it with AM/PM
+    const timeMatch = item.time.trim().match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
+    if (timeMatch) {
+      const formatTime = (h: number, m: number) => {
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const displayHours = h % 12 || 12; // Convert 0 to 12 for 12 AM
+        return `${displayHours}:${m.toString().padStart(2, '0')} ${ampm}`;
+      };
+      
+      const startHour = parseInt(timeMatch[1], 10);
+      const startMinute = parseInt(timeMatch[2], 10);
+      const endHour = parseInt(timeMatch[3], 10);
+      const endMinute = parseInt(timeMatch[4], 10);
+      
+      return `${formatTime(startHour, startMinute)} - ${formatTime(endHour, endMinute)}`;
+    }
+
+    // Try to parse as ISO date string (e.g., "2025-11-12T08:00:00Z")
+    const date = new Date(item.time);
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid date format');
+    }
+
+    // Event is in UTC-5, so we need to convert from UTC to local time
+    // by adding 5 hours (since the time is stored in UTC but represents local time)
+    const localOffset = 5 * 60 * 60 * 1000; // +5 hours in milliseconds
+    const localDate = new Date(date.getTime() + localOffset);
+    
+    // Calculate end time
     const duration = item.duration_minutes || getDefaultDurationMinutes(item.type);
-    const end = new Date(start.getTime() + duration * 60 * 1000);
-    return `${formatClock(start)} - ${formatClock(end)}`;
+    const endDate = new Date(localDate.getTime() + duration * 60 * 1000);
+    
+    // Format time in 12-hour format with AM/PM
+    const formatTime = (d: Date) => {
+      let hours = d.getHours();
+      const minutes = d.getMinutes();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours || 12; // Convert 0 to 12 for 12 AM
+      return `${hours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    };
+    
+    return `${formatTime(localDate)} - ${formatTime(endDate)}`;
   } catch (e) {
+    console.error('Error formatting time range:', e);
     return item.time || '';
   }
 };

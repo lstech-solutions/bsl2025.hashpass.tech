@@ -197,9 +197,14 @@ frontend:
 
 # Rewrite rules for API and SPA
 rewrites:
-  # API routes - let the serverless functions handle these
+  # API routes - handle the +api.js pattern for serverless functions
+  - source: /api/bslatam/agenda
+    target: /_expo/functions/api/bslatam/agenda+api
+    status: '200'
+    
+  # Catch-all for other API routes with +api suffix
   - source: /api/bslatam/<*>
-    target: /_expo/functions/api/bslatam/<*>
+    target: /_expo/functions/api/bslatam/<*>+api
     status: '200'
     
   # SPA fallback - serve index.html for all other routes
@@ -218,10 +223,17 @@ customHeaders:
       - key: 'Access-Control-Allow-Methods'
         value: 'GET, POST, PUT, DELETE, OPTIONS'
     
-  # Static assets and service worker
+  # Static assets
+  - source: /assets/<*>
+    target: /assets/<*>
+    status: '200'
+    
+  # Service worker
   - source: /sw.js
     target: /sw.js
     status: '200'
+    
+  # Expo assets
   - source: /_expo/*
     target: /_expo/
     status: '200'

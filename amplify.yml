@@ -26,15 +26,13 @@ frontend:
         - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
         # Create necessary directories for API routes
         - mkdir -p dist/client/_expo/functions/api/bslatam
-        # Copy API route files to the correct location
+        # Copy all API route files to the correct location
         - cp -r app/api/bslatam/*.ts dist/client/_expo/functions/api/bslatam/
         # Copy all server files to client directory for Amplify
         - cp -r dist/server/* dist/client/
-        # Copy service worker to client directory
-        - cp dist/sw.js dist/client/
         # List contents for debugging
+        - echo "API files in dist/client/_expo/functions/api/bslatam/:"
         - ls -la dist/client/_expo/functions/api/bslatam/
-        - ls -la dist/client/
         - 'echo "Checking for index.html:"'
         - ls -la dist/client/index.html
 
@@ -84,9 +82,12 @@ redirects:
   - source: '/_expo/*'
     status: 200
     target: '/_expo/'
-  - source: '/api/bslatam/*'
+  - source: '/api/bslatam/agenda/'
     status: 200
-    target: '/_expo/functions/api/bslatam/$1+api'
+    target: '/_expo/functions/api/bslatam/agenda+api'
+  - source: '/api/bslatam/agenda-status/'
+    status: 200
+    target: '/_expo/functions/api/bslatam/agenda-status+api'
   - source: '/dashboard/*'
     status: 200
     target: '/index.html'

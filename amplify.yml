@@ -18,18 +18,39 @@ frontend:
         - export PATH=~/.local/bin:$PATH
     build:
       commands:
-        # Run the build script
-        - ./scripts/build.sh
+        # Install dependencies
+        - npm ci
+        
+        # Build the application
+        - npx expo export:web || npx expo export -p web
+        
+        # Create dist/client directory
+        - mkdir -p dist/client
+        
+        # Copy build output to dist/client
+        - if [ -d "web-build" ]; then cp -r web-build/* dist/client/; fi
+        - if [ -d "out" ]; then cp -r out/* dist/client/; fi
+        - if [ -d "dist/web-build" ]; then cp -r dist/web-build/* dist/client/; fi
+        
+        # Ensure _expo/static directory exists
+        - mkdir -p dist/client/_expo/static
+        - if [ -d "dist/client/static" ]; then cp -r dist/client/static/* dist/client/_expo/static/; fi
+        
         # Build and deploy Lambda functions
         - echo "Building Lambda functions..."
         - cd amplify/backend/function/agendaMonitor
         - npm install --production --no-optional
         - cd ../../..
+        
         # Deploy Lambda function
         - echo "Deploying Lambda function..."
         - amplify push --yes --no-gql-override
-        - 'echo "Checking for index.html:"'
-        #- ls -la dist/client/index.html
+        
+        # Verify build output
+        - echo "Build output verification:"
+        - ls -la dist/client/
+        - echo "Checking for index.html:"
+        #- ls -la dist/client/index.html || (echo "index.html not found!" && exit 1)
   artifacts:
     baseDirectory: dist/client
     files:

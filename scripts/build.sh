@@ -58,21 +58,53 @@ copy_files() {
   fi
 }
 
+# First, ensure we have a clean output directory
+rm -rf dist/client
+mkdir -p dist/client
+
 # Check common build output locations and copy files
 if [ -d "web-build" ]; then
   echo "Found web-build directory, copying to dist/client"
-  copy_files "web-build" "dist/client"
+  cp -r web-build/* dist/client/
+  cp -r web-build/.[!.]* dist/client/ 2>/dev/null || true
+  
+  # Ensure _expo directory exists for static files
+  if [ ! -d "dist/client/_expo" ] && [ -d "dist/client/static" ]; then
+    mkdir -p dist/client/_expo/static
+    cp -r dist/client/static/* dist/client/_expo/static/
+  fi
+  
 elif [ -d "out" ]; then
   echo "Found out directory, copying to dist/client"
-  copy_files "out" "dist/client"
+  cp -r out/* dist/client/
+  
+  # Move static files to _expo/static if they exist
+  if [ -d "dist/client/static" ]; then
+    mkdir -p dist/client/_expo/static
+    cp -r dist/client/static/* dist/client/_expo/static/
+  fi
+  
 elif [ -d "dist/web-build" ]; then
   echo "Found dist/web-build, copying to dist/client"
-  copy_files "dist/web-build" "dist/client"
+  cp -r dist/web-build/* dist/client/
+  
+  # Move static files to _expo/static if they exist
+  if [ -d "dist/client/static" ] && [ ! -d "dist/client/_expo/static" ]; then
+    mkdir -p dist/client/_expo/static
+    cp -r dist/client/static/* dist/client/_expo/static/
+  fi
+  
 else
   echo "No standard build directory found, checking for index.html in root"
   if [ -f "index.html" ]; then
     echo "Found index.html in root, copying to dist/client"
     cp index.html dist/client/
+  fi
+  
+  # Ensure _expo/static exists for static files
+  mkdir -p dist/client/_expo/static
+  if [ -d "public" ]; then
+    cp -r public/* dist/client/_expo/static/
   fi
 fi
 
@@ -119,7 +151,11 @@ if [ ! -f "dist/client/index.html" ]; then
   </head>
   <body>
     <div id="root">BSL 2025 - Loading...</div>
-    <script src="/static/js/bundle.js"></script>
+    <script>
+      // Set the base path for static assets
+      window.__PUBLIC_URL__ = window.location.pathname.split('/').slice(0, -1).join('/') || '/';
+    </script>
+    <script src="./static/js/bundle.js"></script>
   </body>
 </html>
 EOL

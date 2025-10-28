@@ -5,22 +5,11 @@ frontend:
       commands:
         - nvm install 22.18.0
         - npm install --quiet --global @expo/cli
-        - >
-          if [ -f yarn.lock ]; then
-            yarn install --frozen-lockfile
-          elif [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-        # Install AWS CLI for Lambda deployment
+        - npm ci
         - pip install awscli --upgrade --user
         - export PATH=~/.local/bin:$PATH
     build:
       commands:
-        # Install dependencies
-        - npm ci
-        
         # Set environment to production
         - export NODE_ENV=production
         
@@ -31,72 +20,24 @@ frontend:
         # Build the application
         - npx expo export:web || npx expo export -p web
         
-        # Move files to dist directory
+        # Handle build output
         - |
-          # Copy from web-build if it exists
+          set -e
+          
+          # Default to web-build if it exists
           if [ -d "web-build" ]; then
             echo "Copying from web-build to dist"
             cp -r web-build/* dist/ 2>/dev/null || true
             cp -r web-build/.[!.]* dist/ 2>/dev/null || true
           fi
           
+          # Create necessary directories
+          mkdir -p dist/_expo/static/js
+          
           # Create a simple index.html if it doesn't exist
           if [ ! -f "dist/index.html" ]; then
             echo "Creating simple index.html"
-            echo '<!DOCTYPE html><html><head><title>BSL 2025</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f5f5f5;color:#333}.container{text-align:center}h1{font-size:2.5rem;margin-bottom:1rem}p{font-size:1.2rem;color:#666}</style></head><body><div class="container"><h1>BSL 2025</h1><p>Loading application...</p></div><script>const paths=["/_expo/static/js/bundle.js","/static/js/bundle.js","/bundle.js"];function loadScript(src){return new Promise((r,e)=>{const t=document.createElement("script");t.src=src;t.onload=()=>r(t);t.onerror=e;document.body.appendChild(t)})}(async()=>{for(const e of paths)try{console.log("Trying to load:",e);await loadScript(e);console.log("Successfully loaded:",e);break}catch(e){console.log("Failed to load:",e)}})()</script></body></html>' > dist/index.html
-          fi
-          
-          # Create 200.html for client-side routing
-          cp dist/index.html dist/200.html 2>/dev/null || true
-          
-          # List all files for debugging
-          echo "Build output files:"
-          find dist -type f | sort
-        
-        # Handle static files and directories
-        - |
-          # Create necessary directories
-          mkdir -p dist/client/_expo/static
-          mkdir -p dist/client/static/js
-          
-          # Copy static files from various possible locations
-          if [ -d "dist/client/static" ]; then
-            cp -r dist/client/static/* dist/client/_expo/static/ 2>/dev/null || true
-          fi
-          
-          # Look for bundle.js in common locations and copy to the right place
-          if [ -f "dist/client/static/js/bundle.js" ]; then
-            echo "Found bundle.js in static/js/"
-          elif [ -f "dist/client/_expo/static/js/bundle.js" ]; then
-            echo "Found bundle.js in _expo/static/js/"
-          else
-            echo "Searching for bundle.js in build output..."
-            find dist -name "bundle.js" -exec cp {} dist/client/static/js/ \; 2>/dev/null || true
-            find dist -name "*.bundle.js" -exec cp {} dist/client/static/js/ \; 2>/dev/null || true
-          fi
-          
-          # Create 200.html for client-side routing
-          if [ ! -f "dist/client/200.html" ] && [ -f "dist/client/index.html" ]; then 
-            cp dist/client/index.html dist/client/200.html
-          fi
-          
-          # Verify build output
-          echo "Build output verification:"
-          echo "Files in dist/client:"
-          find dist/client -type f | sort
-          
-          # Check for index.html in common locations
-          if [ -f "dist/client/index.html" ]; then
-            echo "Found index.html in dist/client/"
-          elif [ -f "dist/client/server/index.html" ]; then
-            echo "Moving index.html from dist/client/server/ to dist/client/"
-            mv dist/client/server/index.html dist/client/
-          else
-            echo "Error: index.html not found in expected locations"
-            find . -name "index.html" -type f
-              # Create a clean, centered index.html as fallback
-            mkdir -p dist/client
-            cat > dist/client/index.html << 'EOL'
+            cat > dist/index.html << 'EOL'
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -112,7 +53,7 @@ frontend:
                         flex-direction: column;
                         justify-content: center;
                         align-items: center;
-                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                         background-color: #f5f5f5;
                         color: #333;
                     }
@@ -131,8 +72,7 @@ frontend:
                 <h1>BSL 2025</h1>
                 <p>Loading application...</p>
                 <script>
-                // Try multiple possible bundle locations
-                const bundlePaths = [
+                const paths = [
                   '/_expo/static/js/bundle.js',
                   '/static/js/bundle.js',
                   '/bundle.js'
@@ -148,14 +88,13 @@ frontend:
                   });
                 }
                 
-                // Try each path until one works
                 (async function() {
-                  for (const path of bundlePaths) {
+                  for (const path of paths) {
                     try {
                       console.log('Trying to load:', path);
                       await loadScript(path);
                       console.log('Successfully loaded:', path);
-                      break; // Stop if successful
+                      break;
                     } catch (e) {
                       console.log('Failed to load:', path);
                     }
@@ -166,23 +105,19 @@ frontend:
             </html>
             EOL
           fi
-        
-        # Build and deploy Lambda functions
-        - echo "Building Lambda functions..."
-        - cd amplify/backend/function/agendaMonitor
-        - npm install --production --no-optional
-        - cd ../../..
-        
-        # Deploy Lambda function
-        - echo "Deploying Lambda function..."
-        - amplify push --yes --no-gql-override
+          
+          # Create 200.html for client-side routing
+          cp dist/index.html dist/200.html 2>/dev/null || true
+          
+          # List all files for debugging
+          echo "Build output files:"
+          find dist -type f | sort
+  
   artifacts:
-    baseDirectory: .
+    baseDirectory: dist
     files:
-      - 'dist/**/*'
-    # Rewrite rules for client-side routing
+      - '**/*'
     customHeaders:
-      # Handle HTML files with no caching
       - pattern: '**/*.html'
         headers:
           - key: Cache-Control
@@ -191,8 +126,6 @@ frontend:
             value: 'no-cache'
           - key: Expires
             value: '0'
-      
-      # Handle root and nested routes
       - pattern: '/*'
         headers:
           - key: Cache-Control

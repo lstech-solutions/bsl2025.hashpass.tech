@@ -94,7 +94,6 @@ frontend:
             value: 'GET, POST, PUT, DELETE, OPTIONS'
           - key: 'Access-Control-Allow-Credentials'
             value: 'true'
-            value: '0'
       - pattern: '**/*.js'
         headers:
           - key: Cache-Control

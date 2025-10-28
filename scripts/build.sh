@@ -21,20 +21,30 @@ fi
 # Build the application
 echo "[3/5] Building Expo web application..."
 
+# Clean previous builds
+echo "[3.1/5] Cleaning previous builds..."
+rm -rf web-build out dist/web-build
+
 # Build for web
-echo "[3.1/5] Building web assets..."
-# First try the new export command, fall back to the old one if it fails
+echo "[3.2/5] Building web assets..."
+# Set environment to production
+export NODE_ENV=production
+
+# Build with the web export command
 if ! npx expo export:web; then
   echo "[WARNING] expo export:web failed, trying alternative build method..."
   if ! npx expo export -p web; then
     echo "[ERROR] All build attempts failed"
     exit 1
   fi
+  BUILD_DIR="dist"
+else
+  BUILD_DIR="web-build"
 fi
 
 # Debug: Show directory structure
-echo "[4/5] Build output structure:"
-find . -maxdepth 3 -type d | sort
+echo "[4/5] Build output structure (${BUILD_DIR}):"
+find "${BUILD_DIR}" -type f | sort
 
 # Prepare build artifacts
 echo "[5/5] Preparing build artifacts..."
@@ -61,6 +71,14 @@ copy_files() {
 # First, ensure we have a clean output directory
 rm -rf dist/client
 mkdir -p dist/client
+
+# Copy build output to dist/client
+if [ -d "${BUILD_DIR}" ]; then
+  echo "Copying build output from ${BUILD_DIR} to dist/client"
+  cp -r "${BUILD_DIR}"/* dist/client/
+  # Copy hidden files as well
+  cp -r "${BUILD_DIR}"/.[!.]* dist/client/ 2>/dev/null || true
+fi
 
 # Check common build output locations and copy files
 if [ -d "web-build" ]; then

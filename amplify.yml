@@ -21,20 +21,39 @@ frontend:
         # Install dependencies
         - npm ci
         
+        # Set environment to production
+        - export NODE_ENV=production
+        
+        # Clean previous builds
+        - rm -rf web-build out dist/web-build
+        
         # Build the application
         - npx expo export:web || npx expo export -p web
+        
+        # Determine build directory
+        - if [ -d "web-build" ]; then BUILD_DIR="web-build"; else BUILD_DIR="dist"; fi
         
         # Create dist/client directory
         - mkdir -p dist/client
         
         # Copy build output to dist/client
-        - if [ -d "web-build" ]; then cp -r web-build/* dist/client/; fi
-        - if [ -d "out" ]; then cp -r out/* dist/client/; fi
-        - if [ -d "dist/web-build" ]; then cp -r dist/web-build/* dist/client/; fi
+        - echo "Copying build output from ${BUILD_DIR} to dist/client"
+        - cp -r ${BUILD_DIR}/* dist/client/
+        - cp -r ${BUILD_DIR}/.[!.]* dist/client/ 2>/dev/null || true
         
         # Ensure _expo/static directory exists
         - mkdir -p dist/client/_expo/static
         - if [ -d "dist/client/static" ]; then cp -r dist/client/static/* dist/client/_expo/static/; fi
+        
+        # Create 200.html for client-side routing
+        - if [ ! -f "dist/client/200.html" ]; then cp dist/client/index.html dist/client/200.html; fi
+        
+        # Verify build output
+        - echo "Build output verification:"
+        - echo "Files in dist/client:"
+        - find dist/client -type f | sort
+        - echo "Checking for index.html:"
+        - ls -la dist/client/index.html || (echo "index.html not found!" && exit 1)
         
         # Build and deploy Lambda functions
         - echo "Building Lambda functions..."
@@ -45,12 +64,6 @@ frontend:
         # Deploy Lambda function
         - echo "Deploying Lambda function..."
         - amplify push --yes --no-gql-override
-        
-        # Verify build output
-        - echo "Build output verification:"
-        #- ls -la dist/client/
-        - echo "Checking for index.html:"
-        #- ls -la dist/client/index.html || (echo "index.html not found!" && exit 1)
   artifacts:
     baseDirectory: dist/client
     files:

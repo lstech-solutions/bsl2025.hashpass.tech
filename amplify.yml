@@ -196,24 +196,34 @@ frontend:
       - $(npm root --global)/**/*
 
 # Redirects for SPA routing and API routes
-redirects:
-  # API routes
+rewrites:
+  # API proxy
   - source: /api/bslatam/<*>
-    target: https://bsl2025.hashpass.tech/api/bslatam/<*>
-    status: '200'  # Must be string for Amplify
+    target: 'https://bsl2025.hashpass.tech/api/bslatam/<*>
+    status: '200'  # 200 means proxy, not redirect
     
   # SPA fallback
   - source: /<*>
     target: /index.html
     status: '200'
+
+# Custom headers for API responses
+customHeaders:
+  - pattern: '**/*'
+    headers:
+      - key: 'Access-Control-Allow-Origin'
+        value: '*'
+      - key: 'Access-Control-Allow-Headers'
+        value: 'Content-Type, Authorization, X-Requested-With'
+      - key: 'Access-Control-Allow-Methods'
+        value: 'GET, POST, PUT, DELETE, OPTIONS'
+    
+  # Static assets and service worker
   - source: /sw.js
     target: /sw.js
     status: '200'
   - source: /_expo/*
     target: /_expo/
-    status: '200'
-  - source: /api/*
-    target: /api/
     status: '200'
   - source: /dashboard/*
     target: /index.html

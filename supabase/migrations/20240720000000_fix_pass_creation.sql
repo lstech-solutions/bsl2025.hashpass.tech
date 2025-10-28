@@ -12,15 +12,15 @@ DECLARE
     pass_id TEXT;
     limits RECORD;
     existing_pass_id TEXT;
-    pass_type_enum pass_type;
+    pass_type_text TEXT;
 BEGIN
-    -- Safely cast the pass type to the enum type
-    BEGIN
-        pass_type_enum := p_pass_type::pass_type;
-    EXCEPTION WHEN OTHERS THEN
-        RAISE NOTICE 'Invalid pass type: %. Defaulting to "general"', p_pass_type;
-        pass_type_enum := 'general'::pass_type;
-    END;
+    -- Use the pass type directly as text (no enum casting needed)
+    pass_type_text := LOWER(TRIM(p_pass_type));
+    
+    -- Validate pass type
+    IF pass_type_text NOT IN ('general', 'vip', 'business') THEN
+        pass_type_text := 'general';
+    END IF;
     
     -- Check if user already has a pass for this event
     SELECT id INTO existing_pass_id 
@@ -35,7 +35,7 @@ BEGIN
     END IF;
     
     -- Get limits for pass type
-    SELECT * INTO limits FROM get_pass_type_limits(pass_type_enum);
+    SELECT * INTO limits FROM get_pass_type_limits(pass_type_text::pass_type);
     
     -- Create pass
     INSERT INTO passes (
@@ -55,17 +55,17 @@ BEGIN
         gen_random_uuid()::text,
         p_user_id::text,
         'bsl2025',
-        pass_type_enum,
+        pass_type_text,
         'active',
-        'BSL2025-' || pass_type_enum::text || '-' || EXTRACT(EPOCH FROM NOW())::bigint,
+        'BSL2025-' || pass_type_text || '-' || EXTRACT(EPOCH FROM NOW())::bigint,
         COALESCE(limits.max_requests, 5),  -- Default to 5 if null
         COALESCE(limits.max_boost, 0),     -- Default to 0 if null
-        CASE pass_type_enum
+        CASE pass_type_text
             WHEN 'vip' THEN ARRAY['all_sessions', 'networking', 'exclusive_events', 'priority_seating', 'speaker_access']
             WHEN 'business' THEN ARRAY['all_sessions', 'networking', 'business_events']
             ELSE ARRAY['general_sessions']
         END,
-        CASE pass_type_enum
+        CASE pass_type_text
             WHEN 'vip' THEN ARRAY['concierge_service', 'exclusive_lounge', 'premium_swag']
             WHEN 'business' THEN ARRAY['business_lounge', 'networking_tools']
             ELSE ARRAY['basic_swag']

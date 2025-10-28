@@ -3,11 +3,11 @@ import { EventConfig } from '../config/events';
 import { getCurrentEvent } from '../lib/event-detector';
 
 interface EventContextType {
-  event: EventConfig;
+  event: EventConfig | null;
   hasFeature: (feature: string) => boolean;
-  getApiEndpoint: (endpoint: string) => string;
+  getApiEndpoint: (endpoint: string) => string | null;
   getRoute: (route: keyof EventConfig['routes']) => string;
-  getBranding: () => EventConfig['branding'];
+  getBranding: () => EventConfig['branding'] | null;
 }
 
 const EventContext = createContext<EventContextType | undefined>(undefined);
@@ -20,19 +20,20 @@ export function EventProvider({ children }: EventProviderProps) {
   const event = getCurrentEvent();
 
   const hasFeature = (feature: string) => {
-    return event.features.includes(feature);
+    return event?.features?.includes(feature) ?? false;
   };
 
   const getApiEndpoint = (endpoint: string) => {
+    if (!event?.api?.basePath) return null;
     return `${event.api.basePath}${endpoint}`;
   };
 
   const getRoute = (route: keyof EventConfig['routes']) => {
-    return event.routes[route] || '/';
+    return event?.routes?.[route] || '/';
   };
 
   const getBranding = () => {
-    return event.branding;
+    return event?.branding ?? null;
   };
 
   const value: EventContextType = {
@@ -56,4 +57,14 @@ export function useEvent(): EventContextType {
     throw new Error('useEvent must be used within an EventProvider');
   }
   return context;
+}
+
+// Helper hook to ensure event is available
+// Use this when you're certain the event should be available
+export function useEventRequired(): EventContextType & { event: EventConfig } {
+  const context = useEvent();
+  if (!context.event) {
+    throw new Error('No event configuration available');
+  }
+  return context as EventContextType & { event: EventConfig };
 }

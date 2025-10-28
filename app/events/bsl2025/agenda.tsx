@@ -6,41 +6,72 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import EventBanner from '../../../components/EventBanner';
 import UnifiedSearchAndFilter from '../../../components/UnifiedSearchAndFilter';
+import { apiClient } from '@/lib/api-client';
+import { 
+  AgendaType,
+  getAgendaTypeColor,
+  parseEventISO,
+  formatTimeRange,
+  AgendaItem
+} from '../../../types/agenda';
 import { EVENTS } from '../../../config/events';
-
-// Type definitions
-interface AgendaItem {
-  id: string;
-  time: string;
-  title: string;
-  description?: string;
-  speakers?: string[];
-  type: 'keynote' | 'panel' | 'break' | 'meal' | 'registration';
-  location?: string;
-}
 
 const { width } = Dimensions.get('window');
 
-const getAgendaTypeColor = (type: string) => {
-  switch (type) {
-    case 'keynote': return '#007AFF';
-    case 'panel': return '#34A853';
-    case 'break': return '#FF9500';
-    case 'meal': return '#FF3B30';
-    case 'registration': return '#8E8E93';
-    default: return '#8E8E93';
-  }
-};
+// Custom filter logic for agenda items
+const customAgendaFilterLogic = (
+  data: AgendaItem[], 
+  filters: { [key: string]: any },
+  searchQuery: string
+): AgendaItem[] => {
+  if (!data) return [];
+  
+  return data.filter(item => {
+    // If no filters are active, include all items
+    if (!filters || Object.keys(filters).length === 0) return true;
 
-const getAgendaTypeIcon = (type: string) => {
-  switch (type) {
-    case 'keynote': return 'mic';
-    case 'panel': return 'group';
-    case 'break': return 'coffee';
-    case 'meal': return 'restaurant';
-    case 'registration': return 'person-add';
-    default: return 'event';
-  }
+    // Check each filter group
+    for (const [key, value] of Object.entries(filters)) {
+      if (!value || value.length === 0) continue;
+
+      switch (key) {
+        case 'type':
+          if (value.length > 0 && !value.includes(item.type)) {
+            return false;
+          }
+          break;
+        case 'speakers':
+          if (value.length > 0 && !item.speakers?.some(speakerId => 
+            value.includes(speakerId)
+          )) {
+            return false;
+          }
+          break;
+        case 'time':
+          // Add time-based filtering logic if needed
+          break;
+        // Add more filter cases as needed
+      }
+    }
+
+    // Handle search query if provided
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesTitle = item.title?.toLowerCase().includes(query) ?? false;
+      const matchesDescription = item.description?.toLowerCase().includes(query) ?? false;
+      
+      // Since we only have speaker IDs, we can only match against the ID itself
+      const matchesSpeaker = item.speakers?.some(speakerId => 
+        speakerId.toLowerCase().includes(query)
+      ) ?? false;
+      
+      if (!matchesTitle && !matchesDescription && !matchesSpeaker) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 };
 
 export default function BSL2025AgendaScreen() {
@@ -55,12 +86,84 @@ export default function BSL2025AgendaScreen() {
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState<AgendaType | 'all'>('all');
   const [usingJsonFallback, setUsingJsonFallback] = useState(false);
   const [serviceStatus, setServiceStatus] = useState<'running' | 'stopped' | 'unknown'>('unknown');
   const [nextUpdateCountdown, setNextUpdateCountdown] = useState<number | null>(null);
   const [isEventPeriod, setIsEventPeriod] = useState(false);
   const [filteredAgenda, setFilteredAgenda] = useState<AgendaItem[]>([]);
   const [showNotLiveDetails, setShowNotLiveDetails] = useState(false);
+
+  // Helper functions used in effects and render
+  const checkEventPeriod = () => {
+    const now = new Date();
+    // Event runs Nov 12-14, 2025 (Medellín, Colombia, UTC-05)
+    const start = new Date('2025-11-12T00:00:00-05:00');
+    const end = new Date('2025-11-14T23:59:59-05:00');
+    setIsEventPeriod(now >= start && now <= end);
+  };
+
+  const getTabLabel = (dayKey: string) => {
+    // Expect keys like "Day 1 - November 12"
+    const parts = dayKey.split(' - ');
+    return parts[0] || dayKey;
+  };
+
+  const getTabTheme = (dayKey: string) => {
+    if (dayKey.includes('Day 1')) return 'Regulación, Bancos Centrales e Infraestructura del Dinero Digital';
+    if (dayKey.includes('Day 2')) return 'PSAV, Compliance, Custodia y Tokenización';
+    if (dayKey.includes('Day 3')) return 'Stablecoins y DeFi: Integrando el Mundo Financiero Global';
+    return '';
+  };
+
+  const formatCountdown = (ms: number) => {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Filters for UnifiedSearchAndFilter
+  const filterGroups = [
+    {
+      key: 'type',
+      label: 'Type',
+      type: 'single' as const,
+      options: [
+        { key: 'keynote', label: 'Keynote', icon: 'mic' },
+        { key: 'panel', label: 'Panel', icon: 'group' },
+        { key: 'break', label: 'Break', icon: 'free-breakfast' },
+        { key: 'meal', label: 'Meal', icon: 'restaurant' },
+        { key: 'registration', label: 'Registration', icon: 'person-add' },
+      ],
+    },
+    {
+      key: 'speakers',
+      label: 'Speakers',
+      type: 'chips' as const,
+      options: [],
+    },
+  ];
+
+  const filterAgendaItems = (items: AgendaItem[], filters: { search?: string; type?: AgendaType | 'all'; speakers?: string }) => {
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      items = items.filter((it: AgendaItem) =>
+        it.title.toLowerCase().includes(q) ||
+        (it.description && it.description.toLowerCase().includes(q)) ||
+        (it.type && it.type.toLowerCase().includes(q)) ||
+        ((it.speakers || []).some((s: string) => s.toLowerCase().includes(q)))
+      );
+    }
+    if (filters?.type) {
+      items = items.filter((it) => it.type === filters.type);
+    }
+    if (filters?.speakers) {
+      items = items.filter((it) => (it.speakers || []).includes(filters?.speakers || ''));
+    }
+    return items;
+  };
 
   // Load agenda from database first, fallback to hardcoded config only on error
   useEffect(() => {
@@ -71,59 +174,103 @@ export default function BSL2025AgendaScreen() {
         setServiceStatus('unknown');
         console.log('📅 Attempting to load agenda from database...');
         
-        // First check agenda status
-        const statusResponse = await fetch('/api/bslatam/agenda-status?eventId=bsl2025');
-        const statusResult = await statusResponse.json();
-        
-        if (statusResponse.ok && statusResult.hasData) {
-          console.log('✅ Live agenda data available:', statusResult.itemCount, 'items');
-          setIsLive(true);
-          setLastUpdated(statusResult.lastUpdated);
-          setServiceStatus('running');
+        try {
+          // Try to fetch agenda directly first
+          console.log('🌐 Fetching agenda data...');
+          const response = await apiClient.request('agenda');
           
-          // Load the actual agenda data
-          const response = await fetch('/api/bslatam/agenda?eventId=bsl2025');
-          const result = await response.json();
+          // Handle the API response format: { data: [...] }
+          let agendaData = [];
           
-          if (response.ok && result.data && result.data.length > 0) {
-            console.log('✅ Loaded live agenda from database:', result.data.length, 'items');
-            setAgenda(result.data);
-          } else {
-            console.warn('⚠️ Status showed data but fetch failed, using JSON fallback');
-            const fallbackAgenda = event.agenda || EVENTS.bsl2025.agenda || [];
-            setAgenda(fallbackAgenda);
-            setIsLive(false);
-            setUsingJsonFallback(true);
-            setServiceStatus('stopped');
+          try {
+            // Check if response is already the data array
+            if (Array.isArray(response)) {
+              agendaData = response;
+            }
+            // Check if response has a data property that is an array
+            else if (response?.data) {
+              if (Array.isArray(response.data)) {
+                agendaData = response.data;
+              } else if (response.data.data && Array.isArray(response.data.data)) {
+                // Handle nested data structure
+                agendaData = response.data.data;
+              }
+            }
+            
+            console.log('📊 Parsed agenda data:', agendaData);
+          } catch (error) {
+            console.error('❌ Error parsing agenda data:', error);
+            throw error; // Re-throw to trigger the fallback
           }
-        } else if (statusResponse.ok && !statusResult.hasData) {
-          console.warn('⚠️ No live agenda data in database, showing JSON fallback');
-          console.log('📄 Event object:', event);
-          console.log('📄 JSON fallback data:', event.agenda?.length || 0, 'items');
-          // No live data - show JSON fallback with "not live" indicator
-          const fallbackAgenda = event.agenda || EVENTS.bsl2025.agenda || [];
-          console.log('📄 Setting fallback agenda:', fallbackAgenda.length, 'items');
-          setAgenda(fallbackAgenda);
-          setIsLive(false);
-          setLastUpdated(null);
-          setUsingJsonFallback(true);
-          setServiceStatus('stopped');
-        } else {
-          console.warn('⚠️ Database error, using JSON fallback');
-          console.log('📄 JSON fallback data:', event.agenda?.length || 0, 'items');
-          // Database error - use JSON fallback
-          const fallbackAgenda = event.agenda || EVENTS.bsl2025.agenda || [];
-          setAgenda(fallbackAgenda);
-          setIsLive(false);
-          setUsingJsonFallback(true);
-          setServiceStatus('stopped');
+          
+          if (agendaData.length > 0) {
+            console.log('✅ Loaded live agenda from database:', agendaData.length, 'items');
+            setAgenda(agendaData);
+            setIsLive(true);
+            setLastUpdated(new Date().toISOString());
+            setServiceStatus('running');
+            return;
+          }
+        } catch (error) {
+          console.error('❌ Error loading agenda:', error);
+          console.log('🔄 Using JSON fallback due to error');
         }
+        
+        // If we get here but no data, try with status endpoint
+        console.log('ℹ️ No data in direct response, trying status endpoint...');
+        try {
+          const statusResponse = await apiClient.request('agenda-status');
+          // Handle status response format: { data: { hasData: true } }
+          const statusData = statusResponse?.data || {};
+          
+          if (statusData?.hasData) {
+            const agendaResponse = await apiClient.request('agenda');
+            let agendaItems = [];
+            
+            // Handle agenda response format: { data: [...] }
+            if (agendaResponse?.data && Array.isArray(agendaResponse.data)) {
+              agendaItems = agendaResponse.data;
+            } else if (Array.isArray(agendaResponse)) {
+              agendaItems = agendaResponse;
+            }
+            
+            console.log('📊 Parsed agenda items from status check:', agendaItems);
+            
+            if (agendaItems.length > 0) {
+              console.log('✅ Loaded agenda with eventId:', agendaItems.length, 'items');
+              setAgenda(agendaItems);
+              setIsLive(true);
+              setLastUpdated(statusData.lastUpdated || new Date().toISOString());
+              setServiceStatus('running');
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error loading agenda:', error);
+          console.log('🔄 Using JSON fallback due to error');
+        }
+        
+        // If we get here, no data was found through any method
+        console.warn('⚠️ No agenda data found, showing JSON fallback');
+        console.log('📄 Event object:', event);
+        console.log('📄 JSON fallback data:', event?.agenda?.length || 0, 'items');
+        
+        // Use fallback data
+        const fallbackAgenda = event?.agenda || EVENTS.bsl2025.agenda || [];
+        console.log('📄 Setting fallback agenda:', fallbackAgenda.length, 'items');
+        setAgenda(fallbackAgenda);
+        setIsLive(false);
+        setLastUpdated(null);
+        setUsingJsonFallback(true);
+        setServiceStatus('stopped');
       } catch (error) {
-        console.error('❌ Network error loading agenda from database:', error);
-        console.log('🔄 Using JSON fallback due to network error');
-        console.log('📄 JSON fallback data:', event.agenda?.length || 0, 'items');
-        // Network error - use JSON fallback
-        const fallbackAgenda = event.agenda || EVENTS.bsl2025.agenda || [];
+        console.error('❌ Error loading agenda:', error);
+        console.log('🔄 Using JSON fallback due to error');
+        
+        // Use fallback data
+        const fallbackAgenda = event?.agenda || EVENTS.bsl2025.agenda || [];
+        console.log('📋 Using fallback agenda with', fallbackAgenda.length, 'items');
+        console.log('📄 JSON fallback data:', fallbackAgenda.length, 'items');
         setAgenda(fallbackAgenda);
         setIsLive(false);
         setUsingJsonFallback(true);
@@ -134,7 +281,16 @@ export default function BSL2025AgendaScreen() {
     };
 
     loadAgenda();
-  }, [event.agenda]);
+  }, [event?.agenda]);
+
+  // Ensure filteredAgenda is populated when agenda loads
+  useEffect(() => {
+    if (agenda && agenda.length > 0) {
+      setFilteredAgenda(agenda);
+    } else {
+      setFilteredAgenda([]);
+    }
+  }, [agenda]);
 
   // Check if we're in the event period
   useEffect(() => {
@@ -308,13 +464,14 @@ export default function BSL2025AgendaScreen() {
       console.log('📅 Grouped after fallback distribution:', Object.keys(grouped));
     }
 
-    // Sort items within each day by time
+    // Sort items within each day by start time (supports DB ISO times)
     Object.keys(grouped).forEach(day => {
       grouped[day].sort((a, b) => {
-        // Extract start time for sorting
-        const timeA = a.time.split(' - ')[0] || '00:00';
-        const timeB = b.time.split(' - ')[0] || '00:00';
-        return timeA.localeCompare(timeB);
+        const da = parseEventISO((a as any).time as any);
+        const db = parseEventISO((b as any).time as any);
+        const va = isNaN(da.getTime()) ? 0 : da.getTime();
+        const vb = isNaN(db.getTime()) ? 0 : db.getTime();
+        return va - vb;
       });
     });
 
@@ -381,27 +538,24 @@ export default function BSL2025AgendaScreen() {
     }
   };
 
+  // Render a single agenda card
   const renderAgendaItem = (item: AgendaItem) => (
     <View key={item.id} style={styles.agendaItem}>
-      {/* Time and Type Header */}
       <View style={styles.agendaItemHeader}>
         <View style={styles.timeContainer}>
-          <Text style={styles.agendaTime}>{item.time}</Text>
+          <Text style={styles.agendaTime}>{formatTimeRange(item)}</Text>
           <View style={[styles.agendaTypeBadge, { backgroundColor: getAgendaTypeColor(item.type) }]}>
             <Text style={styles.agendaTypeText}>{item.type.toUpperCase()}</Text>
           </View>
         </View>
       </View>
 
-      {/* Content */}
       <View style={styles.agendaItemContent}>
         <Text style={styles.agendaTitle}>{cleanSessionTitle(item.title)}</Text>
-        
         {item.description && (
           <Text style={styles.agendaDescription}>{item.description}</Text>
         )}
 
-        {/* Speakers */}
         {item.speakers && item.speakers.length > 0 && (
           <View style={styles.speakersContainer}>
             <MaterialIcons name="people" size={16} color={colors.text.secondary} />
@@ -409,17 +563,11 @@ export default function BSL2025AgendaScreen() {
               {item.speakers.map((speaker, index) => {
                 const speakerId = findSpeakerId(speaker);
                 const isClickable = speakerId !== null;
-                
                 return (
                   <React.Fragment key={index}>
                     {isClickable ? (
-                      <TouchableOpacity
-                        onPress={() => handleSpeakerPress(speaker)}
-                        style={styles.speakerLink}
-                      >
-                        <Text style={[styles.agendaSpeakers, styles.clickableSpeaker]}>
-                          {speaker}
-                        </Text>
+                      <TouchableOpacity onPress={() => handleSpeakerPress(speaker)} style={styles.speakerLink}>
+                        <Text style={[styles.agendaSpeakers, styles.clickableSpeaker]}>{speaker}</Text>
                       </TouchableOpacity>
                     ) : (
                       <Text style={styles.agendaSpeakers}>{speaker}</Text>
@@ -434,24 +582,17 @@ export default function BSL2025AgendaScreen() {
           </View>
         )}
 
-        {/* Location */}
         {(() => {
           let location = '';
-          
-          // Determine location based on session type
           if (item.type === 'keynote') {
             location = 'Main Stage';
           } else if (item.type === 'registration') {
             location = 'Registration Area';
           } else if (item.type === 'meal' || item.type === 'break') {
-            // Don't show location for meals and breaks
             return null;
           } else if (item.location) {
-            // Use existing location for other types
             location = item.location;
           }
-          
-          // Only show location if we have one
           if (location) {
             return (
               <View style={styles.locationContainer}>
@@ -460,204 +601,76 @@ export default function BSL2025AgendaScreen() {
               </View>
             );
           }
-          
           return null;
         })()}
       </View>
     </View>
   );
-
-  const getTabLabel = (dayKey: string) => {
-    if (dayKey.includes('Day 1')) return 'Día 1';
-    if (dayKey.includes('Day 2')) return 'Día 2';
-    if (dayKey.includes('Day 3')) return 'Día 3';
-    return dayKey;
-  };
-
-
-  const getTabTheme = (dayKey: string) => {
-    if (dayKey.includes('Day 1')) return 'Regulación, Bancos Centrales e Infraestructura del Dinero Digital';
-    if (dayKey.includes('Day 2')) return 'Adopción Empresarial y Casos de Uso';
-    if (dayKey.includes('Day 3')) return 'Stablecoins y DeFi: Integrando el Mundo Financiero Global';
-    return '';
-  };
-
-  const formatCountdown = (milliseconds: number) => {
-    const minutes = Math.floor(milliseconds / 60000);
-    const seconds = Math.floor((milliseconds % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const checkEventPeriod = () => {
-    const now = new Date();
-    const eventStart = new Date('2025-11-12T00:00:00-05:00'); // November 12, 2025, Colombia time
-    const eventEnd = new Date('2025-11-14T23:59:59-05:00'); // November 14, 2025, Colombia time
-    
-    const isDuringEvent = now >= eventStart && now <= eventEnd;
-    setIsEventPeriod(isDuringEvent);
-    
-    console.log('📅 Event period check:', {
-      now: now.toISOString(),
-      eventStart: eventStart.toISOString(),
-      eventEnd: eventEnd.toISOString(),
-      isDuringEvent
-    });
-  };
-
-  // Filter configuration for the unified component
-  const filterGroups = [
-    {
-      key: 'type',
-      label: 'Session Type',
-      type: 'chips' as const,
-      options: []
-    },
-    {
-      key: 'speakers',
-      label: 'Speaker',
-      type: 'chips' as const,
-      options: []
-    }
-  ];
-
-  // Custom filter logic for agenda
-  const customAgendaFilterLogic = (data: AgendaItem[], filters: { [key: string]: any }, searchQuery: string): AgendaItem[] => {
-    let filtered = data;
-
-    // Apply search
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(item => 
-        item.title.toLowerCase().includes(query) ||
-        item.description?.toLowerCase().includes(query) ||
-        item.speakers?.some(speaker => speaker.toLowerCase().includes(query)) ||
-        item.type.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply type filter
-    if (filters.type) {
-      filtered = filtered.filter(item => item.type === filters.type);
-    }
-
-    // Apply speaker filter
-    if (filters.speakers) {
-      filtered = filtered.filter(item => 
-        item.speakers?.some(speaker => speaker === filters.speakers)
-      );
-    }
-
-    return filtered;
-  };
-
   return (
     <View style={styles.container}>
-      {/* Event Header */}
-      <EventBanner
-        title="Event Agenda"
-        subtitle={`Conference Schedule • ${agenda.length} Sessions`}
-        date="November 12-14, 2025 • Medellín, Colombia"
-        showCountdown={true}
-        showLiveIndicator={isLive}
-      />
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+      >
+        {/* Event Header */}
+        <EventBanner
+          title="Event Agenda"
+          subtitle={`Conference Schedule • ${agenda.length} Sessions`}
+          date="November 12-14, 2025 • Medellín, Colombia"
+          showCountdown={true}
+          showLiveIndicator={isLive}
+        />
 
-      {/* Tab Navigation */}
-      {Object.keys(agendaByDay).length > 0 && (
-        <View style={styles.tabContainer}>
-          <View style={styles.tabScrollContent}>
-            {Object.keys(agendaByDay).map((dayKey) => (
-              <TouchableOpacity
-                key={dayKey}
-                style={[
-                  styles.tab,
-                  activeTab === dayKey && styles.activeTab
-                ]}
-                onPress={() => setActiveTab(dayKey)}
+        {/* Tab Navigation - Centered with consistent sizing */}
+        {Object.keys(agendaByDay).length > 0 && (
+          <View style={styles.tabContainer}>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <ScrollView 
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tabScrollContent}
+                contentInset={{ left: 0, right: 0 }}
+                contentOffset={{ x: 0, y: 0 }}
+                snapToInterval={128} // 120 (width) + 8 (margin)
+                decelerationRate="fast"
+                snapToAlignment="center"
               >
-                <Text style={[
-                  styles.tabLabel,
-                  activeTab === dayKey && styles.activeTabLabel
-                ]}>
-                  {getTabLabel(dayKey)}
-                </Text>
-                <Text style={[
-                  styles.tabTheme,
-                  activeTab === dayKey && styles.activeTabTheme
-                ]}>
-                  {getTabTheme(dayKey)}
-                </Text>
-                <Text style={[
-                  styles.tabCount,
-                  activeTab === dayKey && styles.activeTabCount
-                ]}>
-                  {agendaByDay[dayKey].length} sessions
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* Status Indicator - Positioned at top right */}
-      {!loading && agenda.length > 0 && (
-        <View style={styles.statusIndicatorContainer}>
-          {isLive && isEventPeriod ? (
-            <View style={[styles.statusBadge, styles.liveBadge]}>
-              <MaterialIcons name="fiber-manual-record" size={12} color="#fff" />
-              <Text style={styles.statusBadgeText}>LIVE</Text>
+              {Object.keys(agendaByDay).map((dayKey) => (
+                <TouchableOpacity
+                  key={dayKey}
+                  style={[
+                    styles.tab,
+                    activeTab === dayKey && styles.activeTab
+                  ]}
+                  onPress={() => setActiveTab(dayKey)}
+                >
+                  <Text style={[
+                    styles.tabLabel,
+                    activeTab === dayKey && styles.activeTabLabel
+                  ]}>
+                    {getTabLabel(dayKey)}
+                  </Text>
+                  <Text style={[
+                    styles.tabTheme,
+                    activeTab === dayKey && styles.activeTabTheme
+                  ]}>
+                    {getTabTheme(dayKey)}
+                  </Text>
+                  <Text style={[
+                    styles.tabCount,
+                    activeTab === dayKey && styles.activeTabCount
+                  ]}>
+                    {agendaByDay[dayKey].length} sessions
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              </ScrollView>
             </View>
-          ) : (
-            <>
-              <TouchableOpacity 
-                style={[styles.statusBadge, styles.notLiveBadge]}
-                onPress={() => setShowNotLiveDetails(!showNotLiveDetails)}
-              >
-                <MaterialIcons name="stop" size={12} color="#fff" />
-                <Text style={styles.statusBadgeText}>NOT LIVE</Text>
-                <MaterialIcons 
-                  name={showNotLiveDetails ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
-                  size={12} 
-                  color="#fff" 
-                />
-              </TouchableOpacity>
-              
-              {/* Not Live Details Dropdown */}
-              {showNotLiveDetails && (
-                <View style={styles.notLiveDetailsDropdown}>
-                  <View style={styles.notLiveDetailsContent}>
-                    <View style={styles.notLiveDetailsRow}>
-                      <View style={styles.notLiveIconContainer}>
-                        <MaterialIcons name="event" size={16} color="#007AFF" />
-                      </View>
-                      <Text style={styles.notLiveDetailsText}>
-                        Live updates start Nov 12, 2025
-                      </Text>
-                    </View>
-                    
-                    <View style={styles.notLiveDetailsRow}>
-                      <View style={styles.notLiveIconContainer}>
-                        <MaterialIcons name="update" size={16} color="#007AFF" />
-                      </View>
-                      <Text style={styles.notLiveDetailsText}>
-                        Auto-refresh every 5 minutes
-                      </Text>
-                    </View>
-                    
-                    <View style={styles.notLiveDetailsRow}>
-                      <View style={styles.notLiveIconContainer}>
-                        <MaterialIcons name="info" size={16} color="#007AFF" />
-                      </View>
-                      <Text style={styles.notLiveDetailsText}>
-                        Showing preview data
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-            </>
-          )}
-        </View>
-      )}
+          </View>
+        )}
+
 
       {/* Live Status Details - Only during event period */}
       {!loading && isLive && isEventPeriod && agenda.length > 0 && (
@@ -688,14 +701,6 @@ export default function BSL2025AgendaScreen() {
       )}
 
 
-      {/* Service Status Warning - Below tabs */}
-      {!loading && !isLive && serviceStatus === 'stopped' && (
-        <View style={styles.serviceWarningContainer}>
-          <MaterialIcons name="warning" size={16} color={colors.warning.main} />
-          <Text style={styles.serviceWarningText}>Agenda monitoring service is not running</Text>
-        </View>
-      )}
-
       {/* Unified Search and Filter Section */}
       {!loading && agenda.length > 0 && (
         <UnifiedSearchAndFilter
@@ -711,13 +716,7 @@ export default function BSL2025AgendaScreen() {
       )}
 
       {/* Tab Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={true}
-        nestedScrollEnabled={true}
-        bounces={true}
-      >
+      <View style={styles.contentContainer}>
         {loading ? (
           <View style={styles.loadingContainer}>
             <MaterialIcons name="schedule" size={48} color={colors.text.secondary} />
@@ -730,7 +729,7 @@ export default function BSL2025AgendaScreen() {
               // Get filtered items for the active tab
               const filteredItems = filteredAgenda.filter(item => {
                 const dayItems = agendaByDay[activeTab] || [];
-                return dayItems.some(dayItem => dayItem.id === item.id);
+                return dayItems.some(dayItem => String((dayItem as any).id) === String((item as any).id));
               });
               
               console.log('📅 Rendering filtered agenda items for', activeTab, ':', filteredItems.length, 'items');
@@ -759,8 +758,9 @@ export default function BSL2025AgendaScreen() {
             </View>
           </View>
         )}
-      </ScrollView>
-    </View>
+      </View>
+    </ScrollView>
+  </View>
   );
 }
 
@@ -777,31 +777,40 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 40,
   },
-  // Tab Styles - Full width with better spacing
+  contentContainer: {
+    paddingBottom: 40,
+  },
+  // Tab Styles - Consistent sizing and centering
   tabContainer: {
     backgroundColor: colors.background.default,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
+    width: '100%',
   },
   tabScrollContent: {
-    paddingHorizontal: 20,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    height: 100, // Slightly reduced height for mobile
+    paddingHorizontal: 8,
   },
   tab: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    marginHorizontal: 6,
-    borderRadius: 16,
+    width: 120, // Reduced width for mobile
+    height: 80, // Reduced height for mobile
+    paddingHorizontal: 4,
+    paddingTop: 6,
+    paddingBottom: 6,
+    marginHorizontal: 4,
+    borderRadius: 8,
     backgroundColor: colors.background.paper,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    minWidth: 100, // Minimum width for touch targets
   },
   activeTab: {
     backgroundColor: '#007AFF',
@@ -812,34 +821,48 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     elevation: 4,
   },
   tabLabel: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 12, // Slightly smaller font for mobile
+    fontWeight: '600',
     color: colors.text.primary,
-    marginBottom: 2,
-    letterSpacing: 0.3,
+    textAlign: 'center',
+    width: '100%',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    paddingHorizontal: 2, // Reduced padding
+    height: 16, // Reduced height
+    lineHeight: 14, // Adjusted line height
   },
   activeTabLabel: {
     color: '#FFFFFF',
   },
   tabTheme: {
-    fontSize: 10,
+    fontSize: 9, // Slightly smaller font for mobile
     color: colors.text.secondary,
-    marginBottom: 4,
     fontWeight: '500',
     textAlign: 'center',
+    width: '100%',
+    height: 12, // Reduced height
+    lineHeight: 11,
+    marginBottom: 3, // Reduced margin
+    overflow: 'hidden',
   },
   activeTabTheme: {
     color: 'rgba(255, 255, 255, 0.9)',
   },
   tabCount: {
-    fontSize: 10,
+    fontSize: 9, // Slightly smaller font for mobile
     color: colors.text.secondary,
     fontWeight: '600',
     backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 4, // Reduced padding
+    paddingVertical: 1,
+    borderRadius: 4,
     overflow: 'hidden',
+    marginTop: 2,
+    minWidth: 50, // Reduced minimum width
+    textAlign: 'center',
+    height: 14, // Reduced height
+    lineHeight: 12, // Adjusted line height
   },
   activeTabCount: {
     color: 'rgba(255, 255, 255, 0.8)',

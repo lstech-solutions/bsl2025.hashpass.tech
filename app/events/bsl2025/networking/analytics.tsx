@@ -5,43 +5,18 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  Dimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useTheme } from '../../../../hooks/useTheme';
-import { useAuth } from '../../../../hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../../../../lib/supabase';
 import { useToastHelpers } from '../../../../contexts/ToastContext';
+import { SystemStats } from '@/types/networking';
 
-const { width: screenWidth } = Dimensions.get('window');
-
-interface SystemStats {
-  totalUsers: number;
-  totalSpeakers: number;
-  totalMeetingRequests: number;
-  pendingRequests: number;
-  acceptedRequests: number;
-  declinedRequests: number;
-  cancelledRequests: number;
-  blockedUsers: number;
-  averageResponseTime: number;
-  topSpeakers: Array<{
-    speaker_id: string;
-    speaker_name: string;
-    count: number;
-  }>;
-  requestsByDay: Array<{
-    date: string;
-    count: number;
-  }>;
-}
 
 export default function AnalyticsView() {
   const { isDark, colors } = useTheme();
-  const { user } = useAuth();
-  const router = useRouter();
-  const { showSuccess, showError } = useToastHelpers();
+
+  const { showError } = useToastHelpers();
   const styles = getStyles(isDark, colors);
 
   const [stats, setStats] = useState<SystemStats>({
@@ -55,7 +30,7 @@ export default function AnalyticsView() {
     blockedUsers: 0,
     averageResponseTime: 0,
     topSpeakers: [],
-    requestsByDay: [],
+    recentActivity: [],
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -124,16 +99,17 @@ export default function AnalyticsView() {
 
       // Get top speakers by request count
       const speakerCounts = requestsData?.reduce((acc, req) => {
+        if (!req.speaker_id) return acc;
         const key = req.speaker_id;
         if (!acc[key]) {
-          acc[key] = { speaker_id: req.speaker_id, speaker_name: req.speaker_name, count: 0 };
+          acc[key] = { speaker_id: req.speaker_id, name: req.speaker_name, meeting_count: 0 };
         }
-        acc[key].count++;
+        acc[key].meeting_count++;
         return acc;
-      }, {} as Record<string, { speaker_id: string; speaker_name: string; count: number }>) || {};
+      }, {} as Record<string, { speaker_id: string; name: string; meeting_count: number }>) || {};
 
       const topSpeakers = Object.values(speakerCounts)
-        .sort((a, b) => b.count - a.count)
+        .sort((a, b) => b.meeting_count - a.meeting_count)
         .slice(0, 5);
 
       // Get requests by day (last 7 days)
@@ -157,7 +133,7 @@ export default function AnalyticsView() {
         count: requestsByDay[date] || 0,
       }));
 
-      setStats({
+setStats({
         totalUsers,
         totalSpeakers,
         totalMeetingRequests,
@@ -168,6 +144,7 @@ export default function AnalyticsView() {
         blockedUsers,
         averageResponseTime,
         topSpeakers,
+        recentActivity: [], // Initialize with empty array for now
         requestsByDay: requestsByDayArray,
       });
 
@@ -296,8 +273,8 @@ export default function AnalyticsView() {
         <Text style={styles.sectionTitle}>Activity (Last 7 Days)</Text>
         <View style={styles.chartCard}>
           <View style={styles.chartContainer}>
-            {stats.requestsByDay.map((day, index) => {
-              const maxCount = Math.max(...stats.requestsByDay.map(d => d.count));
+            {stats.requestsByDay?.map((day, index) => {
+              const maxCount = Math.max(...(stats.requestsByDay || []).map(d => d.count));
               const height = maxCount > 0 ? (day.count / maxCount) * 100 : 0;
               
               return (

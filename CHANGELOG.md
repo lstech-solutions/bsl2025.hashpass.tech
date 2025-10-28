@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.3.2] - 2025-10-27
+
+### Beta
+- Updated version display and changelog automation
+
+### Technical Details
+- Version: 1.3.2
+- Release Type: beta
+- Build Number: 202510272149
+- Release Date: 2025-10-27T21:49:11.400Z
+
+
+## [1.2.9] - 2025-10-26
+
+### Bug Fixes
+- Fixed TypeScript error where 'event' was possibly null in agenda.tsx
+- Updated dependency array to use optional chaining for event.agenda
+
+### Technical Details
+- Version bump to 1.2.9
+- Build timestamp: 2025-10-26T18:52:00.000Z
+
 ## [1.1.7] - 2025-10-15
 
 ### Bug Fixes

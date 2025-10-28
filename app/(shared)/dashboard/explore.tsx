@@ -59,22 +59,29 @@ interface Pass {
   updated_at: string;
 }
 
-const { width } = Dimensions.get('window');
-const HEADER_SCROLL_DISTANCE = 100;
 
 export default function ExploreScreen() {
-  const { scrollY, headerOpacity, headerBackground, headerHeight, setHeaderHeight } = useScroll();
-  const { event } = useEvent();
+  const { scrollY } = useScroll();
+  const { event: currentEventFromContext } = useEvent();
   const { isDark, colors } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams();
   const styles = getStyles(isDark, colors);
   
-  // Detect current event from route or context
-  const currentEvent = getCurrentEvent(params.eventId as string) || event;
+  // Get current event from route or context
+  const currentEvent = getCurrentEvent(params.eventId as string) || currentEventFromContext;
   const availableEvents = getAvailableEvents();
   
   const [selectedEvent, setSelectedEvent] = useState(currentEvent);
+  
+  // Handle case when no event is selected
+  if (!selectedEvent) {
+    return (
+      <View style={styles.container}>
+        <Text>No event selected</Text>
+      </View>
+    );
+  }
   const [showEventSelector, setShowEventSelector] = useState(shouldShowEventSelector());
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
@@ -105,21 +112,7 @@ export default function ExploreScreen() {
     }
   };
 
-  // Detect if we're in BSL2025 context
-  const isBSL2025Event = selectedEvent.id === 'bsl2025';
-  const speakers = (event as any)?.speakers || [];
-  const agenda = (event as any)?.agenda || [];
 
-  // Helper function
-  const getAgendaTypeColor = (type: string) => {
-    switch (type) {
-      case 'keynote': return '#007AFF';
-      case 'panel': return '#34A853';
-      case 'break': return '#FF9500';
-      case 'meal': return '#FF3B30';
-      default: return '#8E8E93';
-    }
-  };
 
   const handleEventSelect = (eventData: EventInfo) => {
     setSelectedEvent(eventData);
@@ -134,7 +127,7 @@ export default function ExploreScreen() {
         styles.eventCard,
         { 
           marginLeft: index === 0 ? 0 : 12,
-          borderColor: selectedEvent.id === eventData.id ? eventData.color : colors.divider,
+          borderColor: selectedEvent?.id === eventData.id ? eventData.color : colors.divider,
           borderWidth: selectedEvent.id === eventData.id ? 2 : 1,
         }
       ]}
@@ -187,7 +180,7 @@ export default function ExploreScreen() {
       >
         {/* Event Banner (now scrolls with content) */}
         <EventBanner 
-          title={(event as any)?.title || (selectedEvent as any)?.title || 'Blockchain Summit Latin America 2025'}
+          title={(event as any)?.title || (selectedEvent as any)?.title || 'Blockchain Summit Latam 2025'}
           subtitle={(event as any)?.subtitle || (selectedEvent as any)?.subtitle || 'November 12-14, 2025 • Universidad EAFIT, Medellín'}
           date={(event as any)?.date || "November 12-14, 2025"}
           showCountdown={true}
@@ -216,7 +209,7 @@ export default function ExploreScreen() {
         </View>
 
         {/* User Passes */}
-        <View style={styles.section}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
           <Text style={styles.sectionTitle}>Your Pass</Text>
           <PassesDisplay 
             mode="dashboard"

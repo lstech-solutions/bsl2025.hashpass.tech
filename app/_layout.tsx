@@ -15,7 +15,7 @@ import { useTheme, useThemeProvider } from '../hooks/useTheme';
 import { StatusBar } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import "./global.css";
-import PWAPrompt from './components/PWAPrompt';
+import PWAPrompt from '../components/PWAPrompt';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Keep the splash screen visible while we fetch resources
@@ -105,6 +105,15 @@ function ThemedContent() {
           contentStyle: {
             backgroundColor: isDark ? colors.primaryDark : colors.background.paper,
           },
+          headerStyle: {
+            backgroundColor: isDark ? '#0A0A0A' : colors.background.default,
+          } as any, // Type assertion to handle platform-specific styles
+          headerTintColor: isDark ? '#FFFFFF' : colors.text.primary,
+          headerTitleStyle: {
+            color: isDark ? '#FFFFFF' : colors.text.primary,
+            fontWeight: '600',
+          },
+          headerBackTitle: undefined,
           animation: 'slide_from_right',
           animationTypeForReplace: 'push',
         }}

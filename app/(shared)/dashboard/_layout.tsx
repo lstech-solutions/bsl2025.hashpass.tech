@@ -56,8 +56,8 @@ function CustomDrawerContent() {
 
   const menuItems = [
     { label: 'Explore', icon: 'compass-outline', route: './explore' as const },
-    { label: 'Notifications', icon: 'notifications-outline', route: './notifications' as const },
     { label: 'Wallet', icon: 'wallet-outline', route: './wallet' as const },
+    { label: 'Notifications', icon: 'notifications-outline', route: './notifications' as const },
     { label: 'Profile', icon: 'person-outline', route: './profile' as const },
     { label: 'Settings', icon: 'settings-outline', route: './settings' as const },
   ] as const;

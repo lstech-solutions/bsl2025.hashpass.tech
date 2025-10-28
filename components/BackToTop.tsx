@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../hooks/useTheme';
 
 interface BackToTopProps {
   scrollY: SharedValue<number>;
@@ -10,6 +11,7 @@ interface BackToTopProps {
 }
 
 const BackToTop: React.FC<BackToTopProps> = ({ scrollY, scrollRef, colors }) => {
+  const { isDark } = useTheme();
   const buttonOpacity = useAnimatedStyle(() => ({
     opacity: scrollY.value > 30 ? 1 : 0,
   } as const));
@@ -20,7 +22,7 @@ const BackToTop: React.FC<BackToTopProps> = ({ scrollY, scrollRef, colors }) => 
 
   const buttonStyle = {
     ...baseStyles.button,
-    backgroundColor: colors.surface
+    backgroundColor: isDark ? colors.primary : colors.surface
   };
 
   return (

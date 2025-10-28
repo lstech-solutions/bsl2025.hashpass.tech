@@ -4,13 +4,17 @@
  */
 
 import React from 'react';
-import { getCurrentEvent, getEventApiEndpoint } from './event-detector';
+import { getCurrentEvent } from './event-detector';
 import { supabase } from './supabase';
 
-export interface ApiResponse<T = any> {
+export type ApiResponse<T = any> = {
   data: T;
-  error?: string;
-  success: boolean;
+  error?: never;
+  success: true;
+} | {
+  data?: T | null;
+  error: string;
+  success: false;
 }
 
 export interface ApiRequestOptions {
@@ -19,6 +23,8 @@ export interface ApiRequestOptions {
   body?: any;
   timeout?: number;
   retries?: number;
+  endpoint?: string;
+  params?: Record<string, any>;
 }
 
 export class EventApiClient {
@@ -29,7 +35,24 @@ export class EventApiClient {
 
   constructor() {
     const event = getCurrentEvent();
-    this.baseURL = event.api.basePath;
+    // Allow overriding via public env var (Expo: EXPO_PUBLIC_*)
+    const envBase = (process.env.EXPO_PUBLIC_API_BASE_URL || '').trim();
+    if (envBase) {
+      // Normalize env base: no trailing slash
+      this.baseURL = envBase.endsWith('/') ? envBase.slice(0, -1) : envBase;
+    } else if (event?.api?.basePath) {
+      // Ensure basePath starts with a slash and doesn't end with one
+      this.baseURL = event.api.basePath.startsWith('/') 
+        ? event.api.basePath 
+        : `/${event.api.basePath}`;
+      this.baseURL = this.baseURL.endsWith('/') 
+        ? this.baseURL.slice(0, -1) 
+        : this.baseURL;
+    } else {
+      // Default to app-local /api
+      this.baseURL = '/api';
+    }
+    
     this.defaultHeaders = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -42,9 +65,46 @@ export class EventApiClient {
    * Make an API request with automatic event endpoint resolution
    */
   async request<T = any>(
-    endpoint: string,
+    path: string,
     options: ApiRequestOptions = {}
   ): Promise<ApiResponse<T>> {
+    // Get the event configuration
+    const event = getCurrentEvent();
+    
+    // Determine the base URL: env override wins, then event config, else constructor default
+    const envBase = (process.env.EXPO_PUBLIC_API_BASE_URL || '').trim();
+    const baseUrl = envBase || event?.api?.basePath || this.baseURL;
+    
+    // Build the final URL
+    let url: string;
+    
+    // If an endpoint is specified in options and exists in the event config
+    if (options.endpoint && event?.api?.endpoints?.[options.endpoint]) {
+      const endpointPath = event.api.endpoints[options.endpoint];
+      const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      const cleanPath = endpointPath.startsWith('/') ? endpointPath.slice(1) : endpointPath;
+      url = `${cleanBase}/${cleanPath}`;
+    } else {
+      // Otherwise, build the URL from the base URL and path
+      const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+      url = `${cleanBase}/${cleanPath}`;
+    }
+    
+    // Add query parameters if provided
+    if (options.params) {
+      const queryParams = new URLSearchParams();
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, String(value));
+        }
+      });
+      const queryString = queryParams.toString();
+      if (queryString) {
+        url += (url.includes('?') ? '&' : '?') + queryString;
+      }
+    }
+    
     const {
       method = 'GET',
       headers = {},
@@ -52,8 +112,7 @@ export class EventApiClient {
       timeout = this.timeout,
       retries = this.retries
     } = options;
-
-    const url = getEventApiEndpoint(endpoint);
+    
     const requestHeaders = { ...this.defaultHeaders, ...headers };
 
     // Add authentication header if available
@@ -151,7 +210,12 @@ export class EventApiClient {
     const formData = new FormData();
     formData.append('file', file);
 
-    const url = getEventApiEndpoint(endpoint);
+    const event = getCurrentEvent();
+    const envBase = (process.env.EXPO_PUBLIC_API_BASE_URL || '').trim();
+    const baseUrl = envBase || event?.api?.basePath || this.baseURL;
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${cleanBase}${cleanPath}`;
     const { data: { session } } = await supabase.auth.getSession();
     
     const headers: Record<string, string> = {};
@@ -177,7 +241,7 @@ export class EventApiClient {
       };
     } catch (error) {
       return {
-        data: null,
+        data: null as unknown as T,  // Type assertion to handle generic type with null
         error: (error as Error).message,
         success: false
       };

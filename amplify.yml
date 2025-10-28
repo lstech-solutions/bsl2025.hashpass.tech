@@ -22,17 +22,28 @@ frontend:
         - rm -rf dist
         # Build Expo web app in server mode
         - npm run build:web
-        # Add cache-busting timestamp to index.html
-        - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
+        
         # Create necessary directories for API routes
         - mkdir -p dist/client/_expo/functions/api/bslatam
-        # Copy all API route files to the correct location
-        - cp -r app/api/bslatam/*.ts dist/client/_expo/functions/api/bslatam/
+        
+        # Copy and process API route files
+        - 'for file in app/api/bslatam/*.ts; do
+            filename=$(basename "$file");
+            cp "$file" "dist/client/_expo/functions/api/bslatam/$filename";
+            echo "Copied $file to dist/client/_expo/functions/api/bslatam/$filename";
+          done'
+        
         # Copy all server files to client directory for Amplify
         - cp -r dist/server/* dist/client/
-        # List contents for debugging
-        - echo "API files in dist/client/_expo/functions/api/bslatam/:"
-        - ls -la dist/client/_expo/functions/api/bslatam/
+        
+        # Add cache-busting timestamp to index.html
+        - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
+        
+        # Debug: List all API files
+        - echo "\n=== API files in dist/client/_expo/functions/api/bslatam/ ==="
+        - ls -la dist/client/_expo/functions/api/bslatam/ || echo "No API files found"
+        - echo "\n=== Contents of dist/client/ ==="
+        - ls -la dist/client/
         - 'echo "Checking for index.html:"'
         - ls -la dist/client/index.html
 
@@ -73,21 +84,28 @@ frontend:
 
 # Redirects for SPA routing
 redirects:
-  - source: '/<*>'
+  # API routes - must come before the catch-all rule
+  - source: '/api/bslatam/agenda/'
     status: 200
-    target: '/index.html'
+    target: '/_expo/functions/api/bslatam/agenda+api'
+    condition: '!^/api/bslatam/agenda/'
+  - source: '/api/bslatam/agenda-status/'
+    status: 200
+    target: '/_expo/functions/api/bslatam/agenda-status+api'
+    condition: '!^/api/bslatam/agenda-status/'
+  
+  # Static files
   - source: '/sw.js'
     status: 200
     target: '/sw.js'
   - source: '/_expo/*'
     status: 200
     target: '/_expo/'
-  - source: '/api/bslatam/agenda/'
+    
+  # SPA fallback - must be last
+  - source: '/<*>'
     status: 200
-    target: '/_expo/functions/api/bslatam/agenda+api'
-  - source: '/api/bslatam/agenda-status/'
-    status: 200
-    target: '/_expo/functions/api/bslatam/agenda-status+api'
+    target: '/index.html'
   - source: '/dashboard/*'
     status: 200
     target: '/index.html'

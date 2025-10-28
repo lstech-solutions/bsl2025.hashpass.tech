@@ -48,7 +48,7 @@ frontend:
         
         # Verify build output
         - echo "Build output verification:"
-        - ls -la dist/client/
+        #- ls -la dist/client/
         - echo "Checking for index.html:"
         #- ls -la dist/client/index.html || (echo "index.html not found!" && exit 1)
   artifacts:

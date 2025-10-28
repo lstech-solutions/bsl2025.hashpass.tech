@@ -31,7 +31,7 @@ frontend:
         # Build the application
         - npx expo export:web || npx expo export -p web
         
-        # Move files to the right location
+        # Move files to dist directory
         - |
           # Copy from web-build if it exists
           if [ -d "web-build" ]; then
@@ -43,7 +43,7 @@ frontend:
           # Create a simple index.html if it doesn't exist
           if [ ! -f "dist/index.html" ]; then
             echo "Creating simple index.html"
-            echo '<!DOCTYPE html><html><head><title>BSL 2025</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f5f5f5;color:#333}.container{text-align:center}h1{font-size:2.5rem;margin-bottom:1rem}p{font-size:1.2rem;color:#666}</style></head><body><div class="container"><h1>BSL 2025</h1><p>Loading application...</p></div><script>const paths=["/_expo/static/js/bundle.js","/static/js/bundle.js","/bundle.js","/js/bundle.js"];function loadScript(src){return new Promise((r,e)=>{const t=document.createElement("script");t.src=t.onload=()=>r(t),t.onerror=e,document.body.appendChild(t)})}(async()=>{for(const e of paths)try{console.log("Trying to load:",e),await loadScript(e),console.log("Successfully loaded:",e),break}catch(e){console.log("Failed to load:",e)}})()</script></body></html>' > dist/index.html
+            echo '<!DOCTYPE html><html><head><title>BSL 2025</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f5f5f5;color:#333}.container{text-align:center}h1{font-size:2.5rem;margin-bottom:1rem}p{font-size:1.2rem;color:#666}</style></head><body><div class="container"><h1>BSL 2025</h1><p>Loading application...</p></div><script>const paths=["/_expo/static/js/bundle.js","/static/js/bundle.js","/bundle.js"];function loadScript(src){return new Promise((r,e)=>{const t=document.createElement("script");t.src=src;t.onload=()=>r(t);t.onerror=e;document.body.appendChild(t)})}(async()=>{for(const e of paths)try{console.log("Trying to load:",e);await loadScript(e);console.log("Successfully loaded:",e);break}catch(e){console.log("Failed to load:",e)}})()</script></body></html>' > dist/index.html
           fi
           
           # Create 200.html for client-side routing
@@ -52,7 +52,6 @@ frontend:
           # List all files for debugging
           echo "Build output files:"
           find dist -type f | sort
-          fi
         
         # Handle static files and directories
         - |
@@ -178,9 +177,9 @@ frontend:
         - echo "Deploying Lambda function..."
         - amplify push --yes --no-gql-override
   artifacts:
-    baseDirectory: dist
+    baseDirectory: .
     files:
-      - '**/*'
+      - 'dist/**/*'
     # Rewrite rules for client-side routing
     customHeaders:
       # Handle HTML files with no caching

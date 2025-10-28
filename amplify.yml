@@ -27,8 +27,9 @@ frontend:
         # Clean previous builds
         - rm -rf web-build out dist/web-build
         
-        # Clean previous builds
-        - rm -rf web-build out dist/client
+        # Clean previous builds and create necessary directories
+        - rm -rf web-build out dist
+        - mkdir -p dist/client
         
         # Build the application
         - npx expo export:web || npx expo export -p web
@@ -95,8 +96,10 @@ frontend:
           else
             echo "Error: index.html not found in expected locations"
             find . -name "index.html" -type f
-            # Create a clean, centered index.html as fallback
-            echo '<!DOCTYPE html>
+              # Create a clean, centered index.html as fallback
+            mkdir -p dist/client
+            cat > dist/client/index.html << 'EOL'
+            <!DOCTYPE html>
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
@@ -129,20 +132,41 @@ frontend:
             <body>
                 <h1>BSL 2025</h1>
                 <p>Loading application...</p>
-                <script src="/_expo/static/js/bundle.js"></script>
                 <script>
-                  // Fallback to try loading from root if _expo path fails
-                  window.addEventListener('error', function(e) {
-                    if (e.target.tagName === 'SCRIPT' && e.target.src.includes('bundle.js')) {
-                      console.log('Fallback: Trying to load bundle.js from root');
-                      var script = document.createElement('script');
-                      script.src = '/static/js/bundle.js';
-                      document.body.appendChild(script);
+                // Try multiple possible bundle locations
+                const bundlePaths = [
+                  '/_expo/static/js/bundle.js',
+                  '/static/js/bundle.js',
+                  '/bundle.js'
+                ];
+                
+                function loadScript(src) {
+                  return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    script.onload = () => resolve();
+                    script.onerror = () => reject();
+                    document.body.appendChild(script);
+                  });
+                }
+                
+                // Try each path until one works
+                (async function() {
+                  for (const path of bundlePaths) {
+                    try {
+                      console.log('Trying to load:', path);
+                      await loadScript(path);
+                      console.log('Successfully loaded:', path);
+                      break; // Stop if successful
+                    } catch (e) {
+                      console.log('Failed to load:', path);
                     }
-                  }, true);
+                  }
+                })();
                 </script>
             </body>
-            </html>' > dist/client/index.html
+            </html>
+            EOL
           fi
         
         # Build and deploy Lambda functions
@@ -155,7 +179,7 @@ frontend:
         - echo "Deploying Lambda function..."
         - amplify push --yes --no-gql-override
   artifacts:
-    baseDirectory: dist/client
+    baseDirectory: dist
     files:
       - '**/*'
     # Rewrite rules for client-side routing

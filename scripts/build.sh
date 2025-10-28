@@ -148,13 +148,17 @@ if [ ! -f "dist/client/index.html" ]; then
     <meta charset="utf-8">
     <title>BSL 2025</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-  </head>
-  <body>
-    <div id="root">BSL 2025 - Loading...</div>
     <script>
       // Set the base path for static assets
       window.__PUBLIC_URL__ = window.location.pathname.split('/').slice(0, -1).join('/') || '/';
+      // Ensure we have a base URL for client-side routing
+      if (!window.location.pathname.endsWith('/') && !window.location.pathname.includes('.')) {
+        window.history.replaceState(null, null, window.location.pathname + '/' + window.location.search + window.location.hash);
+      }
     </script>
+  </head>
+  <body>
+    <div id="root">BSL 2025 - Loading...</div>
     <script src="./static/js/bundle.js"></script>
   </body>
 </html>

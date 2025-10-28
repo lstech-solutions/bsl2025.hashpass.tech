@@ -29,6 +29,11 @@ frontend:
         
         # Copy all server files to client directory for Amplify
         - cp -r dist/server/* dist/client/
+
+        # Copy built server API handlers into Lambda source so the function can import them
+        - mkdir -p amplify/backend/function/bslApi/src/server/_expo/functions
+        - rm -rf amplify/backend/function/bslApi/src/server/_expo/functions/api || true
+        - cp -r dist/server/_expo/functions/api amplify/backend/function/bslApi/src/server/_expo/functions/
         
         # Create a simple package.json for the API functions
         - 'mkdir -p dist/client/api/bslatam'

@@ -197,48 +197,26 @@ frontend:
 
 # Rewrite rules for API and SPA
 rewrites:
-  # Try server location first
+  # API routes - try server location first
   - source: /api/bslatam/agenda
-    target: /server/_expo/functions/api/bslatam/agenda+api
+    target: /_expo/functions/api/bslatam/agenda+api
     status: '200'
     
   - source: /api/bslatam/agenda/
-    target: /server/_expo/functions/api/bslatam/agenda+api
+    target: /_expo/functions/api/bslatam/agenda+api
     status: '200'
     
   - source: /api/bslatam/agenda-status
-    target: /server/_expo/functions/api/bslatam/agenda-status+api
+    target: /_expo/functions/api/bslatam/agenda-status+api
     status: '200'
     
   - source: /api/bslatam/agenda-status/
-    target: /server/_expo/functions/api/bslatam/agenda-status+api
+    target: /_expo/functions/api/bslatam/agenda-status+api
     status: '200'
     
-  # Fallback to client location if not found in server
-  - source: /api/bslatam/agenda
-    target: /client/server/_expo/functions/api/bslatam/agenda+api
-    status: '200'
-    
-  - source: /api/bslatam/agenda/
-    target: /client/server/_expo/functions/api/bslatam/agenda+api
-    status: '200'
-    
-  - source: /api/bslatam/agenda-status
-    target: /client/server/_expo/functions/api/bslatam/agenda-status+api
-    status: '200'
-    
-  - source: /api/bslatam/agenda-status/
-    target: /client/server/_expo/functions/api/bslatam/agenda-status+api
-    status: '200'
-    
-  # Catch-all for other API routes - try server location first
+  # Catch-all for other API routes
   - source: /api/bslatam/<*>
-    target: /server/_expo/functions/api/bslatam/<*>+api
-    status: '200'
-    
-  # Fallback to client location for all other API routes
-  - source: /api/bslatam/<*>
-    target: /client/server/_expo/functions/api/bslatam/<*>+api
+    target: /_expo/functions/api/bslatam/<*>+api
     status: '200'
     
   # SPA fallback - serve index.html for all other routes

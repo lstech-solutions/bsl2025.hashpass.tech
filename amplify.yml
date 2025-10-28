@@ -27,19 +27,24 @@ frontend:
         # Clean previous builds
         - rm -rf web-build out dist/web-build
         
+        # Clean previous builds
+        - rm -rf web-build out dist/client
+        
         # Build the application
         - npx expo export:web || npx expo export -p web
-        
-        # Determine build directory
-        - if [ -d "web-build" ]; then BUILD_DIR="web-build"; else BUILD_DIR="dist"; fi
         
         # Create dist/client directory
         - mkdir -p dist/client
         
         # Copy build output to dist/client
-        - echo "Copying build output from ${BUILD_DIR} to dist/client"
-        - cp -r ${BUILD_DIR}/* dist/client/
-        - cp -r ${BUILD_DIR}/.[!.]* dist/client/ 2>/dev/null || true
+        - if [ -d "web-build" ]; then
+            echo "Copying from web-build to dist/client"
+            cp -r web-build/* dist/client/ 2>/dev/null || true
+            cp -r web-build/.[!.]* dist/client/ 2>/dev/null || true
+          elif [ -d "dist" ]; then
+            echo "Copying from dist to dist/client"
+            find dist -mindepth 1 -maxdepth 1 -not -name "client" -exec cp -r {} dist/client/ \;
+          fi
         
         # Ensure _expo/static directory exists
         - mkdir -p dist/client/_expo/static

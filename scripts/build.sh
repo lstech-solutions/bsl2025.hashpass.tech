@@ -72,19 +72,43 @@ copy_files() {
 rm -rf dist/client
 mkdir -p dist/client
 
+# Function to safely copy build output
+copy_build_output() {
+  local src=$1
+  local dest=$2
+  
+  if [ "$src" = "$dest" ] || [ "$src" = "$dest/" ]; then
+    echo "Skipping copy: source and destination are the same"
+    return 0
+  fi
+  
+  if [ -d "$src" ]; then
+    echo "Copying build output from $src to $dest"
+    # Create destination directory if it doesn't exist
+    mkdir -p "$dest"
+    
+    # Copy all files and directories except the destination directory
+    find "$src" -mindepth 1 -maxdepth 1 ! -name "$(basename "$dest")" -exec cp -r {} "$dest/" \;
+    
+    # Copy hidden files as well
+    find "$src" -mindepth 1 -maxdepth 1 -name ".*" ! -name "." ! -name ".." -exec cp -r {} "$dest/" 2>/dev/null \; || true
+  fi
+}
+
+# Clean and prepare output directory
+echo "Preparing output directory..."
+rm -rf dist/client
+mkdir -p dist/client
+
 # Copy build output to dist/client
-if [ -d "${BUILD_DIR}" ]; then
-  echo "Copying build output from ${BUILD_DIR} to dist/client"
-  cp -r "${BUILD_DIR}"/* dist/client/
-  # Copy hidden files as well
-  cp -r "${BUILD_DIR}"/.[!.]* dist/client/ 2>/dev/null || true
+if [ -d "${BUILD_DIR}" ] && [ "${BUILD_DIR}" != "dist/client" ]; then
+  copy_build_output "${BUILD_DIR}" "dist/client"
 fi
 
 # Check common build output locations and copy files
-if [ -d "web-build" ]; then
-  echo "Found web-build directory, copying to dist/client"
-  cp -r web-build/* dist/client/
-  cp -r web-build/.[!.]* dist/client/ 2>/dev/null || true
+if [ -d "web-build" ] && [ "web-build" != "dist/client" ]; then
+  echo "Found web-build directory"
+  copy_build_output "web-build" "dist/client"
   
   # Ensure _expo directory exists for static files
   if [ ! -d "dist/client/_expo" ] && [ -d "dist/client/static" ]; then

@@ -24,6 +24,11 @@
     "lambda:test": "aws lambda invoke --function-name agendaMonitor --payload '{\"force\": true}' response.json && cat response.json",
     "deploy:amplify": "npm run build:web && npm run amplify:deploy"
   },
+  "expo": {
+    "extra": {
+      "EXPO_PUBLIC_API_BASE_URL": "https://hashpass.co/api"
+    }
+  },
   "jest": {
     "preset": "jest-expo"
   },

@@ -35,10 +35,12 @@ export class EventApiClient {
 
   constructor() {
     const event = getCurrentEvent();
-    if (!event?.api?.basePath) {
-      console.error('Event API configuration is missing');
-      this.baseURL = '/api';
-    } else {
+    // Allow overriding via public env var (Expo: EXPO_PUBLIC_*)
+    const envBase = (process.env.EXPO_PUBLIC_API_BASE_URL || '').trim();
+    if (envBase) {
+      // Normalize env base: no trailing slash
+      this.baseURL = envBase.endsWith('/') ? envBase.slice(0, -1) : envBase;
+    } else if (event?.api?.basePath) {
       // Ensure basePath starts with a slash and doesn't end with one
       this.baseURL = event.api.basePath.startsWith('/') 
         ? event.api.basePath 
@@ -46,6 +48,9 @@ export class EventApiClient {
       this.baseURL = this.baseURL.endsWith('/') 
         ? this.baseURL.slice(0, -1) 
         : this.baseURL;
+    } else {
+      // Default to app-local /api
+      this.baseURL = '/api';
     }
     
     this.defaultHeaders = {
@@ -66,8 +71,9 @@ export class EventApiClient {
     // Get the event configuration
     const event = getCurrentEvent();
     
-    // Determine the base URL
-    const baseUrl = event?.api?.basePath || this.baseURL;
+    // Determine the base URL: env override wins, then event config, else constructor default
+    const envBase = (process.env.EXPO_PUBLIC_API_BASE_URL || '').trim();
+    const baseUrl = envBase || event?.api?.basePath || this.baseURL;
     
     // Build the final URL
     let url: string;
@@ -204,8 +210,12 @@ export class EventApiClient {
     const formData = new FormData();
     formData.append('file', file);
 
-     const event = getCurrentEvent();
-    const url = `${event?.api?.basePath || ''}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+    const event = getCurrentEvent();
+    const envBase = (process.env.EXPO_PUBLIC_API_BASE_URL || '').trim();
+    const baseUrl = envBase || event?.api?.basePath || this.baseURL;
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${cleanBase}${cleanPath}`;
     const { data: { session } } = await supabase.auth.getSession();
     
     const headers: Record<string, string> = {};

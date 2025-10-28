@@ -30,21 +30,33 @@ frontend:
         # Copy all server files to client directory for Amplify
         - cp -r dist/server/* dist/client/
         
+        # Create a simple package.json for the API functions
+        - 'mkdir -p dist/client/api/bslatam'
+        - 'echo "{\"type\": \"module\"}" > dist/client/api/package.json'
+        
         # Process and copy API route files with proper extension
         - |
-          for file in app/api/bslatam/*.ts; do
-            # Convert the file name from "agenda+api.ts" to "agenda.js"
-            filename=$(basename "$file" | sed "s/\+api\.ts$/.js/")
-            # Create the target directory if it doesn't exist
-            mkdir -p "dist/client/_expo/functions/api/bslatam/$(dirname "$filename")"
-            # Create a simple handler file that imports and re-exports the handler
-            echo "import { handler } from '../../../../../$file'" > "dist/client/_expo/functions/api/bslatam/$filename"
-            echo "export default handler" >> "dist/client/_expo/functions/api/bslatam/$filename"
-            echo "Created API handler at dist/client/_expo/functions/api/bslatam/$filename"
+          for file in app/api/bslatam/*+api.ts; do
+            # Get the base filename without the +api.ts suffix
+            base=$(basename "$file" "+api.ts")
+            # Create the handler file
+            mkdir -p "dist/client/api/bslatam/$base"
+            cat > "dist/client/api/bslatam/$base/index.js" << 'EOL'
+          import { handler } from '../../../../../app/api/bslatam/${base}+api';
+          export default async (req, res) => {
+            try {
+              const result = await handler(req, res);
+              if (result) {
+                res.status(200).json(result);
+              }
+            } catch (error) {
+              console.error('API Error:', error);
+              res.status(500).json({ error: 'Internal Server Error' });
+            }
+          };
+          EOL
+            echo "Created API handler at dist/client/api/bslatam/$base/index.js"
           done
-        
-        # Create a simple package.json for the API functions
-        - 'echo "{\"type\": \"module\"}" > dist/client/_expo/functions/package.json'
         
         # Add cache-busting timestamp to index.html
         - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
@@ -97,16 +109,10 @@ redirects:
   # API routes - must come before the catch-all rule
   - source: '/api/bslatam/agenda/'
     status: 200
-    target: '/api/bslatam/agenda+api/'
-  - source: '/api/bslatam/agenda+api/'
-    status: 200
-    target: '/_expo/functions/api/bslatam/agenda+api/'
+    target: '/api/bslatam/agenda/index.js'
   - source: '/api/bslatam/agenda-status/'
     status: 200
-    target: '/api/bslatam/agenda-status+api/'
-  - source: '/api/bslatam/agenda-status+api/'
-    status: 200
-    target: '/_expo/functions/api/bslatam/agenda-status+api/'
+    target: '/api/bslatam/agenda-status/index.js'
   
   # Static files
   - source: '/sw.js'

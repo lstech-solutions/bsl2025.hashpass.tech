@@ -162,26 +162,26 @@ frontend:
 
 # Rewrite rules for API and SPA
 rewrites:
-  # API routes - direct mapping to the API files
+  # API routes - match the actual build output structure
   - source: /api/bslatam/agenda
-    target: /api/bslatam/agenda+api
+    target: /_expo/functions/api/bslatam/agenda+api
     status: '200'
     
   - source: /api/bslatam/agenda/
-    target: /api/bslatam/agenda+api
+    target: /_expo/functions/api/bslatam/agenda+api
     status: '200'
     
   - source: /api/bslatam/agenda-status
-    target: /api/bslatam/agenda-status+api
+    target: /_expo/functions/api/bslatam/agenda-status+api
     status: '200'
     
   - source: /api/bslatam/agenda-status/
-    target: /api/bslatam/agenda-status+api
+    target: /_expo/functions/api/bslatam/agenda-status+api
     status: '200'
     
   # Catch-all for other API routes
   - source: /api/bslatam/<*>
-    target: /api/bslatam/<*>
+    target: /_expo/functions/api/bslatam/<*>
     status: '200'
     
   # Expo assets

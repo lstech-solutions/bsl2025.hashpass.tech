@@ -199,7 +199,7 @@ frontend:
 rewrites:
   # API proxy
   - source: /api/bslatam/<*>
-    target: 'https://bsl2025.hashpass.tech/api/bslatam/<*>
+    target: https://bsl2025.hashpass.tech/api/bslatam/<*>
     status: '200'  # 200 means proxy, not redirect
     
   # SPA fallback

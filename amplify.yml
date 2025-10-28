@@ -31,14 +31,17 @@ frontend:
         - cp -r dist/server/* dist/client/
         
         # Process and copy API route files with proper extension
-        - 'for file in app/api/bslatam/*.ts; do
+        - |
+          for file in app/api/bslatam/*.ts; do
             # Convert the file name from "agenda+api.ts" to "agenda.js"
-            filename=$(basename "$file" | sed "s/\+api\.ts$/.js/");
+            filename=$(basename "$file" | sed "s/\+api\.ts$/.js/")
+            # Create the target directory if it doesn't exist
+            mkdir -p "dist/client/_expo/functions/api/bslatam/$(dirname "$filename")"
             # Create a simple handler file that imports and re-exports the handler
-            echo "import { handler } from \"../../../../../$file\";" > "dist/client/_expo/functions/api/bslatam/$filename";
-            echo "export default handler;" >> "dist/client/_expo/functions/api/bslatam/$filename";
-            echo "Created API handler at dist/client/_expo/functions/api/bslatam/$filename";
-          done'
+            echo "import { handler } from '../../../../../$file'" > "dist/client/_expo/functions/api/bslatam/$filename"
+            echo "export default handler" >> "dist/client/_expo/functions/api/bslatam/$filename"
+            echo "Created API handler at dist/client/_expo/functions/api/bslatam/$filename"
+          done
         
         # Create a simple package.json for the API functions
         - 'echo "{\"type\": \"module\"}" > dist/client/_expo/functions/package.json'

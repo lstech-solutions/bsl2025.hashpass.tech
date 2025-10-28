@@ -195,14 +195,14 @@ frontend:
       - node_modules/**/*
       - $(npm root --global)/**/*
 
-# Redirects for SPA routing and API routes
+# Rewrite rules for API and SPA
 rewrites:
-  # API proxy
+  # API routes - let the serverless functions handle these
   - source: /api/bslatam/<*>
-    target: https://bsl2025.hashpass.tech/api/bslatam/<*>
-    status: '200'  # 200 means proxy, not redirect
+    target: /_expo/functions/api/bslatam/<*>
+    status: '200'
     
-  # SPA fallback
+  # SPA fallback - serve index.html for all other routes
   - source: /<*>
     target: /index.html
     status: '200'

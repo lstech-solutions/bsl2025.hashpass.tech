@@ -21,6 +21,10 @@ frontend:
         - echo "Starting build process..."
         - npx expo export -p web --dump-sourcemap --clear
         
+        # Ensure the API routes are properly copied
+        - mkdir -p dist/api/bslatam
+        - cp -r app/api/bslatam/*.ts dist/api/bslatam/ 2>/dev/null || true
+        
         # Handle build output
         - |
           set -e
@@ -158,26 +162,26 @@ frontend:
 
 # Rewrite rules for API and SPA
 rewrites:
-  # API routes - point to the Expo server functions
+  # API routes - direct mapping to the API files
   - source: /api/bslatam/agenda
-    target: /_expo/functions/api/bslatam/agenda+api
+    target: /api/bslatam/agenda+api
     status: '200'
     
   - source: /api/bslatam/agenda/
-    target: /_expo/functions/api/bslatam/agenda+api
+    target: /api/bslatam/agenda+api
     status: '200'
     
   - source: /api/bslatam/agenda-status
-    target: /_expo/functions/api/bslatam/agenda-status+api
+    target: /api/bslatam/agenda-status+api
     status: '200'
     
   - source: /api/bslatam/agenda-status/
-    target: /_expo/functions/api/bslatam/agenda-status+api
+    target: /api/bslatam/agenda-status+api
     status: '200'
     
   # Catch-all for other API routes
   - source: /api/bslatam/<*>
-    target: /_expo/functions/api/bslatam/<*>+api
+    target: /api/bslatam/<*>
     status: '200'
     
   # Expo assets

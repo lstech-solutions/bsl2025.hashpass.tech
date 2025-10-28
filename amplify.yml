@@ -18,44 +18,109 @@ frontend:
         - mkdir -p dist
         
         # Build the application for web with Metro bundler
-        - npx expo export -p web
+        - echo "Starting build process..."
+        - npx expo export -p web --dump-sourcemap --clear
         
         # Handle build output
         - |
           set -e
           
+          echo "Build completed. Processing output..."
+          
           # Create necessary directories
           mkdir -p dist/_expo/static/js
           
-          # The expo export -p web command outputs to the 'dist' directory by default
-          if [ -d "dist" ]; then
+          # Check if we have a server-side rendered output
+          if [ -d "dist/server" ]; then
+            echo "Detected server-side rendered output structure"
+            
+            # Move files from dist/server to dist/
+            echo "Moving files from dist/server to dist/"
+            mv dist/server/* dist/ 2>/dev/null || true
+            mv dist/server/.* dist/ 2>/dev/null || true
+            rmdir dist/server 2>/dev/null || true
+            
+            # Update any references in HTML files
+            echo "Updating file references..."
+            find dist -type f -name "*.html" -exec sed -i 's|src="/_expo/|src="/_expo/|g' {} \;
+            find dist -type f -name "*.html" -exec sed -i 's|href="/_expo/|href="/_expo/|g' {} \;
+            
+            # List all files for debugging
+            echo "Build output files after reorganization:"
+            find dist -type f | sort
+            
             # Ensure we have the required files
-            if [ ! -f "dist/index.html" ]; then
+            if [ -f "dist/index.html" ]; then
+              echo "Found index.html in dist/"
+              
+              # Create 200.html for client-side routing (required for SPA routing to work)
+              echo "Creating 200.html for SPA routing..."
+              cp dist/index.html dist/200.html 2>/dev/null || true
+              
+              # Find the main JavaScript bundle
+              echo "Locating JavaScript bundles..."
+              
+              # Look for bundle in various possible locations
+              if [ -f "dist/_expo/static/js/main.js" ]; then
+                echo "Found main.js in _expo/static/js/"
+                mkdir -p dist/_expo/static/js
+                cp dist/_expo/static/js/main.js dist/_expo/static/js/bundle.js
+                echo "Created bundle.js from main.js"
+              fi
+              
+              # Check for any JavaScript files that might be the entry point
+              if [ ! -f "dist/_expo/static/js/bundle.js" ]; then
+                echo "Searching for JavaScript entry points..."
+                JS_ENTRY=$(find dist -type f -name "*.js" | grep -i -E 'main|bundle|index' | head -1)
+                
+                if [ -n "$JS_ENTRY" ]; then
+                  echo "Found potential entry point: $JS_ENTRY"
+                  mkdir -p dist/_expo/static/js
+                  cp "$JS_ENTRY" dist/_expo/static/js/bundle.js
+                  echo "Created bundle.js from $JS_ENTRY"
+                else
+                  echo "Warning: No JavaScript entry point found in build output"
+                  echo "Available JavaScript files:"
+                  find dist -type f -name "*.js" | sort
+                fi
+              fi
+              
+              # Verify required files exist
+              if [ ! -f "dist/_expo/static/js/bundle.js" ]; then
+                echo "Error: bundle.js not found in expected location"
+                echo "Trying alternative approach..."
+                
+                # Try to find any JavaScript file that could be the entry
+                ALT_JS=$(find dist -type f -name "*.js" | head -1)
+                if [ -n "$ALT_JS" ]; then
+                  echo "Using $ALT_JS as the entry point"
+                  mkdir -p dist/_expo/static/js
+                  cp "$ALT_JS" dist/_expo/static/js/bundle.js
+                  
+                  # Try to update the index.html to point to the correct bundle
+                  if [ -f "dist/index.html" ]; then
+                    sed -i 's|src="/[^"]*bundle\.js"|src="/_expo/static/js/bundle.js"|g' dist/index.html
+                    sed -i 's|src="/[^"]*main\.js"|src="/_expo/static/js/bundle.js"|g' dist/index.html
+                  fi
+                else
+                  echo "Error: No JavaScript files found in build output"
+                  exit 1
+                fi
+              fi
+            else
               echo "Error: index.html not found in dist directory"
+              echo "Available HTML files:"
+              find dist -type f -name "*.html" | sort
               exit 1
             fi
             
-            # Create 200.html for client-side routing (required for SPA routing to work)
-            cp dist/index.html dist/200.html 2>/dev/null || true
-            
-            # The main bundle is typically in _expo/static/js/main.js
-            if [ -f "dist/_expo/static/js/main.js" ]; then
-              echo "Found main.js in _expo/static/js/"
-              # Create a bundle.js symlink for compatibility
-              mkdir -p dist/_expo/static/js
-              cp dist/_expo/static/js/main.js dist/_expo/static/js/bundle.js
-            fi
-            
-            # List all files for debugging
-            echo "Build output files:"
+            echo "Final file structure:"
             find dist -type f | sort
             
-            # Verify required files exist
-            if [ ! -f "dist/_expo/static/js/bundle.js" ]; then
-              echo "Warning: bundle.js not found in expected location"
-            fi
           else
             echo "Error: dist directory not found after build"
+            echo "Current directory contents:"
+            ls -la
             exit 1
           fi
   

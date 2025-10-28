@@ -20,21 +20,28 @@ frontend:
       commands:
         # Clean previous builds
         - rm -rf dist
-        # Build Expo web app in server mode
-        - npm run build:web
         
         # Create necessary directories for API routes
         - mkdir -p dist/client/_expo/functions/api/bslatam
         
-        # Copy and process API route files
-        - 'for file in app/api/bslatam/*.ts; do
-            filename=$(basename "$file");
-            cp "$file" "dist/client/_expo/functions/api/bslatam/$filename";
-            echo "Copied $file to dist/client/_expo/functions/api/bslatam/$filename";
-          done'
+        # Build Expo web app in server mode
+        - npm run build:web
         
         # Copy all server files to client directory for Amplify
         - cp -r dist/server/* dist/client/
+        
+        # Process and copy API route files with proper extension
+        - 'for file in app/api/bslatam/*.ts; do
+            # Convert the file name from "agenda+api.ts" to "agenda.js"
+            filename=$(basename "$file" | sed "s/\+api\.ts$/.js/");
+            # Create a simple handler file that imports and re-exports the handler
+            echo "import { handler } from \"../../../../../$file\";" > "dist/client/_expo/functions/api/bslatam/$filename";
+            echo "export default handler;" >> "dist/client/_expo/functions/api/bslatam/$filename";
+            echo "Created API handler at dist/client/_expo/functions/api/bslatam/$filename";
+          done'
+        
+        # Create a simple package.json for the API functions
+        - 'echo "{\"type\": \"module\"}" > dist/client/_expo/functions/package.json'
         
         # Add cache-busting timestamp to index.html
         - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
@@ -87,12 +94,16 @@ redirects:
   # API routes - must come before the catch-all rule
   - source: '/api/bslatam/agenda/'
     status: 200
-    target: '/_expo/functions/api/bslatam/agenda+api'
-    condition: '!^/api/bslatam/agenda/'
+    target: '/api/bslatam/agenda+api/'
+  - source: '/api/bslatam/agenda+api/'
+    status: 200
+    target: '/_expo/functions/api/bslatam/agenda+api/'
   - source: '/api/bslatam/agenda-status/'
     status: 200
-    target: '/_expo/functions/api/bslatam/agenda-status+api'
-    condition: '!^/api/bslatam/agenda-status/'
+    target: '/api/bslatam/agenda-status+api/'
+  - source: '/api/bslatam/agenda-status+api/'
+    status: 200
+    target: '/_expo/functions/api/bslatam/agenda-status+api/'
   
   # Static files
   - source: '/sw.js'

@@ -43,25 +43,29 @@ frontend:
             # Ensure the _expo directory structure exists
             mkdir -p dist/_expo/static/{js/web,css,assets}
             
-            # Move JavaScript files to the expected location
-            echo "Moving JavaScript files to _expo/static/js/web/..."
-            find dist -type f -name "*.js" -exec cp {} dist/_expo/static/js/web/ \;
+            # Move JavaScript files to the correct location (without duplicating 'web')
+            echo "Moving JavaScript files to _expo/static/js/..."
+            mkdir -p dist/_expo/static/js
+            find dist -type f -name "*.js" -exec cp {} dist/_expo/static/js/ \;
             
             # Move CSS files to the expected location
             echo "Moving CSS files to _expo/static/css/..."
+            mkdir -p dist/_expo/static/css
             find dist -type f -name "*.css" -exec cp {} dist/_expo/static/css/ \;
             
             # Move other static assets
             echo "Moving static assets..."
             [ -d "dist/static" ] && cp -r dist/static/* dist/_expo/static/ 2>/dev/null || true
             
-            # Update HTML file references
+            # Update HTML file references to point to the correct paths
             echo "Updating file references in HTML files..."
-            find dist -type f -name "*.html" -exec sed -i 's|src="/_expo/static/js/|src="/_expo/static/js/web/|g' {} \;
-            find dist -type f -name "*.html" -exec sed -i 's|src="/static/js/|src="/_expo/static/js/web/|g' {} \;
+            # Fix JavaScript paths
+            find dist -type f -name "*.html" -exec sed -i 's|src="/_expo/static/js/web/|src="/_expo/static/js/|g' {} \;
+            find dist -type f -name "*.html" -exec sed -i 's|src="/static/js/|src="/_expo/static/js/|g' {} \;
+            find dist -type f -name "*.html" -exec sed -i 's|src="/[^"]*bundle\.js"|src="/_expo/static/js/entry.js"|g' {} \;
+            # Fix CSS paths
             find dist -type f -name "*.html" -exec sed -i 's|href="/_expo/static/css/|href="/_expo/static/css/|g' {} \;
-            find dist -type f -name "*.html" -exec sed -i 's|href="/static/css/|href="/_expo/static/css/|g' {} \;
-            find dist -type f -name "*.html" -exec sed -i 's|src="/[^"]*bundle\.js"|src="/_expo/static/js/web/entry.js"|g' {} \;
+            find dist -type f -name "*.html" -exec sed -i 's|href="/static/css/|href="/_expo/static/css/|g' {} \; \;
             
             # List all files for debugging
             echo "Build output files after reorganization:"

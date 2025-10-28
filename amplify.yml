@@ -37,7 +37,8 @@ frontend:
         - mkdir -p dist/client
         
         # Copy build output to dist/client
-        - if [ -d "web-build" ]; then
+        - |
+          if [ -d "web-build" ]; then
             echo "Copying from web-build to dist/client"
             cp -r web-build/* dist/client/ 2>/dev/null || true
             cp -r web-build/.[!.]* dist/client/ 2>/dev/null || true
@@ -46,19 +47,28 @@ frontend:
             find dist -mindepth 1 -maxdepth 1 -not -name "client" -exec cp -r {} dist/client/ \;
           fi
         
-        # Ensure _expo/static directory exists
-        - mkdir -p dist/client/_expo/static
-        - if [ -d "dist/client/static" ]; then cp -r dist/client/static/* dist/client/_expo/static/; fi
-        
-        # Create 200.html for client-side routing
-        - if [ ! -f "dist/client/200.html" ]; then cp dist/client/index.html dist/client/200.html; fi
-        
-        # Verify build output
-        - echo "Build output verification:"
-        - echo "Files in dist/client:"
-        - find dist/client -type f | sort
-        - echo "Checking for index.html:"
-        - ls -la dist/client/index.html || (echo "index.html not found!" && exit 1)
+        # Ensure _expo/static directory exists and copy files
+        - |
+          mkdir -p dist/client/_expo/static
+          if [ -d "dist/client/static" ]; then 
+            cp -r dist/client/static/* dist/client/_expo/static/ || true
+          fi
+          
+          # Create 200.html for client-side routing
+          if [ ! -f "dist/client/200.html" ] && [ -f "dist/client/index.html" ]; then 
+            cp dist/client/index.html dist/client/200.html
+          fi
+          
+          # Verify build output
+          echo "Build output verification:"
+          echo "Files in dist/client:"
+          find dist/client -type f | sort
+          echo "Checking for index.html:"
+          if [ ! -f "dist/client/index.html" ]; then
+            echo "Error: index.html not found in dist/client/"
+            find . -name "index.html" -type f
+            exit 1
+          fi
         
         # Build and deploy Lambda functions
         - echo "Building Lambda functions..."

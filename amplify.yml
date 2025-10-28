@@ -55,8 +55,9 @@ frontend:
     baseDirectory: dist/client
     files:
       - '**/*'
-    # Important: This rewrites all requests to index.html for client-side routing
+    # Rewrite rules for client-side routing
     customHeaders:
+      # Handle HTML files with no caching
       - pattern: '**/*.html'
         headers:
           - key: Cache-Control
@@ -65,37 +66,34 @@ frontend:
             value: 'no-cache'
           - key: Expires
             value: '0'
-      - pattern: '/**/'
+      
+      # Handle root and nested routes
+      - pattern: '/*'
         headers:
           - key: Cache-Control
-            value: 'public, max-age=0, s-maxage=0, must-revalidate'
-      - pattern: '**/*.+(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)'
+            value: 'no-cache, no-store, must-revalidate'
+          - key: Pragma
+            value: 'no-cache'
+          - key: Expires
+            value: '0'
+      
+      # Cache static assets
+      - pattern: '**/*.+(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json)'
         headers:
           - key: Cache-Control
             value: 'public, max-age=31536000, immutable'
+      
+      # API CORS headers
       - pattern: 'api/bslatam/*'
         headers:
           - key: 'Access-Control-Allow-Origin'
             value: '*'
           - key: 'Access-Control-Allow-Headers'
-            value: '*'
+            value: 'Content-Type, Authorization, X-Requested-With'
           - key: 'Access-Control-Allow-Methods'
             value: 'GET, POST, PUT, DELETE, OPTIONS'
-      - pattern: 'index.html'
-        headers:
-          - key: Cache-Control
-            value: 'no-cache, no-store, must-revalidate'
-          - key: Pragma
-            value: 'no-cache'
-          - key: Expires
-            value: '0'
-      - pattern: '**/*.html'
-        headers:
-          - key: Cache-Control
-            value: 'no-cache, no-store, must-revalidate'
-          - key: Pragma
-            value: 'no-cache'
-          - key: Expires
+          - key: 'Access-Control-Allow-Credentials'
+            value: 'true'
             value: '0'
       - pattern: '**/*.js'
         headers:

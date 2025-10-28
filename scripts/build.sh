@@ -141,28 +141,41 @@ if [ ! -f "dist/client/index.html" ]; then
   # If still no index.html, create a default one
   if [ ! -f "dist/client/index.html" ]; then
     echo "Creating default index.html..."
-    cat > dist/client/index.html << 'EOL'
+    cat > dist/client/200.html << 'EOL'
 <!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
     <title>BSL 2025</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <script>
       // Set the base path for static assets
-      window.__PUBLIC_URL__ = window.location.pathname.split('/').slice(0, -1).join('/') || '/';
-      // Ensure we have a base URL for client-side routing
-      if (!window.location.pathname.endsWith('/') && !window.location.pathname.includes('.')) {
-        window.history.replaceState(null, null, window.location.pathname + '/' + window.location.search + window.location.hash);
-      }
+      (function() {
+        // Ensure we have a base URL for client-side routing
+        var path = window.location.pathname;
+        var search = window.location.search;
+        var hash = window.location.hash;
+        
+        // Set public URL for static assets
+        window.__PUBLIC_URL__ = '/';
+        
+        // Handle client-side routing
+        if (!path.endsWith('/') && !path.includes('.') && path !== '/') {
+          var newPath = path + '/' + (search || '') + (hash || '');
+          window.history.replaceState(null, null, newPath);
+        }
+      })();
     </script>
+    <link rel="stylesheet" href="/static/css/main.css">
   </head>
   <body>
-    <div id="root">BSL 2025 - Loading...</div>
-    <script src="./static/js/bundle.js"></script>
+    <div id="root">Loading BSL 2025...</div>
+    <script src="/static/js/bundle.js" defer></script>
   </body>
 </html>
 EOL
+    # Create a copy as index.html for the root path
+    cp dist/client/200.html dist/client/index.html
   fi
 fi
 

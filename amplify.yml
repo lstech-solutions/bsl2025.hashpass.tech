@@ -195,8 +195,14 @@ frontend:
       - node_modules/**/*
       - $(npm root --global)/**/*
 
-# Redirects for SPA routing
+# Redirects for SPA routing and API routes
 redirects:
+  # API routes
+  - source: '/api/bslatam/<*>
+    target: 'https://bsl2025.hashpass.tech/api/bslatam/<*>'
+    status: 200
+    
+  # SPA fallback
   - source: '/<*>'
     status: 200
     target: '/index.html'

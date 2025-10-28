@@ -197,12 +197,12 @@ frontend:
 
 # Rewrite rules for API and SPA
 rewrites:
-  # API routes - handle the +api.js pattern for serverless functions
-  - source: /api/bslatam/agenda
-    target: /_expo/functions/api/bslatam/agenda+api
+  # API routes with trailing slash
+  - source: /api/bslatam/<*>/ 
+    target: /_expo/functions/api/bslatam/<*>+api
     status: '200'
     
-  # Catch-all for other API routes with +api suffix
+  # API routes without trailing slash
   - source: /api/bslatam/<*>
     target: /_expo/functions/api/bslatam/<*>+api
     status: '200'

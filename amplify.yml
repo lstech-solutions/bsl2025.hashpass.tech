@@ -197,7 +197,7 @@ frontend:
 
 # Rewrite rules for API and SPA
 rewrites:
-  # Explicit API routes first
+  # Agenda API routes
   - source: /api/bslatam/agenda
     target: /_expo/functions/api/bslatam/agenda+api
     status: '200'

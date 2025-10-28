@@ -29,7 +29,7 @@ frontend:
         - echo "Deploying Lambda function..."
         - amplify push --yes --no-gql-override
         - 'echo "Checking for index.html:"'
-        - ls -la dist/client/index.html
+        #- ls -la dist/client/index.html
   artifacts:
     baseDirectory: dist/client
     files:

@@ -40,10 +40,18 @@ frontend:
             mv dist/server/.* dist/ 2>/dev/null || true
             rmdir dist/server 2>/dev/null || true
             
+            # Ensure the _expo directory exists
+            mkdir -p dist/_expo/static/js/web
+            
+            # Move any JavaScript files to the expected location
+            echo "Moving JavaScript files to _expo/static/js/web/..."
+            find dist -type f -name "*.js" -exec cp {} dist/_expo/static/js/web/ \;
+            
             # Update any references in HTML files
             echo "Updating file references..."
-            find dist -type f -name "*.html" -exec sed -i 's|src="/_expo/|src="/_expo/|g' {} \;
-            find dist -type f -name "*.html" -exec sed -i 's|href="/_expo/|href="/_expo/|g' {} \;
+            find dist -type f -name "*.html" -exec sed -i 's|src="/_expo/static/js/|"/_expo/static/js/web/|g' {} \;
+            find dist -type f -name "*.html" -exec sed -i 's|src="/static/js/|"/_expo/static/js/web/|g' {} \;
+            find dist -type f -name "*.html" -exec sed -i 's|src="/[^"]*bundle\.js"|src="/_expo/static/js/web/entry.js"|g' {} \;
             
             # List all files for debugging
             echo "Build output files after reorganization:"

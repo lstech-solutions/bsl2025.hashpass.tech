@@ -5,241 +5,99 @@ frontend:
       commands:
         - nvm install 22.18.0
         - npm install --quiet --global @expo/cli
-        - npm ci
+        - >
+          if [ -f yarn.lock ]; then
+            yarn install --frozen-lockfile
+          elif [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+        # Install AWS CLI for Lambda deployment
         - pip install awscli --upgrade --user
         - export PATH=~/.local/bin:$PATH
     build:
       commands:
-        # Set environment to production
-        - export NODE_ENV=production
-        
         # Clean previous builds
-        - rm -rf web-build out dist
-        - mkdir -p dist
-        
-        # Build the application for web with Metro bundler
-        - echo "Starting build process..."
-        - npx expo export -p web --dump-sourcemap --clear
-        
-        # Ensure the API routes are properly copied
-        - mkdir -p dist/api/bslatam
-        - cp -r app/api/bslatam/*.ts dist/api/bslatam/ 2>/dev/null || true
-        
-        # Handle build output
-        - |
-          set -e
-          
-          echo "Build completed. Processing output..."
-          
-          # Create necessary directories
-          mkdir -p dist/_expo/static/js
-          
-          # Check if we have a server-side rendered output
-          if [ -d "dist/server" ]; then
-            echo "Detected server-side rendered output structure"
-            
-            # Move files from dist/server to dist/
-            echo "Moving files from dist/server to dist/"
-            mv dist/server/* dist/ 2>/dev/null || true
-            mv dist/server/.* dist/ 2>/dev/null || true
-            rmdir dist/server 2>/dev/null || true
-            
-            # Ensure the _expo directory structure exists
-            mkdir -p dist/_expo/static/{js/web,css,assets}
-            
-            # Move JavaScript files to the correct location (without duplicating 'web')
-            echo "Moving JavaScript files to _expo/static/js/..."
-            mkdir -p dist/_expo/static/js
-            find dist -type f -name "*.js" -not -path "dist/_expo/static/js/*" -exec cp -n {} dist/_expo/static/js/ \;
-            
-            # Move CSS files to the expected location
-            echo "Moving CSS files to _expo/static/css/..."
-            mkdir -p dist/_expo/static/css
-            find dist -type f -name "*.css" -not -path "dist/_expo/static/css/*" -exec cp -n {} dist/_expo/static/css/ \;
-            
-            # Move other static assets
-            echo "Moving static assets..."
-            [ -d "dist/static" ] && cp -rn dist/static/* dist/_expo/static/ 2>/dev/null || true
-            
-            # Update HTML file references to point to the correct paths
-            echo "Updating file references in HTML files..."
-            # Fix JavaScript paths
-            find dist -type f -name "*.html" -exec sed -i 's|src="/_expo/static/js/web/|src="/_expo/static/js/|g' {} \;
-            find dist -type f -name "*.html" -exec sed -i 's|src="/static/js/|src="/_expo/static/js/|g' {} \;
-            find dist -type f -name "*.html" -exec sed -i 's|src="/[^"]*bundle\.js"|src="/_expo/static/js/entry.js"|g' {} \;
-            # Fix CSS paths
-            find dist -type f -name "*.html" -exec sed -i 's|href="/_expo/static/css/|href="/_expo/static/css/|g' {} \;
-            find dist -type f -name "*.html" -exec sed -i 's|href="/static/css/|href="/_expo/static/css/|g' {} \;
-            
-            # List all files for debugging
-            echo "Build output files after reorganization:"
-            find dist -type f | sort
-            
-            # Ensure we have the required files
-            if [ -f "dist/index.html" ]; then
-              echo "Found index.html in dist/"
-              
-              # Create 200.html for client-side routing (required for SPA routing to work)
-              echo "Creating 200.html for SPA routing..."
-              cp dist/index.html dist/200.html 2>/dev/null || true
-              
-              # Find the main JavaScript bundle
-              echo "Locating JavaScript bundles..."
-              
-              # Look for bundle in various possible locations
-              if [ -f "dist/_expo/static/js/main.js" ]; then
-                echo "Found main.js in _expo/static/js/"
-                mkdir -p dist/_expo/static/js
-                cp dist/_expo/static/js/main.js dist/_expo/static/js/bundle.js
-                echo "Created bundle.js from main.js"
-              fi
-              
-              # Check for any JavaScript files that might be the entry point
-              if [ ! -f "dist/_expo/static/js/bundle.js" ]; then
-                echo "Searching for JavaScript entry points..."
-                JS_ENTRY=$(find dist -type f -name "*.js" | grep -i -E 'main|bundle|index' | head -1)
-                
-                if [ -n "$JS_ENTRY" ]; then
-                  echo "Found potential entry point: $JS_ENTRY"
-                  mkdir -p dist/_expo/static/js
-                  cp "$JS_ENTRY" dist/_expo/static/js/bundle.js
-                  echo "Created bundle.js from $JS_ENTRY"
-                else
-                  echo "Warning: No JavaScript entry point found in build output"
-                  echo "Available JavaScript files:"
-                  find dist -type f -name "*.js" | sort
-                fi
-              fi
-              
-              # Verify required files exist
-              if [ ! -f "dist/_expo/static/js/bundle.js" ]; then
-                echo "Error: bundle.js not found in expected location"
-                echo "Trying alternative approach..."
-                
-                # Try to find any JavaScript file that could be the entry
-                ALT_JS=$(find dist -type f -name "*.js" | head -1)
-                if [ -n "$ALT_JS" ]; then
-                  echo "Using $ALT_JS as the entry point"
-                  mkdir -p dist/_expo/static/js
-                  cp "$ALT_JS" dist/_expo/static/js/bundle.js
-                  
-                  # Try to update the index.html to point to the correct bundle
-                  if [ -f "dist/index.html" ]; then
-                    sed -i 's|src="/[^"]*bundle\.js"|src="/_expo/static/js/bundle.js"|g' dist/index.html
-                    sed -i 's|src="/[^"]*main\.js"|src="/_expo/static/js/bundle.js"|g' dist/index.html
-                  fi
-                else
-                  echo "Error: No JavaScript files found in build output"
-                  exit 1
-                fi
-              fi
-            else
-              echo "Error: index.html not found in dist directory"
-              echo "Available HTML files:"
-              find dist -type f -name "*.html" | sort
-              exit 1
-            fi
-            
-            echo "Final file structure:"
-            find dist -type f | sort
-            
-          else
-            echo "Error: dist directory not found after build"
-            echo "Current directory contents:"
-            ls -la
-            exit 1
-          fi
-  
+        - rm -rf dist
+        # Build Expo web app in server mode
+        - npm run build:web
+        # Add cache-busting timestamp to index.html
+        - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
+        # Copy all server files to client directory for Amplify
+        - cp -r dist/server/* dist/client/
+        # Copy service worker to client directory
+        - cp dist/sw.js dist/client/
+        # List contents for debugging
+        - ls -la dist/client/
+        - 'echo "Checking for index.html:"'
+        - ls -la dist/client/index.html
+
   artifacts:
-    baseDirectory: dist
+    baseDirectory: dist/client
     files:
       - '**/*'
+    customHeaders:
+      - pattern: '_expo/static/**/*'
+        headers:
+          - key: Cache-Control
+            value: 'public, max-age=31536000, immutable'
+      - pattern: 'index.html'
+        headers:
+          - key: Cache-Control
+            value: 'no-cache, no-store, must-revalidate'
+          - key: Pragma
+            value: 'no-cache'
+          - key: Expires
+            value: '0'
+      - pattern: '**/*.html'
+        headers:
+          - key: Cache-Control
+            value: 'no-cache, no-store, must-revalidate'
+          - key: Pragma
+            value: 'no-cache'
+          - key: Expires
+            value: '0'
+      - pattern: '**/*.js'
+        headers:
+          - key: Cache-Control
+            value: 'public, max-age=31536000, immutable'
 
   cache:
     paths:
       - node_modules/**/*
       - $(npm root --global)/**/*
 
-# Rewrite rules for API and SPA
-rewrites:
-  # API routes - match the actual build output structure
-  - source: /api/bslatam/agenda
-    target: /_expo/functions/api/bslatam/agenda+api
-    status: '200'
-    
-  - source: /api/bslatam/agenda/
-    target: /_expo/functions/api/bslatam/agenda+api
-    status: '200'
-    
-  - source: /api/bslatam/agenda-status
-    target: /_expo/functions/api/bslatam/agenda-status+api
-    status: '200'
-    
-  - source: /api/bslatam/agenda-status/
-    target: /_expo/functions/api/bslatam/agenda-status+api
-    status: '200'
-    
-  # Catch-all for other API routes
-  - source: /api/bslatam/<*>
-    target: /_expo/functions/api/bslatam/<*>
-    status: '200'
-    
-  # Expo assets
-  - source: /_expo/static/<*>
-    target: /_expo/static/<*>
-    status: '200'
-    
-  # Static assets
-  - source: /assets/<*>
-    target: /assets/<*>
-    status: '200'
-    
-  # SPA fallback - serve index.html for all other routes
-  - source: '<**>'
-    target: /index.html
-    status: '200'
+# Redirects for SPA routing
+redirects:
+  - source: '/<*>'
+    status: 200
+    target: '/index.html'
+  - source: '/sw.js'
+    status: 200
+    target: '/sw.js'
+  - source: '/_expo/*'
+    status: 200
+    target: '/_expo/'
+  - source: '/api/*'
+    status: 200
+    target: '/api/'
+  - source: '/dashboard/*'
+    status: 200
+    target: '/index.html'
+  - source: '/auth/*'
+    status: 200
+    target: '/index.html'
+  - source: '/bslatam/*'
+    status: 200
+    target: '/index.html'
 
-# Custom headers for API responses
-customHeaders:
-  # Default headers for all files
-  - pattern: '**/*'
-    headers:
-      - key: 'Access-Control-Allow-Origin'
-        value: '*'
-      - key: 'Access-Control-Allow-Headers'
-        value: 'Content-Type, Authorization, X-Requested-With, X-Amz-Date, X-Api-Key, X-Amz-Security-Token'
-      - key: 'Access-Control-Allow-Methods'
-        value: 'GET, POST, PUT, DELETE, OPTIONS'
-      - key: 'Access-Control-Allow-Credentials'
-        value: 'true'
-
-  # Cache control for static assets
-  - pattern: '**/*.+(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json)'
-    headers:
-      - key: 'Cache-Control'
-        value: 'public, max-age=31536000, immutable'
-
-  # No cache for HTML files
-  - pattern: '**/*.html'
-    headers:
-      - key: 'Cache-Control'
-        value: 'no-cache, no-store, must-revalidate'
-      - key: 'Pragma'
-        value: 'no-cache'
-      - key: 'Expires'
-        value: '0'
-
-  # API responses - no cache
-  - pattern: '/_expo/functions/**'
-    headers:
-      - key: 'Cache-Control'
-        value: 'no-cache, no-store, must-revalidate'
-      - key: 'Access-Control-Allow-Origin'
-        value: '*'
-      - key: 'Access-Control-Allow-Methods'
-        value: 'GET, POST, PUT, DELETE, OPTIONS'
-      - key: 'Access-Control-Allow-Headers'
-        value: 'Content-Type, Authorization, X-Requested-With'
+# Error page for 404s
+customErrorResponses:
+  - errorCode: 404
+    responsePagePath: '/index.html'
+    responseCode: 200
+    errorCachingMinTTL: 0
 
 # Error page for 404s
 customErrorResponses:

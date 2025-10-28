@@ -197,7 +197,7 @@ frontend:
 
 # Rewrite rules for API and SPA
 rewrites:
-  # API routes - try server location first
+  # API routes - after build script moves files from dist/server to dist/
   - source: /api/bslatam/agenda
     target: /_expo/functions/api/bslatam/agenda+api
     status: '200'

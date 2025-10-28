@@ -9,7 +9,7 @@ export async function GET(request: Request) {
 
   try {
     const { data, error, count } = await supabase
-      .from('BSL_Speakers')
+      .from('bsl_speakers')
       .select('*', { count: 'exact' })
       .range(from, to)
       .order('name', { ascending: true });

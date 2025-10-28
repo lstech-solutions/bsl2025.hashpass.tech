@@ -44,6 +44,7 @@ app-example
 # Local Netlify folder
 .netlify
 .env
+.env.local
 
 #amplify-do-not-edit-begin
 amplify/\#current-cloud-backend

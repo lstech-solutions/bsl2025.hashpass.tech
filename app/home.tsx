@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation, getCurrentLocale } from '../i18n/i18n';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
-import Features from './components/Features';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { ThemeAndLanguageSwitcher } from './components/ThemeAndLanguageSwitcher';
-import { BackToTop } from './components/BackToTop';
-import Testimonials from './components/Testimonials';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -20,12 +18,17 @@ import Animated, {
   withSpring,
   withRepeat,
   withSequence,
+  Easing,
 } from 'react-native-reanimated';
-import { InteractiveHoverButton } from './components/InteractiveHoverButton';
-import { FlipWords } from './components/FlipWords';
-import { Newsletter } from './components/Newsletter';
-import { useIsMobile } from '@/hooks/useIsMobile';
-import { Easing } from 'react-native-reanimated';
+
+// Import components using relative paths
+import Features from '../components/Features';
+import ThemeAndLanguageSwitcher from '../components/ThemeAndLanguageSwitcher';
+import BackToTop from '../components/BackToTop';
+import Testimonials from '../components/Testimonials';
+import { InteractiveHoverButton } from '../components/InteractiveHoverButton';
+import FlipWords from '../components/FlipWords';
+import Newsletter from '../components/Newsletter';
 
 export default function HomeScreen() {
   const AnimatedImage = Animated.createAnimatedComponent(Image);
@@ -299,6 +302,53 @@ export default function HomeScreen() {
           <Testimonials locale={getCurrentLocale()} />
         </Animated.View>
 
+        {/* Mobile App Download Section */}
+        <Animated.View style={[styles.mobileAppSection, ctaAnimatedStyle]}>
+          <Text style={styles.mobileAppTitle}>📱 Download Our Mobile App</Text>
+          <Text style={styles.mobileAppSubtitle}>Get the best experience with our native mobile app</Text>
+          
+          <View style={styles.qrCodeContainer}>
+            <Image 
+              source={require('../assets/images/qr-one-link-hashpass.png')} 
+              style={styles.qrCode}
+              resizeMode="contain"
+            />
+          </View>
+          
+          <Text style={styles.scanText}>Scan QR code to download</Text>
+          
+          <View style={styles.storeButtonsContainer}>
+            <TouchableOpacity 
+              style={[styles.storeButton, styles.appStoreButton]}
+              onPress={() => Linking.openURL('https://onelink.to/4px5bv')}
+            >
+              <View style={styles.storeButtonContent}>
+                <View style={styles.storeIcon}>
+                  <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
+                </View>
+                <View style={styles.storeTextContainer}>
+                  <Text style={styles.storeButtonSubtext}>Download on the</Text>
+                  <Text style={styles.storeButtonMaintext}>App Store</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.storeButton, styles.googlePlayButton]}
+              onPress={() => Linking.openURL('https://onelink.to/4px5bv')}
+            >
+              <View style={styles.storeButtonContent}>
+                <View style={styles.storeIcon}>
+                  <Ionicons name="logo-google-playstore" size={20} color="#FFFFFF" />
+                </View>
+                <View style={styles.storeTextContainer}>
+                  <Text style={styles.storeButtonSubtext}>GET IT ON</Text>
+                  <Text style={styles.storeButtonMaintext}>Google Play</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
         <Animated.View className="max-w-[740px] mx-auto" style={[styles.cta, ctaAnimatedStyle]}>
           {userName ? (
             <>
@@ -306,7 +356,7 @@ export default function HomeScreen() {
               <Text style={styles.ctaHeadline}>👋 {t('welcomeBack')} <br />{userName}</Text>
               <Animated.View style={styles.ctaButton}>
                 <TouchableOpacity
-                  onPress={() => router.push('/dashboard/explore')}
+                  onPress={() => router.push('/(shared)/dashboard/explore')}
                   activeOpacity={0.9}
                   onPressIn={() => {
                     buttonAnimation.value = withSpring(1);
@@ -326,7 +376,7 @@ export default function HomeScreen() {
               <Text style={styles.ctaHeadline}>{t('readyToSimplify')}</Text>
               <Animated.View style={styles.ctaButton}>
                 <TouchableOpacity
-                  onPress={() => router.push('/auth')}
+                  onPress={() => router.push('/(shared)/auth' as any)}
                   activeOpacity={0.9}
                   onPressIn={() => {
                     buttonAnimation.value = withSpring(1);
@@ -588,5 +638,104 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     opacity: 0.8,
     position: 'relative',
     bottom: 0,
+  },
+  mobileAppSection: {
+    padding: 32,
+    borderRadius: 2 * 16,
+    alignItems: 'center',
+    marginBottom: 32,
+    marginHorizontal: 16,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+  },
+  mobileAppTitle: {
+    fontSize: isMobile ? 24 : 32,
+    fontWeight: '800',
+    color: isDark ? '#FFFFFF' : '#121212',
+    textAlign: 'center',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  mobileAppSubtitle: {
+    fontSize: isMobile ? 16 : 18,
+    color: isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  qrCodeContainer: {
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  qrCode: {
+    width: isMobile ? 150 : 200,
+    height: isMobile ? 150 : 200,
+  },
+  scanText: {
+    fontSize: isMobile ? 14 : 16,
+    color: isDark ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
+    textAlign: 'center',
+    marginBottom: 24,
+    fontWeight: '500',
+  },
+  storeButtonsContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  storeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 140,
+    alignItems: 'center',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  appStoreButton: {
+    backgroundColor: '#000000',
+  },
+  googlePlayButton: {
+    backgroundColor: '#000000',
+  },
+  storeButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  storeIcon: {
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  storeTextContainer: {
+    alignItems: 'flex-start',
+  },
+  storeButtonSubtext: {
+    fontSize: 10,
+    fontWeight: '400',
+    color: '#FFFFFF',
+    lineHeight: 12,
+    letterSpacing: 0.5,
+  },
+  storeButtonMaintext: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    lineHeight: 18,
+    letterSpacing: 0.3,
   }
 });

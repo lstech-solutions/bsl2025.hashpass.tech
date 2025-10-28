@@ -131,11 +131,11 @@ export const darkColors: ThemeColors = {
   },
   text: {
     primary: '#FFFFFF',
-    secondary: 'rgba(255, 255, 255, 0.7)',
-    textSecondary: 'rgba(255, 255, 255, 0.7)',
-    disabled: 'rgba(255, 255, 255, 0.5)',
+    secondary: '#F0F0F0',
+    textSecondary: '#F0F0F0', // Alias for secondary
+    disabled: 'rgba(255, 255, 255, 0.7)',
     onSurface: '#FFFFFF',
-    onSurfaceVariant: 'rgba(255, 255, 255, 0.7)'
+    onSurfaceVariant: '#F0F0F0'
   },
   error: {
     main: baseColors.error.light,
@@ -152,7 +152,7 @@ export const darkColors: ThemeColors = {
     light: baseColors.warning.main,
     dark: baseColors.warning.dark,
   },
-  divider: 'rgba(255, 255, 255, 0.12)',
+  divider: 'rgba(255, 255, 255, 0.2)',
   surface: '#1E1E1E', // Add surface color for dark theme
 };
 

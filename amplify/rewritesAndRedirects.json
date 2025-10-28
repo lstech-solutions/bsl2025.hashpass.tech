@@ -1,0 +1,24 @@
+[
+  {
+    "source": "/api/bslatam/<*>",
+    "target": "/api/bslatam/<*>",
+    "status": "200",
+    "condition": null
+  },
+  {
+    "source": "/<*>",
+    "target": "/index.html",
+    "status": "200",
+    "condition": null
+  },
+  {
+    "source": "/api/bslatam/agenda",
+    "target": "/api/bslatam/agenda+api",
+    "status": "200"
+  },
+  {
+    "source": "/api/bslatam/agenda/",
+    "target": "/api/bslatam/agenda+api",
+    "status": "200"
+  }
+]

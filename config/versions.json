@@ -1,0 +1,126 @@
+{
+  "currentVersion": "1.3.2",
+  "versions": [
+    {
+      "version": "1.3.2",
+      "buildNumber": 202510272149,
+      "releaseDate": "2025-10-27",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "Automated version management and changelog updates",
+        "Improved version display in UI"
+      ],
+      "bugfixes": [
+        "Fixed version history dates and formatting",
+        "Updated version display to show correct information"
+      ],
+      "breakingChanges": [],
+      "notes": "Updated version display and changelog automation with fixed version history"
+    },
+    {
+      "version": "1.2.9",
+      "buildNumber": 202510261852,
+      "releaseDate": "2025-10-26",
+      "releaseType": "beta",
+      "environment": "production",
+      "features": [],
+      "bugfixes": [
+        "Fixed TypeScript error where 'event' was possibly null in agenda.tsx",
+        "Updated dependency array to use optional chaining for event.agenda"
+      ],
+      "breakingChanges": [],
+      "notes": "Fixed TypeScript errors and improved error handling"
+    },
+    {
+      "version": "1.2.3",
+      "buildNumber": 202510181800,
+      "releaseDate": "2025-10-18",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "Complete networking center with horizontal scrolling",
+        "My Requests view for managing sent meeting requests",
+        "My Schedule view for scheduled meetings",
+        "System Analytics with comprehensive statistics",
+        "Blocked Users management system",
+        "Enhanced networking statistics and insights",
+        "Speaker dashboard for incoming request management",
+        "Real-time networking activity tracking"
+      ],
+      "bugfixes": [],
+      "breakingChanges": [],
+      "notes": "Major networking system update with comprehensive meeting request management and analytics"
+    },
+    {
+      "version": "1.2.2",
+      "buildNumber": 202510151600,
+      "releaseDate": "2025-10-15",
+      "releaseType": "beta",
+      "environment": "production",
+      "features": [],
+      "bugfixes": [
+        "Fixed critical 404 errors in Supabase meeting request system",
+        "Resolved database type mismatches",
+        "Fixed Lambda deployment parameter issues",
+        "Updated AWS SDK to v3 for better performance",
+        "Resolved CloudFormation stack deployment errors",
+        "Fixed 404 errors in Supabase database functions",
+        "Resolved UUID/TEXT type mismatch in meeting request system",
+        "Fixed can_make_meeting_request function type casting issues",
+        "Updated database functions to handle mixed column types properly"
+      ],
+      "breakingChanges": [],
+      "notes": "Fixed critical 404 errors in Supabase meeting request system and resolved database type mismatches"
+    },
+    {
+      "version": "1.2.1",
+      "buildNumber": 202510151510,
+      "releaseDate": "2025-10-15",
+      "releaseType": "beta",
+      "environment": "production",
+      "features": [],
+      "bugfixes": [
+        "Fixed React Navigation headerBackTitleVisible property error",
+        "Fixed headerStyle borderBottomWidth property error",
+        "Fixed pass number display showing 'unknown' in explorer view",
+        "Fixed speaker dashboard loading stuck issue",
+        "Fixed get_speaker_meeting_requests SQL GROUP BY error",
+        "Improved networking icon visibility in quick access menu"
+      ],
+      "breakingChanges": [],
+      "notes": "UI display fixes and automatic version management"
+    },
+    {
+      "version": "1.2.0",
+      "buildNumber": 202501150000,
+      "releaseDate": "2025-01-15",
+      "releaseType": "beta",
+      "environment": "production",
+      "features": [
+        "User pass management system with database integration",
+        "BSL 2025 event integration with live agenda updates",
+        "Speaker profile system with avatar support and search functionality",
+        "Event agenda with tabbed interface and real-time countdown",
+        "Unified search and filter system across all views",
+        "Dark mode support with proper contrast adjustments",
+        "Event banner component for consistent branding",
+        "Pass card UI with BSL2025 branding and logo seal",
+        "Real-time countdown system for event timing",
+        "Version tracking and display system"
+      ],
+      "bugfixes": [
+        "Fixed SVG logo rendering issues by implementing text-based fallback",
+        "Resolved TypeScript undefined property errors with proper null checking",
+        "Fixed agenda data grouping logic for proper day distribution",
+        "Corrected speaker count discrepancies and duplicate entries",
+        "Fixed dark mode contrast issues across all components",
+        "Resolved navigation routing problems between views",
+        "Fixed alphabetical dividers in speaker list",
+        "Corrected filter and search system consistency"
+      ],
+      "breakingChanges": [],
+      "notes": "Initial beta release with core event features"
+    }
+  ]
+}

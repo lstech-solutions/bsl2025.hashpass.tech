@@ -197,12 +197,24 @@ frontend:
 
 # Rewrite rules for API and SPA
 rewrites:
-  # API routes with trailing slash
-  - source: /api/bslatam/<*>/ 
-    target: /_expo/functions/api/bslatam/<*>+api
+  # Explicit API routes first
+  - source: /api/bslatam/agenda
+    target: /_expo/functions/api/bslatam/agenda+api
     status: '200'
     
-  # API routes without trailing slash
+  - source: /api/bslatam/agenda/
+    target: /_expo/functions/api/bslatam/agenda+api
+    status: '200'
+    
+  - source: /api/bslatam/agenda-status
+    target: /_expo/functions/api/bslatam/agenda-status+api
+    status: '200'
+    
+  - source: /api/bslatam/agenda-status/
+    target: /_expo/functions/api/bslatam/agenda-status+api
+    status: '200'
+    
+  # Catch-all for other API routes with +api suffix (keep this as last resort)
   - source: /api/bslatam/<*>
     target: /_expo/functions/api/bslatam/<*>+api
     status: '200'
@@ -227,6 +239,17 @@ customHeaders:
   - source: /assets/<*>
     target: /assets/<*>
     status: '200'
+    
+  # Node modules assets (fonts, etc)
+  - source: /assets/node_modules/<*>
+    target: /node_modules/<*>
+    status: '200'
+    
+  # Font files
+  - source: '/*.@(ttf|woff|woff2|eot|otf)'
+    headers:
+      - key: Cache-Control
+        value: 'public, max-age=31536000, immutable'
     
   # Service worker
   - source: /sw.js

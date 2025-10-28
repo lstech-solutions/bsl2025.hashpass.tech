@@ -17,39 +17,52 @@ frontend:
         - rm -rf web-build out dist
         - mkdir -p dist
         
-        # Build the application
-        - npx expo export:web || npx expo export -p web
+        # Build the application for web
+        - npx expo export:web
         
         # Handle build output
         - |
           set -e
           
-          # Default to web-build if it exists
-          if [ -d "web-build" ]; then
-            echo "Copying from web-build to dist"
-            cp -r web-build/* dist/ 2>/dev/null || true
-            cp -r web-build/.[!.]* dist/ 2>/dev/null || true
-          fi
-          
           # Create necessary directories
           mkdir -p dist/_expo/static/js
           
-          # Copy index.html from public directory if it exists
-          if [ -f "public/index.html" ]; then
-            echo "Copying index.html from public directory"
-            mkdir -p dist
-            cp public/index.html dist/
+          # Copy web build files to dist
+          if [ -d "web-build" ]; then
+            echo "Copying from web-build to dist"
+            # Copy all files from web-build to dist
+            cp -r web-build/* dist/ 2>/dev/null || true
+            cp -r web-build/.[!.]* dist/ 2>/dev/null || true
+            
+            # Ensure static files are in the correct location
+            if [ -d "dist/static" ]; then
+              echo "Copying static files to _expo/static"
+              mkdir -p dist/_expo/static
+              cp -r dist/static/* dist/_expo/static/ 2>/dev/null || true
+            fi
+            
+            # Create 200.html for client-side routing
+            if [ -f "dist/index.html" ]; then
+              cp dist/index.html dist/200.html 2>/dev/null || true
+            fi
+            
+            # List all files for debugging
+            echo "Build output files:"
+            find dist -type f | sort
+            
+            # Check for bundle.js in common locations
+            if [ -f "dist/static/js/bundle.js" ]; then
+              echo "Found bundle.js in static/js/"
+              mkdir -p dist/_expo/static/js
+              cp dist/static/js/bundle.js dist/_expo/static/js/
+            elif [ -f "dist/_expo/static/js/main.js" ]; then
+              echo "Found main.js in _expo/static/js/"
+              cp dist/_expo/static/js/main.js dist/_expo/static/js/bundle.js
+            fi
           else
-            echo "Error: public/index.html not found"
+            echo "Error: web-build directory not found"
             exit 1
           fi
-          
-          # Create 200.html for client-side routing
-          cp dist/index.html dist/200.html 2>/dev/null || true
-          
-          # List all files for debugging
-          echo "Build output files:"
-          find dist -type f | sort
   
   artifacts:
     baseDirectory: dist

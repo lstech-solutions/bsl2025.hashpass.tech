@@ -46,16 +46,16 @@ frontend:
             # Move JavaScript files to the correct location (without duplicating 'web')
             echo "Moving JavaScript files to _expo/static/js/..."
             mkdir -p dist/_expo/static/js
-            find dist -type f -name "*.js" -exec cp {} dist/_expo/static/js/ \;
+            find dist -type f -name "*.js" -not -path "dist/_expo/static/js/*" -exec cp -n {} dist/_expo/static/js/ \;
             
             # Move CSS files to the expected location
             echo "Moving CSS files to _expo/static/css/..."
             mkdir -p dist/_expo/static/css
-            find dist -type f -name "*.css" -exec cp {} dist/_expo/static/css/ \;
+            find dist -type f -name "*.css" -not -path "dist/_expo/static/css/*" -exec cp -n {} dist/_expo/static/css/ \;
             
             # Move other static assets
             echo "Moving static assets..."
-            [ -d "dist/static" ] && cp -r dist/static/* dist/_expo/static/ 2>/dev/null || true
+            [ -d "dist/static" ] && cp -rn dist/static/* dist/_expo/static/ 2>/dev/null || true
             
             # Update HTML file references to point to the correct paths
             echo "Updating file references in HTML files..."
@@ -65,7 +65,7 @@ frontend:
             find dist -type f -name "*.html" -exec sed -i 's|src="/[^"]*bundle\.js"|src="/_expo/static/js/entry.js"|g' {} \;
             # Fix CSS paths
             find dist -type f -name "*.html" -exec sed -i 's|href="/_expo/static/css/|href="/_expo/static/css/|g' {} \;
-            find dist -type f -name "*.html" -exec sed -i 's|href="/static/css/|href="/_expo/static/css/|g' {} \; \;
+            find dist -type f -name "*.html" -exec sed -i 's|href="/static/css/|href="/_expo/static/css/|g' {} \;
             
             # List all files for debugging
             echo "Build output files after reorganization:"

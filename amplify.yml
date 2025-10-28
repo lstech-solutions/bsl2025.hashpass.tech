@@ -150,45 +150,6 @@ frontend:
     baseDirectory: dist
     files:
       - '**/*'
-    customHeaders:
-      - pattern: '**/*.html'
-        headers:
-          - key: Cache-Control
-            value: 'no-cache, no-store, must-revalidate'
-          - key: Pragma
-            value: 'no-cache'
-          - key: Expires
-            value: '0'
-      - pattern: '/*'
-        headers:
-          - key: Cache-Control
-            value: 'no-cache, no-store, must-revalidate'
-          - key: Pragma
-            value: 'no-cache'
-          - key: Expires
-            value: '0'
-      
-      # Cache static assets
-      - pattern: '**/*.+(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json)'
-        headers:
-          - key: Cache-Control
-            value: 'public, max-age=31536000, immutable'
-      
-      # API CORS headers
-      - pattern: 'api/bslatam/*'
-        headers:
-          - key: 'Access-Control-Allow-Origin'
-            value: '*'
-          - key: 'Access-Control-Allow-Headers'
-            value: 'Content-Type, Authorization, X-Requested-With'
-          - key: 'Access-Control-Allow-Methods'
-            value: 'GET, POST, PUT, DELETE, OPTIONS'
-          - key: 'Access-Control-Allow-Credentials'
-            value: 'true'
-      - pattern: '**/*.js'
-        headers:
-          - key: Cache-Control
-            value: 'public, max-age=31536000, immutable'
 
   cache:
     paths:
@@ -197,7 +158,7 @@ frontend:
 
 # Rewrite rules for API and SPA
 rewrites:
-  # API routes - after build script moves files from dist/server to dist/
+  # API routes - point to the Expo server functions
   - source: /api/bslatam/agenda
     target: /_expo/functions/api/bslatam/agenda+api
     status: '200'
@@ -219,56 +180,62 @@ rewrites:
     target: /_expo/functions/api/bslatam/<*>+api
     status: '200'
     
-  # SPA fallback - serve index.html for all other routes
-  - source: /<*>
-    target: /index.html
+  # Expo assets
+  - source: /_expo/static/<*>
+    target: /_expo/static/<*>
     status: '200'
-
-# Custom headers for API responses
-customHeaders:
-  - pattern: '**/*'
-    headers:
-      - key: 'Access-Control-Allow-Origin'
-        value: '*'
-      - key: 'Access-Control-Allow-Headers'
-        value: 'Content-Type, Authorization, X-Requested-With'
-      - key: 'Access-Control-Allow-Methods'
-        value: 'GET, POST, PUT, DELETE, OPTIONS'
     
   # Static assets
   - source: /assets/<*>
     target: /assets/<*>
     status: '200'
     
-  # Node modules assets (fonts, etc)
-  - source: /assets/node_modules/<*>
-    target: /node_modules/<*>
+  # SPA fallback - serve index.html for all other routes
+  - source: '<**>'
+    target: /index.html
     status: '200'
-    
-  # Font files
-  - source: '/*.@(ttf|woff|woff2|eot|otf)'
+
+# Custom headers for API responses
+customHeaders:
+  # Default headers for all files
+  - pattern: '**/*'
     headers:
-      - key: Cache-Control
+      - key: 'Access-Control-Allow-Origin'
+        value: '*'
+      - key: 'Access-Control-Allow-Headers'
+        value: 'Content-Type, Authorization, X-Requested-With, X-Amz-Date, X-Api-Key, X-Amz-Security-Token'
+      - key: 'Access-Control-Allow-Methods'
+        value: 'GET, POST, PUT, DELETE, OPTIONS'
+      - key: 'Access-Control-Allow-Credentials'
+        value: 'true'
+
+  # Cache control for static assets
+  - pattern: '**/*.+(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json)'
+    headers:
+      - key: 'Cache-Control'
         value: 'public, max-age=31536000, immutable'
-    
-  # Service worker
-  - source: /sw.js
-    target: /sw.js
-    status: '200'
-    
-  # Expo assets
-  - source: /_expo/*
-    target: /_expo/
-    status: '200'
-  - source: /dashboard/*
-    target: /index.html
-    status: '200'
-  - source: /auth/*
-    target: /index.html
-    status: '200'
-  - source: /bslatam/*
-    target: /index.html
-    status: '200'
+
+  # No cache for HTML files
+  - pattern: '**/*.html'
+    headers:
+      - key: 'Cache-Control'
+        value: 'no-cache, no-store, must-revalidate'
+      - key: 'Pragma'
+        value: 'no-cache'
+      - key: 'Expires'
+        value: '0'
+
+  # API responses - no cache
+  - pattern: '/_expo/functions/**'
+    headers:
+      - key: 'Cache-Control'
+        value: 'no-cache, no-store, must-revalidate'
+      - key: 'Access-Control-Allow-Origin'
+        value: '*'
+      - key: 'Access-Control-Allow-Methods'
+        value: 'GET, POST, PUT, DELETE, OPTIONS'
+      - key: 'Access-Control-Allow-Headers'
+        value: 'Content-Type, Authorization, X-Requested-With'
 
 # Error page for 404s
 customErrorResponses:

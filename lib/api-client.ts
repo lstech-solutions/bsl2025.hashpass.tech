@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import Constants from 'expo-constants';
 import { getCurrentEvent } from './event-detector';
 import { supabase } from './supabase';
 
@@ -35,9 +36,12 @@ export class EventApiClient {
 
   constructor() {
     const event = getCurrentEvent();
-    // Prefer event config first; fallback to public env var; else default
-    const envBase = (process.env.EXPO_PUBLIC_API_BASE_URL || '').trim();
-    if (event?.api?.basePath) {
+    // Prefer env/Constants first; fallback to event config; else default
+    const envBase = ((process.env.EXPO_PUBLIC_API_BASE_URL || '') || (Constants?.expoConfig?.extra as any)?.EXPO_PUBLIC_API_BASE_URL || '').trim();
+    if (envBase) {
+      // Normalize env base: no trailing slash
+      this.baseURL = envBase.endsWith('/') ? envBase.slice(0, -1) : envBase;
+    } else if (event?.api?.basePath) {
       // Ensure basePath starts with a slash and doesn't end with one
       this.baseURL = event.api.basePath.startsWith('/') 
         ? event.api.basePath 
@@ -45,9 +49,6 @@ export class EventApiClient {
       this.baseURL = this.baseURL.endsWith('/') 
         ? this.baseURL.slice(0, -1) 
         : this.baseURL;
-    } else if (envBase) {
-      // Normalize env base: no trailing slash
-      this.baseURL = envBase.endsWith('/') ? envBase.slice(0, -1) : envBase;
     } else {
       // Default to app-local /api
       this.baseURL = '/api';
@@ -71,9 +72,9 @@ export class EventApiClient {
     // Get the event configuration
     const event = getCurrentEvent();
     
-    // Determine base URL: event config wins, then env, else constructor default
-    const envBase = (process.env.EXPO_PUBLIC_API_BASE_URL || '').trim();
-    const baseUrl = event?.api?.basePath || envBase || this.baseURL;
+    // Determine base URL: env/Constants wins, then event config, else constructor default
+    const envBase = ((process.env.EXPO_PUBLIC_API_BASE_URL || '') || (Constants?.expoConfig?.extra as any)?.EXPO_PUBLIC_API_BASE_URL || '').trim();
+    const baseUrl = envBase || event?.api?.basePath || this.baseURL;
     
     // Build the final URL
     let url: string;
@@ -211,8 +212,8 @@ export class EventApiClient {
     formData.append('file', file);
 
     const event = getCurrentEvent();
-    const envBase = (process.env.EXPO_PUBLIC_API_BASE_URL || '').trim();
-    const baseUrl = event?.api?.basePath || envBase || this.baseURL;
+    const envBase = ((process.env.EXPO_PUBLIC_API_BASE_URL || '') || (Constants?.expoConfig?.extra as any)?.EXPO_PUBLIC_API_BASE_URL || '').trim();
+    const baseUrl = envBase || event?.api?.basePath || this.baseURL;
     const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${cleanBase}${cleanPath}`;

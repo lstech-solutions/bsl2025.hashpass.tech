@@ -40,17 +40,27 @@ frontend:
             mv dist/server/.* dist/ 2>/dev/null || true
             rmdir dist/server 2>/dev/null || true
             
-            # Ensure the _expo directory exists
-            mkdir -p dist/_expo/static/js/web
+            # Ensure the _expo directory structure exists
+            mkdir -p dist/_expo/static/{js/web,css,assets}
             
-            # Move any JavaScript files to the expected location
+            # Move JavaScript files to the expected location
             echo "Moving JavaScript files to _expo/static/js/web/..."
             find dist -type f -name "*.js" -exec cp {} dist/_expo/static/js/web/ \;
             
-            # Update any references in HTML files
-            echo "Updating file references..."
-            find dist -type f -name "*.html" -exec sed -i 's|src="/_expo/static/js/|"/_expo/static/js/web/|g' {} \;
-            find dist -type f -name "*.html" -exec sed -i 's|src="/static/js/|"/_expo/static/js/web/|g' {} \;
+            # Move CSS files to the expected location
+            echo "Moving CSS files to _expo/static/css/..."
+            find dist -type f -name "*.css" -exec cp {} dist/_expo/static/css/ \;
+            
+            # Move other static assets
+            echo "Moving static assets..."
+            [ -d "dist/static" ] && cp -r dist/static/* dist/_expo/static/ 2>/dev/null || true
+            
+            # Update HTML file references
+            echo "Updating file references in HTML files..."
+            find dist -type f -name "*.html" -exec sed -i 's|src="/_expo/static/js/|src="/_expo/static/js/web/|g' {} \;
+            find dist -type f -name "*.html" -exec sed -i 's|src="/static/js/|src="/_expo/static/js/web/|g' {} \;
+            find dist -type f -name "*.html" -exec sed -i 's|href="/_expo/static/css/|href="/_expo/static/css/|g' {} \;
+            find dist -type f -name "*.html" -exec sed -i 's|href="/static/css/|href="/_expo/static/css/|g' {} \;
             find dist -type f -name "*.html" -exec sed -i 's|src="/[^"]*bundle\.js"|src="/_expo/static/js/web/entry.js"|g' {} \;
             
             # List all files for debugging

@@ -475,7 +475,6 @@ export default function MyRequestsView() {
         <MaterialIcons name="send" size={48} color={colors.primary} />
         <Text style={styles.loadingText}>Loading your requests...</Text>
         <Text style={styles.loadingSubtext}>Please wait while we fetch your data</Text>
-        <Text style={styles.loadingSubtext}>User: {user?.email || 'No user'}</Text>
       </View>
     );
   }

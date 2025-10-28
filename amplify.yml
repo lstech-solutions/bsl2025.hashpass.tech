@@ -98,10 +98,3 @@ customErrorResponses:
     responsePagePath: '/index.html'
     responseCode: 200
     errorCachingMinTTL: 0
-
-# Error page for 404s
-customErrorResponses:
-  - errorCode: 404
-    responsePagePath: '/index.html'
-    responseCode: 200
-    errorCachingMinTTL: 0

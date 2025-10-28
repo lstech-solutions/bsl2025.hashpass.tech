@@ -54,11 +54,26 @@ frontend:
             find dist -mindepth 1 -maxdepth 1 -not -name "client" -exec cp -r {} dist/client/ \;
           fi
         
-        # Ensure _expo/static directory exists and copy files
+        # Handle static files and directories
         - |
+          # Create necessary directories
           mkdir -p dist/client/_expo/static
-          if [ -d "dist/client/static" ]; then 
-            cp -r dist/client/static/* dist/client/_expo/static/ || true
+          mkdir -p dist/client/static/js
+          
+          # Copy static files from various possible locations
+          if [ -d "dist/client/static" ]; then
+            cp -r dist/client/static/* dist/client/_expo/static/ 2>/dev/null || true
+          fi
+          
+          # Look for bundle.js in common locations and copy to the right place
+          if [ -f "dist/client/static/js/bundle.js" ]; then
+            echo "Found bundle.js in static/js/"
+          elif [ -f "dist/client/_expo/static/js/bundle.js" ]; then
+            echo "Found bundle.js in _expo/static/js/"
+          else
+            echo "Searching for bundle.js in build output..."
+            find dist -name "bundle.js" -exec cp {} dist/client/static/js/ \; 2>/dev/null || true
+            find dist -name "*.bundle.js" -exec cp {} dist/client/static/js/ \; 2>/dev/null || true
           fi
           
           # Create 200.html for client-side routing
@@ -80,8 +95,54 @@ frontend:
           else
             echo "Error: index.html not found in expected locations"
             find . -name "index.html" -type f
-            # Create a basic index.html as fallback
-            echo "<html><body><h1>BSL 2025</h1><p>Loading application...</p><script src="/static/js/bundle.js"></script></body></html>" > dist/client/index.html
+            # Create a clean, centered index.html as fallback
+            echo '<!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>BSL 2025</title>
+                <style>
+                    body, html {
+                        margin: 0;
+                        padding: 0;
+                        height: 100%;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                        background-color: #f5f5f5;
+                        color: #333;
+                    }
+                    h1 {
+                        font-size: 2.5rem;
+                        margin-bottom: 1rem;
+                        color: #1a1a1a;
+                    }
+                    p {
+                        color: #666;
+                        font-size: 1.2rem;
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>BSL 2025</h1>
+                <p>Loading application...</p>
+                <script src="/_expo/static/js/bundle.js"></script>
+                <script>
+                  // Fallback to try loading from root if _expo path fails
+                  window.addEventListener('error', function(e) {
+                    if (e.target.tagName === 'SCRIPT' && e.target.src.includes('bundle.js')) {
+                      console.log('Fallback: Trying to load bundle.js from root');
+                      var script = document.createElement('script');
+                      script.src = '/static/js/bundle.js';
+                      document.body.appendChild(script);
+                    }
+                  }, true);
+                </script>
+            </body>
+            </html>' > dist/client/index.html
           fi
         
         # Build and deploy Lambda functions

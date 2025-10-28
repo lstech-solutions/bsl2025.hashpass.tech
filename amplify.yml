@@ -197,26 +197,26 @@ frontend:
 
 # Rewrite rules for API and SPA
 rewrites:
-  # Agenda API routes
+  # Agenda API routes - pointing to the correct dist location
   - source: /api/bslatam/agenda
-    target: /_expo/functions/api/bslatam/agenda+api
+    target: /server/_expo/functions/api/bslatam/agenda+api
     status: '200'
     
   - source: /api/bslatam/agenda/
-    target: /_expo/functions/api/bslatam/agenda+api
+    target: /server/_expo/functions/api/bslatam/agenda+api
     status: '200'
     
   - source: /api/bslatam/agenda-status
-    target: /_expo/functions/api/bslatam/agenda-status+api
+    target: /server/_expo/functions/api/bslatam/agenda-status+api
     status: '200'
     
   - source: /api/bslatam/agenda-status/
-    target: /_expo/functions/api/bslatam/agenda-status+api
+    target: /server/_expo/functions/api/bslatam/agenda-status+api
     status: '200'
     
   # Catch-all for other API routes with +api suffix (keep this as last resort)
   - source: /api/bslatam/<*>
-    target: /_expo/functions/api/bslatam/<*>+api
+    target: /server/_expo/functions/api/bslatam/<*>+api
     status: '200'
     
   # SPA fallback - serve index.html for all other routes

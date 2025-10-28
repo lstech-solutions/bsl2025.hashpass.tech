@@ -24,11 +24,16 @@ frontend:
         - npm run build:web
         # Add cache-busting timestamp to index.html
         - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
+        # Create necessary directories for API routes
+        - mkdir -p dist/client/_expo/functions/api/bslatam
+        # Copy API route files to the correct location
+        - cp -r app/api/bslatam/*.ts dist/client/_expo/functions/api/bslatam/
         # Copy all server files to client directory for Amplify
         - cp -r dist/server/* dist/client/
         # Copy service worker to client directory
         - cp dist/sw.js dist/client/
         # List contents for debugging
+        - ls -la dist/client/_expo/functions/api/bslatam/
         - ls -la dist/client/
         - 'echo "Checking for index.html:"'
         - ls -la dist/client/index.html
@@ -79,9 +84,9 @@ redirects:
   - source: '/_expo/*'
     status: 200
     target: '/_expo/'
-  - source: '/api/*'
+  - source: '/api/bslatam/*'
     status: 200
-    target: '/api/'
+    target: '/_expo/functions/api/bslatam/$1+api'
   - source: '/dashboard/*'
     status: 200
     target: '/index.html'

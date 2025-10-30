@@ -15,6 +15,18 @@ export interface EventInfo extends Omit<EventConfig, 'name' | 'domain'> {
 // Available events configuration
 // In branch-based deployments, only the current event will be available
 // In main repo, all events will be available
+
+// Detect deployment context from environment variables
+const isMainBranch = typeof process !== 'undefined' && (
+  process.env.AMPLIFY_SHOW_ALL_EVENTS === 'true' ||
+  process.env.NEXT_PUBLIC_SHOW_ALL_EVENTS === 'true' ||
+  (typeof window !== 'undefined' && (window as any).__AMPLIFY_SHOW_ALL_EVENTS__ === true)
+);
+
+const currentEventId = typeof process !== 'undefined' 
+  ? (process.env.AMPLIFY_EVENT_ID || process.env.NEXT_PUBLIC_EVENT_ID || 'bsl2025')
+  : 'bsl2025';
+
 export const AVAILABLE_EVENTS: EventInfo[] = [
   {
     id: 'bsl2025',
@@ -23,7 +35,7 @@ export const AVAILABLE_EVENTS: EventInfo[] = [
     image: 'https://blockchainsummit.la/wp-content/uploads/2025/09/bsl2025-banner.jpg',
     color: '#2196F3',
     route: '/events/bsl2025/home',
-    available: true, // Always available in BSL2025 branch
+    available: isMainBranch || currentEventId === 'bsl2025',
     api: {
       basePath: '/api/bslatam',
       endpoints: {

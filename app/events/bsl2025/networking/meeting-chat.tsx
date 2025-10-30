@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '../../../hooks/useTheme';
-import { useAuth } from '../../../hooks/useAuth';
-import MeetingChat from '../../../components/MeetingChat';
+import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/hooks/useAuth';
+import MeetingChat from '@/components/MeetingChat';
 
 export default function MeetingChatPage() {
   const router = useRouter();
@@ -67,8 +67,12 @@ export default function MeetingChatPage() {
     <View style={[styles.container, { backgroundColor: colors.background?.default }]}>
       <Stack.Screen 
         options={{ 
-          title: meetingInfo?.title || 'Meeting Chat',
-          headerBackTitle: 'Speaker Dashboard',
+          title: '',  // Empty title to hide it
+          headerBackTitle: 'Back',
+          headerShadowVisible: false,  // Remove header shadow for cleaner look
+          headerStyle: {
+            backgroundColor: colors.background?.default,
+          },
           headerRight: () => (
             <TouchableOpacity
               style={styles.closeButton}

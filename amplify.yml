@@ -42,24 +42,22 @@ frontend:
         # Process and copy API route files with proper extension
         - |
           for file in app/api/bslatam/*+api.ts; do
-            # Get the base filename without the +api.ts suffix
             base=$(basename "$file" "+api.ts")
-            # Create the handler file
             mkdir -p "dist/client/api/bslatam/$base"
-            cat > "dist/client/api/bslatam/$base/index.js" << 'EOL'
-          import { handler } from '../../../../../app/api/bslatam/${base}+api';
-          export default async (req, res) => {
-            try {
-              const result = await handler(req, res);
-              if (result) {
-                res.status(200).json(result);
-              }
-            } catch (error) {
-              console.error('API Error:', error);
-              res.status(500).json({ error: 'Internal Server Error' });
-            }
-          };
-          EOL
+            {
+              echo "import { handler } from '../../../../../app/api/bslatam/${base}+api';"
+              echo "export default async (req, res) => {"
+              echo "  try {"
+              echo "    const result = await handler(req, res);"
+              echo "    if (result) {"
+              echo "      res.status(200).json(result);"
+              echo "    }"
+              echo "  } catch (error) {"
+              echo "    console.error('API Error:', error);"
+              echo "    res.status(500).json({ error: 'Internal Server Error' });"
+              echo "  }"
+              echo "};"
+            } > "dist/client/api/bslatam/$base/index.js"
             echo "Created API handler at dist/client/api/bslatam/$base/index.js"
           done
         

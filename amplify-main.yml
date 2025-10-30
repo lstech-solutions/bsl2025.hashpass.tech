@@ -16,10 +16,10 @@ frontend:
         # Install AWS CLI for Lambda deployment
         - pip install awscli --upgrade --user
         - export PATH=~/.local/bin:$PATH
-        # Set event-specific environment variable
-        - export AMPLIFY_SHOW_ALL_EVENTS=false
-        - export AMPLIFY_EVENT_ID=bsl2025
-        - export AMPLIFY_EVENT_DOMAIN=bsl2025.hashpass.tech
+        # Set main branch environment variables
+        - export AMPLIFY_EVENT_ID=default
+        - export AMPLIFY_EVENT_DOMAIN=hashpass.tech
+        - export AMPLIFY_SHOW_ALL_EVENTS=true
     build:
       commands:
         # Clean previous builds
@@ -28,8 +28,8 @@ frontend:
         # Create necessary directories for API routes
         - mkdir -p dist/client/_expo/functions/api/bslatam
         
-        # Build Expo web app in server mode with event-specific env
-        - AMPLIFY_EVENT_ID=bsl2025 npm run build:web
+        # Build Expo web app in server mode - shows all events
+        - AMPLIFY_SHOW_ALL_EVENTS=true npm run build:web
         
         # Copy all server files to client directory for Amplify
         - cp -r dist/server/* dist/client/
@@ -113,7 +113,7 @@ frontend:
       - node_modules/**/*
       - $(npm root --global)/**/*
 
-# Redirects for SPA routing - BSL2025 specific
+# Redirects for SPA routing - Main branch (all events)
 redirects:
   # API routes - must come before the catch-all rule
   - source: '/api/bslatam/agenda/'
@@ -131,21 +131,21 @@ redirects:
     status: 200
     target: '/_expo/'
     
-  # BSL2025 event routes - only these routes are available
-  - source: '/events/bsl2025/*'
-    status: 200
-    target: '/index.html'
-  - source: '/auth/*'
+  # All event routes - main branch supports all events
+  - source: '/events/*'
     status: 200
     target: '/index.html'
   - source: '/dashboard/*'
     status: 200
     target: '/index.html'
+  - source: '/auth/*'
+    status: 200
+    target: '/index.html'
   
-  # Root redirects to BSL2025 home
+  # Root redirects to explorer (shows all events)
   - source: '/'
-    status: 302
-    target: '/events/bsl2025/home'
+    status: 200
+    target: '/index.html'
   
   # SPA fallback - must be last
   - source: '/<*>'

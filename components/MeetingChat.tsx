@@ -92,21 +92,6 @@ export default function MeetingChat({ meetingId, onClose }: MeetingChatProps) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <MaterialIcons name="close" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Meeting Chat</Text>
-          {meeting && (
-            <Text style={styles.headerSubtitle}>
-              {meeting.speaker_name} & {meeting.requester_name}
-            </Text>
-          )}
-        </View>
-      </View>
-
       {/* Real-time Chat Component */}
       <RealtimeChat
         roomName={`meeting_chat_${meetingId}`}

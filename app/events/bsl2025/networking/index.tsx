@@ -8,13 +8,13 @@ import {
   RefreshControl,
   Animated,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useTheme } from '../../../hooks/useTheme';
-import { useAuth } from '../../../hooks/useAuth';
+import { useRouter, Stack } from 'expo-router';
+import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
-import { supabase } from '../../../lib/supabase';
-import { useToastHelpers } from '../../../contexts/ToastContext';
-import QuickAccessGrid from '../../../components/explorer/QuickAccessGrid';
+import { supabase } from '@/lib/supabase';
+import { useToastHelpers } from '@/contexts/ToastContext';
+import QuickAccessGrid from '@/components/explorer/QuickAccessGrid';
 import { NetworkingStats, StatsState, QuickAccessItem } from '@/types/networking';
 
 export default function NetworkingView() {
@@ -89,12 +89,12 @@ export default function NetworkingView() {
       subtitle: 'View all your meeting requests',
     },
     {
-      id: 'speaker-dashboard',
-      title: 'Speaker Dashboard',
-      icon: 'dashboard',
-      color: '#2196F3',
-      route: '/events/bsl2025/speakers/dashboard',
-      subtitle: 'Manage incoming requests',
+      id: 'my-meetings',
+      title: 'My Meetings',
+      icon: 'event',
+      color: '#3F51B5',
+      route: '/events/bsl2025/networking/my-meetings',
+      subtitle: 'Your accepted/created meetings',
     },
     {
       id: 'find-speakers',
@@ -337,57 +337,56 @@ export default function NetworkingView() {
     </View>
   );
 
-  if (statsState.loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <MaterialIcons name="network-check" size={48} color={colors.primary} />
-        <Text style={styles.loadingText}>
-          {statsState.retryCount > 0 
-            ? `Retrying... (${statsState.retryCount}/3)` 
-            : 'Loading networking stats...'
-          }
-        </Text>
-        {statsState.retryCount > 0 && (
-          <Text style={styles.retryText}>
-            Taking longer than expected, please wait...
-          </Text>
-        )}
-      </View>
-    );
-  }
-
-  if (statsState.error) {
-    return (
-      <View style={styles.errorContainer}>
-        <MaterialIcons name="error-outline" size={48} color="#F44336" />
-        <Text style={styles.errorTitle}>Failed to Load Stats</Text>
-        <Text style={styles.errorMessage}>{statsState.error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-          <MaterialIcons name="refresh" size={20} color="white" />
-          <Text style={styles.retryButtonText}>Try Again</Text>
-        </TouchableOpacity>
-        {statsState.lastUpdated && (
-          <Text style={styles.lastUpdatedText}>
-            Last updated: {statsState.lastUpdated.toLocaleTimeString()}
-          </Text>
-        )}
-      </View>
-    );
-  }
-
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-      }
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <MaterialIcons name="people-alt" size={32} color={colors.primary} />
-        <Text style={styles.headerTitle}>Networking Center</Text>
-        <Text style={styles.headerSubtitle}>Connect with speakers and attendees</Text>
-      </View>
+    <>
+      <Stack.Screen 
+        options={{ 
+          title: 'Networking',
+        }} 
+      />
+      {statsState.loading ? (
+        <View style={styles.loadingContainer}>
+          <MaterialIcons name="network-check" size={48} color={colors.primary} />
+          <Text style={styles.loadingText}>
+            {statsState.retryCount > 0 
+              ? `Retrying... (${statsState.retryCount}/3)` 
+              : 'Loading networking stats...'
+            }
+          </Text>
+          {statsState.retryCount > 0 && (
+            <Text style={styles.retryText}>
+              Taking longer than expected, please wait...
+            </Text>
+          )}
+        </View>
+      ) : statsState.error ? (
+        <View style={styles.errorContainer}>
+          <MaterialIcons name="error-outline" size={48} color="#F44336" />
+          <Text style={styles.errorTitle}>Failed to Load Stats</Text>
+          <Text style={styles.errorMessage}>{statsState.error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+            <MaterialIcons name="refresh" size={20} color="white" />
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+          {statsState.lastUpdated && (
+            <Text style={styles.lastUpdatedText}>
+              Last updated: {statsState.lastUpdated.toLocaleTimeString()}
+            </Text>
+          )}
+        </View>
+      ) : (
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <MaterialIcons name="people-alt" size={32} color={colors.primary} />
+          <Text style={styles.headerTitle}>Networking Center</Text>
+          <Text style={styles.headerSubtitle}>Connect with speakers and attendees</Text>
+        </View>
 
       {/* Statistics Section */}
       <View style={styles.section}>
@@ -514,7 +513,9 @@ export default function NetworkingView() {
           </View>
         </Animated.View>
       </View>
-    </ScrollView>
+      </ScrollView>
+      )}
+    </>
   );
 }
 

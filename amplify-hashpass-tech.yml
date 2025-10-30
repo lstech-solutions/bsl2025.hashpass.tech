@@ -87,7 +87,7 @@ redirects:
 cors:
   allowOrigins:
     - exp://*
-    - http://localhost:8081
+    - http://localhost:19006
     - https://*.amazonaws.com
   allowHeaders:
     - "*"

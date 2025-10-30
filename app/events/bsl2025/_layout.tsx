@@ -51,12 +51,6 @@ export default function BSL2025Layout() {
         }}
       />
       <Stack.Screen 
-        name="speaker-dashboard" 
-        options={{
-          headerShown: false, // Hide header as dashboard has its own custom header
-        }}
-      />
-      <Stack.Screen 
         name="speakers" 
         options={{
           headerShown: false, // Let speakers/_layout.tsx handle its own headers
@@ -79,7 +73,7 @@ export default function BSL2025Layout() {
       <Stack.Screen 
         name="networking" 
         options={{
-          title: 'Networking Center',
+          title: 'Networking',
           headerBackTitle: 'BSL2025',
         }}
       />
@@ -116,6 +110,18 @@ export default function BSL2025Layout() {
         options={{
           title: 'Meeting Chat',
           headerBackTitle: 'Speaker Dashboard',
+        }}
+      />
+      <Stack.Screen 
+        name="networking/meeting-detail" 
+        options={{
+          title: 'Meeting Request Details',
+          headerShown: false,
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
+          headerBackVisible: false,
+          gestureEnabled: true,
+          gestureDirection: 'vertical',
         }}
       />
       </Stack>

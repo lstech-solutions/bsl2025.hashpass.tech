@@ -32,6 +32,7 @@ export default function MyRequestsView() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date'); // 'date', 'speaker', 'status'
+  const [directionFilter, setDirectionFilter] = useState<'all' | 'sent' | 'incoming'>('all');
 
   useEffect(() => {
     console.log('🔄 useEffect triggered, user:', user ? 'present' : 'null');
@@ -43,12 +44,10 @@ export default function MyRequestsView() {
       setLoading(false);
     }
     
-    // Add timeout to prevent infinite loading
     const timeout = setTimeout(() => {
-      if (loading) {
-        console.warn('⚠️ My requests loading timeout, setting empty state');
+      if (loading && requests.length === 0) {
+        console.warn('⚠️ My requests loading timeout (requests still empty), setting loading to false');
         setLoading(false);
-        setRequests([]);
       }
     }, 10000); // 10 second timeout
 
@@ -99,10 +98,33 @@ export default function MyRequestsView() {
       console.log('UUID query result:', data2);
       console.log('UUID query error:', error2);
 
-      // Use whichever query worked (prioritize non-empty results)
-      const data = (data1 && data1.length > 0) ? data1 : data2;
-      const error = (data1 && data1.length > 0) ? error1 : error2;
+      // Use whichever query worked (prioritize non-empty results) for SENT
+      const sentData = (data1 && data1.length > 0) ? data1 : data2;
+      const sentError = (data1 && data1.length > 0) ? error1 : error2;
 
+      // INCOMING: if user is a speaker, fetch requests where speaker_id in user's speaker ids
+      let incomingData: any[] = [];
+      let incomingError: any = null;
+      try {
+        const { data: speakerRows, error: speakerErr } = await supabase
+          .from('bsl_speakers')
+          .select('id')
+          .eq('user_id', user.id);
+        if (!speakerErr && speakerRows && speakerRows.length > 0) {
+          const ids = speakerRows.map((r: any) => r.id).join(',');
+          const { data: inc, error: incErr } = await supabase
+            .from('meeting_requests')
+            .select('*')
+            .in('speaker_id', speakerRows.map((r: any) => r.id))
+            .order('created_at', { ascending: false });
+          incomingData = inc || [];
+          incomingError = incErr || null;
+        }
+      } catch (e) {
+        console.warn('Failed to load incoming requests:', e);
+      }
+
+      const error = sentError || incomingError;
       if (error) {
         console.error('Error loading requests:', error);
         showError('Database Error', `Failed to load requests: ${error.message}`);
@@ -110,8 +132,14 @@ export default function MyRequestsView() {
         return;
       }
 
+      // Merge and annotate direction
+      const merged = [
+        ...(sentData || []).map((r: any) => ({ ...r, _direction: 'sent' })),
+        ...(incomingData || []).map((r: any) => ({ ...r, _direction: 'incoming' })),
+      ];
+
       // If no data found, check if there are any requests at all
-      if (!data || data.length === 0) {
+      if (merged.length === 0) {
         console.log('No requests found for user, checking if any requests exist...');
         
         // Try a broader search to see if there are any requests
@@ -130,16 +158,16 @@ export default function MyRequestsView() {
         }
       }
 
-      console.log('My requests loaded:', data?.length || 0, 'requests');
-      console.log('Sample request data:', data?.[0] || 'No requests found');
+      console.log('My requests loaded:', merged.length, 'requests');
+      console.log('Sample request data:', merged?.[0] || 'No requests found');
       console.log('User ID used for query:', user.id);
-      console.log('Full data response:', data);
+      console.log('Full data response count:', merged.length);
       
       // Fetch speaker images for each request
-      if (data && data.length > 0) {
+      if (merged.length > 0) {
         console.log('Fetching speaker images...');
         const requestsWithImages = await Promise.all(
-          data.map(async (request) => {
+          merged.map(async (request) => {
             try {
               // Get speaker image from bsl_speakers table
               const { data: speakerData, error: speakerError } = await supabase
@@ -165,9 +193,9 @@ export default function MyRequestsView() {
         );
         
         console.log('Requests with images loaded:', requestsWithImages.length);
-        setRequests(requestsWithImages);
+        setRequests(requestsWithImages as any);
       } else {
-        setRequests(data || []);
+        setRequests(merged as any);
       }
 
     } catch (error) {
@@ -251,11 +279,17 @@ export default function MyRequestsView() {
   };
 
   const getFilteredAndSortedRequests = () => {
-    let filtered = requests;
+    // Start with all requests
+    let filtered = [...requests];
 
-    // Filter by status
+    // Apply direction filter if not 'all'
+    if (directionFilter !== 'all') {
+      filtered = filtered.filter((r: any) => (r as any)._direction === directionFilter);
+    }
+
+    // Apply status filter if not 'all'
     if (filterStatus !== 'all') {
-      filtered = requests.filter(request => request.status === filterStatus);
+      filtered = filtered.filter(request => request.status === filterStatus);
     }
 
     // Sort by selected criteria
@@ -487,6 +521,12 @@ export default function MyRequestsView() {
     { key: 'cancelled', label: 'Cancelled', count: getStatusCounts().cancelled },
   ];
 
+  const directionFilters = [
+    { key: 'all', label: 'All' },
+    { key: 'sent', label: 'Sent' },
+    { key: 'incoming', label: 'Incoming' },
+  ] as const;
+
   return (
     <View style={styles.container}>
       <Stack.Screen 
@@ -501,58 +541,9 @@ export default function MyRequestsView() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        {requests.length === 0 ? (
-          <View style={styles.emptyState}>
-            <MaterialIcons name="send" size={64} color={colors.secondary} />
-            <Text style={styles.emptyTitle}>No Meeting Requests</Text>
-            <Text style={styles.emptyDescription}>
-              You haven't sent any meeting requests yet. Start networking by browsing speakers and requesting meetings!
-            </Text>
-            <Text style={styles.emptyInstructions}>
-              💡 To create a meeting request: Go to a speaker's profile and tap "Request Meeting"
-            </Text>
-            <View style={styles.emptyActions}>
-              <TouchableOpacity
-                style={styles.browseButton}
-                onPress={() => router.push('/events/bsl2025/speakers')}
-              >
-                <MaterialIcons name="search" size={20} color="white" />
-                <Text style={styles.browseButtonText}>Browse Speakers</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.exploreButton}
-                onPress={() => router.push('/events/bsl2025/explore')}
-              >
-                <MaterialIcons name="explore" size={20} color={colors.primary} />
-                <Text style={styles.exploreButtonText}>Explore Events</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
+        {/* Only show content if there are requests */}
+        {requests.length > 0 && (
           <>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>Request Summary</Text>
-              <View style={styles.summaryStats}>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryValue}>{requests.length}</Text>
-                  <Text style={styles.summaryLabel}>Total</Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryValue, { color: '#FF9800' }]}>
-                    {requests.filter(r => r.status === 'requested').length}
-                  </Text>
-                  <Text style={styles.summaryLabel}>Pending</Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryValue, { color: '#4CAF50' }]}>
-                    {requests.filter(r => r.status === 'accepted').length}
-                  </Text>
-                  <Text style={styles.summaryLabel}>Accepted</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Filter and Sort Controls */}
             <View style={styles.controlsContainer}>
               {/* Status Filter */}
               <ScrollView 
@@ -614,10 +605,40 @@ export default function MyRequestsView() {
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
+                
+                {/* Direction filter pills */}
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={[styles.sortButtons, { marginTop: 8 }]}
+                >
+                  {directionFilters.map((dir) => (
+                    <TouchableOpacity
+                      key={dir.key}
+                      style={[
+                        styles.sortButton,
+                        directionFilter === dir.key && styles.sortButtonActive
+                      ]}
+                      onPress={() => setDirectionFilter(dir.key)}
+                    >
+                      <MaterialIcons 
+                        name={dir.key === 'incoming' ? 'inbox' : dir.key === 'sent' ? 'send' : 'all-inbox'} 
+                        size={16} 
+                        color={directionFilter === dir.key ? colors.primary : (colors.text?.secondary || (isDark ? '#cccccc' : '#666666'))} 
+                      />
+                      <Text style={[
+                        styles.sortButtonText,
+                        directionFilter === dir.key && styles.sortButtonTextActive
+                      ]}>
+                        {dir.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
             </View>
 
-            {/* Filtered and Sorted Requests */}
+            {/* Show filtered requests */}
             {getFilteredAndSortedRequests().map(renderRequestCard)}
           </>
         )}
@@ -632,6 +653,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background?.default || (isDark ? '#000000' : '#ffffff'),
+    paddingTop: 8, // Add some padding at the top
   },
   loadingContainer: {
     flex: 1,
@@ -652,6 +674,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingTop: 4, // Slight padding at the top of the content
   },
   emptyState: {
     flex: 1,
@@ -685,6 +708,44 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginTop: 8,
+  },
+  noResultsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: colors.background?.default || (isDark ? '#000000' : '#ffffff'),
+  },
+  noResultsText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  noResultsSubtext: {
+    fontSize: 14,
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+    paddingHorizontal: 20,
+    lineHeight: 20,
+  },
+  clearFiltersButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  clearFiltersButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   browseButton: {
     backgroundColor: colors.primary,
@@ -731,6 +792,11 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   controlsContainer: {
     marginBottom: 16,
+    paddingTop: 8, // Add padding above the filter controls
+    backgroundColor: colors.background?.default || (isDark ? '#000000' : '#ffffff'),
+    paddingBottom: 8, // Add padding below the filter controls
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: isDark ? '#333' : '#e0e0e0',
   },
   filterContainer: {
     paddingHorizontal: 16,

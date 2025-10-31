@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202510310421, // Updated to current timestamp
+  buildNumber: 202510310540, // Updated to current timestamp
   releaseDate: '2025-10-31',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -72,6 +72,35 @@ export const CURRENT_VERSION: VersionInfo = {
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.3.5': {
+    version: '1.3.5',
+    buildNumber: 202510310540,
+    releaseDate: '2025-10-31',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'User pass management system',
+      'BSL 2025 event integration',
+      'Speaker profile system with avatars',
+      'Event agenda with live updates',
+      'Unified search and filter system',
+      'Dark mode support',
+      'Event banner component',
+      'Pass card UI with BSL branding',
+      'Agenda tabbed interface',
+      'Real-time countdown system'
+    ],
+    bugfixes: [
+      'Fixed SVG logo rendering issues',
+      'Resolved TypeScript undefined property errors',
+      'Fixed agenda data grouping logic',
+      'Corrected speaker count discrepancies',
+      'Fixed dark mode contrast issues',
+      'Resolved navigation routing problems'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.3.5 release'
+  },
   '1.3.5': {
     version: '1.3.5',
     buildNumber: 202510310421,

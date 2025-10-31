@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Linking } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { versionService } from '../lib/services/version-service';
@@ -62,7 +62,20 @@ export default function VersionDisplay({ showInSidebar = false, compact = false 
                   <Text style={styles.buildLabel}>Build Information:</Text>
                   <Text style={styles.buildText}>Build ID: {buildInfo.buildId}</Text>
                   <Text style={styles.buildText}>Build Time: {new Date(buildInfo.buildTime).toLocaleString()}</Text>
-                  <Text style={styles.buildText}>Git Commit: {buildInfo.gitCommit}</Text>
+                  <View style={styles.buildRow}>
+                    <Text style={styles.buildText}>Git Commit: </Text>
+                    {buildInfo.gitCommitUrl && buildInfo.gitCommit !== 'unknown' ? (
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL(buildInfo.gitCommitUrl)}
+                        style={styles.linkContainer}
+                      >
+                        <Text style={styles.linkText}>{buildInfo.gitCommit}</Text>
+                        <MaterialIcons name="open-in-new" size={14} color={colors.primary} style={styles.linkIcon} />
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.buildText}>{buildInfo.gitCommit}</Text>
+                    )}
+                  </View>
                   <Text style={styles.buildText}>Branch: {buildInfo.gitBranch}</Text>
                 </View>
               )}
@@ -318,6 +331,23 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontSize: 12,
     color: colors.text.secondary,
     marginBottom: 2,
+  },
+  buildRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  linkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  linkText: {
+    fontSize: 12,
+    color: colors.primary,
+    textDecorationLine: 'underline',
+  },
+  linkIcon: {
+    marginLeft: 4,
   },
   featureItem: {
     flexDirection: 'row',

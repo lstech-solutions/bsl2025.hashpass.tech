@@ -48,18 +48,21 @@ frontend:
           for file in app/api/bslatam/*+api.ts; do
             base=$(basename "$file" "+api.ts")
             mkdir -p "dist/client/api/bslatam/$base"
-            echo "import { handler } from '../../../../../app/api/bslatam/${base}+api';" > "dist/client/api/bslatam/$base/index.js"
-            echo "export default async (req, res) => {" >> "dist/client/api/bslatam/$base/index.js"
-            echo "  try {" >> "dist/client/api/bslatam/$base/index.js"
-            echo "    const result = await handler(req, res);" >> "dist/client/api/bslatam/$base/index.js"
-            echo "    if (result) {" >> "dist/client/api/bslatam/$base/index.js"
-            echo "      res.status(200).json(result);" >> "dist/client/api/bslatam/$base/index.js"
-            echo "    }" >> "dist/client/api/bslatam/$base/index.js"
-            echo "  } catch (error) {" >> "dist/client/api/bslatam/$base/index.js"
-            echo "    console.error('API Error:', error);" >> "dist/client/api/bslatam/$base/index.js"
-            echo "    res.status(500).json({ error: 'Internal Server Error' });" >> "dist/client/api/bslatam/$base/index.js"
-            echo "  }" >> "dist/client/api/bslatam/$base/index.js"
-            echo "};" >> "dist/client/api/bslatam/$base/index.js"
+            cat > "dist/client/api/bslatam/$base/index.js" << 'ENDOFFILE'
+          import { handler } from '../../../../../app/api/bslatam/PLACEHOLDER+api';
+          export default async (req, res) => {
+            try {
+              const result = await handler(req, res);
+              if (result) {
+                res.status(200).json(result);
+              }
+            } catch (error) {
+              console.error('API Error' + ' ' + error);
+              res.status(500).json({ error: 'Internal Server Error' });
+            }
+          };
+          ENDOFFILE
+            sed -i "s/PLACEHOLDER/$base/g" "dist/client/api/bslatam/$base/index.js"
             echo "Created API handler at dist/client/api/bslatam/$base/index.js"
           done
         - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'

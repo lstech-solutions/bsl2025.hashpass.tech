@@ -1,147 +1,98 @@
-version: 1.0
-frontend:
-  phases:
-    preBuild:
-      commands:
-        - nvm install 22.18.0
-        - npm install --quiet --global @expo/cli
-        - >
-          if [ -f yarn.lock ]; then
-            yarn install --frozen-lockfile
-          elif [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-        # Install AWS CLI for Lambda deployment
-        - pip install awscli --upgrade --user
-        - export PATH=~/.local/bin:$PATH
-    build:
-      commands:
-        # Clean previous builds
-        - rm -rf dist
-        
-        # Create necessary directories for API routes
-        - mkdir -p dist/client/_expo/functions/api/bslatam
-        
-        # Build Expo web app in server mode
-        - npm run build:web
-        
-        # Copy all server files to client directory for Amplify
-        - cp -r dist/server/* dist/client/
+# Amplify Gen2 Configuration for HashPass (Expo)
+# This file configures your Amplify project with serverless API routing for Expo
 
-        # Copy built server API handlers into Lambda source so the function can import them
-        - mkdir -p amplify/backend/function/bslApi/src/server/_expo/functions
-        - rm -rf amplify/backend/function/bslApi/src/server/_expo/functions/api || true
-        - cp -r dist/server/_expo/functions/api amplify/backend/function/bslApi/src/server/_expo/functions/
-        
-        # Create a simple package.json for the API functions
-        - 'mkdir -p dist/client/api/bslatam'
-        - 'echo "{\"type\": \"module\"}" > dist/client/api/package.json'
-        
-        # Process and copy API route files with proper extension
-        - |
-          for file in app/api/bslatam/*+api.ts; do
-            base=$(basename "$file" "+api.ts")
-            mkdir -p "dist/client/api/bslatam/$base"
-            {
-              echo "import { handler } from '../../../../../app/api/bslatam/${base}+api';"
-              echo "export default async (req, res) => {"
-              echo "  try {"
-              echo "    const result = await handler(req, res);"
-              echo "    if (result) {"
-              echo "      res.status(200).json(result);"
-              echo "    }"
-              echo "  } catch (error) {"
-              echo "    console.error('API Error:', error);"
-              echo "    res.status(500).json({ error: 'Internal Server Error' });"
-              echo "  }"
-              echo "};"
-            } > "dist/client/api/bslatam/$base/index.js"
-            echo "Created API handler at dist/client/api/bslatam/$base/index.js"
-          done
-        
-        # Add cache-busting timestamp to index.html
-        - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
-        
-        # Debug: List all API files
-        - echo "\n=== API files in dist/client/_expo/functions/api/bslatam/ ==="
-        - ls -la dist/client/_expo/functions/api/bslatam/ || echo "No API files found"
-        - echo "\n=== Contents of dist/client/ ==="
-        - ls -la dist/client/
-        - 'echo "Checking for index.html:"'
-        - ls -la dist/client/index.html
+# Project settings
+project:
+  name: hashpass-tech
+  type: fullstack
+  version: 2.0
+  environment: dev
 
-  artifacts:
-    baseDirectory: dist/client
-    files:
-      - '**/*'
-    customHeaders:
-      - pattern: '_expo/static/**/*'
-        headers:
-          - key: Cache-Control
-            value: 'public, max-age=31536000, immutable'
-      - pattern: 'index.html'
-        headers:
-          - key: Cache-Control
-            value: 'no-cache, no-store, must-revalidate'
-          - key: Pragma
-            value: 'no-cache'
-          - key: Expires
-            value: '0'
-      - pattern: '**/*.html'
-        headers:
-          - key: Cache-Control
-            value: 'no-cache, no-store, must-revalidate'
-          - key: Pragma
-            value: 'no-cache'
-          - key: Expires
-            value: '0'
-      - pattern: '**/*.js'
-        headers:
-          - key: Cache-Control
-            value: 'public, max-age=31536000, immutable'
+# Build settings for Expo
+build:
+  commands:
+    - npm ci
+    - npx expo install
+    - npx expo prebuild
+    - npx expo export:web
+  baseDirectory: web-build
+  buildPath: web-build
 
-  cache:
-    paths:
-      - node_modules/**/*
-      - $(npm root --global)/**/*
+# App configuration
+app:
+  framework: react-native
+  buildCommand: npx expo export:web
+  startCommand: npx expo start
+  environmentVariables:
+    EXPO_PUBLIC_API_URL: ${api.url}
+    EXPO_PUBLIC_REGION: ${env:REGION}
+
+# Authentication configuration
+auth:
+  identityPoolId: ${env:IDENTITY_POOL_ID}
+  region: ${env:REGION}
+  userPoolId: ${env:USER_POOL_ID}
+  userPoolWebClientId: ${env:USER_POOL_WEB_CLIENT_ID}
+  oauth: {}
+
+# API configuration
+api:
+  name: hashpassApi
+  type: REST
+  configure:
+    endpointType: REGIONAL
+    path: /api
+    stage: dev
+  routes:
+    - path: /api/*
+      target: 
+        kind: Lambda
+        handler: src/api
+      access:
+        - private
+
+# Storage configuration
+storage:
+  resources:
+    - name: hashpassStorage
+      type: s3
+      access: private
+
+# Environment variables
+environmentVariables:
+  - name: EXPO_PUBLIC_API_URL
+    value: ${api.url}
+  - name: EXPO_PUBLIC_REGION
+    value: ${env:REGION}
+  - name: EXPO_PUBLIC_USER_POOL_ID
+    value: ${env:USER_POOL_ID}
+  - name: EXPO_PUBLIC_USER_POOL_WEB_CLIENT_ID
+    value: ${env:USER_POOL_WEB_CLIENT_ID}
+  - name: EXPO_PUBLIC_IDENTITY_POOL_ID
+    value: ${env:IDENTITY_POOL_ID}
+
+# Custom domains (uncomment and configure as needed)
+customDomains:
+   - domainName: hashpass.tech
+     subDomain: bsl2025
+     enableAutoSubdomain: true
+   - domainName: bsl2025.hashpass.tech
+     subDomain: api
+     enableAutoSubdomain: true
 
 # Redirects for SPA routing
 redirects:
-  # API routes - must come before the catch-all rule
-  - source: '/api/bslatam/agenda/'
+  - source: /<*>
+    target: /index.html
     status: 200
-    target: '/api/bslatam/agenda/index.js'
-  - source: '/api/bslatam/agenda-status/'
-    status: 200
-    target: '/api/bslatam/agenda-status/index.js'
-  
-  # Static files
-  - source: '/sw.js'
-    status: 200
-    target: '/sw.js'
-  - source: '/_expo/*'
-    status: 200
-    target: '/_expo/'
-    
-  # SPA fallback - must be last
-  - source: '/<*>'
-    status: 200
-    target: '/index.html'
-  - source: '/dashboard/*'
-    status: 200
-    target: '/index.html'
-  - source: '/auth/*'
-    status: 200
-    target: '/index.html'
-  - source: '/bslatam/*'
-    status: 200
-    target: '/index.html'
 
-# Error page for 404s
-customErrorResponses:
-  - errorCode: 404
-    responsePagePath: '/index.html'
-    responseCode: 200
-    errorCachingMinTTL: 0
+# CORS configuration for API
+cors:
+  allowOrigins:
+    - exp://*
+    - http://localhost:8081
+    - https://*.amazonaws.com
+  allowHeaders:
+    - "*"
+  allowMethods:
+    - "*"

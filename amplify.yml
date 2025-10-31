@@ -43,7 +43,7 @@ frontend:
         - rm -rf amplify/backend/function/bslApi/src/server/_expo/functions/api || true
         - cp -r dist/server/_expo/functions/api amplify/backend/function/bslApi/src/server/_expo/functions/
         - mkdir -p dist/client/api/bslatam
-        - echo "{\"type\": \"module\"}" > dist/client/api/package.json
+        - 'echo "{\"type\": \"module\"}" > dist/client/api/package.json'
         - |
           for file in app/api/bslatam/*+api.ts; do
             base=$(basename "$file" "+api.ts")

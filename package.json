@@ -18,7 +18,7 @@
     "amplify:push": "amplify push",
     "amplify:deploy": "amplify publish",
     "version:update": "node scripts/update-version.mjs",
-    "version:bump": "node scripts/update-version.mjs --auto-git",
+    "version:bump": "node scripts/version-bump.js",
     "parameters:setup": "./scripts/setup-parameters.sh create",
     "parameters:verify": "./scripts/setup-parameters.sh verify",
     "parameters:list": "./scripts/setup-parameters.sh list",

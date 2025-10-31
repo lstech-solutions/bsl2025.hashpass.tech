@@ -21,7 +21,19 @@ const projectRoot = path.join(__dirname, '..');
 
 // Parse command line arguments
 const args = process.argv.slice(2);
-const newVersion = args[0];
+
+// Find version number (first argument that matches version format)
+const versionRegex = /^\d+\.\d+\.\d+$/;
+const versionIndex = args.findIndex(arg => versionRegex.test(arg));
+const newVersion = versionIndex !== -1 ? args[versionIndex] : args[0];
+
+// If version is not found or doesn't match format, try first non-flag argument
+let newVersionFinal = newVersion;
+if (!versionRegex.test(newVersionFinal)) {
+  const nonFlagArgs = args.filter(arg => !arg.startsWith('--') && !arg.startsWith('-'));
+  newVersionFinal = nonFlagArgs[0] || newVersionFinal;
+}
+
 const releaseType = args.find(arg => arg.startsWith('--type='))?.split('=')[1] || 'beta';
 const releaseNotes = args.find(arg => arg.startsWith('--notes='))?.split('=')[1] || '';
 
@@ -31,9 +43,14 @@ const shouldTag = args.includes('--tag') || args.includes('-t');
 const shouldPush = args.includes('--push') || args.includes('-p');
 const autoGit = args.includes('--auto-git'); // Shorthand for --commit --tag --push
 
-if (!newVersion) {
-  console.error('❌ Error: Please provide a version number');
+// Validate version format
+const versionRegex = /^\d+\.\d+\.\d+$/;
+if (!newVersionFinal || !versionRegex.test(newVersionFinal)) {
+  console.error('❌ Error: Please provide a valid version number in format X.Y.Z');
+  console.log('');
   console.log('Usage: node scripts/update-version.mjs <version> [options]');
+  console.log('   or: npm run version:update <version> [-- --options]');
+  console.log('   or: npm run version:bump <version>');
   console.log('');
   console.log('Options:');
   console.log('  --type=<type>        Release type: alpha, beta, rc, stable (default: beta)');
@@ -47,15 +64,13 @@ if (!newVersion) {
   console.log('  node scripts/update-version.mjs 1.3.7');
   console.log('  node scripts/update-version.mjs 1.3.7 --type=beta --notes="Bug fixes"');
   console.log('  node scripts/update-version.mjs 1.3.7 --auto-git');
+  console.log('  npm run version:update 1.3.7 -- --type=beta');
+  console.log('  npm run version:bump 1.3.7');
   process.exit(1);
 }
 
-// Validate version format
-const versionRegex = /^\d+\.\d+\.\d+$/;
-if (!versionRegex.test(newVersion)) {
-  console.error('❌ Error: Version must be in format X.Y.Z (e.g., 1.1.9)');
-  process.exit(1);
-}
+// Use the validated version
+const newVersion = newVersionFinal;
 
 // Validate release type
 const validTypes = ['alpha', 'beta', 'rc', 'stable'];

@@ -12,6 +12,8 @@ npm run version:update 1.3.7
 npm run version:bump 1.3.7
 ```
 
+✅ **Nota**: El comando `npm run version:bump` ahora funciona correctamente y acepta la versión como argumento.
+
 ## Uso Detallado
 
 ### Comando Básico

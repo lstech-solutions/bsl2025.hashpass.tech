@@ -8,27 +8,18 @@
       "releaseType": "beta",
       "environment": "development",
       "features": [
-        "User pass management system",
-        "BSL 2025 event integration",
-        "Speaker profile system with avatars",
-        "Event agenda with live updates",
-        "Unified search and filter system",
-        "Dark mode support",
-        "Event banner component",
-        "Pass card UI with BSL branding",
-        "Agenda tabbed interface",
-        "Real-time countdown system"
+        "Unified LoadingScreen component for consistent loading states across the app",
+        "Integrated LoadingScreen in networking, agenda, and speakers screens",
+        "Global loader implementation for agenda screen to prevent banner expansion issues"
       ],
       "bugfixes": [
-        "Fixed SVG logo rendering issues",
-        "Resolved TypeScript undefined property errors",
-        "Fixed agenda data grouping logic",
-        "Corrected speaker count discrepancies",
-        "Fixed dark mode contrast issues",
-        "Resolved navigation routing problems"
+        "Fixed LoadingScreen subtitle undefined error in getStyles function",
+        "Fixed agenda banner expansion issue during initial loading",
+        "Fixed missing LoadingScreen import in speakers calendar component",
+        "Fixed loader not showing at beginning of agenda screen causing banner to expand"
       ],
       "breakingChanges": [],
-      "notes": "Version 1.3.9 release"
+      "notes": "Version 1.3.9 release - Unified loading experience across all screens"
     },
     {
       "version": "1.3.8",

@@ -27,47 +27,18 @@ export const CURRENT_VERSION: VersionInfo = {
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
-    'User pass management system',
-    'BSL 2025 event integration',
-    'Speaker profile system with avatars',
-    'Event agenda with live updates',
-    'Unified search and filter system',
-    'Dark mode support',
-    'Event banner component',
-    'Pass card UI with BSL branding',
-    'Agenda tabbed interface',
-    'Real-time countdown system',
-    'Meeting request system with Supabase integration',
-    'Speaker availability and booking system',
-    'Complete networking center with horizontal scrolling',
-    'My Requests view for managing sent meeting requests',
-    'My Schedule view for scheduled meetings',
-    'System Analytics with comprehensive statistics',
-    'Blocked Users management system',
-    'Horizontal scrolling quick access menu',
-    'Enhanced networking statistics and insights',
-    'Speaker dashboard for incoming request management',
-    'Real-time networking activity tracking',
-    'Automated version management and changelog updates'
+    'Unified LoadingScreen component for consistent loading states across the app',
+    'Integrated LoadingScreen in networking, agenda, and speakers screens',
+    'Global loader implementation for agenda screen to prevent banner expansion issues'
   ],
   bugfixes: [
-    'Fixed SVG logo rendering issues',
-    'Resolved TypeScript undefined property errors',
-    'Fixed agenda data grouping logic',
-    'Corrected speaker count discrepancies',
-    'Fixed dark mode contrast issues',
-    'Resolved navigation routing problems',
-    'Fixed React Navigation headerBackTitleVisible property error',
-    'Fixed headerStyle borderBottomWidth property error',
-    'Fixed pass number display showing "unknown" in explorer view',
-    'Fixed speaker dashboard loading stuck issue',
-    'Fixed get_speaker_meeting_requests SQL GROUP BY error',
-    'Improved networking icon visibility in quick access menu',
-    'Updated version display and changelog automation',
-    'Fixed version history dates and formatting'
+    'Fixed LoadingScreen subtitle undefined error in getStyles function',
+    'Fixed agenda banner expansion issue during initial loading',
+    'Fixed missing LoadingScreen import in speakers calendar component',
+    'Fixed loader not showing at beginning of agenda screen causing banner to expand'
   ],
   breakingChanges: [],
-  notes: 'Version 1.3.9 release'
+  notes: 'Version 1.3.9 release - Unified loading experience across all screens'
 };
 
 // Version History
@@ -79,27 +50,18 @@ export const VERSION_HISTORY: VersionHistory = {
     releaseType: 'beta',
     environment: 'development',
     features: [
-      'User pass management system',
-      'BSL 2025 event integration',
-      'Speaker profile system with avatars',
-      'Event agenda with live updates',
-      'Unified search and filter system',
-      'Dark mode support',
-      'Event banner component',
-      'Pass card UI with BSL branding',
-      'Agenda tabbed interface',
-      'Real-time countdown system'
+      'Unified LoadingScreen component for consistent loading states across the app',
+      'Integrated LoadingScreen in networking, agenda, and speakers screens',
+      'Global loader implementation for agenda screen to prevent banner expansion issues'
     ],
     bugfixes: [
-      'Fixed SVG logo rendering issues',
-      'Resolved TypeScript undefined property errors',
-      'Fixed agenda data grouping logic',
-      'Corrected speaker count discrepancies',
-      'Fixed dark mode contrast issues',
-      'Resolved navigation routing problems'
+      'Fixed LoadingScreen subtitle undefined error in getStyles function',
+      'Fixed agenda banner expansion issue during initial loading',
+      'Fixed missing LoadingScreen import in speakers calendar component',
+      'Fixed loader not showing at beginning of agenda screen causing banner to expand'
     ],
     breakingChanges: [],
-    notes: 'Version 1.3.9 release'
+    notes: 'Version 1.3.9 release - Unified loading experience across all screens'
   },
   '1.3.8': {
     version: '1.3.8',

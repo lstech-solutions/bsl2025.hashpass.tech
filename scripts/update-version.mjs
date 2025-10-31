@@ -238,11 +238,85 @@ for (const file of filesToUpdate) {
 // Update CHANGELOG.md
 updateChangelog(newVersion, releaseType, releaseNotes);
 
+// Helper function to extract features and bugfixes from CURRENT_VERSION
+function extractFeaturesAndBugfixes(content) {
+  const features = [];
+  const bugfixes = [];
+  const breakingChanges = [];
+  
+  // Extract CURRENT_VERSION block
+  const currentVersionMatch = content.match(/export const CURRENT_VERSION: VersionInfo = \{([\s\S]*?)\};/);
+  if (!currentVersionMatch) {
+    console.warn('⚠️  Could not find CURRENT_VERSION block, using empty arrays');
+    return { features, bugfixes, breakingChanges };
+  }
+  
+  const currentVersionContent = currentVersionMatch[1];
+  
+  // Extract features array from CURRENT_VERSION only
+  const featuresMatch = currentVersionContent.match(/features:\s*\[([\s\S]*?)\],/);
+  if (featuresMatch) {
+    const featuresContent = featuresMatch[1];
+    const featureLines = featuresContent.split('\n').filter(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith("'") || trimmed.startsWith('"');
+    });
+    features.push(...featureLines.map(line => {
+      const match = line.match(/['"](.*?)['"]/);
+      return match ? match[1] : '';
+    }).filter(f => f));
+  }
+  
+  // Extract bugfixes array from CURRENT_VERSION only
+  const bugfixesMatch = currentVersionContent.match(/bugfixes:\s*\[([\s\S]*?)\],/);
+  if (bugfixesMatch) {
+    const bugfixesContent = bugfixesMatch[1];
+    const bugfixLines = bugfixesContent.split('\n').filter(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith("'") || trimmed.startsWith('"');
+    });
+    bugfixes.push(...bugfixLines.map(line => {
+      const match = line.match(/['"](.*?)['"]/);
+      return match ? match[1] : '';
+    }).filter(f => f));
+  }
+  
+  // Extract breakingChanges array from CURRENT_VERSION only
+  const breakingMatch = currentVersionContent.match(/breakingChanges:\s*\[([\s\S]*?)\],/);
+  if (breakingMatch) {
+    const breakingContent = breakingMatch[1];
+    const breakingLines = breakingContent.split('\n').filter(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith("'") || trimmed.startsWith('"');
+    });
+    breakingChanges.push(...breakingLines.map(line => {
+      const match = line.match(/['"](.*?)['"]/);
+      return match ? match[1] : '';
+    }).filter(f => f));
+  }
+  
+  return { features, bugfixes, breakingChanges };
+}
+
 // Update version history in version.ts
 try {
   const versionTsPath = path.join(projectRoot, 'config/version.ts');
   if (fs.existsSync(versionTsPath)) {
     let content = fs.readFileSync(versionTsPath, 'utf8');
+    
+    // Extract features and bugfixes from CURRENT_VERSION
+    const { features, bugfixes, breakingChanges } = extractFeaturesAndBugfixes(content);
+    
+    // Format arrays as strings for the entry
+    const featuresStr = features.length > 0 
+      ? features.map(f => `      '${f.replace(/'/g, "\\'")}'`).join(',\n')
+      : '      // No new features';
+    const bugfixesStr = bugfixes.length > 0
+      ? bugfixes.map(f => `      '${f.replace(/'/g, "\\'")}'`).join(',\n')
+      : '      // No bugfixes';
+    const breakingStr = breakingChanges.length > 0
+      ? breakingChanges.map(f => `      '${f.replace(/'/g, "\\'")}'`).join(',\n')
+      : '';
     
     // Add new version to VERSION_HISTORY
     const newVersionEntry = `  '${newVersion}': {
@@ -252,27 +326,13 @@ try {
     releaseType: '${releaseType}',
     environment: 'development',
     features: [
-      'User pass management system',
-      'BSL 2025 event integration',
-      'Speaker profile system with avatars',
-      'Event agenda with live updates',
-      'Unified search and filter system',
-      'Dark mode support',
-      'Event banner component',
-      'Pass card UI with BSL branding',
-      'Agenda tabbed interface',
-      'Real-time countdown system'
+${featuresStr}
     ],
     bugfixes: [
-      'Fixed SVG logo rendering issues',
-      'Resolved TypeScript undefined property errors',
-      'Fixed agenda data grouping logic',
-      'Corrected speaker count discrepancies',
-      'Fixed dark mode contrast issues',
-      'Resolved navigation routing problems'
+${bugfixesStr}
     ],
-    breakingChanges: [],
-    notes: '${releaseNotes || `Version ${newVersion} release`}'
+    breakingChanges: [${breakingStr ? '\n' + breakingStr + '\n    ' : ''}],
+    notes: '${(releaseNotes || `Version ${newVersion} release`).replace(/'/g, "\\'")}'
   },`;
 
     // Insert the new version entry at the beginning of VERSION_HISTORY
@@ -291,8 +351,14 @@ try {
 // Update config/versions.json (used by sidebar version display)
 try {
   const versionsJsonPath = path.join(projectRoot, 'config/versions.json');
-  if (fs.existsSync(versionsJsonPath)) {
+  const versionTsPath = path.join(projectRoot, 'config/version.ts');
+  
+  if (fs.existsSync(versionsJsonPath) && fs.existsSync(versionTsPath)) {
     const versionsData = JSON.parse(fs.readFileSync(versionsJsonPath, 'utf8'));
+    const versionTsContent = fs.readFileSync(versionTsPath, 'utf8');
+    
+    // Extract features and bugfixes from CURRENT_VERSION
+    const { features, bugfixes, breakingChanges } = extractFeaturesAndBugfixes(versionTsContent);
     
     // Update currentVersion
     versionsData.currentVersion = newVersion;
@@ -308,27 +374,9 @@ try {
         releaseDate: releaseDate,
         releaseType: releaseType,
         environment: 'development',
-        features: [
-          'User pass management system',
-          'BSL 2025 event integration',
-          'Speaker profile system with avatars',
-          'Event agenda with live updates',
-          'Unified search and filter system',
-          'Dark mode support',
-          'Event banner component',
-          'Pass card UI with BSL branding',
-          'Agenda tabbed interface',
-          'Real-time countdown system'
-        ],
-        bugfixes: [
-          'Fixed SVG logo rendering issues',
-          'Resolved TypeScript undefined property errors',
-          'Fixed agenda data grouping logic',
-          'Corrected speaker count discrepancies',
-          'Fixed dark mode contrast issues',
-          'Resolved navigation routing problems'
-        ],
-        breakingChanges: [],
+        features: features.length > 0 ? features : [],
+        bugfixes: bugfixes.length > 0 ? bugfixes : [],
+        breakingChanges: breakingChanges.length > 0 ? breakingChanges : [],
         notes: releaseNotes || `Version ${newVersion} release`
       };
       

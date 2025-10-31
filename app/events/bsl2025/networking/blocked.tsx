@@ -14,6 +14,7 @@ import { useAuth } from '../../../../hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../../../../lib/supabase';
 import { useToastHelpers } from '../../../../contexts/ToastContext';
+import LoadingScreen from '../../../../components/LoadingScreen';
 
 interface BlockedUser {
   id: string;
@@ -154,10 +155,11 @@ export default function BlockedUsersView() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <MaterialIcons name="block" size={48} color={colors.primary} />
-        <Text style={styles.loadingText}>Loading blocked users...</Text>
-      </View>
+      <LoadingScreen
+        icon="block"
+        message="Loading blocked users..."
+        fullScreen={true}
+      />
     );
   }
 
@@ -218,17 +220,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: colors.text,
   },
   header: {
     flexDirection: 'row',

@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { useTheme } from '@hooks/useTheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '@hooks/useAuth';
 import { supabase } from '@lib/supabase';
 import { useToastHelpers } from '@contexts/ToastContext';
+import LoadingScreen from '@components/LoadingScreen';
 import { Meeting } from '@/types/networking';
 import { Stack, useRouter } from 'expo-router';
 
@@ -209,10 +210,11 @@ const MeetingsPage = () => {
         }} 
       />
       {loading ? (
-        <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.emptyText}>Loading meetings...</Text>
-        </View>
+        <LoadingScreen
+          icon="event"
+          message="Loading meetings..."
+          fullScreen={true}
+        />
       ) : meetings.length > 0 ? (
         <>
           <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingTop: 8, gap: 8 }}>

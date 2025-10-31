@@ -22,11 +22,12 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../../hooks/useAuth';
 import { supabase } from '../../../../lib/supabase';
+import { apiClient } from '../../../../lib/api-client';
 import { useToastHelpers } from '../../../../contexts/ToastContext';
 import { Meeting, TimeSlot, DaySchedule } from '@/types/networking';
 import ScheduleConfirmationModal from '../../../../components/ScheduleConfirmationModal';
 import * as Haptics from 'expo-haptics';
-import { AgendaItem } from '../../../types/agenda';
+import { AgendaItem } from '../../../../types/events';
 
 // Constants
 const WORKING_HOURS = { start: 8, end: 19 }; // 8 AM to 7 PM (covers 08:00–18:30 sessions)
@@ -186,9 +187,22 @@ const MySchedule = () => {
     const fetchAgenda = async () => {
       setLoadingAgenda(true);
       try {
-        const res = await fetch('/api/bslatam/agenda?eventId=bsl2025');
-        const json = await res.json();
-        const items: any[] = json?.data || [];
+        // Use apiClient to ensure correct base URL from env vars
+        const response = await apiClient.request('agenda', {
+          params: { eventId: 'bsl2025' }
+        });
+        // apiClient returns { data, success, error }
+        // Handle different response formats
+        let items: any[] = [];
+        if (response.success && response.data) {
+          if (Array.isArray(response.data)) {
+            items = response.data;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            items = response.data.data;
+          } else if (response.data && typeof response.data === 'object') {
+            items = [];
+          }
+        }
         const toMinutes = (t?: string) => (t === 'panel' ? 60 : t === 'keynote' ? 30 : 30);
         const mapped: Meeting[] = items.map((it) => {
           const start = it.time as string;
@@ -434,7 +448,7 @@ const MySchedule = () => {
       let blockedCount = 0;
       let favoritesCount = 0;
       
-      day.slots.forEach(slot => {
+      (day.slots || []).forEach(slot => {
         const slotKey = slot.startTime.toISOString();
         const freeSlotStatus = userFreeSlotStatus[slotKey] || 'available';
         
@@ -1514,8 +1528,9 @@ const MySchedule = () => {
 
               {/* Timeline of Events */}
               {(() => {
-                const selectedDay = schedule.find(day => isSameDay(day.date, daySummaryModal.dayStat.date));
-                if (!selectedDay) return null;
+                if (!daySummaryModal.dayStat) return null;
+                const selectedDay = schedule.find(day => isSameDay(day.date, daySummaryModal.dayStat!.date));
+                if (!selectedDay || !selectedDay.slots) return null;
 
                 // Get all slots with meetings or tracked free slots, sorted by time
                 const timelineSlots = selectedDay.slots

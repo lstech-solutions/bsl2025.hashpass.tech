@@ -21,6 +21,7 @@ import { useToastHelpers } from '../../../contexts/ToastContext';
 import ScheduleConfirmationModal from '../../../components/ScheduleConfirmationModal';
 import * as Haptics from 'expo-haptics';
 import { parseISO } from 'date-fns';
+import LoadingScreen from '../../../components/LoadingScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -329,11 +330,25 @@ export default function BSL2025AgendaScreen() {
         // Trigger a refresh
         const refreshAgenda = async () => {
           try {
-            const response = await fetch('/api/bslatam/agenda?eventId=bsl2025');
-            const result = await response.json();
-            if (response.ok && result.data && result.data.length > 0) {
-              setAgenda(result.data);
-              setLastUpdated(new Date().toISOString());
+            // Use apiClient to ensure correct base URL from env vars
+            const response = await apiClient.request('agenda', {
+              params: { eventId: 'bsl2025' }
+            });
+            // apiClient returns { data, success, error }
+            if (response.success && response.data) {
+              let agendaData: any[] = [];
+              // Handle different response formats
+              if (Array.isArray(response.data)) {
+                agendaData = response.data;
+              } else if (response.data.data && Array.isArray(response.data.data)) {
+                agendaData = response.data.data;
+              } else if (response.data && typeof response.data === 'object') {
+                agendaData = [];
+              }
+              if (agendaData.length > 0) {
+                setAgenda(agendaData);
+                setLastUpdated(new Date().toISOString());
+              }
             }
           } catch (error) {
             console.error('Auto-refresh failed:', error);
@@ -718,7 +733,7 @@ export default function BSL2025AgendaScreen() {
     const isFavorite = favoriteStatus[item.id] || false;
     
     // Parse start time from item
-    const startTime = parseEventISO((item as any).time || item.startTime || '');
+    const startTime = parseEventISO((item as any).time || '');
     const isValidTime = !isNaN(startTime.getTime());
     
     const handleConfirmPress = () => {
@@ -824,6 +839,17 @@ export default function BSL2025AgendaScreen() {
       </View>
     );
   };
+  // Show global loader while loading
+  if (loading) {
+    return (
+      <LoadingScreen
+        icon="schedule"
+        message="Loading agenda..."
+        fullScreen={true}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView 
@@ -891,7 +917,7 @@ export default function BSL2025AgendaScreen() {
 
 
       {/* Live Status Details - Only during event period */}
-      {!loading && isLive && isEventPeriod && agenda.length > 0 && (
+      {isLive && isEventPeriod && agenda.length > 0 && (
         <View style={styles.liveStatusDetails}>
           <View style={styles.liveStatusRow}>
             <MaterialIcons name="update" size={14} color={colors.success.main} />
@@ -920,7 +946,7 @@ export default function BSL2025AgendaScreen() {
 
 
       {/* Unified Search and Filter Section */}
-      {!loading && agenda.length > 0 && (
+      {agenda.length > 0 && (
         <UnifiedSearchAndFilter
           data={agenda}
           onFilteredData={setFilteredAgenda}
@@ -935,13 +961,7 @@ export default function BSL2025AgendaScreen() {
 
       {/* Tab Content */}
       <View style={styles.contentContainer}>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <MaterialIcons name="schedule" size={48} color={colors.text.secondary} />
-            <Text style={styles.loadingText}>Loading agenda...</Text>
-            <Text style={styles.loadingSubtext}>Fetching latest schedule from database</Text>
-          </View>
-        ) : activeTab && agendaByDay[activeTab] ? (
+        {activeTab && agendaByDay[activeTab] ? (
           <View style={styles.agendaList}>
             {(() => {
               // Get filtered items for the active tab
@@ -1216,24 +1236,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontSize: 13,
     color: colors.text.secondary,
     marginLeft: 6,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-  },
-  loadingText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  loadingSubtext: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginTop: 8,
-    textAlign: 'center',
   },
   noAgendaContainer: {
     alignItems: 'center',

@@ -9,6 +9,7 @@ import EventBanner from '../../../../components/EventBanner';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
 import SpeakerSearchAndSort from '../../../../components/SpeakerSearchAndSort';
 import { getSpeakerAvatarUrl } from '../../../../lib/string-utils';
+import LoadingScreen from '../../../../components/LoadingScreen';
 
 // Type definitions
 interface Speaker {
@@ -52,12 +53,14 @@ export default function SpeakersCalendar() {
   const [groupedSpeakers, setGroupedSpeakers] = useState<{ [key: string]: Speaker[] }>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name');
+  const [loading, setLoading] = useState(true);
   const agenda = event.agenda || [];
 
   // Load speakers from database with JSON fallback
   useEffect(() => {
     const loadSpeakers = async () => {
       try {
+        setLoading(true);
         console.log('🔍 Loading speakers from database...');
         
         const dbPromise = supabase
@@ -89,6 +92,7 @@ export default function SpeakersCalendar() {
             
             setSpeakers(uniqueSpeakers);
             console.log('✅ Loaded speakers from database:', uniqueSpeakers.length, 'unique speakers');
+            setLoading(false);
             return;
           }
         } catch (dbError: any) {
@@ -114,6 +118,7 @@ export default function SpeakersCalendar() {
         
         setSpeakers(uniqueEventSpeakers);
         console.log('✅ Loaded speakers from event config (JSON fallback):', uniqueEventSpeakers.length, 'unique speakers');
+        setLoading(false);
       } catch (error) {
         console.error('❌ Error loading speakers:', error);
         // Emergency fallback to event config
@@ -134,6 +139,7 @@ export default function SpeakersCalendar() {
         
         setSpeakers(uniqueEmergencySpeakers);
         console.log('✅ Emergency fallback successful:', uniqueEmergencySpeakers.length, 'unique speakers');
+        setLoading(false);
       }
     };
 
@@ -195,6 +201,16 @@ export default function SpeakersCalendar() {
       </View>
     </View>
   );
+
+  if (loading) {
+    return (
+      <LoadingScreen
+        icon="people"
+        message="Loading speakers..."
+        fullScreen={true}
+      />
+    );
+  }
 
   return (
     <View style={styles.container}>

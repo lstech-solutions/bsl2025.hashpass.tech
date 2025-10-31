@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.9] - 2025-10-31
+
+### Beta
+- Version 1.3.9 release
+
+### Technical Details
+- Version: 1.3.9
+- Release Type: beta
+- Build Number: 202510310833
+- Release Date: 2025-10-31T08:33:45.755Z
+
+
 ## [1.3.8] - 2025-10-31
 
 ### Beta

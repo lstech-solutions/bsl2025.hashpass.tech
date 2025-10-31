@@ -13,65 +13,61 @@ frontend:
           else
             npm install
           fi
-        # Install AWS CLI for Lambda deployment
         - pip install awscli --upgrade --user
         - export PATH=~/.local/bin:$PATH
+        # Detect branch and set environment variables (defaults can be overridden in Amplify Console)
+        - |
+          if [ "$AWS_BRANCH" = "main" ]; then
+            export AMPLIFY_SHOW_ALL_EVENTS=${AMPLIFY_SHOW_ALL_EVENTS:-true}
+            export AMPLIFY_EVENT_ID=${AMPLIFY_EVENT_ID:-default}
+            export AMPLIFY_EVENT_DOMAIN=${AMPLIFY_EVENT_DOMAIN:-hashpass.tech}
+          elif [ "$AWS_BRANCH" = "bsl2025" ]; then
+            export AMPLIFY_SHOW_ALL_EVENTS=${AMPLIFY_SHOW_ALL_EVENTS:-false}
+            export AMPLIFY_EVENT_ID=${AMPLIFY_EVENT_ID:-bsl2025}
+            export AMPLIFY_EVENT_DOMAIN=${AMPLIFY_EVENT_DOMAIN:-bsl2025.hashpass.tech}
+          else
+            export AMPLIFY_SHOW_ALL_EVENTS=${AMPLIFY_SHOW_ALL_EVENTS:-false}
+            export AMPLIFY_EVENT_ID=${AMPLIFY_EVENT_ID:-bsl2025}
+            export AMPLIFY_EVENT_DOMAIN=${AMPLIFY_EVENT_DOMAIN:-bsl2025.hashpass.tech}
+          fi
+        - echo "Building for branch: $AWS_BRANCH"
+        - echo "Event ID: $AMPLIFY_EVENT_ID"
+        - echo "Show all events: $AMPLIFY_SHOW_ALL_EVENTS"
     build:
       commands:
-        # Clean previous builds
         - rm -rf dist
-        
-        # Create necessary directories for API routes
         - mkdir -p dist/client/_expo/functions/api/bslatam
-        
-        # Build Expo web app in server mode
         - npm run build:web
-        
-        # Copy all server files to client directory for Amplify
         - cp -r dist/server/* dist/client/
-
-        # Copy built server API handlers into Lambda source so the function can import them
         - mkdir -p amplify/backend/function/bslApi/src/server/_expo/functions
         - rm -rf amplify/backend/function/bslApi/src/server/_expo/functions/api || true
         - cp -r dist/server/_expo/functions/api amplify/backend/function/bslApi/src/server/_expo/functions/
-        
-        # Create a simple package.json for the API functions
-        - 'mkdir -p dist/client/api/bslatam'
-        - 'echo "{\"type\": \"module\"}" > dist/client/api/package.json'
-        
-        # Process and copy API route files with proper extension
+        - mkdir -p dist/client/api/bslatam
+        - echo "{\"type\": \"module\"}" > dist/client/api/package.json
         - |
           for file in app/api/bslatam/*+api.ts; do
             base=$(basename "$file" "+api.ts")
             mkdir -p "dist/client/api/bslatam/$base"
-            {
-              echo "import { handler } from '../../../../../app/api/bslatam/${base}+api';"
-              echo "export default async (req, res) => {"
-              echo "  try {"
-              echo "    const result = await handler(req, res);"
-              echo "    if (result) {"
-              echo "      res.status(200).json(result);"
-              echo "    }"
-              echo "  } catch (error) {"
-              echo "    console.error('API Error:', error);"
-              echo "    res.status(500).json({ error: 'Internal Server Error' });"
-              echo "  }"
-              echo "};"
-            } > "dist/client/api/bslatam/$base/index.js"
+            echo "import { handler } from '../../../../../app/api/bslatam/${base}+api';" > "dist/client/api/bslatam/$base/index.js"
+            echo "export default async (req, res) => {" >> "dist/client/api/bslatam/$base/index.js"
+            echo "  try {" >> "dist/client/api/bslatam/$base/index.js"
+            echo "    const result = await handler(req, res);" >> "dist/client/api/bslatam/$base/index.js"
+            echo "    if (result) {" >> "dist/client/api/bslatam/$base/index.js"
+            echo "      res.status(200).json(result);" >> "dist/client/api/bslatam/$base/index.js"
+            echo "    }" >> "dist/client/api/bslatam/$base/index.js"
+            echo "  } catch (error) {" >> "dist/client/api/bslatam/$base/index.js"
+            echo "    console.error('API Error:', error);" >> "dist/client/api/bslatam/$base/index.js"
+            echo "    res.status(500).json({ error: 'Internal Server Error' });" >> "dist/client/api/bslatam/$base/index.js"
+            echo "  }" >> "dist/client/api/bslatam/$base/index.js"
+            echo "};" >> "dist/client/api/bslatam/$base/index.js"
             echo "Created API handler at dist/client/api/bslatam/$base/index.js"
           done
-        
-        # Add cache-busting timestamp to index.html
-        - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
-        
-        # Debug: List all API files
-        - echo "\n=== API files in dist/client/_expo/functions/api/bslatam/ ==="
+        - echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html
+        - echo "=== API files in dist/client/_expo/functions/api/bslatam/ ==="
         - ls -la dist/client/_expo/functions/api/bslatam/ || echo "No API files found"
-        - echo "\n=== Contents of dist/client/ ==="
+        - echo "=== Contents of dist/client/ ==="
         - ls -la dist/client/
-        - 'echo "Checking for index.html:"'
         - ls -la dist/client/index.html
-
   artifacts:
     baseDirectory: dist/client
     files:
@@ -101,45 +97,41 @@ frontend:
         headers:
           - key: Cache-Control
             value: 'public, max-age=31536000, immutable'
-
   cache:
     paths:
       - node_modules/**/*
       - $(npm root --global)/**/*
-
-# Redirects for SPA routing
 redirects:
-  # API routes - must come before the catch-all rule
   - source: '/api/bslatam/agenda/'
     status: 200
     target: '/api/bslatam/agenda/index.js'
   - source: '/api/bslatam/agenda-status/'
     status: 200
     target: '/api/bslatam/agenda-status/index.js'
-  
-  # Static files
   - source: '/sw.js'
     status: 200
     target: '/sw.js'
   - source: '/_expo/*'
     status: 200
     target: '/_expo/'
-    
-  # SPA fallback - must be last
-  - source: '/<*>'
+  - source: '/events/bsl2025/*'
     status: 200
     target: '/index.html'
-  - source: '/dashboard/*'
+  - source: '/events/*'
     status: 200
     target: '/index.html'
   - source: '/auth/*'
     status: 200
     target: '/index.html'
-  - source: '/bslatam/*'
+  - source: '/dashboard/*'
     status: 200
     target: '/index.html'
-
-# Error page for 404s
+  - source: '/'
+    status: 200
+    target: '/index.html'
+  - source: '/<*>'
+    status: 200
+    target: '/index.html'
 customErrorResponses:
   - errorCode: 404
     responsePagePath: '/index.html'

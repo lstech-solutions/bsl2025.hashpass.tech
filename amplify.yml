@@ -1,98 +1,123 @@
-# Amplify Gen2 Configuration for HashPass (Expo)
-# This file configures your Amplify project with serverless API routing for Expo
-
-# Project settings
-project:
-  name: hashpass-tech
-  type: fullstack
-  version: 2.0
-  environment: dev
-
-# Build settings for Expo
-build:
-  commands:
-    - npm ci
-    - npx expo install
-    - npx expo prebuild
-    - npx expo export:web
-  baseDirectory: web-build
-  buildPath: web-build
-
-# App configuration
-app:
-  framework: react-native
-  buildCommand: npx expo export:web
-  startCommand: npx expo start
-  environmentVariables:
-    EXPO_PUBLIC_API_URL: ${api.url}
-    EXPO_PUBLIC_REGION: ${env:REGION}
-
-# Authentication configuration
-auth:
-  identityPoolId: ${env:IDENTITY_POOL_ID}
-  region: ${env:REGION}
-  userPoolId: ${env:USER_POOL_ID}
-  userPoolWebClientId: ${env:USER_POOL_WEB_CLIENT_ID}
-  oauth: {}
-
-# API configuration
-api:
-  name: hashpassApi
-  type: REST
-  configure:
-    endpointType: REGIONAL
-    path: /api
-    stage: dev
-  routes:
-    - path: /api/*
-      target: 
-        kind: Lambda
-        handler: src/api
-      access:
-        - private
-
-# Storage configuration
-storage:
-  resources:
-    - name: hashpassStorage
-      type: s3
-      access: private
-
-# Environment variables
-environmentVariables:
-  - name: EXPO_PUBLIC_API_URL
-    value: ${api.url}
-  - name: EXPO_PUBLIC_REGION
-    value: ${env:REGION}
-  - name: EXPO_PUBLIC_USER_POOL_ID
-    value: ${env:USER_POOL_ID}
-  - name: EXPO_PUBLIC_USER_POOL_WEB_CLIENT_ID
-    value: ${env:USER_POOL_WEB_CLIENT_ID}
-  - name: EXPO_PUBLIC_IDENTITY_POOL_ID
-    value: ${env:IDENTITY_POOL_ID}
-
-# Custom domains (uncomment and configure as needed)
-customDomains:
-   - domainName: hashpass.tech
-     subDomain: bsl2025
-     enableAutoSubdomain: true
-   - domainName: bsl2025.hashpass.tech
-     subDomain: api
-     enableAutoSubdomain: true
-
-# Redirects for SPA routing
+version: 1.0
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - nvm install 22.18.0
+        - npm install --quiet --global @expo/cli
+        - >
+          if [ -f yarn.lock ]; then
+            yarn install --frozen-lockfile
+          elif [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+        - pip install awscli --upgrade --user
+        - export PATH=~/.local/bin:$PATH
+        - export AMPLIFY_SHOW_ALL_EVENTS=false
+        - export AMPLIFY_EVENT_ID=bsl2025
+        - export AMPLIFY_EVENT_DOMAIN=bsl2025.hashpass.tech
+    build:
+      commands:
+        - rm -rf dist
+        - mkdir -p dist/client/_expo/functions/api/bslatam
+        - AMPLIFY_EVENT_ID=bsl2025 npm run build:web
+        - cp -r dist/server/* dist/client/
+        - mkdir -p amplify/backend/function/bslApi/src/server/_expo/functions
+        - rm -rf amplify/backend/function/bslApi/src/server/_expo/functions/api || true
+        - cp -r dist/server/_expo/functions/api amplify/backend/function/bslApi/src/server/_expo/functions/
+        - mkdir -p dist/client/api/bslatam
+        - echo '{"type": "module"}' > dist/client/api/package.json
+        - |
+          for file in app/api/bslatam/*+api.ts; do
+            base=$(basename "$file" "+api.ts")
+            mkdir -p "dist/client/api/bslatam/$base"
+            {
+              echo "import { handler } from '../../../../../app/api/bslatam/${base}+api';"
+              echo "export default async (req, res) => {"
+              echo "  try {"
+              echo "    const result = await handler(req, res);"
+              echo "    if (result) {"
+              echo "      res.status(200).json(result);"
+              echo "    }"
+              echo "  } catch (error) {"
+              echo "    console.error('API Error:', error);"
+              echo "    res.status(500).json({ error: 'Internal Server Error' });"
+              echo "  }"
+              echo "};"
+            } > "dist/client/api/bslatam/$base/index.js"
+            echo "Created API handler at dist/client/api/bslatam/$base/index.js"
+          done
+        - echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html
+        - echo "=== API files in dist/client/_expo/functions/api/bslatam/ ==="
+        - ls -la dist/client/_expo/functions/api/bslatam/ || echo "No API files found"
+        - echo "=== Contents of dist/client/ ==="
+        - ls -la dist/client/
+        - ls -la dist/client/index.html
+  artifacts:
+    baseDirectory: dist/client
+    files:
+      - '**/*'
+    customHeaders:
+      - pattern: '_expo/static/**/*'
+        headers:
+          - key: Cache-Control
+            value: 'public, max-age=31536000, immutable'
+      - pattern: 'index.html'
+        headers:
+          - key: Cache-Control
+            value: 'no-cache, no-store, must-revalidate'
+          - key: Pragma
+            value: 'no-cache'
+          - key: Expires
+            value: '0'
+      - pattern: '**/*.html'
+        headers:
+          - key: Cache-Control
+            value: 'no-cache, no-store, must-revalidate'
+          - key: Pragma
+            value: 'no-cache'
+          - key: Expires
+            value: '0'
+      - pattern: '**/*.js'
+        headers:
+          - key: Cache-Control
+            value: 'public, max-age=31536000, immutable'
+  cache:
+    paths:
+      - node_modules/**/*
+      - $(npm root --global)/**/*
 redirects:
-  - source: /<*>
-    target: /index.html
+  - source: '/api/bslatam/agenda/'
     status: 200
-
-# CORS configuration for API
-cors:
-  allowOrigins:
-    - exp://*
-    - http://localhost:8081
-    - https://*.amazonaws.com
-  allowHeaders:
-    - "*"
-  allowMethods:
-    - "*"
+    target: '/api/bslatam/agenda/index.js'
+  - source: '/api/bslatam/agenda-status/'
+    status: 200
+    target: '/api/bslatam/agenda-status/index.js'
+  - source: '/sw.js'
+    status: 200
+    target: '/sw.js'
+  - source: '/_expo/*'
+    status: 200
+    target: '/_expo/'
+  - source: '/events/bsl2025/*'
+    status: 200
+    target: '/index.html'
+  - source: '/auth/*'
+    status: 200
+    target: '/index.html'
+  - source: '/dashboard/*'
+    status: 200
+    target: '/index.html'
+  - source: '/'
+    status: 302
+    target: '/events/bsl2025/home'
+  - source: '/<*>'
+    status: 200
+    target: '/index.html'
+customErrorResponses:
+  - errorCode: 404
+    responsePagePath: '/index.html'
+    responseCode: 200
+    errorCachingMinTTL: 0

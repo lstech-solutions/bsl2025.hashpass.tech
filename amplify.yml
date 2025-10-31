@@ -37,7 +37,7 @@ frontend:
       commands:
         - rm -rf dist
         - mkdir -p dist/client/_expo/functions/api/bslatam
-        - npm run build:web
+        - 'npm run build:web'
         - cp -r dist/server/* dist/client/
         - mkdir -p amplify/backend/function/bslApi/src/server/_expo/functions
         - rm -rf amplify/backend/function/bslApi/src/server/_expo/functions/api || true

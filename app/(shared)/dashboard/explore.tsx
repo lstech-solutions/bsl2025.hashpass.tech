@@ -1,10 +1,8 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, Image, Dimensions, TouchableOpacity, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import { SvgUri } from 'react-native-svg';
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { useScroll } from '../../../contexts/ScrollContext';
 import { useEvent } from '../../../contexts/EventContext';
 import { useTheme } from '../../../hooks/useTheme';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import EventBanner from '../../../components/EventBanner';
@@ -17,49 +15,6 @@ import {
   type EventInfo 
 } from '../../../lib/event-detector';
 
-// Type definitions
-interface Ticket {
-  id: string;
-  title: string;
-  date: string;
-  access: string;
-  type: string;
-  image: string;
-}
-
-interface Event {
-  id: string;
-  title: string;
-  date: string;
-  location: string;
-  image: string;
-}
-
-interface AgendaItem {
-  id: string;
-  time: string;
-  title: string;
-  description?: string;
-  speakers?: string[];
-  type: 'keynote' | 'panel' | 'break' | 'meal' | 'registration';
-  location?: string;
-}
-
-interface Pass {
-  id: string;
-  user_id: string;
-  event_id: string;
-  pass_type: 'general' | 'vip' | 'business';
-  status: 'active' | 'used' | 'expired' | 'cancelled';
-  purchase_date: string;
-  price_usd: number;
-  access_features: string[];
-  special_perks: string[];
-  created_at: string;
-  updated_at: string;
-}
-
-
 export default function ExploreScreen() {
   const { scrollY } = useScroll();
   const { event: currentEventFromContext } = useEvent();
@@ -68,17 +23,33 @@ export default function ExploreScreen() {
   const params = useLocalSearchParams();
   const styles = getStyles(isDark, colors);
   
-  // Get current event from route or context
-  const currentEvent = getCurrentEvent(params.eventId as string) || currentEventFromContext;
+  // Get current event from route - getCurrentEvent returns EventInfo | null
+  const currentEventFromRoute = getCurrentEvent(params.eventId as string);
   const availableEvents = getAvailableEvents();
   
-  const [selectedEvent, setSelectedEvent] = useState(currentEvent);
+  // Convert EventConfig from context to EventInfo if needed, or use route event
+  const currentEventInfo: EventInfo | null = currentEventFromRoute 
+    ? currentEventFromRoute
+    : currentEventFromContext 
+      ? availableEvents.find(e => e.id === currentEventFromContext.id) || null
+      : availableEvents[0] || null;
   
-  // Handle case when no event is selected
+  // Ensure we have a valid event before initializing state
+  if (!currentEventInfo) {
+    return (
+      <View style={styles.container}>
+        <Text style={{ color: colors.text.primary }}>No event available</Text>
+      </View>
+    );
+  }
+  
+  const [selectedEvent, setSelectedEvent] = useState<EventInfo>(currentEventInfo);
+  
+  // Handle case when no event is selected (shouldn't happen after above check, but keeping for safety)
   if (!selectedEvent) {
     return (
       <View style={styles.container}>
-        <Text>No event selected</Text>
+        <Text style={{ color: colors.text.primary }}>No event selected</Text>
       </View>
     );
   }
@@ -180,12 +151,12 @@ export default function ExploreScreen() {
       >
         {/* Event Banner (now scrolls with content) */}
         <EventBanner 
-          title={(event as any)?.title || (selectedEvent as any)?.title || 'Blockchain Summit Latam 2025'}
-          subtitle={(event as any)?.subtitle || (selectedEvent as any)?.subtitle || 'November 12-14, 2025 • Universidad EAFIT, Medellín'}
-          date={(event as any)?.date || "November 12-14, 2025"}
+          title={selectedEvent?.title || 'Blockchain Summit Latam 2025'}
+          subtitle={selectedEvent?.subtitle || 'November 12-14, 2025 • Universidad EAFIT, Medellín'}
+          date={selectedEvent?.eventDateString || selectedEvent?.subtitle || "November 12-14, 2025"}
           showCountdown={true}
           showLiveIndicator={true}
-          eventStartDate="2025-11-12T09:00:00Z"
+          eventStartDate={selectedEvent?.eventStartDate || "2025-11-12T09:00:00-05:00"}
         />
         {/* Header */}
         <View style={styles.header}>

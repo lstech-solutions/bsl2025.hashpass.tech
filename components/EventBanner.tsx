@@ -171,8 +171,9 @@ const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => Sty
     padding: 20,
     backgroundColor: backgroundColor,
     alignItems: 'center',
-    minHeight: 160,
+    minHeight: 360,
     justifyContent: 'center',
+    flex: 1,
   },
   mainInfo: {
     alignItems: 'center',

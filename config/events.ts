@@ -1,67 +1,28 @@
-export interface Speaker {
-  id: string;
-  name: string;
-  title: string;
-  company: string;
-  bio?: string;
-  image?: string;
-  social?: {
-    linkedin?: string;
-    twitter?: string;
-  };
-}
+// Re-export types for backward compatibility
+export type { Speaker, AgendaItem, EventConfig, QuickAccessItem } from '../types/events';
 
-export interface AgendaItem {
-  id: string;
-  time: string;
-  title: string;
-  description?: string;
-  speakers?: string[];
-  type: 'keynote' | 'panel' | 'break' | 'meal' | 'registration';
-  location?: string;
-}
-
-export interface EventConfig {
-  id: string;
-  name: string;
-  domain: string;
-  features: string[];
-  branding: {
-    primaryColor: string;
-    secondaryColor?: string;
-    logo: string;
-    favicon?: string;
-  };
-  api: {
-    basePath: string;
-    endpoints: Record<string, string>;
-  };
-  routes: {
-    home: string;
-    speakers: string;
-    bookings: string;
-    admin?: string;
-  };
-  database?: {
-    schema: string;
-    tables: Record<string, string>;
-  };
-  speakers?: Speaker[];
-  agenda?: AgendaItem[];
-  eventType?: 'hashpass' | 'whitelabel';
-}
+import type { EventConfig } from '../types/events';
 
 export const EVENTS: Record<string, EventConfig> = {
   'bsl2025': {
     id: 'bsl2025',
     name: 'BSL 2025',
     domain: 'bsl2025.hashpass.tech',
+    // UI display fields
+    title: 'Blockchain Summit Latam 2025',
+    subtitle: 'Universidad EAFIT, Medellín',
+    image: 'https://blockchainsummit.la/wp-content/uploads/2025/09/bsl2025-banner.jpg',
+    color: '#2196F3',
+    // Event dates for countdown and display
+    eventStartDate: '2025-11-12T09:00:00-05:00',
+    eventEndDate: '2025-11-14T23:59:59-05:00',
+    eventDateString: 'November 12-14, 2025 • Medellín, Colombia',
     features: ['matchmaking', 'speakers', 'bookings', 'admin'],
     eventType: 'whitelabel',
     branding: {
-      primaryColor: '#007AFF',
+      primaryColor: '#2196F3',
       secondaryColor: '#34A853',
-      logo: '/assets/logos/logo-full-hashpass-white-cyan.svg',
+      logo: '/assets/logos/bsl-logo.png',
       favicon: '/favicon.ico'
     },
     api: {
@@ -173,12 +134,51 @@ export const EVENTS: Record<string, EventConfig> = {
       { id: '10', time: '15:10 – 16:20', title: 'Panel (Bancos Comerciales) – "Transformación Digital de la Banca Tradicional"', type: 'panel' },
       { id: '11', time: '16:25 – 17:35', title: 'Panel (Reguladores) – "Marco regulatorio para la innovación financiera en LatAm"', type: 'panel' },
       { id: '12', time: '17:40 – 18:30', title: 'Panel – "El Futuro del Dinero Digital: Innovación, Confianza y Colaboración en LATAM"', type: 'panel' }
+    ],
+    quickAccessItems: [
+      {
+        id: 'speakers',
+        title: 'Featured Speakers',
+        subtitle: 'Meet the experts',
+        icon: 'people',
+        color: '#007AFF',
+        route: '/events/bsl2025/speakers/calendar'
+      },
+      {
+        id: 'networking',
+        title: 'Networking Center',
+        subtitle: 'Connect & meet',
+        icon: 'people-alt',
+        color: '#4CAF50',
+        route: '/events/bsl2025/networking'
+      },
+      {
+        id: 'agenda',
+        title: 'Event Agenda',
+        subtitle: '3 Days Schedule',
+        icon: 'event',
+        color: '#34A853',
+        route: '/events/bsl2025/agenda'
+      },
+      {
+        id: 'event-info',
+        title: 'Event Information',
+        subtitle: 'Details & Logistics',
+        icon: 'info',
+        color: '#FF9500',
+        route: '/events/bsl2025/event-info'
+      }
     ]
   },
   'default': {
     id: 'default',
     name: 'HashPass',
     domain: 'hashpass.tech',
+    // UI display fields
+    title: 'HashPass',
+    subtitle: 'Digital Identity & Wallet Platform',
+    image: '/assets/images/hashpass-banner.jpg',
+    color: '#6366f1',
     features: ['auth', 'dashboard', 'wallet'],
     eventType: 'hashpass',
     branding: {

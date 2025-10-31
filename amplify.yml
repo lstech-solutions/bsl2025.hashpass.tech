@@ -18,17 +18,17 @@ frontend:
         # Detect branch and set environment variables (defaults can be overridden in Amplify Console)
         - |
           if [ "$AWS_BRANCH" = "main" ]; then
-            export AMPLIFY_SHOW_ALL_EVENTS=${AMPLIFY_SHOW_ALL_EVENTS:-true}
-            export AMPLIFY_EVENT_ID=${AMPLIFY_EVENT_ID:-default}
-            export AMPLIFY_EVENT_DOMAIN=${AMPLIFY_EVENT_DOMAIN:-hashpass.tech}
+            export AMPLIFY_SHOW_ALL_EVENTS="${AMPLIFY_SHOW_ALL_EVENTS:-true}"
+            export AMPLIFY_EVENT_ID="${AMPLIFY_EVENT_ID:-default}"
+            export AMPLIFY_EVENT_DOMAIN="${AMPLIFY_EVENT_DOMAIN:-hashpass.tech}"
           elif [ "$AWS_BRANCH" = "bsl2025" ]; then
-            export AMPLIFY_SHOW_ALL_EVENTS=${AMPLIFY_SHOW_ALL_EVENTS:-false}
-            export AMPLIFY_EVENT_ID=${AMPLIFY_EVENT_ID:-bsl2025}
-            export AMPLIFY_EVENT_DOMAIN=${AMPLIFY_EVENT_DOMAIN:-bsl2025.hashpass.tech}
+            export AMPLIFY_SHOW_ALL_EVENTS="${AMPLIFY_SHOW_ALL_EVENTS:-false}"
+            export AMPLIFY_EVENT_ID="${AMPLIFY_EVENT_ID:-bsl2025}"
+            export AMPLIFY_EVENT_DOMAIN="${AMPLIFY_EVENT_DOMAIN:-bsl2025.hashpass.tech}"
           else
-            export AMPLIFY_SHOW_ALL_EVENTS=${AMPLIFY_SHOW_ALL_EVENTS:-false}
-            export AMPLIFY_EVENT_ID=${AMPLIFY_EVENT_ID:-bsl2025}
-            export AMPLIFY_EVENT_DOMAIN=${AMPLIFY_EVENT_DOMAIN:-bsl2025.hashpass.tech}
+            export AMPLIFY_SHOW_ALL_EVENTS="${AMPLIFY_SHOW_ALL_EVENTS:-false}"
+            export AMPLIFY_EVENT_ID="${AMPLIFY_EVENT_ID:-bsl2025}"
+            export AMPLIFY_EVENT_DOMAIN="${AMPLIFY_EVENT_DOMAIN:-bsl2025.hashpass.tech}"
           fi
         - 'echo "Building for branch: $AWS_BRANCH"'
         - 'echo "Event ID: $AMPLIFY_EVENT_ID"'
@@ -62,10 +62,10 @@ frontend:
             echo "};" >> "dist/client/api/bslatam/$base/index.js"
             echo "Created API handler at dist/client/api/bslatam/$base/index.js"
           done
-        - echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html
-        - echo "=== API files in dist/client/_expo/functions/api/bslatam/ ==="
+        - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
+        - 'echo "=== API files in dist/client/_expo/functions/api/bslatam/ ==="'
         - ls -la dist/client/_expo/functions/api/bslatam/ || echo "No API files found"
-        - echo "=== Contents of dist/client/ ==="
+        - 'echo "=== Contents of dist/client/ ==="'
         - ls -la dist/client/
         - ls -la dist/client/index.html
   artifacts:

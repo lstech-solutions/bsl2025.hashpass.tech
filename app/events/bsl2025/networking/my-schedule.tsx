@@ -13,6 +13,7 @@ import {
   TextStyle,
   ActivityIndicator,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { useTheme } from '../../../../hooks/useTheme';
 import { format, addDays, isSameDay, isToday, isPast, isFuture, parseISO } from 'date-fns';
@@ -25,6 +26,7 @@ import { useToastHelpers } from '../../../../contexts/ToastContext';
 import { Meeting, TimeSlot, DaySchedule } from '@/types/networking';
 import ScheduleConfirmationModal from '../../../../components/ScheduleConfirmationModal';
 import * as Haptics from 'expo-haptics';
+import { AgendaItem } from '../../../types/agenda';
 
 // Constants
 const WORKING_HOURS = { start: 8, end: 19 }; // 8 AM to 7 PM (covers 08:00–18:30 sessions)
@@ -84,6 +86,10 @@ const MySchedule = () => {
     meeting: null,
     slotStartTime: null,
   });
+  const [daySummaryModal, setDaySummaryModal] = useState<{
+    visible: boolean;
+    dayStat: typeof dayStats[0] | null;
+  }>({ visible: false, dayStat: null });
   const [isConfirming, setIsConfirming] = useState(false);
   // Meetings state
   const [meetings, setMeetings] = useState<any[]>([]);
@@ -418,6 +424,57 @@ const MySchedule = () => {
 
     return grouped;
   }, [schedule, selectedDate]);
+
+  // Calculate day statistics for calendar view
+  const dayStats = useMemo(() => {
+    return schedule.map(day => {
+      let confirmedCount = 0;
+      let tentativeCount = 0;
+      let interestedCount = 0;
+      let blockedCount = 0;
+      let favoritesCount = 0;
+      
+      day.slots.forEach(slot => {
+        const slotKey = slot.startTime.toISOString();
+        const freeSlotStatus = userFreeSlotStatus[slotKey] || 'available';
+        
+        if (slot.meeting) {
+          const isAgendaEvent = (slot.meeting as any).isAgendaEvent;
+          const userStatus = isAgendaEvent 
+            ? (userAgendaStatus[slot.meeting.id] || 'tentative')
+            : (userMeetingStatus[slot.meeting.id] || 'tentative');
+          
+          if (userStatus === 'confirmed') {
+            confirmedCount++;
+          } else {
+            tentativeCount++;
+          }
+          
+          // Count favorites for agenda events
+          if (isAgendaEvent && favoriteStatus[slot.meeting.id]) {
+            favoritesCount++;
+          }
+        } else {
+          if (freeSlotStatus === 'interested') {
+            interestedCount++;
+          } else if (freeSlotStatus === 'blocked') {
+            blockedCount++;
+          }
+        }
+      });
+      
+      return {
+        date: day.date,
+        confirmed: confirmedCount,
+        tentative: tentativeCount,
+        interested: interestedCount,
+        blocked: blockedCount,
+        favorites: favoritesCount,
+        // Total only counts actively tracked slots (confirmed, interested, blocked) - excludes tentative defaults
+        total: confirmedCount + interestedCount + blockedCount,
+      };
+    });
+  }, [schedule, userAgendaStatus, userMeetingStatus, userFreeSlotStatus, favoriteStatus]);
 
   // Toggle expanded state for hour group
   const toggleHourGroup = (hour: string) => {
@@ -884,7 +941,7 @@ const MySchedule = () => {
                   {
                     backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
                     borderColor: isTracked 
-                      ? (freeSlotStatus === 'interested' ? colors.primary : colors.text.secondary)
+                      ? (freeSlotStatus === 'interested' ? '#F44336' : colors.text.secondary)
                       : (isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'),
                     borderWidth: isTracked ? 2 : 1,
                     shadowColor: '#000000',
@@ -916,7 +973,7 @@ const MySchedule = () => {
                   }
                   size={20}
                   color={
-                    freeSlotStatus === 'interested' ? colors.primary :
+                    freeSlotStatus === 'interested' ? '#F44336' :
                     freeSlotStatus === 'blocked' ? colors.error.main :
                     freeSlotStatus === 'tentative' ? '#FF9800' :
                     colors.primary
@@ -924,7 +981,7 @@ const MySchedule = () => {
                 />
                 {isTracked && (
                   <Text style={[styles.freeSlotLabel, { 
-                    color: freeSlotStatus === 'interested' ? colors.primary :
+                    color: freeSlotStatus === 'interested' ? '#F44336' :
                            freeSlotStatus === 'blocked' ? colors.error.main :
                            '#FF9800',
                     fontSize: 8,
@@ -971,7 +1028,7 @@ const MySchedule = () => {
           {
             backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
             borderColor: isTracked 
-              ? (freeSlotStatus === 'interested' ? colors.primary : colors.text.secondary)
+              ? (freeSlotStatus === 'interested' ? '#F44336' : colors.text.secondary)
               : (isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'),
             borderWidth: isTracked ? 2 : 1,
             shadowColor: '#000000',
@@ -1001,7 +1058,7 @@ const MySchedule = () => {
           }
           size={20}
           color={
-            freeSlotStatus === 'interested' ? colors.primary :
+            freeSlotStatus === 'interested' ? '#F44336' :
             freeSlotStatus === 'blocked' ? colors.error.main :
             freeSlotStatus === 'tentative' ? '#FF9800' :
             colors.primary
@@ -1009,7 +1066,7 @@ const MySchedule = () => {
         />
         {isTracked && (
           <Text style={[styles.freeSlotLabel, { 
-            color: freeSlotStatus === 'interested' ? colors.primary :
+            color: freeSlotStatus === 'interested' ? '#F44336' :
                    freeSlotStatus === 'blocked' ? colors.error.main :
                    '#FF9800'
           }]}>
@@ -1111,71 +1168,167 @@ const MySchedule = () => {
     ]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      {/* Header spacing */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 }} />
-
-      {/* Date Selector */}
-      <View style={[
-        styles.dateSelector,
-        {
-          backgroundColor: colors.background.paper,
-          borderBottomColor: colors.divider
-        }
-      ]}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dateScrollView}
-        >
-          {schedule.map((day) => {
-            const isSelected = isSameDay(day.date, selectedDate);
-            return (
-              <TouchableOpacity
-                key={day.date.toString()}
-                style={[
-                  styles.dateButton,
-                  isSelected && { backgroundColor: colors.primary },
-                  day.isToday && !isSelected && {
-                    borderWidth: 1,
-                    borderColor: colors.primary,
-                  },
-                ]}
-                onPress={() => setSelectedDate(day.date)}
-              >
-                <Text
+      {/* Scrollable Content - Includes Calendar and Time Slots */}
+      <ScrollView 
+        style={styles.scrollContent}
+        contentContainerStyle={styles.scrollContentContainer}
+        showsVerticalScrollIndicator={true}
+      >
+        {/* Calendar Week View */}
+        <View style={[
+          styles.calendarContainer,
+          {
+            backgroundColor: colors.background.paper,
+            borderBottomColor: colors.divider,
+          }
+        ]}>
+          <View style={styles.calendarHeader}>
+            <Text style={[styles.calendarTitle, { color: colors.text.primary }]}>
+              Schedule Overview
+            </Text>
+          </View>
+          <View style={styles.calendarWeek}>
+            {dayStats.map((dayStat) => {
+              const isSelected = isSameDay(dayStat.date, selectedDate);
+              const isCurrentDay = isToday(dayStat.date);
+              
+              return (
+                <TouchableOpacity
+                  key={dayStat.date.toString()}
                   style={[
-                    styles.dateNumber,
-                    { color: isSelected ? '#ffffff' : colors.text.primary },
-                    day.isToday && !isSelected && { color: colors.primary },
+                    styles.calendarDay,
+                    {
+                      backgroundColor: isSelected 
+                        ? colors.primary 
+                        : isDark 
+                        ? colors.surface 
+                        : '#FFFFFF',
+                      borderColor: isSelected 
+                        ? colors.primary 
+                        : isCurrentDay 
+                        ? colors.primary 
+                        : colors.divider,
+                      borderWidth: isSelected || isCurrentDay ? 2 : 1,
+                    }
                   ]}
+                  onPress={() => {
+                    setSelectedDate(dayStat.date);
+                    setDaySummaryModal({ visible: true, dayStat });
+                  }}
+                  activeOpacity={0.7}
                 >
-                  {format(day.date, 'd')}
+                  <Text style={[
+                    styles.calendarDayName,
+                    { 
+                      color: isSelected 
+                        ? '#FFFFFF' 
+                        : isCurrentDay 
+                        ? colors.primary 
+                        : colors.text.secondary 
+                    }
+                  ]}>
+                    {format(dayStat.date, 'EEE')}
+                  </Text>
+                  <Text style={[
+                    styles.calendarDayNumber,
+                    { 
+                      color: isSelected 
+                        ? '#FFFFFF' 
+                        : colors.text.primary 
+                    }
+                  ]}>
+                    {format(dayStat.date, 'd')}
+                  </Text>
+                  
+                  {/* Indicators */}
+                  <View style={styles.calendarIndicators}>
+                    {dayStat.confirmed > 0 && (
+                      <View style={[styles.indicatorDot, { backgroundColor: '#4CAF50' }]} />
+                    )}
+                    {dayStat.tentative > 0 && (
+                      <View style={[styles.indicatorDot, { backgroundColor: '#FF9800' }]} />
+                    )}
+                    {dayStat.interested > 0 && (
+                      <View style={[styles.indicatorDot, { backgroundColor: '#F44336' }]} />
+                    )}
+                    {dayStat.blocked > 0 && (
+                      <View style={[styles.indicatorDot, { backgroundColor: colors.error.main }]} />
+                    )}
+                  </View>
+                  
+                  {/* Count badge */}
+                  {dayStat.total > 0 && (
+                    <View style={[
+                      styles.countBadge,
+                      {
+                        backgroundColor: isSelected 
+                          ? 'rgba(255, 255, 255, 0.3)' 
+                          : colors.primary + '20',
+                      }
+                    ]}>
+                      <Text style={[
+                        styles.countBadgeText,
+                        { 
+                          color: isSelected 
+                            ? '#FFFFFF' 
+                            : colors.primary 
+                        }
+                      ]}>
+                        {dayStat.total}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          
+          {/* Legend */}
+          <View style={styles.calendarLegend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#4CAF50' }]} />
+              <Text style={[styles.legendText, { color: colors.text.secondary }]}>Confirmed</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#FF9800' }]} />
+              <Text style={[styles.legendText, { color: colors.text.secondary }]}>Tentative</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#F44336' }]} />
+              <Text style={[styles.legendText, { color: colors.text.secondary }]}>Interested</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.error.main }]} />
+              <Text style={[styles.legendText, { color: colors.text.secondary }]}>Blocked</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[
+                styles.legendCircleWithNumber,
+                {
+                  backgroundColor: colors.primary + '20',
+                  borderColor: colors.primary,
+                }
+              ]}>
+                <Text style={[
+                  styles.legendCircleNumber,
+                  { color: colors.primary }
+                ]}>
+                  {dayStats.reduce((sum, day) => sum + day.total, 0)}
                 </Text>
-                <Text
-                  style={[
-                    styles.dateName,
-                    { color: isSelected ? '#ffffff' : colors.text.primary, opacity: 0.7 },
-                    day.isToday && !isSelected && { color: colors.primary },
-                  ]}
-                >
-                  {day.date.toLocaleDateString('en-US', { weekday: 'short' })}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+              </View>
+              <Text style={[styles.legendText, { color: colors.text.secondary }]}>Scheduled Slots</Text>
+            </View>
+          </View>
+        </View>
 
-      {/* Time Slots */}
-      <ScrollView style={[
-        styles.content,
-        { backgroundColor: colors.background.primary }
-      ]}>
-        {Object.entries(groupedSlots).map(([hour, slots]) =>
-          renderHourGroup(hour, slots)
-        )}
+        {/* Time Slots */}
+        <View style={styles.content}>
+          {Object.entries(groupedSlots).map(([hour, slots]) =>
+            renderHourGroup(hour, slots)
+          )}
 
-        {/* My Meetings moved to dedicated page: /events/bsl2025/networking/my-meetings */}
+          {/* My Meetings moved to dedicated page: /events/bsl2025/networking/my-meetings */}
+        </View>
       </ScrollView>
 
       {/* Confirmation Modal */}
@@ -1201,6 +1354,326 @@ const MySchedule = () => {
           onToggleBlocked={() => handleToggleFreeSlotBlocked(confirmationModal.slotStartTime!)}
         />
       )}
+
+      {/* Day Summary Modal */}
+      {daySummaryModal.dayStat && (
+        <Modal
+          visible={daySummaryModal.visible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setDaySummaryModal({ visible: false, dayStat: null })}
+        >
+          <View style={[
+            styles.modalOverlay,
+            { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)' }
+          ]}>
+            <View style={[
+              styles.modalContent,
+              {
+                backgroundColor: colors.background.paper,
+                borderColor: colors.divider,
+              }
+            ]}>
+              {/* Close X Button */}
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setDaySummaryModal({ visible: false, dayStat: null })}
+              >
+                <MaterialIcons name="close" size={24} color={colors.text.secondary} />
+              </TouchableOpacity>
+
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <MaterialIcons
+                  name="calendar-today"
+                  size={32}
+                  color={colors.primary}
+                />
+                <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
+                  Schedule Summary
+                </Text>
+                <Text style={[styles.modalSubtitle, { color: colors.text.secondary }]}>
+                  {format(daySummaryModal.dayStat.date, 'EEEE, MMMM d, yyyy')}
+                </Text>
+              </View>
+
+              {/* Visual Summary */}
+              <View style={styles.summaryContainer}>
+                {/* Confirmed */}
+                {daySummaryModal.dayStat.confirmed > 0 && (
+                  <View style={styles.summaryRow}>
+                    <View style={styles.summaryLabelContainer}>
+                      <View style={[styles.summaryDot, { backgroundColor: '#4CAF50' }]} />
+                      <Text style={[styles.summaryLabel, { color: colors.text.primary }]}>
+                        Confirmed
+                      </Text>
+                    </View>
+                    <View style={styles.summaryBarContainer}>
+                      <View style={[
+                        styles.summaryBar,
+                        {
+                          width: `${(daySummaryModal.dayStat.confirmed / Math.max(daySummaryModal.dayStat.total, 1)) * 100}%`,
+                          backgroundColor: '#4CAF50',
+                        }
+                      ]} />
+                    </View>
+                    <Text style={[styles.summaryCount, { color: colors.text.primary }]}>
+                      {daySummaryModal.dayStat.confirmed}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Tentative */}
+                {daySummaryModal.dayStat.tentative > 0 && (
+                  <View style={styles.summaryRow}>
+                    <View style={styles.summaryLabelContainer}>
+                      <View style={[styles.summaryDot, { backgroundColor: '#FF9800' }]} />
+                      <Text style={[styles.summaryLabel, { color: colors.text.primary }]}>
+                        Tentative
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.summaryBarContainer,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      }
+                    ]}>
+                      <View style={[
+                        styles.summaryBar,
+                        {
+                          width: `${(daySummaryModal.dayStat.tentative / Math.max(daySummaryModal.dayStat.total + daySummaryModal.dayStat.tentative, 1)) * 100}%`,
+                          backgroundColor: '#FF9800',
+                        }
+                      ]} />
+                    </View>
+                    <Text style={[styles.summaryCount, { color: colors.text.primary }]}>
+                      {daySummaryModal.dayStat.tentative}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Interested */}
+                {daySummaryModal.dayStat.interested > 0 && (
+                  <View style={styles.summaryRow}>
+                    <View style={styles.summaryLabelContainer}>
+                      <View style={[styles.summaryDot, { backgroundColor: '#F44336' }]} />
+                      <Text style={[styles.summaryLabel, { color: colors.text.primary }]}>
+                        Interested
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.summaryBarContainer,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      }
+                    ]}>
+                      <View style={[
+                        styles.summaryBar,
+                        {
+                          width: `${(daySummaryModal.dayStat.interested / Math.max(daySummaryModal.dayStat.total, 1)) * 100}%`,
+                          backgroundColor: '#F44336',
+                        }
+                      ]} />
+                    </View>
+                    <Text style={[styles.summaryCount, { color: colors.text.primary }]}>
+                      {daySummaryModal.dayStat.interested}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Blocked */}
+                {daySummaryModal.dayStat.blocked > 0 && (
+                  <View style={styles.summaryRow}>
+                    <View style={styles.summaryLabelContainer}>
+                      <View style={[styles.summaryDot, { backgroundColor: colors.error.main }]} />
+                      <Text style={[styles.summaryLabel, { color: colors.text.primary }]}>
+                        Blocked
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.summaryBarContainer,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      }
+                    ]}>
+                      <View style={[
+                        styles.summaryBar,
+                        {
+                          width: `${(daySummaryModal.dayStat.blocked / Math.max(daySummaryModal.dayStat.total, 1)) * 100}%`,
+                          backgroundColor: colors.error.main,
+                        }
+                      ]} />
+                    </View>
+                    <Text style={[styles.summaryCount, { color: colors.text.primary }]}>
+                      {daySummaryModal.dayStat.blocked}
+                    </Text>
+                  </View>
+                )}
+
+              </View>
+
+              {/* Timeline of Events */}
+              {(() => {
+                const selectedDay = schedule.find(day => isSameDay(day.date, daySummaryModal.dayStat.date));
+                if (!selectedDay) return null;
+
+                // Get all slots with meetings or tracked free slots, sorted by time
+                const timelineSlots = selectedDay.slots
+                  .filter(slot => {
+                    if (slot.meeting) return true;
+                    const slotKey = slot.startTime.toISOString();
+                    const freeSlotStatus = userFreeSlotStatus[slotKey] || 'available';
+                    return freeSlotStatus !== 'available';
+                  })
+                  .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+                if (timelineSlots.length === 0) return null;
+
+                return (
+                  <View style={styles.timelineContainer}>
+                    <Text style={[styles.timelineTitle, { color: colors.text.primary }]}>
+                      Day Plan Route
+                    </Text>
+                    <ScrollView 
+                      style={styles.timelineScrollView}
+                      showsVerticalScrollIndicator={true}
+                    >
+                      {timelineSlots.map((slot, index) => {
+                        const slotKey = slot.startTime.toISOString();
+                        const freeSlotStatus = userFreeSlotStatus[slotKey] || 'available';
+                        
+                        if (slot.meeting) {
+                          const meeting = slot.meeting;
+                          const isAgendaEvent = (meeting as any).isAgendaEvent;
+                          const userStatus = isAgendaEvent 
+                            ? (userAgendaStatus[meeting.id] || 'tentative')
+                            : (userMeetingStatus[meeting.id] || 'tentative');
+                          const isConfirmed = userStatus === 'confirmed';
+                          const isTentative = userStatus === 'tentative';
+                          const statusColor = isConfirmed ? '#4CAF50' : '#FF9800';
+                          
+                          return (
+                            <View key={`${slot.startTime.toISOString()}-${index}`} style={styles.timelineItem}>
+                              <View style={styles.timelineTimeContainer}>
+                                <Text style={[styles.timelineTime, { color: colors.text.primary }]}>
+                                  {format(slot.startTime, 'h:mm a')}
+                                </Text>
+                                {index < timelineSlots.length - 1 && (
+                                  <View style={[styles.timelineLine, { backgroundColor: colors.divider }]} />
+                                )}
+                              </View>
+                              <View style={[
+                                styles.timelineContent,
+                                {
+                                  backgroundColor: isDark ? colors.surface : '#F8F9FA',
+                                  borderLeftColor: statusColor,
+                                }
+                              ]}>
+                                <View style={styles.timelineHeader}>
+                                  <Text style={[styles.timelineEventTitle, { color: colors.text.primary }]} numberOfLines={2}>
+                                    {meeting.title || 'Untitled Event'}
+                                  </Text>
+                                  <View style={[
+                                    styles.timelineStatusBadge,
+                                    { backgroundColor: statusColor + '20' }
+                                  ]}>
+                                    <Text style={[
+                                      styles.timelineStatusText,
+                                      { color: statusColor }
+                                    ]}>
+                                      {isConfirmed ? 'CONFIRMED' : 'TENTATIVE'}
+                                    </Text>
+                                  </View>
+                                </View>
+                                {meeting.location && (
+                                  <View style={styles.timelineLocation}>
+                                    <MaterialIcons name="location-on" size={14} color={colors.text.secondary} />
+                                    <Text style={[styles.timelineLocationText, { color: colors.text.secondary }]} numberOfLines={1}>
+                                      {meeting.location}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+                          );
+                        } else {
+                          // Free slot with status
+                          const statusColor = freeSlotStatus === 'interested' ? '#F44336' : 
+                                           freeSlotStatus === 'blocked' ? colors.error.main : '#FF9800';
+                          const statusLabel = freeSlotStatus === 'interested' ? 'INTERESTED' :
+                                            freeSlotStatus === 'blocked' ? 'BLOCKED' : 'TENTATIVE';
+                          
+                          return (
+                            <View key={`${slot.startTime.toISOString()}-${index}`} style={styles.timelineItem}>
+                              <View style={styles.timelineTimeContainer}>
+                                <Text style={[styles.timelineTime, { color: colors.text.primary }]}>
+                                  {format(slot.startTime, 'h:mm a')}
+                                </Text>
+                                {index < timelineSlots.length - 1 && (
+                                  <View style={[styles.timelineLine, { backgroundColor: colors.divider }]} />
+                                )}
+                              </View>
+                              <View style={[
+                                styles.timelineContent,
+                                {
+                                  backgroundColor: isDark ? colors.surface : '#F8F9FA',
+                                  borderLeftColor: statusColor,
+                                }
+                              ]}>
+                                <View style={styles.timelineHeader}>
+                                  <Text style={[styles.timelineEventTitle, { color: colors.text.primary }]}>
+                                    Free Slot
+                                  </Text>
+                                  <View style={[
+                                    styles.timelineStatusBadge,
+                                    { backgroundColor: statusColor + '20' }
+                                  ]}>
+                                    <Text style={[
+                                      styles.timelineStatusText,
+                                      { color: statusColor }
+                                    ]}>
+                                      {statusLabel}
+                                    </Text>
+                                  </View>
+                                </View>
+                              </View>
+                            </View>
+                          );
+                        }
+                      })}
+                    </ScrollView>
+                  </View>
+                );
+              })()}
+
+              {/* Total Scheduled */}
+              <View style={[
+                styles.summaryTotalRow,
+                {
+                  backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.05)',
+                  borderColor: colors.divider,
+                  marginTop: 24,
+                }
+              ]}>
+                <Text style={[styles.summaryTotalLabel, { color: colors.text.primary }]}>
+                  Total Scheduled Slots
+                </Text>
+                <View style={[
+                  styles.summaryTotalBadge,
+                  { backgroundColor: colors.primary + '20' }
+                ]}>
+                  <Text style={[
+                    styles.summaryTotalCount,
+                    { color: colors.primary }
+                  ]}>
+                    {daySummaryModal.dayStat.total}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 };
@@ -1210,35 +1683,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  dateSelector: {
-    backgroundColor: '#F5F5F5',
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E0E0E0',
+  scrollContent: {
+    flex: 1,
   },
-  dateScrollView: {
-    paddingHorizontal: 8,
-  },
-  dateButton: {
-    padding: 10,
-    borderRadius: 12,
-    alignItems: 'center',
-    width: 60,
-    marginHorizontal: 4,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  dateNumber: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  dateName: {
-    fontSize: 12,
-    marginTop: 2,
+  scrollContentContainer: {
+    flexGrow: 1,
   },
   content: {
-    flex: 1,
     padding: 16,
   },
   hourGroup: {
@@ -1365,6 +1816,297 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
     textTransform: 'uppercase',
+  },
+  calendarContainer: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  calendarHeader: {
+    marginBottom: 12,
+  },
+  calendarTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  calendarWeek: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 12,
+  },
+  calendarDay: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    minHeight: 100,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  calendarDayName: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  calendarDayNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  calendarIndicators: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  indicatorDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  indicatorCircleWithNumber: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  indicatorCircleNumber: {
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  countBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  countBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  calendarLegend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 16,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E0E0E0',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendCircleWithNumber: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  legendCircleNumber: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  legendText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    position: 'relative',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    padding: 4,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  summaryContainer: {
+    gap: 16,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  summaryLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: 100,
+  },
+  summaryDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  summaryBarContainer: {
+    flex: 1,
+    height: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  summaryBar: {
+    height: '100%',
+    borderRadius: 12,
+  },
+  summaryCount: {
+    fontSize: 16,
+    fontWeight: '700',
+    minWidth: 30,
+    textAlign: 'right',
+  },
+  summaryTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  summaryTotalLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  summaryTotalBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  summaryTotalCount: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  timelineContainer: {
+    marginTop: 24,
+    maxHeight: 300,
+  },
+  timelineTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  timelineScrollView: {
+    maxHeight: 250,
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 12,
+  },
+  timelineTimeContainer: {
+    alignItems: 'center',
+    width: 70,
+  },
+  timelineTime: {
+    fontSize: 12,
+    fontWeight: '600',
+    minWidth: 60,
+  },
+  timelineLine: {
+    width: 1,
+    flex: 1,
+    minHeight: 20,
+    marginTop: 4,
+  },
+  timelineContent: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+  },
+  timelineHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 4,
+  },
+  timelineEventTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
+  timelineStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  timelineStatusText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  timelineLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  timelineLocationText: {
+    fontSize: 12,
+    flex: 1,
   },
 });
 

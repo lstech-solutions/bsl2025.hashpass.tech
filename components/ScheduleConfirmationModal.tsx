@@ -78,7 +78,7 @@ export default function ScheduleConfirmationModal({
               <MaterialIcons
                 name={isBlocked ? "block" : isInterested ? "favorite" : "schedule"}
                 size={32}
-                color={isBlocked ? colors.error.main : isInterested ? colors.primary : colors.text.secondary}
+                color={isBlocked ? colors.error.main : isInterested ? '#F44336' : colors.text.secondary}
               />
               <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
                 {isBlocked ? "Unblock Slot" : isInterested ? "Remove Interest" : "Mark Free Slot"}
@@ -108,23 +108,23 @@ export default function ScheduleConfirmationModal({
                 backgroundColor: isBlocked 
                   ? `${colors.error.main}15` 
                   : isInterested 
-                  ? `${colors.primary}15` 
+                  ? `#F4433615` 
                   : `${colors.info || '#2196F3'}15`,
                 borderColor: isBlocked 
                   ? colors.error.main 
                   : isInterested 
-                  ? colors.primary 
+                  ? '#F44336' 
                   : (colors.info || '#2196F3'),
               }
             ]}>
               <MaterialIcons
                 name={isBlocked ? "block" : isInterested ? "info" : "info"}
                 size={20}
-                color={isBlocked ? colors.error.main : isInterested ? colors.primary : (colors.info || '#2196F3')}
+                color={isBlocked ? colors.error.main : isInterested ? '#F44336' : (colors.info || '#2196F3')}
               />
               <Text style={[
                 styles.messageText,
-                { color: isBlocked ? colors.error.main : isInterested ? colors.primary : (colors.info || '#2196F3') }
+                { color: isBlocked ? colors.error.main : isInterested ? '#F44336' : (colors.info || '#2196F3') }
               ]}>
                 {isBlocked
                   ? "This slot is blocked. Unblock it to make it available again?"
@@ -176,7 +176,7 @@ export default function ScheduleConfirmationModal({
                   style={[
                     styles.confirmButton,
                     {
-                      backgroundColor: isBlocked ? colors.error.main : colors.primary,
+                      backgroundColor: isBlocked ? colors.error.main : '#F44336',
                     },
                     isLoading && styles.confirmButtonDisabled
                   ]}

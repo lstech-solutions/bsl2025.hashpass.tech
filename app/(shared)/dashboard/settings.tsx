@@ -1,20 +1,43 @@
 import React, { useState } from 'react';
-import { View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet, Alert, StatusBar } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { useLanguage } from '../../../providers/LanguageProvider';
+import { useAnimations } from '../../../providers/AnimationProvider';
+import { useToastHelpers } from '../../../contexts/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from '../../../i18n/i18n';
 import { version } from '../../../package.json';
+import { useScroll } from '../../../contexts/ScrollContext';
+import * as Haptics from 'expo-haptics';
 
 export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
   const [biometricAuth, setBiometricAuth] = useState(false);
-  const [animations, setAnimations] = useState(true);
   const [dataUsage, setDataUsage] = useState(false);
   const { isDark, toggleTheme, colors } = useTheme();
   const { locale, setLocale } = useLanguage();
+  const { animationsEnabled, setAnimationsEnabled } = useAnimations();
+  const { headerHeight } = useScroll();
+  const { showSuccess, showInfo } = useToastHelpers();
   const { t } = useTranslation('profile');
   const styles = getStyles(isDark, colors);
+  
+  // Calculate safe area for nav bar overlay
+  const navBarHeight = (StatusBar.currentHeight || 0) + 80;
+
+  const handleAnimationsToggle = async (enabled: boolean) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await setAnimationsEnabled(enabled);
+      if (enabled) {
+        showSuccess('Animations Enabled', 'Smooth transitions and animations are now active');
+      } else {
+        showInfo('Animations Disabled', 'Transitions are now disabled for better performance');
+      }
+    } catch (error) {
+      console.error('Failed to toggle animations:', error);
+    }
+  };
 
 
   const handleLanguageChange = async () => {
@@ -74,7 +97,11 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: navBarHeight }}
+      >
         {/* App Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>App Settings</Text>
@@ -121,10 +148,10 @@ export default function SettingsScreen() {
             subtitle: 'Enable smooth transitions and animations',
             rightComponent: (
               <Switch
-                value={animations}
-                onValueChange={setAnimations}
+                value={animationsEnabled}
+                onValueChange={handleAnimationsToggle}
                 trackColor={{ false: '#e5e7eb', true: colors.primary }}
-                thumbColor={animations ? '#4f46e5' : '#f3f4f6'}
+                thumbColor={animationsEnabled ? '#4f46e5' : '#f3f4f6'}
               />
             ),
           })}

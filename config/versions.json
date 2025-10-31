@@ -1,6 +1,35 @@
 {
-  "currentVersion": "1.3.7",
+  "currentVersion": "1.3.8",
   "versions": [
+    {
+      "version": "1.3.8",
+      "buildNumber": 202510310801,
+      "releaseDate": "2025-10-31",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "User pass management system",
+        "BSL 2025 event integration",
+        "Speaker profile system with avatars",
+        "Event agenda with live updates",
+        "Unified search and filter system",
+        "Dark mode support",
+        "Event banner component",
+        "Pass card UI with BSL branding",
+        "Agenda tabbed interface",
+        "Real-time countdown system"
+      ],
+      "bugfixes": [
+        "Fixed SVG logo rendering issues",
+        "Resolved TypeScript undefined property errors",
+        "Fixed agenda data grouping logic",
+        "Corrected speaker count discrepancies",
+        "Fixed dark mode contrast issues",
+        "Resolved navigation routing problems"
+      ],
+      "breakingChanges": [],
+      "notes": "Version 1.3.8 release"
+    },
     {
       "version": "1.3.7",
       "buildNumber": 202510310647,

@@ -35,33 +35,32 @@ export const ScrollProvider = ({ children }: { children: ReactNode }) => {
     extrapolate: 'clamp',
   });
 
-  // Interpolate header background color with better contrast
+  // Interpolate header background color - transparent when scrolled to show content behind
   const headerBackground = scrollY.interpolate({
-    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.2, HEADER_SCROLL_DISTANCE * 0.6, HEADER_SCROLL_DISTANCE],
+    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.3, HEADER_SCROLL_DISTANCE * 0.7, HEADER_SCROLL_DISTANCE],
     outputRange: [
-      'rgba(255, 255, 255, 0.95)',  // Start with very high opacity white for maximum contrast
-      'rgba(255, 255, 255, 0.98)',  // Increase opacity quickly
-      'rgba(255, 255, 255, 0.99)',  // Near full opacity
-      'rgba(255, 255, 255, 1)'      // Full opacity when scrolled
+      'rgba(255, 255, 255, 0.7)',   // Start with semi-transparent white
+      'rgba(255, 255, 255, 0.4)',   // More transparent as you scroll
+      'rgba(255, 255, 255, 0.2)',   // Very transparent
+      'rgba(255, 255, 255, 0.15)'   // Almost transparent to show banner/content behind
     ],
     extrapolate: 'clamp',
   });
   
-  // Add a very subtle blue tint for branding
+  // Remove blue tint - let content color show through
   const headerTint = scrollY.interpolate({
-    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.3, HEADER_SCROLL_DISTANCE],
+    inputRange: [0, HEADER_SCROLL_DISTANCE],
     outputRange: [
-      'rgba(0, 122, 255, 0.02)',  // Minimal blue tint when not scrolled
-      'rgba(0, 122, 255, 0.03)',  // Slightly more blue
-      'rgba(0, 122, 255, 0.04)'   // More pronounced blue when scrolled
+      'rgba(0, 0, 0, 0)',  // No tint - let content show through
+      'rgba(0, 0, 0, 0)'   // No tint when scrolled
     ],
     extrapolate: 'clamp',
   });
 
-  // Interpolate blur radius based on scroll position
+  // Interpolate blur radius - stronger blur when scrolled to create glass effect
   const headerBlur = scrollY.interpolate({
     inputRange: [0, HEADER_SCROLL_DISTANCE * 0.3, HEADER_SCROLL_DISTANCE],
-    outputRange: [8, 12, 15], // Start with some blur for better contrast
+    outputRange: [10, 20, 30], // Increase blur to create frosted glass effect
     extrapolate: 'clamp',
   });
 

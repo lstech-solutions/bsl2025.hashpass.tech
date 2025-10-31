@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.8] - 2025-10-31
+
+### Beta
+- Version 1.3.8 release
+
+### Technical Details
+- Version: 1.3.8
+- Release Type: beta
+- Build Number: 202510310801
+- Release Date: 2025-10-31T08:01:01.844Z
+
+
 ## [1.3.7] - 2025-10-31
 
 ### Beta

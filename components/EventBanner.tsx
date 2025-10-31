@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity, StatusBar } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 
@@ -169,6 +169,7 @@ export default function EventBanner({
 const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => StyleSheet.create({
   headerSection: {
     padding: 20,
+    paddingTop: (StatusBar.currentHeight || 0) + 100, // Extra top padding to account for nav bar overlay
     backgroundColor: backgroundColor,
     alignItems: 'center',
     minHeight: 360,

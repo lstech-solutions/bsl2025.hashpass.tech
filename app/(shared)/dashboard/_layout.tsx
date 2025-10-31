@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image, Animated } from 'react-native';
-import AnimatedGradient, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, interpolate } from 'react-native-reanimated';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image, Platform, Animated as RNAnimated } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, interpolate, withSpring, useAnimatedProps } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname, useNavigation as useExpoNavigation } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
@@ -16,6 +17,7 @@ import { useLanguage } from '../../../providers/LanguageProvider';
 import { color } from 'motion/react';
 import { ScrollProvider, useScroll } from '../../../contexts/ScrollContext';
 import { NotificationProvider } from '../../../contexts/NotificationContext';
+import { AnimationProvider, useAnimations } from '../../../providers/AnimationProvider';
 import VersionDisplay from '../../../components/VersionDisplay';
 
 // Define the type for our drawer navigation
@@ -30,27 +32,116 @@ function CustomDrawerContent() {
   const { colors, isDark, toggleTheme } = useTheme();
   const { signOut } = useAuth();
   const { locale, setLocale } = useLanguage();
+  const { animationsEnabled } = useAnimations();
   const router = useRouter();
   const pathname = usePathname();
   const navigation = useNavigation<DrawerNavigation>();
   const isMobile = useIsMobile();
   const styles = getStyles(isDark, colors, isMobile);
 
-  // Animated gradient effect
-  const gradientAnimation = useSharedValue(0);
+  // Animated fluid gradient effect with multiple layers
+  const gradientAnimation1 = useSharedValue(0);
+  const gradientAnimation2 = useSharedValue(0);
+  const gradientAnimation3 = useSharedValue(0);
+  const gradientAnimation4 = useSharedValue(0);
   
   useEffect(() => {
-    gradientAnimation.value = withRepeat(
-      withTiming(1, { duration: 3000 }),
-      -1,
-      true
-    );
-  }, []);
+    // Only start animations if animations are enabled
+    if (animationsEnabled) {
+      // Start all animations with different durations and delays for fluid movement
+      console.log('Starting fluid gradient animations');
+      gradientAnimation1.value = withRepeat(
+        withTiming(1, { duration: 4000 }),
+        -1,
+        true
+      );
+      gradientAnimation2.value = withRepeat(
+        withTiming(1, { duration: 5000 }),
+        -1,
+        true
+      );
+      gradientAnimation3.value = withRepeat(
+        withTiming(1, { duration: 6000 }),
+        -1,
+        true
+      );
+      gradientAnimation4.value = withRepeat(
+        withTiming(1, { duration: 3500 }),
+        -1,
+        true
+      );
+    } else {
+      // Stop all animations and reset to initial state
+      console.log('Stopping fluid gradient animations');
+      gradientAnimation1.value = 0;
+      gradientAnimation2.value = 0;
+      gradientAnimation3.value = 0;
+      gradientAnimation4.value = 0;
+    }
+  }, [animationsEnabled]);
 
-  const animatedGradientStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(gradientAnimation.value, [0, 0.5, 1], [0.1, 0.2, 0.1]);
+  // Animated styles for each gradient layer - only when animations enabled
+  const animatedGradientStyle1 = useAnimatedStyle(() => {
+    if (!animationsEnabled) {
+      return {
+        transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+        opacity: 0.3,
+      };
+    }
+    const translateX = interpolate(gradientAnimation1.value, [0, 1], [-80, 80]);
+    const translateY = interpolate(gradientAnimation1.value, [0, 1], [-50, 50]);
+    const scale = interpolate(gradientAnimation1.value, [0, 0.5, 1], [0.7, 1.3, 0.7]);
     return {
-      opacity,
+      transform: [{ translateX }, { translateY }, { scale }],
+      opacity: interpolate(gradientAnimation1.value, [0, 0.5, 1], [0.3, 0.5, 0.3]),
+    };
+  });
+
+  const animatedGradientStyle2 = useAnimatedStyle(() => {
+    if (!animationsEnabled) {
+      return {
+        transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+        opacity: 0.25,
+      };
+    }
+    const translateX = interpolate(gradientAnimation2.value, [0, 1], [80, -80]);
+    const translateY = interpolate(gradientAnimation2.value, [0, 1], [50, -50]);
+    const scale = interpolate(gradientAnimation2.value, [0, 0.5, 1], [1.0, 0.8, 1.0]);
+    return {
+      transform: [{ translateX }, { translateY }, { scale }],
+      opacity: interpolate(gradientAnimation2.value, [0, 0.5, 1], [0.25, 0.45, 0.25]),
+    };
+  });
+
+  const animatedGradientStyle3 = useAnimatedStyle(() => {
+    if (!animationsEnabled) {
+      return {
+        transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+        opacity: 0.2,
+      };
+    }
+    const translateX = interpolate(gradientAnimation3.value, [0, 1], [-60, 60]);
+    const translateY = interpolate(gradientAnimation3.value, [0, 1], [-80, 80]);
+    const scale = interpolate(gradientAnimation3.value, [0, 0.5, 1], [0.8, 1.2, 0.8]);
+    return {
+      transform: [{ translateX }, { translateY }, { scale }],
+      opacity: interpolate(gradientAnimation3.value, [0, 0.5, 1], [0.2, 0.4, 0.2]),
+    };
+  });
+
+  const animatedGradientStyle4 = useAnimatedStyle(() => {
+    if (!animationsEnabled) {
+      return {
+        transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
+        opacity: 0.15,
+      };
+    }
+    const translateX = interpolate(gradientAnimation4.value, [0, 1], [60, -60]);
+    const translateY = interpolate(gradientAnimation4.value, [0, 1], [80, -80]);
+    const scale = interpolate(gradientAnimation4.value, [0, 0.5, 1], [1.2, 0.7, 1.2]);
+    return {
+      transform: [{ translateX }, { translateY }, { scale }],
+      opacity: interpolate(gradientAnimation4.value, [0, 0.5, 1], [0.15, 0.35, 0.15]),
     };
   });
 
@@ -102,30 +193,74 @@ function CustomDrawerContent() {
     <View style={[styles.container, { backgroundColor: colors.background.default, flex: 1 }]}>
       {/* Drawer Header */}
       <View style={[styles.drawerHeader, { 
-        backgroundColor: colors.primary,
-        borderBottomWidth: 1,
-        borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+        backgroundColor: isDark ? colors.primaryLight : colors.primaryDark, // Red in dark mode, blue in light mode
+        borderBottomWidth: 2,
+        borderBottomColor: colors.primaryContrastText + '33', // 20% opacity white
+        shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
       }]}>
-        {/* Animated Gradient Background */}
-        <AnimatedGradient.View 
-          style={[
-            styles.gradientBackground,
-            {
-              backgroundColor: isDark ? 'rgba(96, 165, 250, 0.1)' : 'rgba(30, 64, 175, 0.1)',
-            },
-            animatedGradientStyle
-          ]}
-        />
-        <View style={styles.brandingContainer}>
+        {/* Animated Fluid Gradient Background Layers - only render when animations enabled */}
+        {animationsEnabled ? (
+          <>
+            <Animated.View 
+              style={[
+                styles.fluidGradientLayer,
+                {
+                  backgroundColor: isDark 
+                    ? 'rgba(175, 13, 1, 0.6)' // Red with high opacity
+                    : 'rgba(30, 58, 138, 0.5)', // Blue with high opacity
+                },
+                animatedGradientStyle1
+              ]}
+            />
+            <Animated.View 
+              style={[
+                styles.fluidGradientLayer,
+                {
+                  backgroundColor: isDark 
+                    ? 'rgba(161, 209, 214, 0.5)' // Cyan with high opacity
+                    : 'rgba(0, 122, 255, 0.4)', // Blue with high opacity
+                },
+                animatedGradientStyle2
+              ]}
+            />
+            <Animated.View 
+              style={[
+                styles.fluidGradientLayer,
+                {
+                  backgroundColor: isDark 
+                    ? 'rgba(255, 215, 0, 0.45)' // Gold with high opacity
+                    : 'rgba(100, 181, 246, 0.35)', // Light blue with high opacity
+                },
+                animatedGradientStyle3
+              ]}
+            />
+            <Animated.View 
+              style={[
+                styles.fluidGradientLayer,
+                {
+                  backgroundColor: isDark 
+                    ? 'rgba(255, 87, 34, 0.45)' // Orange with high opacity
+                    : 'rgba(63, 81, 181, 0.35)', // Indigo with high opacity
+                },
+                animatedGradientStyle4
+              ]}
+            />
+          </>
+        ) : null}
+        <View style={[styles.brandingContainer, { zIndex: 1, position: 'relative' }]}>
           <View style={styles.logoContainer}>
             <View style={[styles.logoPill, {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+              backgroundColor: colors.primaryContrastText + '33', // White background with opacity
+              borderColor: colors.primaryContrastText + '66', // White border with opacity
             }]}>
               <Image 
                 source={isDark 
-                  ? require('../../../assets/logos/logo-full-hashpass-white.svg')
-                  : require('../../../assets/logos/logo-full-hashpass-black-cyan.svg')
+                  ? require('../../../assets/logos/logo-full-hashpass-white-cyan.svg')
+                  : require('../../../assets/logos/logo-full-hashpass-white.svg')
                 } 
                 style={styles.logoImage}
                 resizeMode="contain"
@@ -134,7 +269,7 @@ function CustomDrawerContent() {
           </View>
           <View style={styles.brandingSection}>
             <Text style={styles.brandSubtitle}>Digital Event Platform</Text>
-            <View style={styles.brandBadge}>
+            <View style={[styles.brandBadge, { backgroundColor: '#007AFF' }]}>
               <Text style={styles.brandBadgeText}>BSL2025</Text>
             </View>
           </View>
@@ -143,10 +278,10 @@ function CustomDrawerContent() {
 
       {/* Menu Items */}
       <View style={[styles.menuItems, { 
-        backgroundColor: colors.background.paper,
-        borderRightWidth: 1,
-        borderRightColor: colors.divider,
-        flex: 1
+        backgroundColor: 'transparent',
+        flex: 1,
+        paddingTop: 24,
+        paddingBottom: 16,
       }]}>
         {menuItems.map((item) => {
           const isActive = pathname === item.route;
@@ -157,74 +292,121 @@ function CustomDrawerContent() {
                 styles.menuItem,
                 {
                   backgroundColor: isActive 
-                    ? `${colors.primary}20` // 20% opacity
-                    : 'transparent',
+                    ? (isDark 
+                        ? `rgba(175, 13, 1, 0.15)` // Red with transparency
+                        : `rgba(175, 13, 1, 0.1)`) // Red with transparency
+                    : (isDark 
+                        ? 'rgba(255, 255, 255, 0.05)' 
+                        : 'rgba(0, 0, 0, 0.03)'), // Subtle background
                   borderLeftWidth: isActive ? 4 : 0,
-                  borderLeftColor: colors.primary,
+                  borderLeftColor: isActive ? colors.primaryLight : 'transparent',
                 }
               ]}
               onPress={() => handleNavigation(item.route)}
-              activeOpacity={0.7}
+              activeOpacity={0.6}
             >
-              <Ionicons
-                name={item.icon as any}
-                size={28}
-                color={isActive ? colors.primary : colors.text.primary}
-                style={styles.menuIcon}
-              />
+              <View style={[
+                styles.menuIconContainer,
+                {
+                  backgroundColor: isActive 
+                    ? (isDark 
+                        ? `rgba(175, 13, 1, 0.2)` 
+                        : `rgba(175, 13, 1, 0.15)`)
+                    : (isDark 
+                        ? 'rgba(255, 255, 255, 0.08)' 
+                        : 'rgba(0, 0, 0, 0.05)'),
+                }
+              ]}>
+                <Ionicons
+                  name={item.icon as any}
+                  size={22}
+                  color={isActive ? colors.primaryLight : colors.text.secondary}
+                />
+              </View>
               <Text
                 style={[
                   styles.menuText,
                   {
-                    color: isActive ? colors.primary : colors.text.primary,
+                    color: isActive ? colors.text.primary : colors.text.secondary,
                     fontWeight: isActive ? '700' : '500',
-                    fontSize: 16,
+                    fontSize: 15,
                   }
                 ]}
               >
                 {item.label}
               </Text>
+              {isActive && (
+                <View style={styles.activeIndicator} />
+              )}
             </TouchableOpacity>
           );
         })}
       </View>
 
       {/* Quick Settings & Actions */}
-      <View style={[styles.quickSettingsSection, { 
-        backgroundColor: colors.background.paper,
-      }]}>
+      <View style={styles.quickSettingsSection}>
         <View style={styles.quickTogglesRow}>
           {/* Theme Toggle */}
           <TouchableOpacity
-            style={styles.quickToggleButton}
+            style={[
+              styles.quickToggleButton,
+              {
+                backgroundColor: isDark 
+                  ? 'rgba(255, 215, 0, 0.15)' 
+                  : 'rgba(108, 99, 255, 0.1)',
+                borderColor: isDark 
+                  ? 'rgba(255, 215, 0, 0.3)' 
+                  : 'rgba(108, 99, 255, 0.2)',
+              }
+            ]}
             onPress={toggleTheme}
-            activeOpacity={0.7}
+            activeOpacity={0.6}
           >
             <Ionicons 
               name={isDark ? 'sunny' : 'moon'} 
-              size={20} 
+              size={22} 
               color={isDark ? '#FFD700' : '#6C63FF'} 
             />
           </TouchableOpacity>
 
           {/* Language Toggle */}
           <TouchableOpacity
-            style={styles.quickToggleButton}
+            style={[
+              styles.quickToggleButton,
+              {
+                backgroundColor: isDark 
+                  ? 'rgba(255, 255, 255, 0.08)' 
+                  : 'rgba(0, 0, 0, 0.05)',
+                borderColor: isDark 
+                  ? 'rgba(255, 255, 255, 0.15)' 
+                  : 'rgba(0, 0, 0, 0.1)',
+              }
+            ]}
             onPress={handleLanguageToggle}
-            activeOpacity={0.7}
+            activeOpacity={0.6}
           >
             <Text style={styles.languageFlag}>{getLanguageFlag(locale)}</Text>
           </TouchableOpacity>
 
           {/* Logout Button */}
           <TouchableOpacity
-            style={styles.quickToggleButton}
+            style={[
+              styles.quickToggleButton,
+              {
+                backgroundColor: isDark 
+                  ? 'rgba(255, 59, 48, 0.15)' 
+                  : 'rgba(255, 59, 48, 0.1)',
+                borderColor: isDark 
+                  ? 'rgba(255, 59, 48, 0.3)' 
+                  : 'rgba(255, 59, 48, 0.2)',
+              }
+            ]}
             onPress={handleLogout}
-            activeOpacity={0.7}
+            activeOpacity={0.6}
           >
             <Ionicons 
               name="log-out-outline" 
-              size={20} 
+              size={22} 
               color={colors.error.main} 
             />
           </TouchableOpacity>
@@ -246,19 +428,108 @@ export default function DashboardLayout() {
   // Header component for the drawer screens
   const Header = () => {
     const drawerNavigation = useNavigation<DrawerNavigation>();
-    const { headerOpacity, headerBackground, headerTint, headerBorderWidth, headerShadowOpacity, headerHeight, setHeaderHeight } = useScroll();
+    const { headerOpacity, headerBackground, headerTint, headerBlur, headerBorderWidth, headerShadowOpacity, headerHeight, setHeaderHeight, scrollY } = useScroll();
+    const { animationsEnabled } = useAnimations();
 
+    // Adjust header background color based on theme to match app background
+    const HEADER_SCROLL_DISTANCE = 100;
+    // Extract RGB values from theme background color
+    const hexToRgb = (hex: string) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 18, g: 18, b: 18 }; // Fallback to dark color
+    };
+    const bgRgb = hexToRgb(colors.background.default);
+    
+    // Banner colors - typically blue (#007AFF) or event-specific colors
+    // When banner is visible, blend with banner color
+    const bannerColor = '#007AFF'; // Default banner color
+    const bannerRgb = hexToRgb(bannerColor);
+    
+    // Interpolate RGB values based on scroll to blend theme color with banner color
+    // Only interpolate when animations are enabled
+    const blendedR = animationsEnabled ? scrollY.interpolate({
+      inputRange: [0, HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
+      outputRange: [bgRgb.r, Math.round((bgRgb.r + bannerRgb.r) / 2), bannerRgb.r],
+      extrapolate: 'clamp',
+    }) : bgRgb.r;
+    
+    const blendedG = animationsEnabled ? scrollY.interpolate({
+      inputRange: [0, HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
+      outputRange: [bgRgb.g, Math.round((bgRgb.g + bannerRgb.g) / 2), bannerRgb.g],
+      extrapolate: 'clamp',
+    }) : bgRgb.g;
+    
+    const blendedB = animationsEnabled ? scrollY.interpolate({
+      inputRange: [0, HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
+      outputRange: [bgRgb.b, Math.round((bgRgb.b + bannerRgb.b) / 2), bannerRgb.b],
+      extrapolate: 'clamp',
+    }) : bgRgb.b;
+    
+    // Build rgba string dynamically with smooth gradient transitions
+    // More interpolation points for smoother color transitions
+    // At the beginning (scrollY = 0), use full app background color (no transparency)
+    // If animations disabled, use solid color like sidebar
+    const adjustedHeaderBackground = animationsEnabled
+      ? scrollY.interpolate({
+          inputRange: [
+            0, 
+            HEADER_SCROLL_DISTANCE * 0.15, 
+            HEADER_SCROLL_DISTANCE * 0.3, 
+            HEADER_SCROLL_DISTANCE * 0.5, 
+            HEADER_SCROLL_DISTANCE * 0.7, 
+            HEADER_SCROLL_DISTANCE * 0.85,
+            HEADER_SCROLL_DISTANCE
+          ],
+          outputRange: [
+            `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 1)`,   // Start with full app background color (100% opaque, 100% theme)
+            `rgba(${Math.round(bgRgb.r * 0.9 + bannerRgb.r * 0.1)}, ${Math.round(bgRgb.g * 0.9 + bannerRgb.g * 0.1)}, ${Math.round(bgRgb.b * 0.9 + bannerRgb.b * 0.1)}, 0.9)`,   // 90% theme, 10% banner, slightly transparent
+            `rgba(${Math.round(bgRgb.r * 0.7 + bannerRgb.r * 0.3)}, ${Math.round(bgRgb.g * 0.7 + bannerRgb.g * 0.3)}, ${Math.round(bgRgb.b * 0.7 + bannerRgb.b * 0.3)}, 0.7)`,   // 70% theme, 30% banner
+            `rgba(${Math.round(bgRgb.r * 0.5 + bannerRgb.r * 0.5)}, ${Math.round(bgRgb.g * 0.5 + bannerRgb.g * 0.5)}, ${Math.round(bgRgb.b * 0.5 + bannerRgb.b * 0.5)}, 0.5)`,   // 50% theme, 50% banner
+            `rgba(${Math.round(bgRgb.r * 0.3 + bannerRgb.r * 0.7)}, ${Math.round(bgRgb.g * 0.3 + bannerRgb.g * 0.7)}, ${Math.round(bgRgb.b * 0.3 + bannerRgb.b * 0.7)}, 0.3)`,   // 30% theme, 70% banner
+            `rgba(${Math.round(bgRgb.r * 0.15 + bannerRgb.r * 0.85)}, ${Math.round(bgRgb.g * 0.15 + bannerRgb.g * 0.85)}, ${Math.round(bgRgb.b * 0.15 + bannerRgb.b * 0.85)}, 0.2)`,   // 15% theme, 85% banner
+            `rgba(${bannerRgb.r}, ${bannerRgb.g}, ${bannerRgb.b}, 0.15)`   // 100% banner color when scrolled
+          ],
+          extrapolate: 'clamp',
+        })
+      : colors.background.default; // Solid color when animations disabled
+
+    // Gloss effect animation based on scroll - disabled when animations off
+    const glossOpacity = animationsEnabled
+      ? scrollY.interpolate({
+          inputRange: [0, HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
+          outputRange: [0, 0.4, 0.6], // More visible when scrolled
+          extrapolate: 'clamp',
+        })
+      : 0; // No gloss when animations disabled
+
+    const glossPosition = animationsEnabled
+      ? scrollY.interpolate({
+          inputRange: [0, HEADER_SCROLL_DISTANCE],
+          outputRange: [-200, 200], // Moves from left to right as you scroll
+          extrapolate: 'clamp',
+        })
+      : 0; // No movement when animations disabled
+
+    // Blur intensity based on scroll - use headerBlur from context
+    const blurIntensityValue = headerBlur;
+
+    // Use regular View for styles that come from old Animated API
+    // Animated.View from reanimated doesn't support old Animated.Interpolation directly
     return (
-      <Animated.View
+      <View
         style={[
           styles.header,
           {
             backgroundColor: 'transparent',
-            borderBottomWidth: headerBorderWidth,
+            borderBottomWidth: headerBorderWidth as any,
             borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
             shadowColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.2)',
             shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: headerShadowOpacity,
+            shadowOpacity: headerShadowOpacity as any,
             shadowRadius: 6,
             elevation: 8,
             overflow: 'hidden',
@@ -266,71 +537,118 @@ export default function DashboardLayout() {
         ]}
         onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
       >
-        {/* Background with blur and tint effect */}
-        <Animated.View 
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: headerBackground,
-              backdropFilter: 'blur(25px)',
-              WebkitBackdropFilter: 'blur(25px)',
-            }
-          ]} 
-        />
-        {/* Gradient overlay for depth */}
-        <Animated.View 
-          style={[
-            StyleSheet.absoluteFill,
-            { 
-              backgroundColor: isDark 
-                ? 'rgba(0, 0, 0, 0.1)' 
-                : 'rgba(255, 255, 255, 0.1)',
-            }
-          ]} 
-        />
-        {/* Blue tint overlay */}
-        <Animated.View 
-          style={[
-            StyleSheet.absoluteFill,
-            { 
-              backgroundColor: headerTint,
-              opacity: 1,
-            }
-          ]} 
-        />
+        {/* Background with blur and gloss effect */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          {/* Blur effect - only when animations enabled */}
+          {animationsEnabled ? (
+            Platform.OS === 'web' ? (
+              <RNAnimated.View
+                style={[
+                  StyleSheet.absoluteFill,
+                  {
+                    backgroundColor: adjustedHeaderBackground as any,
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                  }
+                ]}
+              />
+            ) : (
+              <>
+                <BlurView
+                  intensity={20}
+                  tint={isDark ? 'dark' : 'light'}
+                  style={StyleSheet.absoluteFill}
+                />
+                <RNAnimated.View
+                  style={[
+                    StyleSheet.absoluteFill,
+                    {
+                      backgroundColor: adjustedHeaderBackground as any,
+                    }
+                  ]}
+                />
+              </>
+            )
+          ) : (
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: adjustedHeaderBackground as string,
+                }
+              ]}
+            />
+          )}
+          
+          {/* Gloss effect overlay - only when animations enabled */}
+          {animationsEnabled && (
+            <RNAnimated.View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  opacity: glossOpacity as any,
+                  transform: [{ translateX: glossPosition as any }],
+                }
+              ]}
+              pointerEvents="none"
+            >
+              <View
+                style={{
+                  width: '200%',
+                  height: '100%',
+                  backgroundColor: 'transparent',
+                  flexDirection: 'row',
+                }}
+              >
+                {/* Left transparent */}
+                <View style={{ flex: 1, backgroundColor: 'transparent' }} />
+                {/* Center gloss highlight */}
+                <View
+                  style={{
+                    width: '50%',
+                    height: '100%',
+                    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                  }}
+                />
+                {/* Right transparent */}
+                <View style={{ flex: 1, backgroundColor: 'transparent' }} />
+              </View>
+            </RNAnimated.View>
+          )}
+        </View>
         <Animated.View
           style={[
             styles.headerContent,
-            {
+            animationsEnabled ? {
               opacity: headerOpacity.interpolate({
                 inputRange: [0, 1],
                 outputRange: [0.8, 1] // Slight fade in effect
-              })
+              }),
+            } : {
+              opacity: 1, // No animation when disabled
+            },
+            {
+              pointerEvents: 'auto', // Make buttons clickable
             }
           ]}
         >
           <TouchableOpacity
             onPress={() => drawerNavigation.dispatch(DrawerActions.toggleDrawer())}
-            style={styles.headerButton}
+            style={styles.headerIconButton}
             activeOpacity={0.8}
           >
             <Ionicons 
               name="menu" 
               size={26} 
               color={isDark ? '#FFFFFF' : '#000000'}
-              style={{
-                textShadowColor: isDark ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.6)',
-                textShadowOffset: { width: 0, height: 2 },
-                textShadowRadius: 3,
-              }}
             />
           </TouchableOpacity>
 
-          <View style={styles.headerLogoContainer}>
+          <View style={styles.headerLogoContainer} pointerEvents="none">
             <Image 
               source={isDark 
-                ? require('../../../assets/logos/logo-full-hashpass-white.svg')
-                : require('../../../assets/logos/logo-full-hashpass-black-cyan.svg')
+                ? require('../../../assets/logos/logo-full-hashpass-white-cyan.svg')
+                : require('../../../assets/logos/logo-full-hashpass-white.svg')
               } 
               style={styles.headerLogoImage}
               resizeMode="contain"
@@ -339,35 +657,17 @@ export default function DashboardLayout() {
 
           <TouchableOpacity
             onPress={() => console.log('Scan QR')}
-            style={[styles.headerButton, {
-              backgroundColor: isDark 
-                ? 'rgba(255, 255, 255, 0.12)' 
-                : 'rgba(0, 0, 0, 0.08)',
-              borderRadius: 16,
-              padding: 12,
-              shadowColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.4,
-              shadowRadius: 8,
-              elevation: 10,
-              borderWidth: 1,
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
-            }]}
+            style={styles.headerIconButton}
             activeOpacity={0.8}
           >
             <Ionicons 
               name="qr-code-outline" 
               size={26} 
               color={isDark ? '#FFFFFF' : '#000000'}
-              style={{
-                textShadowColor: isDark ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.6)',
-                textShadowOffset: { width: 0, height: 2 },
-                textShadowRadius: 3,
-              }}
             />
           </TouchableOpacity>
         </Animated.View>
-      </Animated.View>
+      </View>
     );
   };
 
@@ -375,9 +675,25 @@ export default function DashboardLayout() {
   const ScreenWithHeader = () => {
     const { headerHeight } = useScroll();
     
+    // Header should overlay content without taking space
+    // Only reserve space for StatusBar
+    const statusBarHeight = StatusBar.currentHeight || 0;
+    
     return (
-      <View style={[styles.headerContainer, { height: headerHeight }]}>
-        <StatusBar barStyle={colors.background.default === '#FFFFFF' ? 'dark-content' : 'light-content'} />
+      <View style={[styles.headerContainer, { 
+        height: statusBarHeight, 
+        backgroundColor: 'transparent',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
+      }]}>
+        <StatusBar 
+          barStyle={colors.background.default === '#FFFFFF' ? 'dark-content' : 'light-content'}
+          backgroundColor="transparent"
+          translucent={true}
+        />
         <Header />
       </View>
     );
@@ -385,9 +701,10 @@ export default function DashboardLayout() {
 
 
   return (
-    <NotificationProvider>
-      <ScrollProvider>
-        <View style={{ flex: 1 }}>
+    <AnimationProvider>
+      <NotificationProvider>
+        <ScrollProvider>
+          <View style={{ flex: 1 }}>
           <Drawer
             drawerContent={CustomDrawerContent}
             screenOptions={{
@@ -436,9 +753,10 @@ export default function DashboardLayout() {
               }}
             />
           </Drawer>
-        </View>
-      </ScrollProvider>
-    </NotificationProvider>
+          </View>
+        </ScrollProvider>
+      </NotificationProvider>
+    </AnimationProvider>
   );
 }
 
@@ -450,21 +768,23 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   headerContainer: {
     backgroundColor: 'transparent',
     zIndex: 1000,
+    pointerEvents: 'box-none', // Allow scroll to pass through
   },
   header: {
     position: 'absolute',
-    top: 0,
+    top: StatusBar.currentHeight || 0,
     left: 0,
     right: 0,
     zIndex: 1000,
-    paddingTop: StatusBar.currentHeight,
     backgroundColor: 'transparent',
     borderBottomWidth: 1,
     borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    pointerEvents: 'box-none', // Allow touch events to pass through to content, but keep buttons clickable
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 12,
   },
   headerButton: {
@@ -481,23 +801,36 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     borderWidth: 1,
     borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
   },
-  headerLogoContainer: {
-    flex: 1,
+  headerIconButton: {
+    padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 48, // Balance the header button on the left
+    backgroundColor: 'transparent',
+  },
+  headerLogoContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: -1, // Place behind buttons
   },
   headerLogoImage: {
     width: 120,
     height: 40,
   },
   drawerHeader: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+    padding: 20,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primaryContrastText + '33', // White border with opacity from theme
+    backgroundColor: isDark ? colors.primaryLight : colors.primaryDark, // Red in dark mode, blue in light mode
     position: 'relative',
     overflow: 'hidden',
+    shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   gradientBackground: {
     position: 'absolute',
@@ -506,6 +839,17 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     right: 0,
     bottom: 0,
     borderRadius: 0,
+  },
+  fluidGradientLayer: {
+    position: 'absolute',
+    width: 400,
+    height: 400,
+    borderRadius: 200, // Circular shape
+    top: '50%',
+    left: '50%',
+    marginTop: -200,
+    marginLeft: -200,
+    zIndex: 0,
   },
   brandingContainer: {
     flexDirection: 'row',
@@ -520,12 +864,12 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 30,
-    borderWidth: 1,
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 2,
+    shadowColor: 'rgba(0, 0, 0, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   logoImage: {
     width: 80,
@@ -538,19 +882,22 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   brandSubtitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.95)',
+    color: '#FFFFFF', // Pure white for better contrast
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     marginBottom: 12,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   brandBadge: {
-    backgroundColor: '#60A5FA',
+    backgroundColor: isDark ? colors.primary : colors.secondary,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    shadowColor: 'rgba(0, 0, 0, 0.3)',
+    borderColor: colors.primaryContrastText + '4D', // 30% opacity white
+    shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.2)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 6,
@@ -559,7 +906,7 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   brandBadgeText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: colors.primaryContrastText,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
@@ -573,8 +920,9 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   },
   menuItems: {
     flex: 1,
-    paddingTop: 8,
-    paddingHorizontal: 8,
+    paddingTop: 24,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
   },
   menuItem: {
     flexDirection: 'row',
@@ -582,35 +930,34 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginVertical: 4,
-    marginHorizontal: 8,
-    borderRadius: 16,
+    borderRadius: 14,
     borderLeftWidth: 4,
     borderLeftColor: 'transparent',
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-    shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: 'transparent',
+    position: 'relative',
+    overflow: 'hidden',
   },
-  menuIcon: {
+  menuIconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-    textAlign: 'center',
-    marginRight: 16,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    marginRight: 14,
+  },
+  activeIndicator: {
+    position: 'absolute',
+    right: 12,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primaryLight,
   },
   menuText: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.text.primary,
     flex: 1,
+    letterSpacing: 0.2,
   },
   logoutButton: {
     flexDirection: 'row',
@@ -638,16 +985,14 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   },
   quickSettingsSection: {
     paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingVertical: 20,
     marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 24,
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)',
-    shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 16,
+    backgroundColor: isDark 
+      ? 'rgba(255, 255, 255, 0.05)' 
+      : 'rgba(0, 0, 0, 0.02)',
   },
   quickSettingsTitle: {
     fontSize: 14,
@@ -658,22 +1003,22 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   },
   quickTogglesRow: {
     flexDirection: 'row',
-    justifyContent: 'space-evenly',
+    justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
   },
   quickToggleButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    flex: 1,
+    height: 56,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-    shadowColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.15)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 6,
+    borderWidth: 1,
+    shadowColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
   languageFlag: {
     fontSize: 18,

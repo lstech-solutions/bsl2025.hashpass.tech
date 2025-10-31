@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import React, { useRef, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, NativeSyntheticEvent, NativeScrollEvent, StatusBar } from 'react-native';
 import { useScroll } from '../../../contexts/ScrollContext';
 import { useEvent } from '../../../contexts/EventContext';
 import { useTheme } from '../../../hooks/useTheme';
@@ -16,7 +16,9 @@ import {
 } from '../../../lib/event-detector';
 
 export default function ExploreScreen() {
-  const { scrollY } = useScroll();
+  const { scrollY, headerHeight } = useScroll();
+  // Calculate safe area for nav bar overlay
+  const navBarHeight = (StatusBar.currentHeight || 0) + 80; // StatusBar + header content
   const { event: currentEventFromContext } = useEvent();
   const { isDark, colors } = useTheme();
   const router = useRouter();
@@ -147,9 +149,12 @@ export default function ExploreScreen() {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ 
+          paddingBottom: 40,
+        }}
       >
         {/* Event Banner (now scrolls with content) */}
+        {/* Banner starts from top, nav bar floats on top with blur */}
         <EventBanner 
           title={selectedEvent?.title || 'Blockchain Summit Latam 2025'}
           subtitle={selectedEvent?.subtitle || 'November 12-14, 2025 • Universidad EAFIT, Medellín'}

@@ -25,10 +25,10 @@ const args = process.argv.slice(2);
 // Find version number (first argument that matches version format)
 const versionRegex = /^\d+\.\d+\.\d+$/;
 const versionIndex = args.findIndex(arg => versionRegex.test(arg));
-const newVersion = versionIndex !== -1 ? args[versionIndex] : args[0];
+const versionArg = versionIndex !== -1 ? args[versionIndex] : args[0];
 
 // If version is not found or doesn't match format, try first non-flag argument
-let newVersionFinal = newVersion;
+let newVersionFinal = versionArg;
 if (!versionRegex.test(newVersionFinal)) {
   const nonFlagArgs = args.filter(arg => !arg.startsWith('--') && !arg.startsWith('-'));
   newVersionFinal = nonFlagArgs[0] || newVersionFinal;
@@ -44,7 +44,6 @@ const shouldPush = args.includes('--push') || args.includes('-p');
 const autoGit = args.includes('--auto-git'); // Shorthand for --commit --tag --push
 
 // Validate version format
-const versionRegex = /^\d+\.\d+\.\d+$/;
 if (!newVersionFinal || !versionRegex.test(newVersionFinal)) {
   console.error('❌ Error: Please provide a valid version number in format X.Y.Z');
   console.log('');
@@ -69,7 +68,7 @@ if (!newVersionFinal || !versionRegex.test(newVersionFinal)) {
   process.exit(1);
 }
 
-// Use the validated version
+// Use the validated version (rename to avoid conflict)
 const newVersion = newVersionFinal;
 
 // Validate release type

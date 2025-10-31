@@ -15,38 +15,51 @@ frontend:
           fi
         - pip install awscli --upgrade --user
         - export PATH=~/.local/bin:$PATH
-        - export AMPLIFY_SHOW_ALL_EVENTS=false
-        - export AMPLIFY_EVENT_ID=bsl2025
-        - export AMPLIFY_EVENT_DOMAIN=bsl2025.hashpass.tech
+        # Detect branch and set environment variables (defaults can be overridden in Amplify Console)
+        - |
+          if [ "$AWS_BRANCH" = "main" ]; then
+            export AMPLIFY_SHOW_ALL_EVENTS=${AMPLIFY_SHOW_ALL_EVENTS:-true}
+            export AMPLIFY_EVENT_ID=${AMPLIFY_EVENT_ID:-default}
+            export AMPLIFY_EVENT_DOMAIN=${AMPLIFY_EVENT_DOMAIN:-hashpass.tech}
+          elif [ "$AWS_BRANCH" = "bsl2025" ]; then
+            export AMPLIFY_SHOW_ALL_EVENTS=${AMPLIFY_SHOW_ALL_EVENTS:-false}
+            export AMPLIFY_EVENT_ID=${AMPLIFY_EVENT_ID:-bsl2025}
+            export AMPLIFY_EVENT_DOMAIN=${AMPLIFY_EVENT_DOMAIN:-bsl2025.hashpass.tech}
+          else
+            export AMPLIFY_SHOW_ALL_EVENTS=${AMPLIFY_SHOW_ALL_EVENTS:-false}
+            export AMPLIFY_EVENT_ID=${AMPLIFY_EVENT_ID:-bsl2025}
+            export AMPLIFY_EVENT_DOMAIN=${AMPLIFY_EVENT_DOMAIN:-bsl2025.hashpass.tech}
+          fi
+        - echo "Building for branch: $AWS_BRANCH"
+        - echo "Event ID: $AMPLIFY_EVENT_ID"
+        - echo "Show all events: $AMPLIFY_SHOW_ALL_EVENTS"
     build:
       commands:
         - rm -rf dist
         - mkdir -p dist/client/_expo/functions/api/bslatam
-        - AMPLIFY_EVENT_ID=bsl2025 npm run build:web
+        - npm run build:web
         - cp -r dist/server/* dist/client/
         - mkdir -p amplify/backend/function/bslApi/src/server/_expo/functions
         - rm -rf amplify/backend/function/bslApi/src/server/_expo/functions/api || true
         - cp -r dist/server/_expo/functions/api amplify/backend/function/bslApi/src/server/_expo/functions/
         - mkdir -p dist/client/api/bslatam
-        - echo '{"type": "module"}' > dist/client/api/package.json
+        - echo "{\"type\": \"module\"}" > dist/client/api/package.json
         - |
           for file in app/api/bslatam/*+api.ts; do
             base=$(basename "$file" "+api.ts")
             mkdir -p "dist/client/api/bslatam/$base"
-            {
-              echo "import { handler } from '../../../../../app/api/bslatam/${base}+api';"
-              echo "export default async (req, res) => {"
-              echo "  try {"
-              echo "    const result = await handler(req, res);"
-              echo "    if (result) {"
-              echo "      res.status(200).json(result);"
-              echo "    }"
-              echo "  } catch (error) {"
-              echo "    console.error('API Error:', error);"
-              echo "    res.status(500).json({ error: 'Internal Server Error' });"
-              echo "  }"
-              echo "};"
-            } > "dist/client/api/bslatam/$base/index.js"
+            echo "import { handler } from '../../../../../app/api/bslatam/${base}+api';" > "dist/client/api/bslatam/$base/index.js"
+            echo "export default async (req, res) => {" >> "dist/client/api/bslatam/$base/index.js"
+            echo "  try {" >> "dist/client/api/bslatam/$base/index.js"
+            echo "    const result = await handler(req, res);" >> "dist/client/api/bslatam/$base/index.js"
+            echo "    if (result) {" >> "dist/client/api/bslatam/$base/index.js"
+            echo "      res.status(200).json(result);" >> "dist/client/api/bslatam/$base/index.js"
+            echo "    }" >> "dist/client/api/bslatam/$base/index.js"
+            echo "  } catch (error) {" >> "dist/client/api/bslatam/$base/index.js"
+            echo "    console.error('API Error:', error);" >> "dist/client/api/bslatam/$base/index.js"
+            echo "    res.status(500).json({ error: 'Internal Server Error' });" >> "dist/client/api/bslatam/$base/index.js"
+            echo "  }" >> "dist/client/api/bslatam/$base/index.js"
+            echo "};" >> "dist/client/api/bslatam/$base/index.js"
             echo "Created API handler at dist/client/api/bslatam/$base/index.js"
           done
         - echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html
@@ -104,6 +117,9 @@ redirects:
   - source: '/events/bsl2025/*'
     status: 200
     target: '/index.html'
+  - source: '/events/*'
+    status: 200
+    target: '/index.html'
   - source: '/auth/*'
     status: 200
     target: '/index.html'
@@ -111,8 +127,8 @@ redirects:
     status: 200
     target: '/index.html'
   - source: '/'
-    status: 302
-    target: '/events/bsl2025/home'
+    status: 200
+    target: '/index.html'
   - source: '/<*>'
     status: 200
     target: '/index.html'

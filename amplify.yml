@@ -14,7 +14,7 @@ frontend:
             npm install
           fi
         - pip install awscli --upgrade --user
-        - export PATH=~/.local/bin:$PATH
+        - 'export PATH=~/.local/bin:$PATH'
         # Detect branch and set environment variables (defaults can be overridden in Amplify Console)
         - |
           if [ "$AWS_BRANCH" = "main" ]; then
@@ -30,9 +30,9 @@ frontend:
             export AMPLIFY_EVENT_ID=${AMPLIFY_EVENT_ID:-bsl2025}
             export AMPLIFY_EVENT_DOMAIN=${AMPLIFY_EVENT_DOMAIN:-bsl2025.hashpass.tech}
           fi
-        - echo "Building for branch: $AWS_BRANCH"
-        - echo "Event ID: $AMPLIFY_EVENT_ID"
-        - echo "Show all events: $AMPLIFY_SHOW_ALL_EVENTS"
+        - 'echo "Building for branch: $AWS_BRANCH"'
+        - 'echo "Event ID: $AMPLIFY_EVENT_ID"'
+        - 'echo "Show all events: $AMPLIFY_SHOW_ALL_EVENTS"'
     build:
       commands:
         - rm -rf dist

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity, StatusBar, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 
@@ -14,6 +14,7 @@ interface EventBannerProps {
   isLive?: boolean;
   lastUpdated?: string | null;
   usingJsonFallback?: boolean;
+  eventId?: string; // Event ID to determine if logo should be shown
 }
 
 interface TimeLeft {
@@ -33,9 +34,13 @@ export default function EventBanner({
   eventStartDate = '2025-11-12T09:00:00-05:00', // BSL 2025 start time
   isLive = false,
   lastUpdated = null,
-  usingJsonFallback = false
+  usingJsonFallback = false,
+  eventId
 }: EventBannerProps) {
   const { isDark, colors } = useTheme();
+  
+  // Check if this is BSL2025 event to show logo instead of title
+  const isBSL2025 = eventId === 'bsl2025' || title === 'Blockchain Summit Latam 2025';
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isEventLive, setIsEventLive] = useState(false);
   const [pulseAnim] = useState(new Animated.Value(1));
@@ -100,7 +105,18 @@ export default function EventBanner({
     <View style={styles.headerSection}>
       {/* Main Event Info */}
       <View style={styles.mainInfo}>
-        <Text style={styles.eventTitle}>{title}</Text>
+        {isBSL2025 ? (
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../assets/logos/bsl/BSL-Logo-fondo-oscuro-2024.svg')}
+              style={styles.eventLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.logoSubLabel}>2025 - 9th Edition</Text>
+          </View>
+        ) : (
+          <Text style={styles.eventTitle}>{title}</Text>
+        )}
         <Text style={styles.eventSubtitle}>{subtitle}</Text>
         <Text style={styles.eventDate}>{date}</Text>
       </View>
@@ -186,6 +202,24 @@ const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => Sty
     color: '#FFFFFF',
     marginBottom: 4,
     textAlign: 'center',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 4,
+    width: '100%',
+  },
+  eventLogo: {
+    width: 360,
+    height: 100,
+    marginBottom: 8,
+  },
+  logoSubLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginTop: 4,
   },
   eventSubtitle: {
     fontSize: 16,

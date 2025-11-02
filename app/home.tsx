@@ -249,8 +249,8 @@ export default function HomeScreen() {
           <Animated.View style={[styles.heroTextContainer, headerAnimatedStyle]}>
             <Image
               source={isDark
-                ? require('../assets/logos/logo-full-hashpass-white-cyan.svg')
-                : require('../assets/logos/logo-full-hashpass-white.svg')
+                ? require('../assets/logos/hashpass/logo-full-hashpass-white-cyan.svg')
+                : require('../assets/logos/hashpass/logo-full-hashpass-white.svg')
               }
               style={[styles.logo, headerAnimatedStyle]}
               resizeMode="contain"

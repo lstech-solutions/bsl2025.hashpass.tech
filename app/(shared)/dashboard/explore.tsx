@@ -288,6 +288,7 @@ export default function ExploreScreen() {
           showCountdown={true}
           showLiveIndicator={true}
           eventStartDate={selectedEvent?.eventStartDate || "2025-11-12T09:00:00-05:00"}
+          eventId={selectedEvent?.id}
         />
         {/* Header */}
         <View style={styles.header}>

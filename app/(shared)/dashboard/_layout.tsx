@@ -323,8 +323,8 @@ function CustomDrawerContent() {
               ]}>
                 <Image 
                   source={isDark 
-                    ? require('../../../assets/logos/logo-full-hashpass-white-cyan.svg')
-                    : require('../../../assets/logos/logo-full-hashpass-white.svg')
+                    ? require('../../../assets/logos/hashpass/logo-full-hashpass-white-cyan.svg')
+                    : require('../../../assets/logos/hashpass/logo-full-hashpass-white.svg')
                   } 
                   style={styles.logoImage}
                   resizeMode="contain"
@@ -723,8 +723,8 @@ export default function DashboardLayout() {
           <View style={styles.headerLogoContainer} pointerEvents="none">
             <Image 
               source={isDark 
-                ? require('../../../assets/logos/logo-full-hashpass-white-cyan.svg')
-                : require('../../../assets/logos/logo-full-hashpass-white.svg')
+                ? require('../../../assets/logos/hashpass/logo-full-hashpass-white-cyan.svg')
+                : require('../../../assets/logos/hashpass/logo-full-hashpass-white.svg')
               } 
               style={styles.headerLogoImage}
               resizeMode="contain"

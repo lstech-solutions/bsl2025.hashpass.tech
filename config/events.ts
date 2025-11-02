@@ -184,7 +184,7 @@ export const EVENTS: Record<string, EventConfig> = {
     branding: {
       primaryColor: '#6366f1',
       secondaryColor: '#8b5cf6',
-      logo: '/assets/logos/logo-full-hashpass-white.svg',
+      logo: '/assets/logos/hashpass/logo-full-hashpass-white.svg',
       favicon: '/favicon.ico'
     },
     api: {

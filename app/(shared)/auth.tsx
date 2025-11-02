@@ -119,8 +119,8 @@ export default function AuthScreen() {
           <Animated.View style={[styles.logoContainer, headerAnimatedStyle]}>            
             <Image
               source={isDark
-                ? require('../../assets/logos/logo-full-hashpass-black.svg')
-                : require('../../assets/logos/logo-full-hashpass-white.svg')
+                ? require('../../assets/logos/hashpass/logo-full-hashpass-black.svg')
+                : require('../../assets/logos/hashpass/logo-full-hashpass-white.svg')
               }
               style={styles.logo}
               resizeMode="contain"

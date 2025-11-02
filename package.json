@@ -1,7 +1,7 @@
 {
   "name": "hashpass.tech",
   "main": "expo-router/entry",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -27,7 +27,7 @@
   },
   "expo": {
     "extra": {
-      "EXPO_PUBLIC_API_BASE_URL": "https://hashpass.co/api/bslatam"
+      "EXPO_PUBLIC_API_BASE_URL": "https://hashpass.co/api"
     }
   },
   "jest": {

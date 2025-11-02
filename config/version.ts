@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202511020054, // Updated to current timestamp
+  buildNumber: 202511020246, // Updated to current timestamp
   releaseDate: '2025-11-02',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -38,11 +38,31 @@ export const CURRENT_VERSION: VersionInfo = {
     'Fixed loader not showing at beginning of agenda screen causing banner to expand'
   ],
   breakingChanges: [],
-  notes: 'Version 1.4.0 release'
+  notes: 'Version 1.4.1 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.4.1': {
+    version: '1.4.1',
+    buildNumber: 202511020246,
+    releaseDate: '2025-11-02',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Unified LoadingScreen component for consistent loading states across the app',
+      'Integrated LoadingScreen in networking, agenda, and speakers screens',
+      'Global loader implementation for agenda screen to prevent banner expansion issues'
+    ],
+    bugfixes: [
+      'Fixed LoadingScreen subtitle undefined error in getStyles function',
+      'Fixed agenda banner expansion issue during initial loading',
+      'Fixed missing LoadingScreen import in speakers calendar component',
+      'Fixed loader not showing at beginning of agenda screen causing banner to expand'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.4.1 release'
+  },
   '1.4.0': {
     version: '1.4.0',
     buildNumber: 202511020054,

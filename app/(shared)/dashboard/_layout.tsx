@@ -19,6 +19,9 @@ import { ScrollProvider, useScroll } from '../../../contexts/ScrollContext';
 import { NotificationProvider } from '../../../contexts/NotificationContext';
 import { AnimationProvider, useAnimations } from '../../../providers/AnimationProvider';
 import VersionDisplay from '../../../components/VersionDisplay';
+import QRScanner from '../../../components/QRScanner';
+import AdminQRScanner from '../../../components/AdminQRScanner';
+import { isAdmin } from '../../../lib/admin-utils';
 
 // Define the type for our drawer navigation
 type DrawerNavigation = CompositeNavigationProp<
@@ -430,6 +433,17 @@ export default function DashboardLayout() {
     const drawerNavigation = useNavigation<DrawerNavigation>();
     const { headerOpacity, headerBackground, headerTint, headerBlur, headerBorderWidth, headerShadowOpacity, headerHeight, setHeaderHeight, scrollY } = useScroll();
     const { animationsEnabled } = useAnimations();
+    const { user } = useAuth();
+    const [qrScannerVisible, setQrScannerVisible] = React.useState(false);
+    const [adminScannerVisible, setAdminScannerVisible] = React.useState(false);
+    const [isUserAdmin, setIsUserAdmin] = React.useState(false);
+
+    // Check admin status on mount
+    React.useEffect(() => {
+      if (user?.id) {
+        isAdmin(user.id).then(setIsUserAdmin);
+      }
+    }, [user]);
 
     // Adjust header background color based on theme to match app background
     const HEADER_SCROLL_DISTANCE = 100;
@@ -655,18 +669,60 @@ export default function DashboardLayout() {
             />
           </View>
 
-          <TouchableOpacity
-            onPress={() => console.log('Scan QR')}
-            style={styles.headerIconButton}
-            activeOpacity={0.8}
-          >
-            <Ionicons 
-              name="qr-code-outline" 
-              size={26} 
-              color={isDark ? '#FFFFFF' : '#000000'}
-            />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {isUserAdmin && (
+              <TouchableOpacity
+                onPress={() => setAdminScannerVisible(true)}
+                style={styles.headerIconButton}
+                activeOpacity={0.8}
+              >
+                <Ionicons 
+                  name="shield-checkmark-outline" 
+                  size={26} 
+                  color={isDark ? '#FF9500' : '#FF9500'}
+                />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => setQrScannerVisible(true)}
+              style={styles.headerIconButton}
+              activeOpacity={0.8}
+            >
+              <Ionicons 
+                name="qr-code-outline" 
+                size={26} 
+                color={isDark ? '#FFFFFF' : '#000000'}
+              />
+            </TouchableOpacity>
+          </View>
         </Animated.View>
+        
+        {/* Regular QR Scanner Modal */}
+        <QRScanner
+          visible={qrScannerVisible}
+          onClose={() => setQrScannerVisible(false)}
+          onScanSuccess={(result) => {
+            console.log('QR Scan Success:', result);
+            setQrScannerVisible(false);
+            // You can add navigation or other actions here based on scan result
+          }}
+          onScanError={(error) => {
+            console.error('QR Scan Error:', error);
+            // Error is already shown in the scanner component
+          }}
+        />
+        
+        {/* Admin QR Scanner Modal */}
+        {isUserAdmin && (
+          <AdminQRScanner
+            visible={adminScannerVisible}
+            onClose={() => setAdminScannerVisible(false)}
+            onScanSuccess={(result) => {
+              console.log('Admin QR Scan Success:', result);
+              // Admin scanner handles its own UI
+            }}
+          />
+        )}
       </View>
     );
   };

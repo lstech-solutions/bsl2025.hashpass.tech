@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.1] - 2025-11-02
+
+### Beta
+- Version 1.4.1 release
+
+### Technical Details
+- Version: 1.4.1
+- Release Type: beta
+- Build Number: 202511020246
+- Release Date: 2025-11-02T02:46:49.394Z
+
+
 ## [1.4.0] - 2025-11-02
 
 ### Released

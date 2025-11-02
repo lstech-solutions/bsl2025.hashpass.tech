@@ -22,8 +22,8 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202511012207, // Updated to current timestamp
-  releaseDate: '2025-11-01',
+  buildNumber: 202511020310, // Updated to current timestamp
+  releaseDate: '2025-11-02',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
@@ -38,11 +38,31 @@ export const CURRENT_VERSION: VersionInfo = {
     'Fixed HashPass logo card background to not be affected by sidebar animation'
   ],
   breakingChanges: [],
-  notes: 'Version 1.4.2 release - UI improvements and bug fixes'
+  notes: 'Version 1.4.3 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.4.3': {
+    version: '1.4.3',
+    buildNumber: 202511020310,
+    releaseDate: '2025-11-02',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'HashPass logo clickable with zoom animation - navigates to home page',
+      'Mouse wheel scroll support for Quick Access section on explore page',
+      'Snap-to-interval scrolling for Quick Access cards matching networking center behavior'
+    ],
+    bugfixes: [
+      'Fixed admin status check error (PGRST116) - multiple rows returned issue',
+      'Fixed QR code authentication error - wait for auth to finish loading',
+      'Fixed arrow button scrolling on small viewports in Quick Access section',
+      'Fixed HashPass logo card background to not be affected by sidebar animation'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.4.3 release'
+  },
   '1.4.2': {
     version: '1.4.2',
     buildNumber: 202511012207,

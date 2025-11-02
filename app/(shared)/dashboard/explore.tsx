@@ -1,5 +1,5 @@
-import React, { useRef, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, NativeSyntheticEvent, NativeScrollEvent, StatusBar } from 'react-native';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, NativeSyntheticEvent, NativeScrollEvent, StatusBar, Platform } from 'react-native';
 import { useScroll } from '../../../contexts/ScrollContext';
 import { useEvent } from '../../../contexts/EventContext';
 import { useTheme } from '../../../hooks/useTheme';
@@ -85,6 +85,19 @@ export default function ExploreScreen() {
     setShowRightArrow(currentScrollX < currentMaxScrollX - 10);
   };
 
+  // Additional scroll handlers for better web support
+  const handleQuickAccessScrollBeginDrag = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    handleQuickAccessScroll(event);
+  };
+
+  const handleQuickAccessScrollEndDrag = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    handleQuickAccessScroll(event);
+  };
+
+  const handleQuickAccessMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    handleQuickAccessScroll(event);
+  };
+
   const handleQuickAccessLayout = (e: any) => {
     const w = e?.nativeEvent?.layout?.width || 0;
     setViewportWidth(w);
@@ -95,6 +108,71 @@ export default function ExploreScreen() {
     setContentWidth(w);
     setMaxScrollX(Math.max(0, w - viewportWidth));
   };
+
+  // Web-specific scroll detection using DOM events (fallback)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    let scrollElement: HTMLElement | null = null;
+    let cleanupFn: (() => void) | null = null;
+    let initTimeout: NodeJS.Timeout | null = null;
+
+    // Use a small delay to ensure the ScrollView is mounted
+    const timeoutId = setTimeout(() => {
+      try {
+        const scrollRef = quickAccessScrollRef.current as any;
+        if (!scrollRef) return;
+
+        // Try to get the underlying DOM element
+        const getScrollElement = () => {
+          // React Native Web ScrollView structure
+          if (scrollRef._component) {
+            const innerView = scrollRef._component.querySelector?.('div[style*="overflow"]') ||
+                             scrollRef._component.querySelector?.('div[class*="scroll"]') ||
+                             scrollRef._component;
+            return innerView;
+          }
+          return null;
+        };
+
+        scrollElement = getScrollElement();
+        if (!scrollElement) return;
+
+        const handleWebScroll = () => {
+          if (!scrollElement) return;
+          const scrollLeft = scrollElement.scrollLeft || 0;
+          const scrollWidth = scrollElement.scrollWidth || 0;
+          const clientWidth = scrollElement.clientWidth || 0;
+          const maxScrollX = Math.max(0, scrollWidth - clientWidth);
+          
+          setScrollX(scrollLeft);
+          setMaxScrollX(maxScrollX);
+          setViewportWidth(clientWidth);
+          setShowLeftArrow(scrollLeft > 0);
+          setShowRightArrow(scrollLeft < maxScrollX - 10);
+        };
+
+        scrollElement.addEventListener('scroll', handleWebScroll, { passive: true });
+        
+        // Initial check after a brief delay
+        initTimeout = setTimeout(handleWebScroll, 100);
+
+        cleanupFn = () => {
+          if (initTimeout) clearTimeout(initTimeout);
+          if (scrollElement) {
+            scrollElement.removeEventListener('scroll', handleWebScroll);
+          }
+        };
+      } catch (error) {
+        console.warn('Failed to set up web scroll listener:', error);
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (cleanupFn) cleanupFn();
+    };
+  }, [Platform.OS]);
 
   const handleQuickAccessWheel = (e: any) => {
     // Map wheel vertical/horizontal delta to horizontal scroll
@@ -260,7 +338,10 @@ export default function ExploreScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalScroll}
               onScroll={handleQuickAccessScroll}
-              scrollEventThrottle={16}
+              onScrollBeginDrag={handleQuickAccessScrollBeginDrag}
+              onScrollEndDrag={handleQuickAccessScrollEndDrag}
+              onMomentumScrollEnd={handleQuickAccessMomentumScrollEnd}
+              scrollEventThrottle={Platform.OS === 'web' ? 0 : 16}
               decelerationRate="fast"
               snapToInterval={cardWidth + cardSpacing}
               snapToAlignment="start"

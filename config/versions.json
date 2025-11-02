@@ -1,6 +1,26 @@
 {
-  "currentVersion": "1.3.9",
+  "currentVersion": "1.4.0",
   "versions": [
+    {
+      "version": "1.4.0",
+      "buildNumber": 202511020054,
+      "releaseDate": "2025-11-02",
+      "releaseType": "stable",
+      "environment": "development",
+      "features": [
+        "Unified LoadingScreen component for consistent loading states across the app",
+        "Integrated LoadingScreen in networking, agenda, and speakers screens",
+        "Global loader implementation for agenda screen to prevent banner expansion issues"
+      ],
+      "bugfixes": [
+        "Fixed LoadingScreen subtitle undefined error in getStyles function",
+        "Fixed agenda banner expansion issue during initial loading",
+        "Fixed missing LoadingScreen import in speakers calendar component",
+        "Fixed loader not showing at beginning of agenda screen causing banner to expand"
+      ],
+      "breakingChanges": [],
+      "notes": "Polished profile view with avatar update functionality, removed sign out button and version display"
+    },
     {
       "version": "1.3.9",
       "buildNumber": 202510310833,

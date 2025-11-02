@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.0] - 2025-11-02
+
+### Released
+- Polished profile view with avatar update functionality, removed sign out button and version display
+
+### Technical Details
+- Version: 1.4.0
+- Release Type: stable
+- Build Number: 202511020054
+- Release Date: 2025-11-02T00:54:07.190Z
+
+
 ## [1.3.9] - 2025-10-31
 
 ### Beta

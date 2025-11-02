@@ -22,27 +22,47 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202511020246, // Updated to current timestamp
-  releaseDate: '2025-11-02',
+  buildNumber: 202511012207, // Updated to current timestamp
+  releaseDate: '2025-11-01',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
-    'Unified LoadingScreen component for consistent loading states across the app',
-    'Integrated LoadingScreen in networking, agenda, and speakers screens',
-    'Global loader implementation for agenda screen to prevent banner expansion issues'
+    'HashPass logo clickable with zoom animation - navigates to home page',
+    'Mouse wheel scroll support for Quick Access section on explore page',
+    'Snap-to-interval scrolling for Quick Access cards matching networking center behavior'
   ],
   bugfixes: [
-    'Fixed LoadingScreen subtitle undefined error in getStyles function',
-    'Fixed agenda banner expansion issue during initial loading',
-    'Fixed missing LoadingScreen import in speakers calendar component',
-    'Fixed loader not showing at beginning of agenda screen causing banner to expand'
+    'Fixed admin status check error (PGRST116) - multiple rows returned issue',
+    'Fixed QR code authentication error - wait for auth to finish loading',
+    'Fixed arrow button scrolling on small viewports in Quick Access section',
+    'Fixed HashPass logo card background to not be affected by sidebar animation'
   ],
   breakingChanges: [],
-  notes: 'Version 1.4.1 release'
+  notes: 'Version 1.4.2 release - UI improvements and bug fixes'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.4.2': {
+    version: '1.4.2',
+    buildNumber: 202511012207,
+    releaseDate: '2025-11-01',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'HashPass logo clickable with zoom animation - navigates to home page',
+      'Mouse wheel scroll support for Quick Access section on explore page',
+      'Snap-to-interval scrolling for Quick Access cards matching networking center behavior'
+    ],
+    bugfixes: [
+      'Fixed admin status check error (PGRST116) - multiple rows returned issue',
+      'Fixed QR code authentication error - wait for auth to finish loading',
+      'Fixed arrow button scrolling on small viewports in Quick Access section',
+      'Fixed HashPass logo card background to not be affected by sidebar animation'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.4.2 release - UI improvements and bug fixes'
+  },
   '1.4.1': {
     version: '1.4.1',
     buildNumber: 202511020246,

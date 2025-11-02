@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.4.2] - 2025-11-01
+
+### Beta
+- Version 1.4.2 release - UI improvements and bug fixes
+
+### Features
+- HashPass logo clickable with zoom animation - navigates to home page
+- Mouse wheel scroll support for Quick Access section on explore page
+- Snap-to-interval scrolling for Quick Access cards matching networking center behavior
+
+### Bugfixes
+- Fixed admin status check error (PGRST116) - multiple rows returned issue
+- Fixed QR code authentication error - wait for auth to finish loading
+- Fixed arrow button scrolling on small viewports in Quick Access section
+- Fixed HashPass logo card background to not be affected by sidebar animation
+
+### Technical Details
+- Version: 1.4.2
+- Release Type: beta
+- Build Number: 202511012207
+- Release Date: 2025-11-01T22:07:00.000Z
+
+
 ## [1.4.1] - 2025-11-02
 
 ### Beta

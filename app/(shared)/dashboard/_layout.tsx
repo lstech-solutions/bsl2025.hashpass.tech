@@ -48,6 +48,9 @@ function CustomDrawerContent() {
   const gradientAnimation3 = useSharedValue(0);
   const gradientAnimation4 = useSharedValue(0);
   
+  // Logo zoom animation
+  const logoScale = useSharedValue(1);
+  
   useEffect(() => {
     // Only start animations if animations are enabled
     if (animationsEnabled) {
@@ -192,6 +195,50 @@ function CustomDrawerContent() {
     }
   };
 
+  // Logo zoom animation style
+  const logoAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: logoScale.value }],
+    };
+  });
+
+  const handleLogoPress = () => {
+    navigation.dispatch(DrawerActions.closeDrawer());
+    router.push('/home' as any);
+  };
+
+  const handleLogoPressIn = () => {
+    logoScale.value = withSpring(1.1, {
+      damping: 10,
+      stiffness: 300,
+    });
+  };
+
+  const handleLogoPressOut = () => {
+    logoScale.value = withSpring(1, {
+      damping: 10,
+      stiffness: 300,
+    });
+  };
+
+  const handleLogoHoverIn = () => {
+    if (Platform.OS === 'web') {
+      logoScale.value = withSpring(1.1, {
+        damping: 10,
+        stiffness: 300,
+      });
+    }
+  };
+
+  const handleLogoHoverOut = () => {
+    if (Platform.OS === 'web') {
+      logoScale.value = withSpring(1, {
+        damping: 10,
+        stiffness: 300,
+      });
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background.default, flex: 1 }]}>
       {/* Drawer Header */}
@@ -256,19 +303,34 @@ function CustomDrawerContent() {
         ) : null}
         <View style={[styles.brandingContainer, { zIndex: 1, position: 'relative' }]}>
           <View style={styles.logoContainer}>
-            <View style={[styles.logoPill, {
-              backgroundColor: colors.primaryContrastText + '33', // White background with opacity
-              borderColor: colors.primaryContrastText + '66', // White border with opacity
-            }]}>
-              <Image 
-                source={isDark 
-                  ? require('../../../assets/logos/logo-full-hashpass-white-cyan.svg')
-                  : require('../../../assets/logos/logo-full-hashpass-white.svg')
-                } 
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
+            <TouchableOpacity
+              onPress={handleLogoPress}
+              onPressIn={handleLogoPressIn}
+              onPressOut={handleLogoPressOut}
+              activeOpacity={1}
+              // @ts-ignore - Web-specific hover handlers
+              onMouseEnter={handleLogoHoverIn}
+              onMouseLeave={handleLogoHoverOut}
+            >
+              <Animated.View style={[
+                styles.logoPill,
+                {
+                  backgroundColor: isDark ? colors.primaryLight : colors.primaryDark, // Solid background matching drawer header
+                  borderColor: colors.primaryContrastText + '66', // White border with opacity
+                  zIndex: 10, // Ensure logo card is above animated background
+                },
+                logoAnimatedStyle
+              ]}>
+                <Image 
+                  source={isDark 
+                    ? require('../../../assets/logos/logo-full-hashpass-white-cyan.svg')
+                    : require('../../../assets/logos/logo-full-hashpass-white.svg')
+                  } 
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
+              </Animated.View>
+            </TouchableOpacity>
           </View>
           <View style={styles.brandingSection}>
             <Text style={styles.brandSubtitle}>Digital Event Platform</Text>

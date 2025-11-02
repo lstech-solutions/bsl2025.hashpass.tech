@@ -31,7 +31,7 @@ export default function DynamicQRDisplay({
   onError,
 }: DynamicQRDisplayProps) {
   const { colors, isDark } = useTheme();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [qrCode, setQrCode] = useState<QRCode | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -47,7 +47,18 @@ export default function DynamicQRDisplay({
   const styles = getStyles(isDark, colors, size);
 
   useEffect(() => {
-    generateQR();
+    // Wait for auth to finish loading
+    if (authLoading) {
+      return;
+    }
+    
+    // Only generate QR if user is authenticated
+    if (user) {
+      generateQR();
+    } else {
+      setError('User not authenticated');
+      setIsLoading(false);
+    }
     
     return () => {
       if (refreshTimerRef.current) {
@@ -57,7 +68,7 @@ export default function DynamicQRDisplay({
         clearInterval(expiryTimerRef.current);
       }
     };
-  }, [passId]);
+  }, [passId, user, authLoading]);
 
   useEffect(() => {
     if (autoRefresh && qrCode && qrCode.status === 'active') {

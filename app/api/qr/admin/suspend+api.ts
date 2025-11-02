@@ -10,14 +10,14 @@ async function isAdmin(userId: string): Promise<boolean> {
       .select('role')
       .eq('user_id', userId)
       .in('role', ['superAdmin', 'admin', 'moderator'])
-      .maybeSingle();
+      .limit(1); // Limit to 1 since we only need to check existence
     
     if (error) {
       console.error('Error checking admin status:', error);
       return false;
     }
     
-    return !!data;
+    return !!data && data.length > 0;
   } catch {
     return false;
   }

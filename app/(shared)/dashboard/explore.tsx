@@ -58,7 +58,15 @@ export default function ExploreScreen() {
   const [showEventSelector, setShowEventSelector] = useState(shouldShowEventSelector());
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
+  const [scrollX, setScrollX] = useState(0);
+  const [maxScrollX, setMaxScrollX] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
   const quickAccessScrollRef = useRef<ScrollView>(null);
+  
+  // Quick Access card dimensions (matching styles)
+  const cardWidth = 140;
+  const cardSpacing = 12;
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -67,21 +75,61 @@ export default function ExploreScreen() {
 
   const handleQuickAccessScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const scrollX = contentOffset.x;
-    const maxScrollX = contentSize.width - layoutMeasurement.width;
+    const currentScrollX = contentOffset.x;
+    const currentMaxScrollX = contentSize.width - layoutMeasurement.width;
     
-    setShowLeftArrow(scrollX > 0);
-    setShowRightArrow(scrollX < maxScrollX - 10);
+    setScrollX(currentScrollX);
+    setMaxScrollX(currentMaxScrollX);
+    setViewportWidth(layoutMeasurement.width);
+    setShowLeftArrow(currentScrollX > 0);
+    setShowRightArrow(currentScrollX < currentMaxScrollX - 10);
+  };
+
+  const handleQuickAccessLayout = (e: any) => {
+    const w = e?.nativeEvent?.layout?.width || 0;
+    setViewportWidth(w);
+    setMaxScrollX(Math.max(0, contentWidth - w));
+  };
+
+  const handleQuickAccessContentSizeChange = (w: number, _h: number) => {
+    setContentWidth(w);
+    setMaxScrollX(Math.max(0, w - viewportWidth));
+  };
+
+  const handleQuickAccessWheel = (e: any) => {
+    // Map wheel vertical/horizontal delta to horizontal scroll
+    const dx = e?.nativeEvent?.deltaX ?? e?.deltaX ?? 0;
+    const dy = e?.nativeEvent?.deltaY ?? e?.deltaY ?? 0;
+    const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+    const nextX = Math.max(0, Math.min(scrollX + delta, maxScrollX));
+    
+    if (typeof e?.preventDefault === 'function') {
+      e.preventDefault();
+    }
+    
+    if (quickAccessScrollRef.current) {
+      quickAccessScrollRef.current.scrollTo({ x: nextX, animated: false });
+    }
   };
 
   const scrollQuickAccess = (direction: 'left' | 'right') => {
-    if (quickAccessScrollRef.current) {
-      const scrollAmount = 200;
-      // Use a more reliable method to get current scroll position
-      quickAccessScrollRef.current.scrollTo({ 
-        x: direction === 'left' ? -scrollAmount : scrollAmount, 
-        animated: true 
-      });
+    if (!quickAccessScrollRef.current) return;
+    
+    // For small screens, scroll by one card at a time
+    // For larger screens, scroll by viewport width minus spacing
+    const scrollAmount = viewportWidth > 0 && viewportWidth > cardWidth * 2
+      ? Math.min(viewportWidth - cardSpacing, cardWidth * 2)
+      : cardWidth + cardSpacing;
+    
+    const currentScrollX = scrollX || 0;
+    const target = direction === 'left' 
+      ? Math.max(0, currentScrollX - scrollAmount)
+      : Math.min(maxScrollX, currentScrollX + scrollAmount);
+    
+    // Only scroll if we're not already at the boundary
+    if ((direction === 'left' && currentScrollX > 0) || 
+        (direction === 'right' && currentScrollX < maxScrollX)) {
+      quickAccessScrollRef.current.scrollTo({ x: target, animated: true });
     }
   };
 
@@ -213,6 +261,14 @@ export default function ExploreScreen() {
               contentContainerStyle={styles.horizontalScroll}
               onScroll={handleQuickAccessScroll}
               scrollEventThrottle={16}
+              decelerationRate="fast"
+              snapToInterval={cardWidth + cardSpacing}
+              snapToAlignment="start"
+              disableIntervalMomentum
+              onLayout={handleQuickAccessLayout}
+              onContentSizeChange={handleQuickAccessContentSizeChange}
+              // @ts-ignore - onWheel supported in RN Web
+              onWheel={handleQuickAccessWheel}
             >
               {getQuickAccessItems().map((item, index) => renderQuickAccessItem(item, index))}
             </ScrollView>

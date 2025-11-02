@@ -16,12 +16,11 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useLanguage } from '../../../providers/LanguageProvider';
 import { color } from 'motion/react';
 import { ScrollProvider, useScroll } from '../../../contexts/ScrollContext';
-import { NotificationProvider } from '../../../contexts/NotificationContext';
+import { NotificationProvider, useNotifications } from '../../../contexts/NotificationContext';
 import { AnimationProvider, useAnimations } from '../../../providers/AnimationProvider';
 import VersionDisplay from '../../../components/VersionDisplay';
 import QRScanner from '../../../components/QRScanner';
-import AdminQRScanner from '../../../components/AdminQRScanner';
-import { isAdmin } from '../../../lib/admin-utils';
+import MiniNotificationDropdown from '../../../components/MiniNotificationDropdown';
 
 // Define the type for our drawer navigation
 type DrawerNavigation = CompositeNavigationProp<
@@ -35,6 +34,7 @@ function CustomDrawerContent() {
   const { colors, isDark, toggleTheme } = useTheme();
   const { signOut } = useAuth();
   const { locale, setLocale } = useLanguage();
+  const { unreadCount } = useNotifications();
   const { animationsEnabled } = useAnimations();
   const router = useRouter();
   const pathname = usePathname();
@@ -204,7 +204,7 @@ function CustomDrawerContent() {
 
   const handleLogoPress = () => {
     navigation.dispatch(DrawerActions.closeDrawer());
-    router.push('/home' as any);
+    router.push('./explore' as any);
   };
 
   const handleLogoPressIn = () => {
@@ -400,6 +400,13 @@ function CustomDrawerContent() {
               >
                 {item.label}
               </Text>
+              {item.route === './notifications' && unreadCount > 0 && (
+                <View style={styles.menuBadge}>
+                  <Text style={styles.menuBadgeText}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Text>
+                </View>
+              )}
               {isActive && (
                 <View style={styles.activeIndicator} />
               )}
@@ -493,19 +500,11 @@ export default function DashboardLayout() {
   // Header component for the drawer screens
   const Header = () => {
     const drawerNavigation = useNavigation<DrawerNavigation>();
+    const headerRouter = useRouter();
     const { headerOpacity, headerBackground, headerTint, headerBlur, headerBorderWidth, headerShadowOpacity, headerHeight, setHeaderHeight, scrollY } = useScroll();
     const { animationsEnabled } = useAnimations();
     const { user } = useAuth();
     const [qrScannerVisible, setQrScannerVisible] = React.useState(false);
-    const [adminScannerVisible, setAdminScannerVisible] = React.useState(false);
-    const [isUserAdmin, setIsUserAdmin] = React.useState(false);
-
-    // Check admin status on mount
-    React.useEffect(() => {
-      if (user?.id) {
-        isAdmin(user.id).then(setIsUserAdmin);
-      }
-    }, [user]);
 
     // Adjust header background color based on theme to match app background
     const HEADER_SCROLL_DISTANCE = 100;
@@ -720,7 +719,11 @@ export default function DashboardLayout() {
             />
           </TouchableOpacity>
 
-          <View style={styles.headerLogoContainer} pointerEvents="none">
+          <TouchableOpacity
+            onPress={() => headerRouter.push('./explore' as any)}
+            style={styles.headerLogoContainer}
+            activeOpacity={0.8}
+          >
             <Image 
               source={isDark 
                 ? require('../../../assets/logos/hashpass/logo-full-hashpass-white-cyan.svg')
@@ -729,22 +732,10 @@ export default function DashboardLayout() {
               style={styles.headerLogoImage}
               resizeMode="contain"
             />
-          </View>
+          </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            {isUserAdmin && (
-              <TouchableOpacity
-                onPress={() => setAdminScannerVisible(true)}
-                style={styles.headerIconButton}
-                activeOpacity={0.8}
-              >
-                <Ionicons 
-                  name="shield-checkmark-outline" 
-                  size={26} 
-                  color={isDark ? '#FF9500' : '#FF9500'}
-                />
-              </TouchableOpacity>
-            )}
+            <MiniNotificationDropdown />
             <TouchableOpacity
               onPress={() => setQrScannerVisible(true)}
               style={styles.headerIconButton}
@@ -774,17 +765,6 @@ export default function DashboardLayout() {
           }}
         />
         
-        {/* Admin QR Scanner Modal */}
-        {isUserAdmin && (
-          <AdminQRScanner
-            visible={adminScannerVisible}
-            onClose={() => setAdminScannerVisible(false)}
-            onScanSuccess={(result) => {
-              console.log('Admin QR Scan Success:', result);
-              // Admin scanner handles its own UI
-            }}
-          />
-        )}
       </View>
     );
   };
@@ -1076,6 +1056,22 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     color: colors.text.primary,
     flex: 1,
     letterSpacing: 0.2,
+  },
+  menuBadge: {
+    backgroundColor: '#FF3B30',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    minWidth: 24,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  menuBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
   logoutButton: {
     flexDirection: 'row',

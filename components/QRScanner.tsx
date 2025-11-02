@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator, Platform, ScrollView } from 'react-native';
 import { BarCodeScanner, BarCodeScannerResult } from 'expo-barcode-scanner';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
-import { qrSystemService, QRScanResult } from '../lib/qr-system';
+import { qrSystemService, QRScanResult, QRCode } from '../lib/qr-system';
 import { cameraPermissionManager } from '../lib/camera-permissions';
+import { isAdmin } from '../lib/admin-utils';
 
 interface QRScannerProps {
   visible: boolean;
@@ -30,6 +31,9 @@ export default function QRScanner({
   const [scanned, setScanned] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanResult, setScanResult] = useState<QRScanResult | null>(null);
+  const [qrDetails, setQrDetails] = useState<QRCode | null>(null);
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const styles = getStyles(isDark, colors);
 
@@ -39,13 +43,19 @@ export default function QRScanner({
       setScanned(false);
       setScanResult(null);
       setIsProcessing(false);
+      setQrDetails(null);
+      setShowDetails(false);
+      // Check admin status
+      if (user?.id) {
+        isAdmin(user.id).then(setIsUserAdmin);
+      }
       // Check permission status first
       checkPermissionStatus();
     } else {
       // Reset permission state when modal closes
       setHasPermission(null);
     }
-  }, [visible]);
+  }, [visible, user]);
 
   const checkPermissionStatus = async (forceRefresh: boolean = false) => {
     try {
@@ -193,18 +203,24 @@ export default function QRScanner({
 
       if (result.valid) {
         // Fetch QR details to show pass information
-        let qrDetails = null;
+        let qr = null;
         try {
-          qrDetails = await qrSystemService.getQRByToken(token);
+          qr = await qrSystemService.getQRByToken(token);
+          setQrDetails(qr);
+          
+          // If admin, show detailed view
+          if (isUserAdmin) {
+            setShowDetails(true);
+          }
         } catch (e) {
           console.error('Error fetching QR details:', e);
         }
 
         if (onScanSuccess) {
           onScanSuccess(result);
-        } else {
-          // Enhanced success handling with pass details
-          const passInfo = qrDetails?.display_data;
+        } else if (!isUserAdmin) {
+          // Regular user success handling with pass details
+          const passInfo = qr?.display_data;
           const passNumber = passInfo?.pass_number || 'N/A';
           const passType = passInfo?.pass_type || 'N/A';
           
@@ -265,6 +281,49 @@ export default function QRScanner({
     setScanned(false);
     setIsProcessing(false);
     setScanResult(null);
+    setQrDetails(null);
+    setShowDetails(false);
+  };
+
+  const handleRevoke = async () => {
+    if (!scanResult || !qrDetails || !user) return;
+
+    Alert.alert(
+      'Revoke QR Code',
+      'Are you sure you want to revoke this QR code?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Revoke',
+          style: 'destructive',
+          onPress: async () => {
+            const success = await qrSystemService.revokeQR(
+              qrDetails.token,
+              user.id,
+              'Revoked by admin via scanner'
+            );
+            if (success) {
+              Alert.alert('Success', 'QR code has been revoked');
+              resetScanner();
+            } else {
+              Alert.alert('Error', 'Failed to revoke QR code');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSuspend = async () => {
+    if (!scanResult || !qrDetails || !user) return;
+
+    const success = await qrSystemService.suspendQR(qrDetails.token, user.id);
+    if (success) {
+      Alert.alert('Success', 'QR code has been suspended');
+      resetScanner();
+    } else {
+      Alert.alert('Error', 'Failed to suspend QR code');
+    }
   };
 
   if (!visible) return null;
@@ -431,17 +490,75 @@ export default function QRScanner({
             </View>
           </View>
 
-          {/* Instructions */}
-          <View style={styles.instructions}>
-            <Text style={styles.instructionText}>
-              Position the QR code within the frame to scan
-            </Text>
-            {scanned && !isProcessing && (
-              <TouchableOpacity style={styles.resetButton} onPress={resetScanner}>
-                <Text style={styles.resetButtonText}>Scan Again</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          {/* Instructions or Admin Details */}
+          {showDetails && qrDetails && isUserAdmin ? (
+            <ScrollView style={styles.adminDetailsContainer}>
+              <View style={styles.adminDetailsHeader}>
+                <Text style={styles.adminDetailsTitle}>QR Code Details</Text>
+                <TouchableOpacity onPress={resetScanner}>
+                  <MaterialIcons name="close" size={24} color={colors.text.primary} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>Status</Text>
+                <Text style={[styles.detailValue, { color: qrDetails.status === 'active' ? colors.success : colors.error }]}>
+                  {qrDetails.status.toUpperCase()}
+                </Text>
+              </View>
+
+              {qrDetails.display_data && (
+                <>
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailLabel}>Pass Number</Text>
+                    <Text style={styles.detailValue}>{qrDetails.display_data.pass_number || 'N/A'}</Text>
+                  </View>
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailLabel}>Pass Type</Text>
+                    <Text style={styles.detailValue}>{qrDetails.display_data.pass_type || 'N/A'}</Text>
+                  </View>
+                </>
+              )}
+
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>QR Type</Text>
+                <Text style={styles.detailValue}>{qrDetails.qr_type || 'N/A'}</Text>
+              </View>
+
+              {qrDetails.expires_at && (
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Expires At</Text>
+                  <Text style={styles.detailValue}>
+                    {new Date(qrDetails.expires_at).toLocaleString()}
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.adminActions}>
+                {qrDetails.status === 'active' && (
+                  <TouchableOpacity style={styles.suspendButton} onPress={handleSuspend}>
+                    <MaterialIcons name="pause-circle-outline" size={20} color={colors.text.primary} />
+                    <Text style={styles.actionButtonText}>Suspend</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={styles.revokeButton} onPress={handleRevoke}>
+                  <MaterialIcons name="block" size={20} color="#FF3B30" />
+                  <Text style={[styles.actionButtonText, { color: '#FF3B30' }]}>Revoke</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          ) : (
+            <View style={styles.instructions}>
+              <Text style={styles.instructionText}>
+                Position the QR code within the frame to scan
+              </Text>
+              {scanned && !isProcessing && (
+                <TouchableOpacity style={styles.resetButton} onPress={resetScanner}>
+                  <Text style={styles.resetButtonText}>Scan Again</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
       </View>
     </Modal>
@@ -647,6 +764,76 @@ const getStyles = (isDark: boolean, colors: any) =>
       fontWeight: '600',
     },
     buttonTextSecondary: {
+      color: colors.text.primary,
+    },
+    adminDetailsContainer: {
+      maxHeight: 400,
+      backgroundColor: colors.background.paper,
+      borderTopWidth: 1,
+      borderTopColor: colors.divider,
+    },
+    adminDetailsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.divider,
+    },
+    adminDetailsTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text.primary,
+    },
+    detailSection: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.divider,
+    },
+    detailLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.text.secondary,
+      marginBottom: 4,
+      textTransform: 'uppercase',
+    },
+    detailValue: {
+      fontSize: 16,
+      color: colors.text.primary,
+      fontWeight: '500',
+    },
+    adminActions: {
+      flexDirection: 'row',
+      padding: 16,
+      gap: 12,
+    },
+    suspendButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 12,
+      borderRadius: 8,
+      backgroundColor: colors.background.default,
+      borderWidth: 1,
+      borderColor: colors.divider,
+      gap: 8,
+    },
+    revokeButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 12,
+      borderRadius: 8,
+      backgroundColor: colors.background.default,
+      borderWidth: 1,
+      borderColor: '#FF3B30',
+      gap: 8,
+    },
+    actionButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
       color: colors.text.primary,
     },
   });

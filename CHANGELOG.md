@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.6] - 2025-11-02
+
+### Beta
+- Version 1.4.6 release
+
+### Technical Details
+- Version: 1.4.6
+- Release Type: beta
+- Build Number: 202511022340
+- Release Date: 2025-11-02T23:40:07.824Z
+
+
 ## [1.4.4] - 2025-11-02
 
 ### Beta

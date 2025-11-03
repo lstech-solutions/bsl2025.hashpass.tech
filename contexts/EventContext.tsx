@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { EventConfig } from '../config/events';
+import { EventConfig, EVENTS } from '../config/events';
 import { getCurrentEvent } from '../lib/event-detector';
 
 interface EventContextType {
@@ -17,7 +17,13 @@ interface EventProviderProps {
 }
 
 export function EventProvider({ children }: EventProviderProps) {
-  const event = getCurrentEvent();
+  // Get EventInfo from event-detector
+  const eventInfo = getCurrentEvent();
+  
+  // Convert EventInfo to EventConfig by looking up the full config
+  const event: EventConfig | null = eventInfo 
+    ? (EVENTS[eventInfo.id as keyof typeof EVENTS] || null)
+    : null;
 
   const hasFeature = (feature: string) => {
     return event?.features?.includes(feature) ?? false;

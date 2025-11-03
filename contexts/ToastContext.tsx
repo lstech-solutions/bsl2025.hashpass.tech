@@ -72,9 +72,8 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
 
   const getToastStyles = (type: Toast['type']) => {
     const baseStyles = {
-      backgroundColor: colors.background.paper,
+      backgroundColor: isDark ? colors.surface : colors.background.paper,
       borderLeftWidth: 4,
-      // Shadow will be applied via className in the component
     };
 
     switch (type) {
@@ -82,28 +81,36 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         return {
           ...baseStyles,
           borderLeftColor: '#4CAF50',
-          backgroundColor: isDark ? '#2E7D32' : '#4CAF50',
+          borderColor: isDark ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.2)',
+          backgroundColor: isDark ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.3)',
         };
       case 'error':
         return {
           ...baseStyles,
           borderLeftColor: '#F44336',
-          backgroundColor: isDark ? '#C62828' : '#F44336',
+          borderColor: isDark ? 'rgba(244, 67, 54, 0.3)' : 'rgba(244, 67, 54, 0.2)',
+          backgroundColor: isDark ? 'rgba(244, 67, 54, 0.4)' : 'rgba(244, 67, 54, 0.3)',
         };
       case 'warning':
         return {
           ...baseStyles,
           borderLeftColor: '#FF9800',
-          backgroundColor: isDark ? '#E65100' : '#FF9800',
+          borderColor: isDark ? 'rgba(255, 152, 0, 0.3)' : 'rgba(255, 152, 0, 0.2)',
+          backgroundColor: isDark ? 'rgba(255, 152, 0, 0.4)' : 'rgba(255, 152, 0, 0.3)',
         };
       case 'info':
         return {
           ...baseStyles,
           borderLeftColor: '#2196F3',
-          backgroundColor: isDark ? '#1565C0' : '#2196F3',
+          borderColor: isDark ? 'rgba(33, 150, 243, 0.3)' : 'rgba(33, 150, 243, 0.2)',
+          backgroundColor: isDark ? 'rgba(33, 150, 243, 0.4)' : 'rgba(33, 150, 243, 0.3)',
         };
       default:
-        return baseStyles;
+        return {
+          ...baseStyles,
+          borderColor: colors.divider,
+          backgroundColor: isDark ? colors.surface : colors.background.paper,
+        };
     }
   };
 
@@ -178,16 +185,18 @@ const ToastItem: React.FC<ToastItemProps> = ({
   const [slideAnim] = useState(new Animated.Value(-100));
 
   React.useEffect(() => {
-    // Animate in
+    // Animate in with spring effect
     Animated.parallel([
-      Animated.timing(fadeAnim, {
+      Animated.spring(fadeAnim, {
         toValue: 1,
-        duration: 300,
+        tension: 50,
+        friction: 7,
         useNativeDriver: true,
       }),
-      Animated.timing(slideAnim, {
+      Animated.spring(slideAnim, {
         toValue: 0,
-        duration: 300,
+        tension: 50,
+        friction: 7,
         useNativeDriver: true,
       }),
     ]).start();
@@ -197,12 +206,12 @@ const ToastItem: React.FC<ToastItemProps> = ({
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 200,
+        duration: 250,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: -100,
-        duration: 200,
+        duration: 250,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -220,25 +229,38 @@ const ToastItem: React.FC<ToastItemProps> = ({
         {
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }],
-          marginTop: index * 8,
+          marginTop: index * 12,
         },
       ]}
     >
-      <View style={[styles.toast, toastStyles]} className="shadow-lg">
+      <View 
+        style={[
+          styles.toast, 
+          toastStyles,
+          {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: isDark ? 0.5 : 0.2,
+            shadowRadius: 8,
+            elevation: 8,
+          }
+        ]}
+      >
         <View style={styles.toastContent}>
           <View style={styles.toastHeader}>
-            <MaterialIcons
-              name={icon.name as any}
-              size={24}
-              color={icon.color}
-              style={styles.toastIcon}
-            />
+            <View style={[styles.iconContainer, { backgroundColor: `${icon.color}20` }]}>
+              <MaterialIcons
+                name={icon.name as any}
+                size={22}
+                color={icon.color}
+              />
+            </View>
             <View style={styles.toastTextContainer}>
-              <Text style={[styles.toastTitle, { color: '#FFFFFF' }]}>
+              <Text style={[styles.toastTitle, { color: colors.text.primary }]}>
                 {toast.title}
               </Text>
               {toast.message && (
-                <Text style={[styles.toastMessage, { color: '#FFFFFF' }]}>
+                <Text style={[styles.toastMessage, { color: colors.text.secondary }]}>
                   {toast.message}
                 </Text>
               )}
@@ -250,21 +272,27 @@ const ToastItem: React.FC<ToastItemProps> = ({
             >
               <MaterialIcons
                 name="close"
-                size={20}
-                color="#FFFFFF"
+                size={18}
+                color={colors.text.secondary}
               />
             </TouchableOpacity>
           </View>
           
           {toast.action && (
             <TouchableOpacity
-              style={[styles.actionButton, { borderColor: colors.divider }]}
+              style={[
+                styles.actionButton, 
+                { 
+                  borderColor: icon.color,
+                  backgroundColor: `${icon.color}15`,
+                }
+              ]}
               onPress={() => {
                 toast.action?.onPress();
                 handleHide();
               }}
             >
-              <Text style={[styles.actionButtonText, { color: colors.primary }]}>
+              <Text style={[styles.actionButtonText, { color: icon.color }]}>
                 {toast.action.label}
               </Text>
             </TouchableOpacity>
@@ -283,15 +311,18 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
     backgroundColor: 'transparent',
+    pointerEvents: 'box-none',
   },
   toastItem: {
     marginBottom: 8,
+    width: '100%',
+    maxWidth: 400,
   },
   toast: {
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    minHeight: 60,
-    // Shadow is now handled by className in the component
+    minHeight: 64,
+    borderWidth: 1,
   },
   toastContent: {
     flex: 1,
@@ -300,39 +331,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  toastIcon: {
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
-    marginTop: 2,
+    flexShrink: 0,
   },
   toastTextContainer: {
     flex: 1,
     marginRight: 8,
+    paddingTop: 2,
   },
   toastTitle: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
-    lineHeight: 20,
+    lineHeight: 22,
+    letterSpacing: 0.2,
   },
   toastMessage: {
     fontSize: 14,
-    lineHeight: 18,
+    lineHeight: 20,
+    letterSpacing: 0.1,
   },
   closeButton: {
     padding: 4,
     marginTop: -2,
+    borderRadius: 12,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionButton: {
     marginTop: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignSelf: 'flex-start',
   },
   actionButtonText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
 });
 

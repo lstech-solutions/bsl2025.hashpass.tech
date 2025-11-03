@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator, FlatList, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, FlatList, ImageBackground, Modal, Share, Platform, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { passSystemService, PassInfo, PassRequestLimits, PassType } from '@/lib/pass-system';
+import DynamicQRDisplay from './DynamicQRDisplay';
+import * as Clipboard from 'expo-clipboard';
 
 interface PassesDisplayProps {
   // Display mode
@@ -205,11 +209,11 @@ export default function PassesDisplay({
           </Text>
         )}
         
-        <View style={{ height: 300 }}>
+        <View style={{ minHeight: 520, marginHorizontal: -4 }}>
           <FlatList
             data={[passInfo]}
             renderItem={({ item }) => (
-              <View style={{ width: 280, marginRight: 16 }}>
+              <View style={{ width: 340, marginRight: 20, paddingHorizontal: 4 }}>
                 <PassCard pass={item} />
               </View>
             )}
@@ -217,7 +221,7 @@ export default function PassesDisplay({
             horizontal={true}
             showsHorizontalScrollIndicator={true}
             scrollEnabled={true}
-            contentContainerStyle={{ paddingRight: 16 }}
+            contentContainerStyle={{ paddingRight: 20, paddingLeft: 4 }}
           />
         </View>
       </View>
@@ -948,9 +952,92 @@ export default function PassesDisplay({
   );
 }
 
-// PassCard component for dashboard mode - enhanced ticket-style design
+// PassCard component for dashboard mode - enhanced ticket-style design with flip animation
 const PassCard = ({ pass }: { pass: PassInfo }) => {
   const { colors } = useTheme();
+  const router = useRouter();
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
+  
+  // Flip animation values
+  const flipRotation = useSharedValue(0);
+  
+  // Handle flip animation
+  const handleFlip = () => {
+    setIsFlipped(!isFlipped);
+    flipRotation.value = withSpring(isFlipped ? 0 : 180, {
+      damping: 15,
+      stiffness: 100,
+    });
+  };
+  
+  // Front card animated style
+  const frontAnimatedStyle = useAnimatedStyle(() => {
+    const rotateY = interpolate(flipRotation.value, [0, 180], [0, 180]);
+    return {
+      transform: [{ rotateY: `${rotateY}deg` }],
+      backfaceVisibility: 'hidden' as const,
+    };
+  });
+  
+  // Back card animated style
+  const backAnimatedStyle = useAnimatedStyle(() => {
+    const rotateY = interpolate(flipRotation.value, [0, 180], [180, 360]);
+    return {
+      transform: [{ rotateY: `${rotateY}deg` }],
+      backfaceVisibility: 'hidden' as const,
+    };
+  });
+  
+  const handleShare = async () => {
+    try {
+      const passTypeDisplay = passSystemService.getPassTypeDisplayName(pass.pass_type);
+      const shareMessage = `Check out my ${passTypeDisplay} pass for BSL 2025!\n\nPass Number: ${pass.pass_number}\nPass Type: ${passTypeDisplay}\n\nPresent this QR code at the event entrance.`;
+
+      // Check if Share API is available (works on mobile and some browsers)
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.share) {
+        // Use Web Share API if available
+        await navigator.share({
+          title: `BSL 2025 ${passTypeDisplay} Pass`,
+          text: shareMessage,
+        });
+      } else if (Platform.OS !== 'web' && Share.share) {
+        // Use React Native Share on mobile
+        await Share.share({
+          message: shareMessage,
+          title: `BSL 2025 ${passTypeDisplay} Pass`,
+        });
+      } else {
+        // Fallback: Copy to clipboard for browsers without Share API
+        await Clipboard.setStringAsync(shareMessage);
+        Alert.alert(
+          'Pass Information Copied',
+          'Pass information has been copied to your clipboard. You can paste it anywhere to share.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error: any) {
+      // If share was cancelled, don't show error
+      if (error?.message?.includes('cancel') || error?.message?.includes('AbortError')) {
+        return;
+      }
+      
+      // For other errors, fallback to clipboard
+      try {
+        const passTypeDisplay = passSystemService.getPassTypeDisplayName(pass.pass_type);
+        const shareMessage = `Check out my ${passTypeDisplay} pass for BSL 2025!\n\nPass Number: ${pass.pass_number}\nPass Type: ${passTypeDisplay}\n\nPresent this QR code at the event entrance.`;
+        await Clipboard.setStringAsync(shareMessage);
+        Alert.alert(
+          'Pass Information Copied',
+          'Pass information has been copied to your clipboard. You can paste it anywhere to share.',
+          [{ text: 'OK' }]
+        );
+      } catch (clipboardError) {
+        console.error('Error copying to clipboard:', clipboardError);
+        Alert.alert('Error', 'Unable to share pass. Please try again.');
+      }
+    }
+  };
   
   const getPassTypeColor = (type: string) => {
     switch (type) {
@@ -988,7 +1075,8 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
     }
   };
 
-  return (
+  // Front card content
+  const renderFrontCard = () => (
     <View style={{
       backgroundColor: colors.background.paper,
       borderRadius: 16,
@@ -999,63 +1087,116 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
       shadowOpacity: 0.1,
       shadowRadius: 6,
       elevation: 3,
-      overflow: 'hidden',
-      marginBottom: 24, // Increased bottom margin for better spacing
-      marginHorizontal: 4
+      overflow: 'visible', // Changed to visible to show ticket notches
+      width: '100%',
+      minHeight: 480,
+      flex: 1,
+      flexDirection: 'column',
     }}>
+      {/* Ticket-style side notches */}
+      <View style={{
+        position: 'absolute',
+        left: -8,
+        top: '50%',
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: colors.background.default,
+        zIndex: 1,
+        transform: [{ translateY: -8 }]
+      }} />
+      <View style={{
+        position: 'absolute',
+        right: -8,
+        top: '50%',
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: colors.background.default,
+        zIndex: 1,
+        transform: [{ translateY: -8 }]
+      }} />
+      {/* Content wrapper with overflow hidden for internal content */}
+      <View style={{ overflow: 'hidden', flex: 1, flexDirection: 'column' }}>
       {/* Ticket Header */}
       <View style={{
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
         padding: 14,
         paddingBottom: 10,
         borderBottomWidth: 1,
         borderBottomColor: colors.divider
       }}>
-        <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
-          <Text 
-            style={{ 
-              fontSize: 12,
-              fontWeight: '700',
-              color: colors.text.primary,
-              maxWidth: '100%',
-              flexShrink: 1,
-              lineHeight: 16,
-              letterSpacing: -0.1,
-              marginBottom: 1
-            }}
-            numberOfLines={1}
-            ellipsizeMode="middle"
-            minimumFontScale={0.8}
-            adjustsFontSizeToFit
-          >
-            {getPassTypeLabel(pass.pass_type)} Pass
-          </Text>
-          <Text style={{ 
-            fontSize: 9, 
-            color: colors.text.secondary,
-            opacity: 0.8
-          }}>
-            Nov 12-14, 2025
-          </Text>
-        </View>
         <View style={{
-          paddingHorizontal: 10,
-          paddingVertical: 4,
-          backgroundColor: getPassTypeColor(pass.pass_type),
-          borderRadius: 16,
-          marginLeft: 8, // Add some spacing between title and badge
-          flexShrink: 0 // Prevent badge from shrinking
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 8
         }}>
-          <Text style={{ 
-            fontSize: 12, 
-            fontWeight: '700', 
-            color: '#FFFFFF'
+          <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
+            <Text 
+              style={{ 
+                fontSize: 12,
+                fontWeight: '700',
+                color: colors.text.primary,
+                maxWidth: '100%',
+                flexShrink: 1,
+                lineHeight: 16,
+                letterSpacing: -0.1,
+                marginBottom: 1
+              }}
+              numberOfLines={1}
+              ellipsizeMode="middle"
+              minimumFontScale={0.8}
+              adjustsFontSizeToFit
+            >
+              {getPassTypeLabel(pass.pass_type)} Pass
+            </Text>
+            <Text style={{ 
+              fontSize: 9, 
+              color: colors.text.secondary,
+              opacity: 0.8
+            }}>
+              Nov 12-14, 2025
+            </Text>
+          </View>
+          <View style={{
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            backgroundColor: getPassTypeColor(pass.pass_type),
+            borderRadius: 16,
+            marginLeft: 8,
+            flexShrink: 0
           }}>
-            {pass.pass_type.toUpperCase()}
-          </Text>
+            <Text style={{ 
+              fontSize: 12, 
+              fontWeight: '700', 
+              color: '#FFFFFF'
+            }}>
+              {pass.pass_type.toUpperCase()}
+            </Text>
+          </View>
         </View>
+        {/* Show Full Details Link */}
+        <TouchableOpacity
+          onPress={() => {
+            router.push(`/dashboard/pass-details?passId=${pass.pass_id}`);
+          }}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            alignSelf: 'flex-start',
+            marginTop: 4
+          }}
+        >
+          <Text style={{
+            fontSize: 10,
+            color: getPassTypeColor(pass.pass_type),
+            fontWeight: '600',
+            textDecorationLine: 'underline'
+          }}>
+            Show Full Details
+          </Text>
+          <MaterialIcons name="arrow-forward" size={12} color={getPassTypeColor(pass.pass_type)} style={{ marginLeft: 4 }} />
+        </TouchableOpacity>
       </View>
       
       {/* Ticket Image Container */}
@@ -1183,17 +1324,24 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
       <View style={{
         flexDirection: 'row',
         borderTopWidth: 1,
-        borderTopColor: colors.divider
+        borderTopColor: colors.divider,
+        marginTop: 'auto' // Push footer to bottom
       }}>
-        <TouchableOpacity style={{
-          flex: 1,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingVertical: 12,
-          borderRightWidth: 1,
-          borderRightColor: colors.divider
-        }}>
+        <TouchableOpacity 
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 12,
+            borderRightWidth: 1,
+            borderRightColor: colors.divider
+          }}
+          onPress={() => {
+            // Navigate to QR view page or show modal
+            setShowQRModal(true);
+          }}
+        >
           <MaterialIcons name="qr-code" size={16} color="#4A90E2" />
           <Text style={{ 
             fontSize: 12, 
@@ -1204,15 +1352,18 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             QR Code
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={{
-          flex: 1,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingVertical: 12,
-          borderRightWidth: 1,
-          borderRightColor: colors.divider
-        }}>
+        <TouchableOpacity 
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 12,
+            borderRightWidth: 1,
+            borderRightColor: colors.divider
+          }}
+          onPress={handleFlip}
+        >
           <MaterialIcons name="info" size={16} color="#4A90E2" />
           <Text style={{ 
             fontSize: 12, 
@@ -1223,13 +1374,16 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             Details
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={{
-          flex: 1,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingVertical: 12
-        }}>
+        <TouchableOpacity 
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 12
+          }}
+          onPress={handleShare}
+        >
           <MaterialIcons name="share" size={16} color="#4A90E2" />
           <Text style={{ 
             fontSize: 12, 
@@ -1241,6 +1395,428 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
           </Text>
         </TouchableOpacity>
       </View>
+      </View> {/* Close content wrapper */}
+    </View>
+  );
+
+  // Back card content - Resume/Summary version
+  const renderBackCard = () => (
+    <View style={{
+      backgroundColor: colors.background.paper,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.divider,
+      shadowColor: colors.text.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+      elevation: 3,
+      overflow: 'visible', // Changed to visible to show ticket notches
+      width: '100%',
+      minHeight: 480,
+      flex: 1,
+      flexDirection: 'column',
+    }}>
+      {/* Ticket-style side notches */}
+      <View style={{
+        position: 'absolute',
+        left: -8,
+        top: '50%',
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: colors.background.default,
+        zIndex: 1,
+        transform: [{ translateY: -8 }]
+      }} />
+      <View style={{
+        position: 'absolute',
+        right: -8,
+        top: '50%',
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: colors.background.default,
+        zIndex: 1,
+        transform: [{ translateY: -8 }]
+      }} />
+      {/* Content wrapper */}
+      <View style={{ overflow: 'hidden', flex: 1, flexDirection: 'column' }}>
+      {/* Ticket Header - Same as front */}
+      <View style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 14,
+        paddingBottom: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.divider
+      }}>
+        <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
+          <Text 
+            style={{ 
+              fontSize: 12,
+              fontWeight: '700',
+              color: colors.text.primary,
+              maxWidth: '100%',
+              flexShrink: 1,
+              lineHeight: 16,
+              letterSpacing: -0.1,
+              marginBottom: 1
+            }}
+            numberOfLines={1}
+            ellipsizeMode="middle"
+            minimumFontScale={0.8}
+            adjustsFontSizeToFit
+          >
+            Pass Summary
+          </Text>
+          <Text style={{ 
+            fontSize: 9, 
+            color: colors.text.secondary,
+            opacity: 0.8
+          }}>
+            Quick Overview
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={handleFlip}
+          style={{
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            backgroundColor: getPassTypeColor(pass.pass_type),
+            borderRadius: 16,
+            marginLeft: 8,
+            flexShrink: 0
+          }}
+        >
+          <MaterialIcons name="flip" size={14} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+      
+      {/* Summary Content */}
+      <View style={{ flex: 1, padding: 16, justifyContent: 'space-between' }}>
+        {/* Pass Info Summary */}
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+            <MaterialIcons name="confirmation-number" size={18} color={colors.text.secondary} />
+            <Text style={{ fontSize: 12, color: colors.text.primary, marginLeft: 8, fontWeight: '600' }}>
+              #{pass.pass_number}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+            <MaterialIcons name="event" size={18} color={colors.text.secondary} />
+            <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 8 }}>
+              BSL 2025 • Nov 12-14, 2025
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+            <MaterialIcons name="label" size={18} color={colors.text.secondary} />
+            <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 8 }}>
+              {getPassTypeLabel(pass.pass_type)} Pass • {pass.status.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Stats Grid */}
+        <View style={{ 
+          flexDirection: 'row', 
+          justifyContent: 'space-around',
+          paddingVertical: 16,
+          borderTopWidth: 1,
+          borderTopColor: colors.divider,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.divider,
+          marginBottom: 16
+        }}>
+          <View style={{ alignItems: 'center', flex: 1 }}>
+            <Text style={{ fontSize: 28, fontWeight: '700', color: colors.text.primary }}>
+              {pass.remaining_requests}
+            </Text>
+            <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center', marginTop: 4 }}>
+              Requests Left
+            </Text>
+            <Text style={{ fontSize: 9, color: colors.text.secondary, textAlign: 'center', marginTop: 2 }}>
+              {pass.used_requests} / {pass.max_requests} used
+            </Text>
+          </View>
+          <View style={{ width: 1, backgroundColor: colors.divider, marginHorizontal: 8 }} />
+          <View style={{ alignItems: 'center', flex: 1 }}>
+            <Text style={{ fontSize: 28, fontWeight: '700', color: colors.warning || '#FF9500' }}>
+              {pass.remaining_boost}
+            </Text>
+            <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center', marginTop: 4 }}>
+              Boost Left
+            </Text>
+            <Text style={{ fontSize: 9, color: colors.text.secondary, textAlign: 'center', marginTop: 2 }}>
+              {pass.used_boost} / {pass.max_boost} used
+            </Text>
+          </View>
+        </View>
+
+        {/* Quick Access Info */}
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{
+            fontSize: 11,
+            fontWeight: '600',
+            color: colors.text.primary,
+            marginBottom: 8,
+            textTransform: 'uppercase',
+            letterSpacing: 0.5
+          }}>
+            Access Included
+          </Text>
+          <Text style={{
+            fontSize: 12,
+            color: colors.text.secondary,
+            lineHeight: 18
+          }}>
+            {getPassAccess(pass.pass_type)}
+          </Text>
+        </View>
+
+        {/* Full Details Button */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: getPassTypeColor(pass.pass_type),
+            paddingVertical: 14,
+            borderRadius: 10,
+            alignItems: 'center',
+            flexDirection: 'row',
+            justifyContent: 'center',
+            gap: 8,
+            marginTop: 'auto',
+            shadowColor: getPassTypeColor(pass.pass_type),
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 4,
+          }}
+          onPress={() => {
+            handleFlip();
+            router.push(`/dashboard/pass-details?passId=${pass.pass_id}`);
+          }}
+          activeOpacity={0.8}
+        >
+          <MaterialIcons name="info" size={18} color="#FFFFFF" />
+          <Text style={{
+            fontSize: 14,
+            fontWeight: '700',
+            color: '#FFFFFF',
+            letterSpacing: 0.5
+          }}>
+            View Full Details
+          </Text>
+          <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Ticket Footer Actions - Same style as front */}
+      <View style={{
+        flexDirection: 'row',
+        borderTopWidth: 1,
+        borderTopColor: colors.divider,
+        marginTop: 'auto' // Push footer to bottom
+      }}>
+        <TouchableOpacity 
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 12,
+            borderRightWidth: 1,
+            borderRightColor: colors.divider
+          }}
+          onPress={() => {
+            handleFlip();
+            setShowQRModal(true);
+          }}
+        >
+          <MaterialIcons name="qr-code" size={16} color="#4A90E2" />
+          <Text style={{ 
+            fontSize: 12, 
+            fontWeight: '600', 
+            color: '#4A90E2',
+            marginLeft: 4
+          }}>
+            QR Code
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 12,
+            borderRightWidth: 1,
+            borderRightColor: colors.divider
+          }}
+          onPress={handleFlip}
+        >
+          <MaterialIcons name="flip" size={16} color="#4A90E2" />
+          <Text style={{ 
+            fontSize: 12, 
+            fontWeight: '600', 
+            color: '#4A90E2',
+            marginLeft: 4
+          }}>
+            Flip Back
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 12
+          }}
+          onPress={handleShare}
+        >
+          <MaterialIcons name="share" size={16} color="#4A90E2" />
+          <Text style={{ 
+            fontSize: 12, 
+            fontWeight: '600', 
+            color: '#4A90E2',
+            marginLeft: 4
+          }}>
+            Share
+          </Text>
+        </TouchableOpacity>
+      </View>
+      </View> {/* Close content wrapper */}
+    </View>
+  );
+
+  return (
+    <View style={{
+      marginBottom: 24,
+      marginHorizontal: 0, // Remove horizontal margin, let parent handle spacing
+      minHeight: 480, // Minimum height for flip animation, allows content to expand
+      width: '100%',
+    }}>
+      {/* Flip Card Container */}
+      <View style={{
+        width: '100%',
+        minHeight: 480,
+      }}>
+        {/* Front Card */}
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              width: '100%',
+              minHeight: 480,
+            },
+            frontAnimatedStyle
+          ]}
+        >
+          {renderFrontCard()}
+        </Animated.View>
+
+        {/* Back Card */}
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              width: '100%',
+              minHeight: 480,
+            },
+            backAnimatedStyle
+          ]}
+        >
+          {renderBackCard()}
+        </Animated.View>
+      </View>
+      
+      {/* QR Code Modal */}
+      <Modal
+        visible={showQRModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowQRModal(false)}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20
+        }}>
+          <View style={{
+            backgroundColor: colors.background.paper,
+            borderRadius: 20,
+            padding: 24,
+            width: '100%',
+            maxWidth: 400,
+            maxHeight: '90%'
+          }}>
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 20
+            }}>
+              <Text style={{
+                fontSize: 20,
+                fontWeight: '700',
+                color: colors.text.primary
+              }}>
+                Your Pass QR Code
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowQRModal(false)}
+                style={{
+                  padding: 8,
+                  borderRadius: 20,
+                  backgroundColor: colors.background.secondary
+                }}
+              >
+                <MaterialIcons name="close" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+            
+            <DynamicQRDisplay
+              passId={pass.pass_id}
+              passNumber={pass.pass_number}
+              passType={pass.pass_type}
+              size={250}
+              showRefreshButton={true}
+              autoRefresh={true}
+              refreshInterval={30}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
+
+// Helper component for detail rows
+const DetailRow = ({ icon, label, value, colors }: { icon: string; label: string; value: string; colors: any }) => (
+  <View style={{
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12
+  }}>
+    <MaterialIcons name={icon as any} size={18} color={colors.text.secondary} />
+    <View style={{ marginLeft: 12, flex: 1 }}>
+      <Text style={{
+        fontSize: 11,
+        color: colors.text.secondary,
+        marginBottom: 2
+      }}>
+        {label}
+      </Text>
+      <Text style={{
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.text.primary
+      }}>
+        {value}
+      </Text>
+    </View>
+  </View>
+);

@@ -1,4 +1,5 @@
 import rawVersionsData from '../../config/versions.json';
+import gitInfo from '../../config/git-info.json';
 
 // Type assertion to ensure the imported data matches our interface
 const versionsData = rawVersionsData as VersionsData;
@@ -60,11 +61,19 @@ class VersionService {
   }
 
   public getBuildInfo() {
+    const gitCommit = (gitInfo as any).gitCommit || process.env.GIT_COMMIT || 'unknown';
+    const gitCommitFull = (gitInfo as any).gitCommitFull || gitCommit;
+    const gitBranch = (gitInfo as any).gitBranch || process.env.GIT_BRANCH || 'main';
+    const gitRepoUrl = (gitInfo as any).gitRepoUrl || 'https://github.com/lstech-solutions/bsl2025.hashpass.tech';
+    
     return {
       buildId: `build-${this.getCurrentVersion().buildNumber}`,
       buildTime: new Date().toISOString(),
-      gitCommit: process.env.GIT_COMMIT || 'unknown',
-      gitBranch: process.env.GIT_BRANCH || 'main',
+      gitCommit: gitCommit,
+      gitCommitFull: gitCommitFull,
+      gitBranch: gitBranch,
+      gitRepoUrl: gitRepoUrl,
+      gitCommitUrl: `${gitRepoUrl}/commit/${gitCommitFull}`,
       buildEnvironment: process.env.NODE_ENV || 'development',
       buildMachine: process.env.HOSTNAME || 'unknown',
     };

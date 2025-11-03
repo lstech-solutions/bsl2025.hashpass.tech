@@ -1,7 +1,7 @@
 {
   "name": "hashpass.tech",
   "main": "expo-router/entry",
-  "version": "1.3.4",
+  "version": "1.4.6",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -9,7 +9,8 @@
     "web": "expo start --web --clear",
     "test": "jest --watchAll",
     "dev": "expo start --web --clear",
-    "build:web": "npm run prebuild && expo export -p web && npx workbox-cli generateSW workbox-config.js",
+    "build:web": "npm run prebuild && expo export -p web && npm run postbuild:web && npx workbox-cli generateSW workbox-config.js",
+    "postbuild:web": "if [ -d dist/server/_expo ]; then mkdir -p dist/client/_expo && cp -r dist/server/_expo/* dist/client/_expo/; fi && if [ -d dist/server/static ]; then mkdir -p dist/client/static && cp -r dist/server/static/* dist/client/static/; fi",
     "prebuild": "rm -rf dist",
     "lint": "expo lint",
     "deploy": "npm run build:web && netlify deploy --prod",
@@ -18,6 +19,7 @@
     "amplify:push": "amplify push",
     "amplify:deploy": "amplify publish",
     "version:update": "node scripts/update-version.mjs",
+    "version:bump": "node scripts/version-bump.js",
     "parameters:setup": "./scripts/setup-parameters.sh create",
     "parameters:verify": "./scripts/setup-parameters.sh verify",
     "parameters:list": "./scripts/setup-parameters.sh list",
@@ -26,7 +28,7 @@
   },
   "expo": {
     "extra": {
-      "EXPO_PUBLIC_API_BASE_URL": "https://hashpass.co/api/bslatam"
+      "EXPO_PUBLIC_API_BASE_URL": "https://hashpass.co/api"
     }
   },
   "jest": {
@@ -58,6 +60,7 @@
     "expo-auth-session": "^6.2.1",
     "expo-barcode-scanner": "~13.0.1",
     "expo-blur": "~14.1.4",
+    "expo-clipboard": "^8.0.7",
     "expo-constants": "~17.1.5",
     "expo-font": "~13.3.1",
     "expo-haptics": "~14.1.4",

@@ -1,14 +1,11 @@
 // Event Detection Utility
 // This utility detects available events based on the current deployment context
 
-import { EventConfig } from '../config/events';
+import { EventConfig, EVENTS } from '../config/events';
 
+// EventInfo is the UI-focused view of EventConfig
+// It omits backend-specific fields (name, domain) and adds availability flag
 export interface EventInfo extends Omit<EventConfig, 'name' | 'domain'> {
-  title: string;
-  subtitle: string;
-  image: string;
-  color: string;
-  route: string;
   available: boolean;
 }
 
@@ -27,45 +24,27 @@ const currentEventId = typeof process !== 'undefined'
   ? (process.env.AMPLIFY_EVENT_ID || process.env.NEXT_PUBLIC_EVENT_ID || 'bsl2025')
   : 'bsl2025';
 
-export const AVAILABLE_EVENTS: EventInfo[] = [
-  {
-    id: 'bsl2025',
-    title: 'Blockchain Summit Latam 2025',
-    subtitle: 'Universidad EAFIT, Medellín',
-    image: 'https://blockchainsummit.la/wp-content/uploads/2025/09/bsl2025-banner.jpg',
-    color: '#2196F3',
-    route: '/events/bsl2025/home',
-    available: isMainBranch || currentEventId === 'bsl2025',
-    api: {
-      basePath: '/api/bslatam',
-      endpoints: {
-        agenda: 'agenda',
-        speakers: 'speakers',
-        bookings: 'bookings',
-      },
-    },
-    routes: {
-      home: '/events/bsl2025/home',
-      speakers: '/events/bsl2025/speakers',
-      bookings: '/events/bsl2025/bookings',
-    },
-    features: [],
-    branding: {
-      primaryColor: '#2196F3',
-      logo: '/assets/logos/bsl-logo.png',
-    },
-  },
-  // Future events - only available in main repo
-  // {
-  //   id: 'event2026',
-  //   title: 'Future Event 2026',
-  //   subtitle: 'Coming Soon',
-  //   image: 'https://example.com/banner.jpg',
-  //   color: '#2196F3',
-  //   route: '/events/event2026/home',
-  //   available: process.env.NODE_ENV === 'development' || process.env.BRANCH === 'main',
-  // }
-];
+// Helper function to convert EventConfig to EventInfo
+const configToEventInfo = (config: EventConfig, available: boolean): EventInfo => {
+  const { name, domain, ...rest } = config;
+  return {
+    ...rest,
+    available,
+  };
+};
+
+// Build AVAILABLE_EVENTS from EVENTS config
+// This ensures all event data is centralized in config/events.ts
+export const AVAILABLE_EVENTS: EventInfo[] = Object.values(EVENTS)
+  .filter(event => {
+    // Only include whitelabel events (exclude 'default' event)
+    return event.eventType === 'whitelabel';
+  })
+  .map(event => {
+    // Determine availability based on current context
+    const available = isMainBranch || currentEventId === event.id;
+    return configToEventInfo(event, available);
+  });
 
 // Get available events based on current context
 export const getAvailableEvents = (): EventInfo[] => {
@@ -89,70 +68,38 @@ export const shouldShowEventSelector = (): boolean => {
 
 // Get event-specific quick access items
 export const getEventQuickAccessItems = (eventId: string) => {
-  switch (eventId) {
-    case 'bsl2025':
-      return [
-        {
-          id: 'speakers',
-          title: 'Featured Speakers',
-          subtitle: 'Meet the experts',
-          icon: 'people',
-          color: '#007AFF',
-          route: '/events/bsl2025/speakers/calendar'
-        },
-        {
-          id: 'networking',
-          title: 'Networking Center',
-          subtitle: 'Connect & meet',
-          icon: 'people-alt',
-          color: '#4CAF50',
-          route: '/events/bsl2025/networking'
-        },
-        {
-          id: 'agenda',
-          title: 'Event Agenda',
-          subtitle: '3 Days Schedule',
-          icon: 'event',
-          color: '#34A853',
-          route: '/events/bsl2025/agenda'
-        },
-        {
-          id: 'event-info',
-          title: 'Event Information',
-          subtitle: 'Details & Logistics',
-          icon: 'info',
-          color: '#FF9500',
-          route: '/events/bsl2025/event-info'
-        }
-      ];
-    
-    default:
-      // Default items for other events
-      return [
-        {
-          id: 'speakers',
-          title: 'Speakers',
-          subtitle: 'Meet the experts',
-          icon: 'people',
-          color: '#007AFF',
-          route: `/events/${eventId}/speakers`
-        },
-        {
-          id: 'agenda',
-          title: 'Agenda',
-          subtitle: 'Event Schedule',
-          icon: 'event',
-          color: '#34A853',
-          route: `/events/${eventId}/agenda`
-        },
-        {
-          id: 'info',
-          title: 'Event Info',
-          subtitle: 'Details & Logistics',
-          icon: 'info',
-          color: '#FF9500',
-          route: `/events/${eventId}/info`
-        }
-      ];
+  const event = EVENTS[eventId];
+  
+  // If event has quickAccessItems configured, return them
+  if (event?.quickAccessItems) {
+    return event.quickAccessItems;
   }
+  
+  // Default items for events without custom quickAccessItems
+  return [
+    {
+      id: 'speakers',
+      title: 'Speakers',
+      subtitle: 'Meet the experts',
+      icon: 'people',
+      color: '#007AFF',
+      route: `/events/${eventId}/speakers`
+    },
+    {
+      id: 'agenda',
+      title: 'Agenda',
+      subtitle: 'Event Schedule',
+      icon: 'event',
+      color: '#34A853',
+      route: `/events/${eventId}/agenda`
+    },
+    {
+      id: 'info',
+      title: 'Event Info',
+      subtitle: 'Details & Logistics',
+      icon: 'info',
+      color: '#FF9500',
+      route: `/events/${eventId}/info`
+    }
+  ];
 };

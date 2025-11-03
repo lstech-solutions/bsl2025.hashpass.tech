@@ -1,10 +1,8 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, Image, Dimensions, TouchableOpacity, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import { SvgUri } from 'react-native-svg';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, NativeSyntheticEvent, NativeScrollEvent, StatusBar, Platform } from 'react-native';
 import { useScroll } from '../../../contexts/ScrollContext';
 import { useEvent } from '../../../contexts/EventContext';
 import { useTheme } from '../../../hooks/useTheme';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import EventBanner from '../../../components/EventBanner';
@@ -17,75 +15,58 @@ import {
   type EventInfo 
 } from '../../../lib/event-detector';
 
-// Type definitions
-interface Ticket {
-  id: string;
-  title: string;
-  date: string;
-  access: string;
-  type: string;
-  image: string;
-}
-
-interface Event {
-  id: string;
-  title: string;
-  date: string;
-  location: string;
-  image: string;
-}
-
-interface AgendaItem {
-  id: string;
-  time: string;
-  title: string;
-  description?: string;
-  speakers?: string[];
-  type: 'keynote' | 'panel' | 'break' | 'meal' | 'registration';
-  location?: string;
-}
-
-interface Pass {
-  id: string;
-  user_id: string;
-  event_id: string;
-  pass_type: 'general' | 'vip' | 'business';
-  status: 'active' | 'used' | 'expired' | 'cancelled';
-  purchase_date: string;
-  price_usd: number;
-  access_features: string[];
-  special_perks: string[];
-  created_at: string;
-  updated_at: string;
-}
-
-
 export default function ExploreScreen() {
-  const { scrollY } = useScroll();
+  const { scrollY, headerHeight } = useScroll();
+  // Calculate safe area for nav bar overlay
+  const navBarHeight = (StatusBar.currentHeight || 0) + 80; // StatusBar + header content
   const { event: currentEventFromContext } = useEvent();
   const { isDark, colors } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams();
   const styles = getStyles(isDark, colors);
   
-  // Get current event from route or context
-  const currentEvent = getCurrentEvent(params.eventId as string) || currentEventFromContext;
+  // Get current event from route - getCurrentEvent returns EventInfo | null
+  const currentEventFromRoute = getCurrentEvent(params.eventId as string);
   const availableEvents = getAvailableEvents();
   
-  const [selectedEvent, setSelectedEvent] = useState(currentEvent);
+  // Convert EventConfig from context to EventInfo if needed, or use route event
+  const currentEventInfo: EventInfo | null = currentEventFromRoute 
+    ? currentEventFromRoute
+    : currentEventFromContext 
+      ? availableEvents.find(e => e.id === currentEventFromContext.id) || null
+      : availableEvents[0] || null;
   
-  // Handle case when no event is selected
+  // Ensure we have a valid event before initializing state
+  if (!currentEventInfo) {
+    return (
+      <View style={styles.container}>
+        <Text style={{ color: colors.text.primary }}>No event available</Text>
+      </View>
+    );
+  }
+  
+  const [selectedEvent, setSelectedEvent] = useState<EventInfo>(currentEventInfo);
+  
+  // Handle case when no event is selected (shouldn't happen after above check, but keeping for safety)
   if (!selectedEvent) {
     return (
       <View style={styles.container}>
-        <Text>No event selected</Text>
+        <Text style={{ color: colors.text.primary }}>No event selected</Text>
       </View>
     );
   }
   const [showEventSelector, setShowEventSelector] = useState(shouldShowEventSelector());
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
+  const [scrollX, setScrollX] = useState(0);
+  const [maxScrollX, setMaxScrollX] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
   const quickAccessScrollRef = useRef<ScrollView>(null);
+  
+  // Quick Access card dimensions (matching styles)
+  const cardWidth = 140;
+  const cardSpacing = 12;
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -94,21 +75,139 @@ export default function ExploreScreen() {
 
   const handleQuickAccessScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const scrollX = contentOffset.x;
-    const maxScrollX = contentSize.width - layoutMeasurement.width;
+    const currentScrollX = contentOffset.x;
+    const currentMaxScrollX = contentSize.width - layoutMeasurement.width;
     
-    setShowLeftArrow(scrollX > 0);
-    setShowRightArrow(scrollX < maxScrollX - 10);
+    setScrollX(currentScrollX);
+    setMaxScrollX(currentMaxScrollX);
+    setViewportWidth(layoutMeasurement.width);
+    setShowLeftArrow(currentScrollX > 0);
+    setShowRightArrow(currentScrollX < currentMaxScrollX - 10);
+  };
+
+  // Additional scroll handlers for better web support
+  const handleQuickAccessScrollBeginDrag = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    handleQuickAccessScroll(event);
+  };
+
+  const handleQuickAccessScrollEndDrag = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    handleQuickAccessScroll(event);
+  };
+
+  const handleQuickAccessMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    handleQuickAccessScroll(event);
+  };
+
+  const handleQuickAccessLayout = (e: any) => {
+    const w = e?.nativeEvent?.layout?.width || 0;
+    setViewportWidth(w);
+    setMaxScrollX(Math.max(0, contentWidth - w));
+  };
+
+  const handleQuickAccessContentSizeChange = (w: number, _h: number) => {
+    setContentWidth(w);
+    setMaxScrollX(Math.max(0, w - viewportWidth));
+  };
+
+  // Web-specific scroll detection using DOM events (fallback)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    let scrollElement: HTMLElement | null = null;
+    let cleanupFn: (() => void) | null = null;
+    let initTimeout: NodeJS.Timeout | null = null;
+
+    // Use a small delay to ensure the ScrollView is mounted
+    const timeoutId = setTimeout(() => {
+      try {
+        const scrollRef = quickAccessScrollRef.current as any;
+        if (!scrollRef) return;
+
+        // Try to get the underlying DOM element
+        const getScrollElement = () => {
+          // React Native Web ScrollView structure
+          if (scrollRef._component) {
+            const innerView = scrollRef._component.querySelector?.('div[style*="overflow"]') ||
+                             scrollRef._component.querySelector?.('div[class*="scroll"]') ||
+                             scrollRef._component;
+            return innerView;
+          }
+          return null;
+        };
+
+        scrollElement = getScrollElement();
+        if (!scrollElement) return;
+
+        const handleWebScroll = () => {
+          if (!scrollElement) return;
+          const scrollLeft = scrollElement.scrollLeft || 0;
+          const scrollWidth = scrollElement.scrollWidth || 0;
+          const clientWidth = scrollElement.clientWidth || 0;
+          const maxScrollX = Math.max(0, scrollWidth - clientWidth);
+          
+          setScrollX(scrollLeft);
+          setMaxScrollX(maxScrollX);
+          setViewportWidth(clientWidth);
+          setShowLeftArrow(scrollLeft > 0);
+          setShowRightArrow(scrollLeft < maxScrollX - 10);
+        };
+
+        scrollElement.addEventListener('scroll', handleWebScroll, { passive: true });
+        
+        // Initial check after a brief delay
+        initTimeout = setTimeout(handleWebScroll, 100);
+
+        cleanupFn = () => {
+          if (initTimeout) clearTimeout(initTimeout);
+          if (scrollElement) {
+            scrollElement.removeEventListener('scroll', handleWebScroll);
+          }
+        };
+      } catch (error) {
+        console.warn('Failed to set up web scroll listener:', error);
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (cleanupFn) cleanupFn();
+    };
+  }, [Platform.OS]);
+
+  const handleQuickAccessWheel = (e: any) => {
+    // Map wheel vertical/horizontal delta to horizontal scroll
+    const dx = e?.nativeEvent?.deltaX ?? e?.deltaX ?? 0;
+    const dy = e?.nativeEvent?.deltaY ?? e?.deltaY ?? 0;
+    const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+    const nextX = Math.max(0, Math.min(scrollX + delta, maxScrollX));
+    
+    if (typeof e?.preventDefault === 'function') {
+      e.preventDefault();
+    }
+    
+    if (quickAccessScrollRef.current) {
+      quickAccessScrollRef.current.scrollTo({ x: nextX, animated: false });
+    }
   };
 
   const scrollQuickAccess = (direction: 'left' | 'right') => {
-    if (quickAccessScrollRef.current) {
-      const scrollAmount = 200;
-      // Use a more reliable method to get current scroll position
-      quickAccessScrollRef.current.scrollTo({ 
-        x: direction === 'left' ? -scrollAmount : scrollAmount, 
-        animated: true 
-      });
+    if (!quickAccessScrollRef.current) return;
+    
+    // For small screens, scroll by one card at a time
+    // For larger screens, scroll by viewport width minus spacing
+    const scrollAmount = viewportWidth > 0 && viewportWidth > cardWidth * 2
+      ? Math.min(viewportWidth - cardSpacing, cardWidth * 2)
+      : cardWidth + cardSpacing;
+    
+    const currentScrollX = scrollX || 0;
+    const target = direction === 'left' 
+      ? Math.max(0, currentScrollX - scrollAmount)
+      : Math.min(maxScrollX, currentScrollX + scrollAmount);
+    
+    // Only scroll if we're not already at the boundary
+    if ((direction === 'left' && currentScrollX > 0) || 
+        (direction === 'right' && currentScrollX < maxScrollX)) {
+      quickAccessScrollRef.current.scrollTo({ x: target, animated: true });
     }
   };
 
@@ -176,16 +275,20 @@ export default function ExploreScreen() {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ 
+          paddingBottom: 40,
+        }}
       >
         {/* Event Banner (now scrolls with content) */}
+        {/* Banner starts from top, nav bar floats on top with blur */}
         <EventBanner 
-          title={(event as any)?.title || (selectedEvent as any)?.title || 'Blockchain Summit Latam 2025'}
-          subtitle={(event as any)?.subtitle || (selectedEvent as any)?.subtitle || 'November 12-14, 2025 • Universidad EAFIT, Medellín'}
-          date={(event as any)?.date || "November 12-14, 2025"}
+          title={selectedEvent?.title || 'Blockchain Summit Latam 2025'}
+          subtitle={selectedEvent?.subtitle || 'November 12-14, 2025 • Universidad EAFIT, Medellín'}
+          date={selectedEvent?.eventDateString || selectedEvent?.subtitle || "November 12-14, 2025"}
           showCountdown={true}
           showLiveIndicator={true}
-          eventStartDate="2025-11-12T09:00:00Z"
+          eventStartDate={selectedEvent?.eventStartDate || "2025-11-12T09:00:00-05:00"}
+          eventId={selectedEvent?.id}
         />
         {/* Header */}
         <View style={styles.header}>
@@ -210,7 +313,7 @@ export default function ExploreScreen() {
 
         {/* User Passes */}
         <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-          <Text style={styles.sectionTitle}>Your Pass</Text>
+          <Text style={styles.sectionTitle}>Your Passes</Text>
           <PassesDisplay 
             mode="dashboard"
             showTitle={false}
@@ -236,7 +339,18 @@ export default function ExploreScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalScroll}
               onScroll={handleQuickAccessScroll}
-              scrollEventThrottle={16}
+              onScrollBeginDrag={handleQuickAccessScrollBeginDrag}
+              onScrollEndDrag={handleQuickAccessScrollEndDrag}
+              onMomentumScrollEnd={handleQuickAccessMomentumScrollEnd}
+              scrollEventThrottle={Platform.OS === 'web' ? 0 : 16}
+              decelerationRate="fast"
+              snapToInterval={cardWidth + cardSpacing}
+              snapToAlignment="start"
+              disableIntervalMomentum
+              onLayout={handleQuickAccessLayout}
+              onContentSizeChange={handleQuickAccessContentSizeChange}
+              // @ts-ignore - onWheel supported in RN Web
+              onWheel={handleQuickAccessWheel}
             >
               {getQuickAccessItems().map((item, index) => renderQuickAccessItem(item, index))}
             </ScrollView>

@@ -10,6 +10,7 @@ import { useTheme } from '../../../../hooks/useTheme';
 import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../../../../lib/supabase';
 import { useToastHelpers } from '../../../../contexts/ToastContext';
+import LoadingScreen from '../../../../components/LoadingScreen';
 import { SystemStats } from '@/types/networking';
 
 
@@ -186,10 +187,11 @@ setStats({
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <MaterialIcons name="analytics" size={48} color={colors.primary} />
-        <Text style={styles.loadingText}>Loading analytics...</Text>
-      </View>
+      <LoadingScreen
+        icon="analytics"
+        message="Loading analytics..."
+        fullScreen={true}
+      />
     );
   }
 
@@ -320,17 +322,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background?.default || (isDark ? '#121212' : '#FFFFFF'),
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background?.default || (isDark ? '#121212' : '#FFFFFF'),
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000'),
   },
   header: {
     padding: 20,

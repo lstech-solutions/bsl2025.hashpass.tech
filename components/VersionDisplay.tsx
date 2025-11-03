@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Linking } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { versionService } from '../lib/services/version-service';
@@ -62,7 +62,20 @@ export default function VersionDisplay({ showInSidebar = false, compact = false 
                   <Text style={styles.buildLabel}>Build Information:</Text>
                   <Text style={styles.buildText}>Build ID: {buildInfo.buildId}</Text>
                   <Text style={styles.buildText}>Build Time: {new Date(buildInfo.buildTime).toLocaleString()}</Text>
-                  <Text style={styles.buildText}>Git Commit: {buildInfo.gitCommit}</Text>
+                  <View style={styles.buildRow}>
+                    <Text style={styles.buildText}>Git Commit: </Text>
+                    {buildInfo.gitCommitUrl && buildInfo.gitCommit !== 'unknown' ? (
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL(buildInfo.gitCommitUrl)}
+                        style={styles.linkContainer}
+                      >
+                        <Text style={styles.linkText}>{buildInfo.gitCommit}</Text>
+                        <MaterialIcons name="open-in-new" size={14} color={colors.primary} style={styles.linkIcon} />
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.buildText}>{buildInfo.gitCommit}</Text>
+                    )}
+                  </View>
                   <Text style={styles.buildText}>Branch: {buildInfo.gitBranch}</Text>
                 </View>
               )}
@@ -111,15 +124,33 @@ export default function VersionDisplay({ showInSidebar = false, compact = false 
           {/* Version History */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Version History</Text>
-            {versionHistory.slice(0, 5).map((version, index) => (
-              <View key={version.version} style={styles.historyItem}>
-                <View style={styles.historyHeader}>
-                  <Text style={styles.historyVersion}>v{version.version}</Text>
-                  <Text style={styles.historyDate}>{version.releaseDate}</Text>
+            {versionHistory.slice(0, 5).map((version, index) => {
+              const tagUrl = buildInfo?.gitRepoUrl 
+                ? `${buildInfo.gitRepoUrl}/releases/tag/v${version.version}`
+                : null;
+              
+              return (
+                <View key={version.version} style={styles.historyItem}>
+                  <View style={styles.historyHeader}>
+                    <View style={styles.historyVersionContainer}>
+                      {tagUrl ? (
+                        <TouchableOpacity
+                          onPress={() => Linking.openURL(tagUrl)}
+                          style={styles.historyLinkContainer}
+                        >
+                          <Text style={styles.historyVersion}>v{version.version}</Text>
+                          <MaterialIcons name="open-in-new" size={14} color={colors.primary} style={styles.historyLinkIcon} />
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={styles.historyVersion}>v{version.version}</Text>
+                      )}
+                    </View>
+                    <Text style={styles.historyDate}>{version.releaseDate}</Text>
+                  </View>
+                  <Text style={styles.historyNotes}>{version.notes}</Text>
                 </View>
-                <Text style={styles.historyNotes}>{version.notes}</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </ScrollView>
       </View>
@@ -319,6 +350,23 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: colors.text.secondary,
     marginBottom: 2,
   },
+  buildRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  linkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  linkText: {
+    fontSize: 12,
+    color: colors.primary,
+    textDecorationLine: 'underline',
+  },
+  linkIcon: {
+    marginLeft: 4,
+  },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -345,10 +393,21 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 4,
   },
+  historyVersionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   historyVersion: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text.primary,
+  },
+  historyLinkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  historyLinkIcon: {
+    marginLeft: 6,
   },
   historyDate: {
     fontSize: 12,

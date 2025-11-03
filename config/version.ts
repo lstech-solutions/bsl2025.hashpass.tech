@@ -22,56 +22,332 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202510302121, // Updated to current timestamp
-  releaseDate: '2025-10-30',
+  buildNumber: 202511022340, // Updated to current timestamp
+  releaseDate: '2025-11-02',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
-    'User pass management system',
-    'BSL 2025 event integration',
-    'Speaker profile system with avatars',
-    'Event agenda with live updates',
-    'Unified search and filter system',
-    'Dark mode support',
-    'Event banner component',
-    'Pass card UI with BSL branding',
-    'Agenda tabbed interface',
-    'Real-time countdown system',
-    'Meeting request system with Supabase integration',
-    'Speaker availability and booking system',
-    'Complete networking center with horizontal scrolling',
-    'My Requests view for managing sent meeting requests',
-    'My Schedule view for scheduled meetings',
-    'System Analytics with comprehensive statistics',
-    'Blocked Users management system',
-    'Horizontal scrolling quick access menu',
-    'Enhanced networking statistics and insights',
-    'Speaker dashboard for incoming request management',
-    'Real-time networking activity tracking',
-    'Automated version management and changelog updates'
+    'HashPass logo clickable with zoom animation - navigates to home page',
+    'Mouse wheel scroll support for Quick Access section on explore page',
+    'Snap-to-interval scrolling for Quick Access cards matching networking center behavior'
   ],
   bugfixes: [
-    'Fixed SVG logo rendering issues',
-    'Resolved TypeScript undefined property errors',
-    'Fixed agenda data grouping logic',
-    'Corrected speaker count discrepancies',
-    'Fixed dark mode contrast issues',
-    'Resolved navigation routing problems',
-    'Fixed React Navigation headerBackTitleVisible property error',
-    'Fixed headerStyle borderBottomWidth property error',
-    'Fixed pass number display showing "unknown" in explorer view',
-    'Fixed speaker dashboard loading stuck issue',
-    'Fixed get_speaker_meeting_requests SQL GROUP BY error',
-    'Improved networking icon visibility in quick access menu',
-    'Updated version display and changelog automation',
-    'Fixed version history dates and formatting'
+    'Fixed admin status check error (PGRST116) - multiple rows returned issue',
+    'Fixed QR code authentication error - wait for auth to finish loading',
+    'Fixed arrow button scrolling on small viewports in Quick Access section',
+    'Fixed HashPass logo card background to not be affected by sidebar animation'
   ],
   breakingChanges: [],
-  notes: 'Version 1.3.4 release'
+  notes: 'Version 1.4.6 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.4.6': {
+    version: '1.4.6',
+    buildNumber: 202511022340,
+    releaseDate: '2025-11-02',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'HashPass logo clickable with zoom animation - navigates to home page',
+      'Mouse wheel scroll support for Quick Access section on explore page',
+      'Snap-to-interval scrolling for Quick Access cards matching networking center behavior'
+    ],
+    bugfixes: [
+      'Fixed admin status check error (PGRST116) - multiple rows returned issue',
+      'Fixed QR code authentication error - wait for auth to finish loading',
+      'Fixed arrow button scrolling on small viewports in Quick Access section',
+      'Fixed HashPass logo card background to not be affected by sidebar animation'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.4.6 release'
+  },
+  '1.4.4': {
+    version: '1.4.4',
+    buildNumber: 202511020451,
+    releaseDate: '2025-11-02',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'HashPass logo clickable with zoom animation - navigates to home page',
+      'Mouse wheel scroll support for Quick Access section on explore page',
+      'Snap-to-interval scrolling for Quick Access cards matching networking center behavior'
+    ],
+    bugfixes: [
+      'Fixed admin status check error (PGRST116) - multiple rows returned issue',
+      'Fixed QR code authentication error - wait for auth to finish loading',
+      'Fixed arrow button scrolling on small viewports in Quick Access section',
+      'Fixed HashPass logo card background to not be affected by sidebar animation'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.4.4 release'
+  },
+  '1.4.3': {
+    version: '1.4.3',
+    buildNumber: 202511020310,
+    releaseDate: '2025-11-02',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'HashPass logo clickable with zoom animation - navigates to home page',
+      'Mouse wheel scroll support for Quick Access section on explore page',
+      'Snap-to-interval scrolling for Quick Access cards matching networking center behavior'
+    ],
+    bugfixes: [
+      'Fixed admin status check error (PGRST116) - multiple rows returned issue',
+      'Fixed QR code authentication error - wait for auth to finish loading',
+      'Fixed arrow button scrolling on small viewports in Quick Access section',
+      'Fixed HashPass logo card background to not be affected by sidebar animation'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.4.3 release'
+  },
+  '1.4.2': {
+    version: '1.4.2',
+    buildNumber: 202511012207,
+    releaseDate: '2025-11-01',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'HashPass logo clickable with zoom animation - navigates to home page',
+      'Mouse wheel scroll support for Quick Access section on explore page',
+      'Snap-to-interval scrolling for Quick Access cards matching networking center behavior'
+    ],
+    bugfixes: [
+      'Fixed admin status check error (PGRST116) - multiple rows returned issue',
+      'Fixed QR code authentication error - wait for auth to finish loading',
+      'Fixed arrow button scrolling on small viewports in Quick Access section',
+      'Fixed HashPass logo card background to not be affected by sidebar animation'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.4.2 release - UI improvements and bug fixes'
+  },
+  '1.4.1': {
+    version: '1.4.1',
+    buildNumber: 202511020246,
+    releaseDate: '2025-11-02',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Unified LoadingScreen component for consistent loading states across the app',
+      'Integrated LoadingScreen in networking, agenda, and speakers screens',
+      'Global loader implementation for agenda screen to prevent banner expansion issues'
+    ],
+    bugfixes: [
+      'Fixed LoadingScreen subtitle undefined error in getStyles function',
+      'Fixed agenda banner expansion issue during initial loading',
+      'Fixed missing LoadingScreen import in speakers calendar component',
+      'Fixed loader not showing at beginning of agenda screen causing banner to expand'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.4.1 release'
+  },
+  '1.4.0': {
+    version: '1.4.0',
+    buildNumber: 202511020054,
+    releaseDate: '2025-11-02',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Unified LoadingScreen component for consistent loading states across the app',
+      'Integrated LoadingScreen in networking, agenda, and speakers screens',
+      'Global loader implementation for agenda screen to prevent banner expansion issues'
+    ],
+    bugfixes: [
+      'Fixed LoadingScreen subtitle undefined error in getStyles function',
+      'Fixed agenda banner expansion issue during initial loading',
+      'Fixed missing LoadingScreen import in speakers calendar component',
+      'Fixed loader not showing at beginning of agenda screen causing banner to expand'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.4.0 release'
+  },
+  '1.4.0': {
+    version: '1.4.0',
+    buildNumber: 202511020054,
+    releaseDate: '2025-11-02',
+    releaseType: 'stable',
+    environment: 'development',
+    features: [
+      'Unified LoadingScreen component for consistent loading states across the app',
+      'Integrated LoadingScreen in networking, agenda, and speakers screens',
+      'Global loader implementation for agenda screen to prevent banner expansion issues'
+    ],
+    bugfixes: [
+      'Fixed LoadingScreen subtitle undefined error in getStyles function',
+      'Fixed agenda banner expansion issue during initial loading',
+      'Fixed missing LoadingScreen import in speakers calendar component',
+      'Fixed loader not showing at beginning of agenda screen causing banner to expand'
+    ],
+    breakingChanges: [],
+    notes: 'Polished profile view with avatar update functionality, removed sign out button and version display'
+  },
+  '1.3.9': {
+    version: '1.3.9',
+    buildNumber: 202510310833,
+    releaseDate: '2025-10-31',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Unified LoadingScreen component for consistent loading states across the app',
+      'Integrated LoadingScreen in networking, agenda, and speakers screens',
+      'Global loader implementation for agenda screen to prevent banner expansion issues'
+    ],
+    bugfixes: [
+      'Fixed LoadingScreen subtitle undefined error in getStyles function',
+      'Fixed agenda banner expansion issue during initial loading',
+      'Fixed missing LoadingScreen import in speakers calendar component',
+      'Fixed loader not showing at beginning of agenda screen causing banner to expand'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.3.9 release - Unified loading experience across all screens'
+  },
+  '1.3.8': {
+    version: '1.3.8',
+    buildNumber: 202510310801,
+    releaseDate: '2025-10-31',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'User pass management system',
+      'BSL 2025 event integration',
+      'Speaker profile system with avatars',
+      'Event agenda with live updates',
+      'Unified search and filter system',
+      'Dark mode support',
+      'Event banner component',
+      'Pass card UI with BSL branding',
+      'Agenda tabbed interface',
+      'Real-time countdown system'
+    ],
+    bugfixes: [
+      'Fixed SVG logo rendering issues',
+      'Resolved TypeScript undefined property errors',
+      'Fixed agenda data grouping logic',
+      'Corrected speaker count discrepancies',
+      'Fixed dark mode contrast issues',
+      'Resolved navigation routing problems'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.3.8 release'
+  },
+  '1.3.7': {
+    version: '1.3.7',
+    buildNumber: 202510310647,
+    releaseDate: '2025-10-31',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'User pass management system',
+      'BSL 2025 event integration',
+      'Speaker profile system with avatars',
+      'Event agenda with live updates',
+      'Unified search and filter system',
+      'Dark mode support',
+      'Event banner component',
+      'Pass card UI with BSL branding',
+      'Agenda tabbed interface',
+      'Real-time countdown system'
+    ],
+    bugfixes: [
+      'Fixed SVG logo rendering issues',
+      'Resolved TypeScript undefined property errors',
+      'Fixed agenda data grouping logic',
+      'Corrected speaker count discrepancies',
+      'Fixed dark mode contrast issues',
+      'Resolved navigation routing problems'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.3.7 release'
+  },
+  '1.3.6': {
+    version: '1.3.6',
+    buildNumber: 202510310635,
+    releaseDate: '2025-10-31',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'User pass management system',
+      'BSL 2025 event integration',
+      'Speaker profile system with avatars',
+      'Event agenda with live updates',
+      'Unified search and filter system',
+      'Dark mode support',
+      'Event banner component',
+      'Pass card UI with BSL branding',
+      'Agenda tabbed interface',
+      'Real-time countdown system'
+    ],
+    bugfixes: [
+      'Fixed SVG logo rendering issues',
+      'Resolved TypeScript undefined property errors',
+      'Fixed agenda data grouping logic',
+      'Corrected speaker count discrepancies',
+      'Fixed dark mode contrast issues',
+      'Resolved navigation routing problems'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.3.6 release'
+  },
+  '1.3.5': {
+    version: '1.3.5',
+    buildNumber: 202510310540,
+    releaseDate: '2025-10-31',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'User pass management system',
+      'BSL 2025 event integration',
+      'Speaker profile system with avatars',
+      'Event agenda with live updates',
+      'Unified search and filter system',
+      'Dark mode support',
+      'Event banner component',
+      'Pass card UI with BSL branding',
+      'Agenda tabbed interface',
+      'Real-time countdown system'
+    ],
+    bugfixes: [
+      'Fixed SVG logo rendering issues',
+      'Resolved TypeScript undefined property errors',
+      'Fixed agenda data grouping logic',
+      'Corrected speaker count discrepancies',
+      'Fixed dark mode contrast issues',
+      'Resolved navigation routing problems'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.3.5 release'
+  },
+  '1.3.5': {
+    version: '1.3.5',
+    buildNumber: 202510310421,
+    releaseDate: '2025-10-31',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'User pass management system',
+      'BSL 2025 event integration',
+      'Speaker profile system with avatars',
+      'Event agenda with live updates',
+      'Unified search and filter system',
+      'Dark mode support',
+      'Event banner component',
+      'Pass card UI with BSL branding',
+      'Agenda tabbed interface',
+      'Real-time countdown system'
+    ],
+    bugfixes: [
+      'Fixed SVG logo rendering issues',
+      'Resolved TypeScript undefined property errors',
+      'Fixed agenda data grouping logic',
+      'Corrected speaker count discrepancies',
+      'Fixed dark mode contrast issues',
+      'Resolved navigation routing problems'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.3.5 release'
+  },
   '1.3.4': {
     version: '1.3.4',
     buildNumber: 202510302121,

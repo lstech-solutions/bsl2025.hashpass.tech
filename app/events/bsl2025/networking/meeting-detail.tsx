@@ -7,6 +7,7 @@ import { format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useToastHelpers } from '@/contexts/ToastContext';
 import SpeakerAvatar from '@/components/SpeakerAvatar';
+import LoadingScreen from '@/components/LoadingScreen';
 
 export default function MeetingDetailScreen() {
   const { colors, isDark } = useTheme();
@@ -89,10 +90,11 @@ export default function MeetingDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading meeting details...</Text>
-      </View>
+      <LoadingScreen
+        icon="info"
+        message="Loading meeting details..."
+        fullScreen={true}
+      />
     );
   }
 
@@ -269,17 +271,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   modalContent: {
     flex: 1,
     padding: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background?.default || (isDark ? '#000000' : '#ffffff'),
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
   },
   errorText: {
     textAlign: 'center',

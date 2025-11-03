@@ -34,13 +34,38 @@ export class EventApiClient {
   private timeout: number;
   private retries: number;
 
+  /**
+   * Extract event-specific API path segment from event config
+   * Examples:
+   * - '/api/bslatam' -> 'bslatam'
+   * - '/api' -> event.id (e.g., 'default')
+   */
+  private getEventApiSegment(event: ReturnType<typeof getCurrentEvent>): string {
+    if (!event) {
+      return 'default';
+    }
+
+    // Extract segment from basePath if it exists and contains more than just '/api'
+    if (event.api?.basePath) {
+      const basePath = event.api.basePath.trim();
+      // If basePath is '/api/bslatam', extract 'bslatam'
+      const match = basePath.match(/^\/api\/(.+)$/);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+
+    // Fallback to event ID, but use 'default' for default event
+    return event.id === 'default' ? 'default' : event.id;
+  }
+
   constructor() {
     const event = getCurrentEvent();
     // Prefer env/Constants first; fallback to event config; else default
     const envBase = ((process.env.EXPO_PUBLIC_API_BASE_URL || '') || (Constants?.expoConfig?.extra as any)?.EXPO_PUBLIC_API_BASE_URL || '').trim();
     if (envBase) {
-      // Normalize env base: no trailing slash
-      this.baseURL = envBase.endsWith('/') ? envBase.slice(0, -1) : envBase;
+      // Normalize env base: ensure it ends with a slash
+      this.baseURL = envBase.endsWith('/') ? envBase : `${envBase}/`;
     } else if (event?.api?.basePath) {
       // Ensure basePath starts with a slash and doesn't end with one
       this.baseURL = event.api.basePath.startsWith('/') 
@@ -74,7 +99,17 @@ export class EventApiClient {
     
     // Determine base URL: env/Constants wins, then event config, else constructor default
     const envBase = ((process.env.EXPO_PUBLIC_API_BASE_URL || '') || (Constants?.expoConfig?.extra as any)?.EXPO_PUBLIC_API_BASE_URL || '').trim();
-    const baseUrl = envBase || event?.api?.basePath || this.baseURL;
+    
+    let baseUrl: string;
+    if (envBase) {
+      // If we have an env base URL (e.g., https://hashpass.co/api/), append event-specific segment
+      const eventSegment = this.getEventApiSegment(event);
+      const cleanEnvBase = envBase.endsWith('/') ? envBase : `${envBase}/`;
+      baseUrl = `${cleanEnvBase}${eventSegment}`;
+    } else {
+      // Fallback to event config or constructor default
+      baseUrl = event?.api?.basePath || this.baseURL;
+    }
     
     // Build the final URL
     let url: string;
@@ -213,7 +248,18 @@ export class EventApiClient {
 
     const event = getCurrentEvent();
     const envBase = ((process.env.EXPO_PUBLIC_API_BASE_URL || '') || (Constants?.expoConfig?.extra as any)?.EXPO_PUBLIC_API_BASE_URL || '').trim();
-    const baseUrl = envBase || event?.api?.basePath || this.baseURL;
+    
+    let baseUrl: string;
+    if (envBase) {
+      // If we have an env base URL (e.g., https://hashpass.co/api/), append event-specific segment
+      const eventSegment = this.getEventApiSegment(event);
+      const cleanEnvBase = envBase.endsWith('/') ? envBase : `${envBase}/`;
+      baseUrl = `${cleanEnvBase}${eventSegment}`;
+    } else {
+      // Fallback to event config or constructor default
+      baseUrl = event?.api?.basePath || this.baseURL;
+    }
+    
     const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${cleanBase}${cleanPath}`;

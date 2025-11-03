@@ -15,6 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useToastHelpers } from '@/contexts/ToastContext';
 import QuickAccessGrid from '@/components/explorer/QuickAccessGrid';
+import LoadingScreen from '@/components/LoadingScreen';
 import { NetworkingStats, StatsState, QuickAccessItem } from '@/types/networking';
 
 export default function NetworkingView() {
@@ -345,20 +346,12 @@ export default function NetworkingView() {
         }} 
       />
       {statsState.loading ? (
-        <View style={styles.loadingContainer}>
-          <MaterialIcons name="network-check" size={48} color={colors.primary} />
-          <Text style={styles.loadingText}>
-            {statsState.retryCount > 0 
-              ? `Retrying... (${statsState.retryCount}/3)` 
-              : 'Loading networking stats...'
-            }
-          </Text>
-          {statsState.retryCount > 0 && (
-            <Text style={styles.retryText}>
-              Taking longer than expected, please wait...
-            </Text>
-          )}
-        </View>
+        <LoadingScreen
+          icon="network-check"
+          message="Loading networking stats..."
+          retryCount={statsState.retryCount}
+          fullScreen={true}
+        />
       ) : statsState.error ? (
         <View style={styles.errorContainer}>
           <MaterialIcons name="error-outline" size={48} color="#F44336" />
@@ -523,17 +516,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background?.default || (isDark ? '#121212' : '#ffffff'),
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background?.default || (isDark ? '#121212' : '#ffffff'),
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
   },
   header: {
     padding: 20,

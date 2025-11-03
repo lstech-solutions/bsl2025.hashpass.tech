@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import MeetingChat from '@/components/MeetingChat';
+import LoadingScreen from '@/components/LoadingScreen';
 
 export default function MeetingChatPage() {
   const router = useRouter();
@@ -53,12 +54,11 @@ export default function MeetingChatPage() {
             headerBackTitle: 'Speaker Dashboard',
           }} 
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.text.primary }]}>
-            Loading meeting chat...
-          </Text>
-        </View>
+        <LoadingScreen
+          icon="chat"
+          message="Loading meeting chat..."
+          fullScreen={true}
+        />
       </View>
     );
   }
@@ -95,17 +95,6 @@ export default function MeetingChatPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    textAlign: 'center',
   },
   closeButton: {
     padding: 8,

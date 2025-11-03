@@ -15,6 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../../../../lib/supabase';
 import { useToastHelpers } from '../../../../contexts/ToastContext';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
+import LoadingScreen from '../../../../components/LoadingScreen';
 import { MeetingRequest } from '@/types/networking';
 
 
@@ -505,11 +506,11 @@ export default function MyRequestsView() {
   if (loading) {
     console.log('🔄 Rendering loading state...');
     return (
-      <View style={styles.loadingContainer}>
-        <MaterialIcons name="send" size={48} color={colors.primary} />
-        <Text style={styles.loadingText}>Loading your requests...</Text>
-        <Text style={styles.loadingSubtext}>Please wait while we fetch your data</Text>
-      </View>
+      <LoadingScreen
+        icon="send"
+        message="Loading your requests..."
+        fullScreen={true}
+      />
     );
   }
 

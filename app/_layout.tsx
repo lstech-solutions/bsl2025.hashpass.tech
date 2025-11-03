@@ -128,6 +128,18 @@ function ThemedContent() {
             headerShown: false
           }}
         />
+        <Stack.Screen 
+          name="(shared)/dashboard/qr-view" 
+          options={{ 
+            headerShown: false
+          }}
+        />
+        <Stack.Screen 
+          name="(shared)/dashboard/pass-details" 
+          options={{ 
+            headerShown: false
+          }}
+        />
         {/* Public BSL routes */}
         <Stack.Screen name="events/bsl2025/home" options={{ headerShown: false }} />
         <Stack.Screen name="events/bsl2025/speakers/[id]" options={{ headerShown: false }} />

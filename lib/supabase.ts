@@ -2,7 +2,7 @@ import { createClient, type Session, type User } from '@supabase/supabase-js';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { Platform } from 'react-native';
 
-let storage;
+let storage: any;
 
 if (Platform.OS === 'web') {
   // For web, use localStorage if window is defined (client-side browser)
@@ -13,21 +13,33 @@ if (Platform.OS === 'web') {
     removeItem: async (_key: string) => {},
   };
 } else {
-  // For native (iOS, Android), dynamically import AsyncStorage
+  // For native (iOS, Android), use lazy initialization with dynamic import
   // This prevents AsyncStorage from being evaluated in Node.js environments
   // if it has top-level dependencies on browser globals.
-  try {
-    // Using a dynamic import (require) here to defer loading
-    // This is a common workaround for packages that are not fully SSR-friendly
-    storage = require('@react-native-async-storage/async-storage').default;
-  } catch (e) {
-    console.warn('AsyncStorage could not be loaded for native, falling back to no storage.', e);
-    storage = {
-      getItem: async (_key: string) => null,
-      setItem: async (_key: string, _value: string) => {},
-      removeItem: async (_key: string) => {},
-    };
-  }
+  // Initialize with a proxy that loads AsyncStorage on first access
+  let asyncStorage: any = null;
+  const loadAsyncStorage = async () => {
+    if (!asyncStorage) {
+      const AsyncStorageModule = await import('@react-native-async-storage/async-storage');
+      asyncStorage = AsyncStorageModule.default;
+    }
+    return asyncStorage;
+  };
+  
+  storage = {
+    getItem: async (key: string) => {
+      const AsyncStorage = await loadAsyncStorage();
+      return AsyncStorage.getItem(key);
+    },
+    setItem: async (key: string, value: string) => {
+      const AsyncStorage = await loadAsyncStorage();
+      return AsyncStorage.setItem(key, value);
+    },
+    removeItem: async (key: string) => {
+      const AsyncStorage = await loadAsyncStorage();
+      return AsyncStorage.removeItem(key);
+    },
+  };
 }
 
 

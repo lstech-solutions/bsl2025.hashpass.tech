@@ -4,13 +4,15 @@ import { useAuth } from '../hooks/useAuth';
 
 export interface Notification {
   id: string;
-  type: 'meeting_request' | 'meeting_accepted' | 'meeting_declined' | 'meeting_reminder' | 'boost_received' | 'system_alert';
+  type: 'meeting_request' | 'meeting_accepted' | 'meeting_declined' | 'meeting_reminder' | 'meeting_expired' | 'boost_received' | 'system_alert';
   title: string;
   message: string;
   is_read: boolean;
   is_urgent: boolean;
+  is_archived?: boolean;
   created_at: string;
   read_at?: string;
+  archived_at?: string;
   meeting_request_id?: string;
   speaker_id?: string;
 }
@@ -20,7 +22,9 @@ export interface NotificationContextType {
   unreadCount: number;
   isLoading: boolean;
   markAsRead: (notificationId: string) => Promise<void>;
+  markAsUnread: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  archiveNotification: (notificationId: string) => Promise<void>;
   deleteNotification: (notificationId: string) => Promise<void>;
   refreshNotifications: () => Promise<void>;
 }
@@ -44,7 +48,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = notifications.filter(n => !n.is_read && !n.is_archived).length;
 
   const fetchNotifications = useCallback(async () => {
     if (!user) {
@@ -101,6 +105,77 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       );
     } catch (error) {
       console.error('Error marking notification as read:', error);
+    }
+  }, [user]);
+
+  const markAsUnread = useCallback(async (notificationId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ 
+          is_read: false, 
+          read_at: null
+        })
+        .eq('id', notificationId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error marking notification as unread:', error);
+        return;
+      }
+
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === notificationId 
+            ? { ...notification, is_read: false, read_at: undefined }
+            : notification
+        )
+      );
+    } catch (error) {
+      console.error('Error marking notification as unread:', error);
+    }
+  }, [user]);
+
+  const archiveNotification = useCallback(async (notificationId: string) => {
+    if (!user) return;
+
+    try {
+      // Archive and mark as read in a single update
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('notifications')
+        .update({ 
+          is_read: true,
+          read_at: now,
+          is_archived: true,
+          archived_at: now
+        })
+        .eq('id', notificationId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error archiving notification:', error);
+        return;
+      }
+
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === notificationId 
+            ? { 
+                ...notification, 
+                is_read: true,
+                read_at: now,
+                is_archived: true, 
+                archived_at: now
+              }
+            : notification
+        )
+      );
+    } catch (error) {
+      console.error('Error archiving notification:', error);
     }
   }, [user]);
 
@@ -263,7 +338,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     unreadCount,
     isLoading,
     markAsRead,
+    markAsUnread,
     markAllAsRead,
+    archiveNotification,
     deleteNotification,
     refreshNotifications,
   };

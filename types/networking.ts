@@ -8,7 +8,7 @@ export interface Meeting {
   speaker_name: string;
   requester_name: string;
   meeting_type: string;
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+  status: 'scheduled' | 'confirmed' | 'tentative' | 'unconfirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
   scheduled_at?: string;
   duration_minutes: number;
   location?: string;

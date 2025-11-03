@@ -1,17 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { useNotifications } from '../../../contexts/NotificationContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import UnifiedSearchAndFilter from '../../../components/UnifiedSearchAndFilter';
+
+type TabType = 'all' | 'archive';
 
 export default function NotificationsScreen() {
   const { isDark, colors } = useTheme();
-  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, deleteNotification, refreshNotifications } = useNotifications();
+  const { notifications, unreadCount, isLoading, markAsRead, markAsUnread, markAllAsRead, archiveNotification, deleteNotification, refreshNotifications } = useNotifications();
   const router = useRouter();
   const styles = getStyles(isDark, colors);
 
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('all');
+  const [filteredNotifications, setFilteredNotifications] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [markingAsRead, setMarkingAsRead] = useState<Set<string>>(new Set());
+
+  // Filter notifications by tab (all vs archive)
+  const tabFilteredNotifications = useMemo(() => {
+    if (activeTab === 'archive') {
+      return notifications.filter(n => n.is_archived === true);
+    }
+    return notifications.filter(n => !n.is_archived);
+  }, [notifications, activeTab]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -19,13 +34,8 @@ export default function NotificationsScreen() {
     setRefreshing(false);
   };
 
-  const handleNotificationPress = async (notification: any) => {
-    // Mark as read if not already read
-    if (!notification.is_read) {
-      await markAsRead(notification.id);
-    }
-
-    // Navigate based on notification type
+  const handleNotificationPress = (notification: any) => {
+    // Navigate based on notification type (without marking as read)
     if (notification.meeting_request_id) {
       // Navigate to meeting request details
       router.push(`/events/bsl2025/meeting-request/${notification.meeting_request_id}`);
@@ -35,7 +45,32 @@ export default function NotificationsScreen() {
     }
   };
 
-  const handleDeleteNotification = (notificationId: string) => {
+  const handleToggleReadStatus = async (notificationId: string) => {
+    // Prevent double-clicking and ensure proper state update
+    const notification = notifications.find(n => n.id === notificationId);
+    if (!notification || markingAsRead.has(notificationId)) return;
+
+    setMarkingAsRead(prev => new Set(prev).add(notificationId));
+    try {
+      if (notification.is_read) {
+        await markAsUnread(notificationId);
+      } else {
+        await markAsRead(notificationId);
+      }
+    } finally {
+      setMarkingAsRead(prev => {
+        const next = new Set(prev);
+        next.delete(notificationId);
+        return next;
+      });
+    }
+  };
+
+  const handleArchiveNotification = async (notificationId: string) => {
+    await archiveNotification(notificationId);
+  };
+
+  const handleDeleteNotification = async (notificationId: string) => {
     Alert.alert(
       'Delete Notification',
       'Are you sure you want to delete this notification?',
@@ -44,7 +79,11 @@ export default function NotificationsScreen() {
         { 
           text: 'Delete', 
           style: 'destructive',
-          onPress: () => deleteNotification(notificationId)
+          onPress: async () => {
+            await deleteNotification(notificationId);
+            // Clear filtered notifications to refresh the view
+            setFilteredNotifications([]);
+          }
         }
       ]
     );
@@ -53,11 +92,13 @@ export default function NotificationsScreen() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'meeting_request':
-        return 'event';
+        return 'send';
       case 'meeting_accepted':
         return 'check-circle';
       case 'meeting_declined':
         return 'cancel';
+      case 'meeting_expired':
+        return 'schedule';
       case 'meeting_reminder':
         return 'schedule';
       case 'boost_received':
@@ -109,44 +150,169 @@ export default function NotificationsScreen() {
     }
   };
 
+  // Custom filter logic for notifications
+  const customFilterLogic = (data: any[], filters: { [key: string]: any }, query: string) => {
+    let filtered = data;
+
+    // Apply search query
+    if (query.trim()) {
+      const lowercaseQuery = query.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.title?.toLowerCase().includes(lowercaseQuery) ||
+        item.message?.toLowerCase().includes(lowercaseQuery) ||
+        item.type?.toLowerCase().includes(lowercaseQuery)
+      );
+    }
+
+    // Apply filters
+    if (filters.readStatus) {
+      if (filters.readStatus === 'unread') {
+        filtered = filtered.filter(item => !item.is_read);
+      } else if (filters.readStatus === 'read') {
+        filtered = filtered.filter(item => item.is_read);
+      }
+    }
+
+    if (filters.type) {
+      filtered = filtered.filter(item => item.type === filters.type);
+    }
+
+    if (filters.urgent === 'true' || filters.urgent === true) {
+      filtered = filtered.filter(item => item.is_urgent === true);
+    }
+
+    return filtered;
+  };
+
+  // Filter groups for UnifiedSearchAndFilter
+  const filterGroups = [
+    {
+      key: 'readStatus',
+      label: 'Read Status',
+      type: 'single' as const,
+      options: [
+        { key: 'all', label: 'All', icon: 'list' },
+        { key: 'unread', label: 'Unread', icon: 'mail' },
+        { key: 'read', label: 'Read', icon: 'drafts' },
+      ],
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      type: 'single' as const,
+      options: [
+        { key: '', label: 'All Types', icon: 'apps' },
+        { key: 'meeting_request', label: 'Meeting Request', icon: 'event' },
+        { key: 'meeting_accepted', label: 'Meeting Accepted', icon: 'check-circle' },
+        { key: 'meeting_declined', label: 'Meeting Declined', icon: 'cancel' },
+        { key: 'meeting_expired', label: 'Meeting Expired', icon: 'schedule' },
+        { key: 'meeting_reminder', label: 'Reminder', icon: 'schedule' },
+        { key: 'boost_received', label: 'Boost Received', icon: 'trending-up' },
+        { key: 'system_alert', label: 'System Alert', icon: 'info' },
+      ],
+    },
+    {
+      key: 'urgent',
+      label: 'Priority',
+      type: 'single' as const,
+      options: [
+        { key: '', label: 'All', icon: 'star-border' },
+        { key: 'true', label: 'Urgent Only', icon: 'priority-high' },
+      ],
+    },
+  ];
+
   const NotificationCard = ({ notification }: { notification: any }) => {
     const iconName = getNotificationIcon(notification.type);
     const iconColor = getNotificationColor(notification.type, notification.is_urgent);
+    const isUnread = !notification.is_read;
 
     return (
-      <TouchableOpacity
+      <View
         style={[
           styles.notificationCard,
-          !notification.is_read && styles.unreadNotification
+          isUnread && styles.unreadNotification,
+          !isUnread && styles.readNotification
         ]}
-        onPress={() => handleNotificationPress(notification)}
-        activeOpacity={0.7}
       >
-        <View style={styles.notificationContent}>
-          <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
+        {/* Top Right X Button - Only in Archive Tab */}
+        {activeTab === 'archive' && (
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleDeleteNotification(notification.id);
+            }}
+          >
+            <MaterialIcons name="close" size={20} color={colors.text.secondary} />
+          </TouchableOpacity>
+        )}
+
+        {/* Content */}
+        <TouchableOpacity
+          style={styles.notificationContent}
+          onPress={() => handleNotificationPress(notification)}
+          activeOpacity={0.7}
+        >
+          <View style={[
+            styles.iconContainer, 
+            { backgroundColor: iconColor + '20' },
+            isUnread && styles.unreadIconContainer
+          ]}>
             <MaterialIcons 
               name={iconName as any} 
               size={24} 
               color={iconColor} 
             />
+            {isUnread && (
+              <View style={styles.unreadDot} />
+            )}
           </View>
           
           <View style={styles.notificationText}>
             <View style={styles.notificationHeader}>
               <Text style={[
                 styles.notificationTitle,
-                !notification.is_read && styles.unreadText
+                isUnread && styles.unreadText,
+                !isUnread && styles.readText
               ]}>
                 {notification.title}
               </Text>
-              {notification.is_urgent && (
-                <View style={styles.urgentBadge}>
-                  <Text style={styles.urgentText}>URGENT</Text>
-                </View>
-              )}
+              <View style={styles.headerActions}>
+                {notification.is_urgent && (
+                  <View style={styles.urgentBadge}>
+                    <Text style={styles.urgentText}>URGENT</Text>
+                  </View>
+                )}
+                {activeTab === 'all' && !markingAsRead.has(notification.id) && (
+                  <TouchableOpacity
+                    style={styles.markReadButtonInline}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleToggleReadStatus(notification.id);
+                    }}
+                    disabled={markingAsRead.has(notification.id)}
+                  >
+                    <MaterialIcons 
+                      name={notification.is_read ? "mark-email-unread" : "drafts"} 
+                      size={16} 
+                      color="#007AFF" 
+                    />
+                  </TouchableOpacity>
+                )}
+                {activeTab === 'all' && markingAsRead.has(notification.id) && (
+                  <View style={styles.markReadButtonInline}>
+                    <MaterialIcons name="hourglass-empty" size={16} color={colors.text.secondary} />
+                  </View>
+                )}
+              </View>
             </View>
             
-            <Text style={styles.notificationMessage}>
+            <Text style={[
+              styles.notificationMessage,
+              isUnread && styles.unreadMessage,
+              !isUnread && styles.readMessage
+            ]}>
               {notification.message}
             </Text>
             
@@ -154,17 +320,59 @@ export default function NotificationsScreen() {
               {formatTimeAgo(notification.created_at)}
             </Text>
           </View>
-          
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDeleteNotification(notification.id)}
-          >
-            <MaterialIcons name="close" size={20} color={colors.text.secondary} />
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+
+        {/* Bottom Right Action Buttons - Only in All Tab */}
+        {activeTab === 'all' && (
+          <View style={styles.bottomActionButtons}>
+            <TouchableOpacity
+              style={[
+                styles.toggleReadButton,
+                notification.is_read && styles.toggleReadButtonRead
+              ]}
+              onPress={() => handleToggleReadStatus(notification.id)}
+              disabled={markingAsRead.has(notification.id)}
+            >
+              {markingAsRead.has(notification.id) ? (
+                <MaterialIcons name="hourglass-empty" size={18} color={colors.text.secondary} />
+              ) : notification.is_read ? (
+                <>
+                  <MaterialIcons name="mark-email-unread" size={18} color="#007AFF" />
+                  <Text style={styles.toggleReadButtonText}>Mark Unread</Text>
+                </>
+              ) : (
+                <>
+                  <MaterialIcons name="drafts" size={18} color="#007AFF" />
+                  <Text style={styles.toggleReadButtonText}>Mark Read</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.archiveButtonBottom}
+              onPress={() => handleArchiveNotification(notification.id)}
+            >
+              <MaterialIcons 
+                name="archive" 
+                size={18} 
+                color={!notification.is_read ? "#007AFF" : colors.text.secondary} 
+              />
+              <Text style={[
+                styles.archiveButtonText,
+                !notification.is_read && styles.archiveButtonTextActive
+              ]}>
+                Archive
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     );
   };
+
+  // Use filtered notifications if search/filters are active, otherwise use tab-filtered notifications
+  const displayNotifications = filteredNotifications.length > 0 
+    ? filteredNotifications 
+    : tabFilteredNotifications;
 
   if (isLoading && notifications.length === 0) {
     return (
@@ -181,14 +389,14 @@ export default function NotificationsScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>Notifications</Text>
-          {unreadCount > 0 && (
+          {unreadCount > 0 && activeTab === 'all' && (
             <View style={styles.unreadBadge}>
               <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
             </View>
           )}
         </View>
         
-        {unreadCount > 0 && (
+        {unreadCount > 0 && activeTab === 'all' && (
           <TouchableOpacity
             style={styles.markAllButton}
             onPress={markAllAsRead}
@@ -198,13 +406,75 @@ export default function NotificationsScreen() {
         )}
       </View>
 
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+          onPress={() => {
+            setActiveTab('all');
+            setFilteredNotifications([]);
+            setSearchQuery('');
+          }}
+        >
+          <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+            All
+          </Text>
+          {activeTab === 'all' && tabFilteredNotifications.filter(n => !n.is_read).length > 0 && (
+            <View style={styles.tabBadge}>
+              <Text style={styles.tabBadgeText}>
+                {tabFilteredNotifications.filter(n => !n.is_read).length}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'archive' && styles.activeTab]}
+          onPress={() => {
+            setActiveTab('archive');
+            setFilteredNotifications([]);
+            setSearchQuery('');
+          }}
+        >
+          <Text style={[styles.tabText, activeTab === 'archive' && styles.activeTabText]}>
+            Archive
+          </Text>
+          {activeTab === 'archive' && tabFilteredNotifications.length > 0 && (
+            <View style={styles.tabBadge}>
+              <Text style={styles.tabBadgeText}>
+                {tabFilteredNotifications.length}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Filter Section */}
+      <UnifiedSearchAndFilter
+        data={tabFilteredNotifications}
+        onFilteredData={setFilteredNotifications}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search notifications..."
+        searchFields={['title', 'message', 'type']}
+        filterGroups={filterGroups}
+        showResultsCount={true}
+        customFilterLogic={customFilterLogic}
+      />
+
       {/* Notifications List */}
-      {notifications.length === 0 ? (
+      {displayNotifications.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <MaterialIcons name="notifications-none" size={64} color={colors.text.secondary} />
-          <Text style={styles.emptyTitle}>No Notifications</Text>
+          <MaterialIcons 
+            name={activeTab === 'archive' ? 'archive' : 'notifications-none'} 
+            size={64} 
+            color={colors.text.secondary} 
+          />
+          <Text style={styles.emptyTitle}>
+            {activeTab === 'archive' ? 'No Archived Notifications' : 'No Notifications'}
+          </Text>
           <Text style={styles.emptyMessage}>
-            You're all caught up! New notifications will appear here.
+            {activeTab === 'archive' 
+              ? 'Archived notifications will appear here.'
+              : "You're all caught up! New notifications will appear here."}
           </Text>
         </View>
       ) : (
@@ -220,7 +490,7 @@ export default function NotificationsScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          {notifications.map((notification) => (
+          {displayNotifications.map((notification) => (
             <NotificationCard key={notification.id} notification={notification} />
           ))}
         </ScrollView>
@@ -289,6 +559,48 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontWeight: '500',
     color: colors.text.primary,
   },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: colors.background.paper,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+    paddingHorizontal: 20,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: '#007AFF',
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.text.secondary,
+  },
+  activeTabText: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  tabBadge: {
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 6,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  tabBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
   scrollView: {
     flex: 1,
   },
@@ -325,10 +637,23 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
     borderColor: colors.divider,
+    position: 'relative',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+    zIndex: 10,
   },
   unreadNotification: {
     borderLeftWidth: 4,
     borderLeftColor: '#007AFF',
+    backgroundColor: isDark ? 'rgba(0, 122, 255, 0.05)' : 'rgba(0, 122, 255, 0.03)',
+  },
+  readNotification: {
+    opacity: 0.5,
+    backgroundColor: colors.background.paper,
   },
   notificationContent: {
     flexDirection: 'row',
@@ -342,6 +667,22 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    position: 'relative',
+  },
+  unreadIconContainer: {
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  unreadDot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FF3B30',
+    borderWidth: 2,
+    borderColor: colors.background.paper,
   },
   notificationText: {
     flex: 1,
@@ -349,7 +690,18 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   notificationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 4,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  markReadButtonInline: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   notificationTitle: {
     fontSize: 16,
@@ -359,6 +711,11 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   unreadText: {
     fontWeight: '700',
+    color: colors.text.primary,
+  },
+  readText: {
+    fontWeight: '500',
+    color: colors.text.secondary,
   },
   urgentBadge: {
     backgroundColor: '#FF3B30',
@@ -374,16 +731,88 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   notificationMessage: {
     fontSize: 14,
-    color: colors.text.secondary,
     lineHeight: 20,
     marginBottom: 8,
+  },
+  unreadMessage: {
+    color: colors.text.primary,
+    fontWeight: '500',
+  },
+  readMessage: {
+    color: colors.text.secondary,
+    fontWeight: '400',
   },
   notificationTime: {
     fontSize: 12,
     color: colors.text.secondary,
   },
-  deleteButton: {
-    padding: 4,
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginLeft: 8,
+    gap: 8,
+  },
+  bottomActionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    paddingTop: 8,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  markReadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    gap: 6,
+  },
+  markReadButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#007AFF',
+  },
+  toggleReadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    gap: 6,
+  },
+  toggleReadButtonRead: {
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+  },
+  toggleReadButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#007AFF',
+  },
+  archiveButtonBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    gap: 6,
+  },
+  archiveButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text.secondary,
+  },
+  archiveButtonTextActive: {
+    color: '#007AFF',
+  },
+  deleteButton: {
+    padding: 6,
+    borderRadius: 6,
   },
 });

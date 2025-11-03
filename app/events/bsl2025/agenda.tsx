@@ -15,6 +15,13 @@ import {
   AgendaItem
 } from '../../../types/agenda';
 import { EVENTS } from '../../../config/events';
+import { useAuth } from '../../../hooks/useAuth';
+import { supabase } from '../../../lib/supabase';
+import { useToastHelpers } from '../../../contexts/ToastContext';
+import ScheduleConfirmationModal from '../../../components/ScheduleConfirmationModal';
+import * as Haptics from 'expo-haptics';
+import { parseISO } from 'date-fns';
+import LoadingScreen from '../../../components/LoadingScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -79,6 +86,8 @@ export default function BSL2025AgendaScreen() {
   const { isDark, colors } = useTheme();
   const router = useRouter();
   const styles = getStyles(isDark, colors);
+  const { user } = useAuth();
+  const { showSuccess, showError, showWarning } = useToastHelpers();
 
   const [agendaByDay, setAgendaByDay] = useState<{ [key: string]: AgendaItem[] }>({});
   const [activeTab, setActiveTab] = useState<string>('');
@@ -94,6 +103,14 @@ export default function BSL2025AgendaScreen() {
   const [isEventPeriod, setIsEventPeriod] = useState(false);
   const [filteredAgenda, setFilteredAgenda] = useState<AgendaItem[]>([]);
   const [showNotLiveDetails, setShowNotLiveDetails] = useState(false);
+  const [userAgendaStatus, setUserAgendaStatus] = useState<Record<string, 'tentative' | 'confirmed'>>({});
+  const [favoriteStatus, setFavoriteStatus] = useState<Record<string, boolean>>({});
+  const [confirmationModal, setConfirmationModal] = useState<{
+    visible: boolean;
+    agendaItem: AgendaItem | null;
+    startTime: Date | null;
+  }>({ visible: false, agendaItem: null, startTime: null });
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Helper functions used in effects and render
   const checkEventPeriod = () => {
@@ -313,11 +330,25 @@ export default function BSL2025AgendaScreen() {
         // Trigger a refresh
         const refreshAgenda = async () => {
           try {
-            const response = await fetch('/api/bslatam/agenda?eventId=bsl2025');
-            const result = await response.json();
-            if (response.ok && result.data && result.data.length > 0) {
-              setAgenda(result.data);
-              setLastUpdated(new Date().toISOString());
+            // Use apiClient to ensure correct base URL from env vars
+            const response = await apiClient.request('agenda', {
+              params: { eventId: 'bsl2025' }
+            });
+            // apiClient returns { data, success, error }
+            if (response.success && response.data) {
+              let agendaData: any[] = [];
+              // Handle different response formats
+              if (Array.isArray(response.data)) {
+                agendaData = response.data;
+              } else if (response.data.data && Array.isArray(response.data.data)) {
+                agendaData = response.data.data;
+              } else if (response.data && typeof response.data === 'object') {
+                agendaData = [];
+              }
+              if (agendaData.length > 0) {
+                setAgenda(agendaData);
+                setLastUpdated(new Date().toISOString());
+              }
             }
           } catch (error) {
             console.error('Auto-refresh failed:', error);
@@ -538,74 +569,287 @@ export default function BSL2025AgendaScreen() {
     }
   };
 
+  // Load user agenda status and favorites
+  useEffect(() => {
+    const loadUserAgendaStatus = async () => {
+      if (!user) {
+        setUserAgendaStatus({});
+        setFavoriteStatus({});
+        return;
+      }
+      try {
+        const { data, error } = await supabase
+          .from('user_agenda_status')
+          .select('agenda_id, status, is_favorite')
+          .eq('user_id', user.id)
+          .not('agenda_id', 'is', null);
+        
+        if (error) {
+          console.error('Error loading user agenda status:', error);
+          return;
+        }
+        
+        const statusMap: Record<string, 'tentative' | 'confirmed'> = {};
+        const favoriteMap: Record<string, boolean> = {};
+        
+        (data || []).forEach((item: any) => {
+          if (item.agenda_id) {
+            const status = item.status === 'unconfirmed' ? 'tentative' : item.status;
+            statusMap[item.agenda_id] = status as 'tentative' | 'confirmed';
+            if (item.is_favorite) favoriteMap[item.agenda_id] = true;
+          }
+        });
+        
+        setUserAgendaStatus(statusMap);
+        setFavoriteStatus(favoriteMap);
+      } catch (e) {
+        console.error('Error loading user agenda status:', e);
+      }
+    };
+
+    loadUserAgendaStatus();
+  }, [user]);
+
+  // Handle toggle confirmation
+  const handleToggleConfirmation = async (agendaItem: AgendaItem, startTime: Date) => {
+    if (!user) return;
+    
+    setIsConfirming(true);
+    const currentStatus = userAgendaStatus[agendaItem.id] || 'tentative';
+    const newStatus = currentStatus === 'confirmed' ? 'tentative' : 'confirmed';
+    
+    try {
+      const { data: existing } = await supabase
+        .from('user_agenda_status')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('agenda_id', agendaItem.id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('user_agenda_status')
+          .update({
+            status: newStatus,
+            confirmed_at: newStatus === 'confirmed' ? new Date().toISOString() : null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+        
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('user_agenda_status')
+          .insert({
+            user_id: user.id,
+            agenda_id: agendaItem.id,
+            event_id: 'bsl2025',
+            status: newStatus,
+            confirmed_at: newStatus === 'confirmed' ? new Date().toISOString() : null,
+          });
+        
+        if (error) throw error;
+      }
+
+      setUserAgendaStatus(prev => ({
+        ...prev,
+        [agendaItem.id]: newStatus,
+      }));
+
+      setConfirmationModal({ visible: false, agendaItem: null, startTime: null });
+      if (newStatus === 'confirmed') {
+        showSuccess('Event confirmed', 'This event has been added to your schedule');
+      } else {
+        showWarning('Event unconfirmed', 'This event has been removed from your confirmed schedule');
+      }
+    } catch (error) {
+      console.error('Error toggling confirmation:', error);
+      showError('Error', `Failed to ${newStatus === 'confirmed' ? 'confirm' : 'unconfirm'} event`);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  // Handle toggle favorite
+  const handleToggleFavorite = async (agendaItem: AgendaItem) => {
+    if (!user) return;
+    
+    const currentFavorite = favoriteStatus[agendaItem.id] || false;
+    const newFavorite = !currentFavorite;
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    try {
+      const { data: existing } = await supabase
+        .from('user_agenda_status')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('agenda_id', agendaItem.id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('user_agenda_status')
+          .update({
+            is_favorite: newFavorite,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const currentStatus = userAgendaStatus[agendaItem.id] || 'tentative';
+        const { error } = await supabase
+          .from('user_agenda_status')
+          .insert({
+            user_id: user.id,
+            agenda_id: agendaItem.id,
+            event_id: 'bsl2025',
+            status: currentStatus,
+            is_favorite: newFavorite,
+          });
+        if (error) throw error;
+      }
+
+      setFavoriteStatus(prev => ({
+        ...prev,
+        [agendaItem.id]: newFavorite,
+      }));
+      
+      if (newFavorite) {
+        showSuccess('Added to favorites');
+      } else {
+        showWarning('Removed from favorites');
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      showError('Error', `Failed to ${newFavorite ? 'add to' : 'remove from'} favorites`);
+    }
+  };
+
   // Render a single agenda card
-  const renderAgendaItem = (item: AgendaItem) => (
-    <View key={item.id} style={styles.agendaItem}>
-      <View style={styles.agendaItemHeader}>
-        <View style={styles.timeContainer}>
-          <Text style={styles.agendaTime}>{formatTimeRange(item)}</Text>
-          <View style={[styles.agendaTypeBadge, { backgroundColor: getAgendaTypeColor(item.type) }]}>
-            <Text style={styles.agendaTypeText}>{item.type.toUpperCase()}</Text>
-          </View>
-        </View>
-      </View>
+  const renderAgendaItem = (item: AgendaItem) => {
+    const userStatus = userAgendaStatus[item.id] || 'tentative';
+    const isConfirmed = userStatus === 'confirmed';
+    const isFavorite = favoriteStatus[item.id] || false;
+    
+    // Parse start time from item
+    const startTime = parseEventISO((item as any).time || '');
+    const isValidTime = !isNaN(startTime.getTime());
+    
+    const handleConfirmPress = () => {
+      if (isValidTime) {
+        setConfirmationModal({ visible: true, agendaItem: item, startTime });
+      }
+    };
 
-      <View style={styles.agendaItemContent}>
-        <Text style={styles.agendaTitle}>{cleanSessionTitle(item.title)}</Text>
-        {item.description && (
-          <Text style={styles.agendaDescription}>{item.description}</Text>
-        )}
-
-        {item.speakers && item.speakers.length > 0 && (
-          <View style={styles.speakersContainer}>
-            <MaterialIcons name="people" size={16} color={colors.text.secondary} />
-            <View style={styles.speakersList}>
-              {item.speakers.map((speaker, index) => {
-                const speakerId = findSpeakerId(speaker);
-                const isClickable = speakerId !== null;
-                return (
-                  <React.Fragment key={index}>
-                    {isClickable ? (
-                      <TouchableOpacity onPress={() => handleSpeakerPress(speaker)} style={styles.speakerLink}>
-                        <Text style={[styles.agendaSpeakers, styles.clickableSpeaker]}>{speaker}</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={styles.agendaSpeakers}>{speaker}</Text>
-                    )}
-                    {index < (item.speakers?.length || 0) - 1 && (
-                      <Text style={styles.speakerSeparator}>, </Text>
-                    )}
-                  </React.Fragment>
-                );
-              })}
+    const typeColor = getAgendaTypeColor(item.type);
+    
+    return (
+      <View key={item.id} style={styles.agendaItem}>
+        <View style={[styles.agendaItemHeader, { backgroundColor: typeColor }]}>
+          <View style={styles.timeContainer}>
+            <Text style={[styles.agendaTime, { color: '#FFFFFF' }]}>{formatTimeRange(item)}</Text>
+            <View style={[styles.agendaTypeBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
+              <Text style={[styles.agendaTypeText, { color: '#FFFFFF' }]}>{item.type.toUpperCase()}</Text>
             </View>
           </View>
-        )}
+        </View>
 
-        {(() => {
-          let location = '';
-          if (item.type === 'keynote') {
-            location = 'Main Stage';
-          } else if (item.type === 'registration') {
-            location = 'Registration Area';
-          } else if (item.type === 'meal' || item.type === 'break') {
-            return null;
-          } else if (item.location) {
-            location = item.location;
-          }
-          if (location) {
-            return (
-              <View style={styles.locationContainer}>
-                <MaterialIcons name="location-on" size={16} color={colors.text.secondary} />
-                <Text style={styles.agendaLocation}>{location}</Text>
+        <View style={styles.agendaItemContent}>
+          <View style={styles.agendaTitleRow}>
+            <Text style={styles.agendaTitle}>{cleanSessionTitle(item.title)}</Text>
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                onPress={() => handleToggleFavorite(item)}
+                style={styles.actionButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <MaterialIcons
+                  name={isFavorite ? 'star' : 'star-border'}
+                  size={22}
+                  color={isFavorite ? '#FFD700' : colors.text.secondary}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleConfirmPress}
+                style={styles.actionButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <MaterialIcons
+                  name={isConfirmed ? 'check-circle' : 'radio-button-unchecked'}
+                  size={22}
+                  color={isConfirmed ? colors.success.main : colors.text.secondary}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {item.description && (
+            <Text style={styles.agendaDescription}>{item.description}</Text>
+          )}
+
+          {item.speakers && item.speakers.length > 0 && (
+            <View style={styles.speakersContainer}>
+              <MaterialIcons name="people" size={16} color={colors.text.secondary} />
+              <View style={styles.speakersList}>
+                {item.speakers.map((speaker, index) => {
+                  const speakerId = findSpeakerId(speaker);
+                  const isClickable = speakerId !== null;
+                  return (
+                    <React.Fragment key={index}>
+                      {isClickable ? (
+                        <TouchableOpacity onPress={() => handleSpeakerPress(speaker)} style={styles.speakerLink}>
+                          <Text style={[styles.agendaSpeakers, styles.clickableSpeaker]}>{speaker}</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={styles.agendaSpeakers}>{speaker}</Text>
+                      )}
+                      {index < (item.speakers?.length || 0) - 1 && (
+                        <Text style={styles.speakerSeparator}>, </Text>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </View>
-            );
-          }
-          return null;
-        })()}
+            </View>
+          )}
+
+          {(() => {
+            let location = '';
+            if (item.type === 'keynote') {
+              location = 'Main Stage';
+            } else if (item.type === 'registration') {
+              location = 'Registration Area';
+            } else if (item.type === 'meal' || item.type === 'break') {
+              return null;
+            } else if (item.location) {
+              location = item.location;
+            }
+            if (location) {
+              return (
+                <View style={styles.locationContainer}>
+                  <MaterialIcons name="location-on" size={16} color={colors.text.secondary} />
+                  <Text style={styles.agendaLocation}>{location}</Text>
+                </View>
+              );
+            }
+            return null;
+          })()}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
+  // Show global loader while loading
+  if (loading) {
+    return (
+      <LoadingScreen
+        icon="schedule"
+        message="Loading agenda..."
+        fullScreen={true}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView 
@@ -673,7 +917,7 @@ export default function BSL2025AgendaScreen() {
 
 
       {/* Live Status Details - Only during event period */}
-      {!loading && isLive && isEventPeriod && agenda.length > 0 && (
+      {isLive && isEventPeriod && agenda.length > 0 && (
         <View style={styles.liveStatusDetails}>
           <View style={styles.liveStatusRow}>
             <MaterialIcons name="update" size={14} color={colors.success.main} />
@@ -702,7 +946,7 @@ export default function BSL2025AgendaScreen() {
 
 
       {/* Unified Search and Filter Section */}
-      {!loading && agenda.length > 0 && (
+      {agenda.length > 0 && (
         <UnifiedSearchAndFilter
           data={agenda}
           onFilteredData={setFilteredAgenda}
@@ -717,13 +961,7 @@ export default function BSL2025AgendaScreen() {
 
       {/* Tab Content */}
       <View style={styles.contentContainer}>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <MaterialIcons name="schedule" size={48} color={colors.text.secondary} />
-            <Text style={styles.loadingText}>Loading agenda...</Text>
-            <Text style={styles.loadingSubtext}>Fetching latest schedule from database</Text>
-          </View>
-        ) : activeTab && agendaByDay[activeTab] ? (
+        {activeTab && agendaByDay[activeTab] ? (
           <View style={styles.agendaList}>
             {(() => {
               // Get filtered items for the active tab
@@ -759,6 +997,27 @@ export default function BSL2025AgendaScreen() {
           </View>
         )}
       </View>
+
+      {/* Confirmation Modal */}
+      {confirmationModal.agendaItem && confirmationModal.startTime && (
+        <ScheduleConfirmationModal
+          visible={confirmationModal.visible}
+          title={confirmationModal.agendaItem.title || 'Untitled Event'}
+          location={confirmationModal.agendaItem.location || 
+            (confirmationModal.agendaItem.type === 'keynote' ? 'Main Stage' : 
+             confirmationModal.agendaItem.type === 'registration' ? 'Registration Area' : undefined)}
+          startTime={confirmationModal.startTime}
+          isConfirmed={(userAgendaStatus[confirmationModal.agendaItem.id] || 'tentative') === 'confirmed'}
+          onConfirm={() => handleToggleConfirmation(confirmationModal.agendaItem!, confirmationModal.startTime!)}
+          onCancel={() => setConfirmationModal({ visible: false, agendaItem: null, startTime: null })}
+          isLoading={isConfirming}
+          isFreeSlot={false}
+          freeSlotStatus="available"
+          isAgendaEvent={true}
+          isFavorite={favoriteStatus[confirmationModal.agendaItem.id] || false}
+          onToggleFavorite={() => confirmationModal.agendaItem && handleToggleFavorite(confirmationModal.agendaItem)}
+        />
+      )}
     </ScrollView>
   </View>
   );
@@ -886,11 +1145,9 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     overflow: 'hidden',
   },
   agendaItemHeader: {
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    borderBottomWidth: 0,
   },
   timeContainer: {
     flexDirection: 'row',
@@ -916,12 +1173,27 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   agendaItemContent: {
     padding: 16,
   },
+  agendaTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    gap: 8,
+  },
   agendaTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text.primary,
-    marginBottom: 8,
+    flex: 1,
     lineHeight: 22,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionButton: {
+    padding: 4,
   },
   agendaDescription: {
     fontSize: 14,
@@ -964,24 +1236,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontSize: 13,
     color: colors.text.secondary,
     marginLeft: 6,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-  },
-  loadingText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  loadingSubtext: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginTop: 8,
-    textAlign: 'center',
   },
   noAgendaContainer: {
     alignItems: 'center',

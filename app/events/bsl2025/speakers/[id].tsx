@@ -12,6 +12,7 @@ import { passSystemService } from '../../../../lib/pass-system';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
 import PassesDisplay from '../../../../components/PassesDisplay';
 import { getSpeakerAvatarUrl, getSpeakerLinkedInUrl, getSpeakerTwitterUrl } from '../../../../lib/string-utils';
+import LoadingScreen from '../../../../components/LoadingScreen';
 
 interface Speaker {
   id: string;
@@ -43,6 +44,7 @@ export default function SpeakerDetail() {
   const styles = getStyles(isDark, colors);
 
   const [speaker, setSpeaker] = useState<Speaker | null>(null);
+  const [loading, setLoading] = useState(true);
   // userTicket removed - now using pass system
   const [isRequestingMeeting, setIsRequestingMeeting] = useState(false);
   const [showMeetingModal, setShowMeetingModal] = useState(false);
@@ -143,6 +145,7 @@ export default function SpeakerDetail() {
             }
           });
           console.log('✅ Loaded speaker from database:', dbSpeaker.name);
+          setLoading(false);
           return;
         }
       } catch (dbError) {
@@ -814,11 +817,13 @@ export default function SpeakerDetail() {
     }
   };
 
-  if (!speaker) {
+  if (loading || !speaker) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading speaker details...</Text>
-      </View>
+      <LoadingScreen
+        icon="person"
+        message="Loading speaker details..."
+        fullScreen={true}
+      />
     );
   }
 
@@ -1495,16 +1500,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.default,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background.default,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: colors.text.secondary,
   },
   speakerCard: {
     flexDirection: 'row',

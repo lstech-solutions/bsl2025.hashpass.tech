@@ -13,6 +13,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,23 +21,55 @@ const projectRoot = path.join(__dirname, '..');
 
 // Parse command line arguments
 const args = process.argv.slice(2);
-const newVersion = args[0];
+
+// Find version number (first argument that matches version format)
+const versionRegex = /^\d+\.\d+\.\d+$/;
+const versionIndex = args.findIndex(arg => versionRegex.test(arg));
+const versionArg = versionIndex !== -1 ? args[versionIndex] : args[0];
+
+// If version is not found or doesn't match format, try first non-flag argument
+let newVersionFinal = versionArg;
+if (!versionRegex.test(newVersionFinal)) {
+  const nonFlagArgs = args.filter(arg => !arg.startsWith('--') && !arg.startsWith('-'));
+  newVersionFinal = nonFlagArgs[0] || newVersionFinal;
+}
+
 const releaseType = args.find(arg => arg.startsWith('--type='))?.split('=')[1] || 'beta';
 const releaseNotes = args.find(arg => arg.startsWith('--notes='))?.split('=')[1] || '';
 
-if (!newVersion) {
-  console.error('❌ Error: Please provide a version number');
-  console.log('Usage: node scripts/update-version.mjs <version> [--type=<type>] [--notes="<notes>"]');
-  console.log('Example: node scripts/update-version.mjs 1.1.9 --type=beta --notes="Bug fixes"');
+// Git operation flags (optional)
+const shouldCommit = args.includes('--commit') || args.includes('-c');
+const shouldTag = args.includes('--tag') || args.includes('-t');
+const shouldPush = args.includes('--push') || args.includes('-p');
+const autoGit = args.includes('--auto-git'); // Shorthand for --commit --tag --push
+
+// Validate version format
+if (!newVersionFinal || !versionRegex.test(newVersionFinal)) {
+  console.error('❌ Error: Please provide a valid version number in format X.Y.Z');
+  console.log('');
+  console.log('Usage: node scripts/update-version.mjs <version> [options]');
+  console.log('   or: npm run version:update <version> [-- --options]');
+  console.log('   or: npm run version:bump <version>');
+  console.log('');
+  console.log('Options:');
+  console.log('  --type=<type>        Release type: alpha, beta, rc, stable (default: beta)');
+  console.log('  --notes="<notes>"    Release notes');
+  console.log('  --commit, -c         Commit changes automatically');
+  console.log('  --tag, -t            Create git tag automatically');
+  console.log('  --push, -p           Push to remote automatically');
+  console.log('  --auto-git           Shorthand for --commit --tag --push');
+  console.log('');
+  console.log('Examples:');
+  console.log('  node scripts/update-version.mjs 1.3.7');
+  console.log('  node scripts/update-version.mjs 1.3.7 --type=beta --notes="Bug fixes"');
+  console.log('  node scripts/update-version.mjs 1.3.7 --auto-git');
+  console.log('  npm run version:update 1.3.7 -- --type=beta');
+  console.log('  npm run version:bump 1.3.7');
   process.exit(1);
 }
 
-// Validate version format
-const versionRegex = /^\d+\.\d+\.\d+$/;
-if (!versionRegex.test(newVersion)) {
-  console.error('❌ Error: Version must be in format X.Y.Z (e.g., 1.1.9)');
-  process.exit(1);
-}
+// Use the validated version (rename to avoid conflict)
+const newVersion = newVersionFinal;
 
 // Validate release type
 const validTypes = ['alpha', 'beta', 'rc', 'stable'];
@@ -46,6 +79,9 @@ if (!validTypes.includes(releaseType)) {
 }
 
 console.log(`🚀 Updating version to ${newVersion} (${releaseType})`);
+if (autoGit || shouldCommit || shouldTag || shouldPush) {
+  console.log(`📋 Git operations: ${autoGit || shouldCommit ? 'commit' : ''} ${autoGit || shouldTag ? 'tag' : ''} ${autoGit || shouldPush ? 'push' : ''}`);
+}
 
 // Generate build number (timestamp-based)
 const buildNumber = parseInt(new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12));
@@ -202,11 +238,85 @@ for (const file of filesToUpdate) {
 // Update CHANGELOG.md
 updateChangelog(newVersion, releaseType, releaseNotes);
 
+// Helper function to extract features and bugfixes from CURRENT_VERSION
+function extractFeaturesAndBugfixes(content) {
+  const features = [];
+  const bugfixes = [];
+  const breakingChanges = [];
+  
+  // Extract CURRENT_VERSION block
+  const currentVersionMatch = content.match(/export const CURRENT_VERSION: VersionInfo = \{([\s\S]*?)\};/);
+  if (!currentVersionMatch) {
+    console.warn('⚠️  Could not find CURRENT_VERSION block, using empty arrays');
+    return { features, bugfixes, breakingChanges };
+  }
+  
+  const currentVersionContent = currentVersionMatch[1];
+  
+  // Extract features array from CURRENT_VERSION only
+  const featuresMatch = currentVersionContent.match(/features:\s*\[([\s\S]*?)\],/);
+  if (featuresMatch) {
+    const featuresContent = featuresMatch[1];
+    const featureLines = featuresContent.split('\n').filter(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith("'") || trimmed.startsWith('"');
+    });
+    features.push(...featureLines.map(line => {
+      const match = line.match(/['"](.*?)['"]/);
+      return match ? match[1] : '';
+    }).filter(f => f));
+  }
+  
+  // Extract bugfixes array from CURRENT_VERSION only
+  const bugfixesMatch = currentVersionContent.match(/bugfixes:\s*\[([\s\S]*?)\],/);
+  if (bugfixesMatch) {
+    const bugfixesContent = bugfixesMatch[1];
+    const bugfixLines = bugfixesContent.split('\n').filter(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith("'") || trimmed.startsWith('"');
+    });
+    bugfixes.push(...bugfixLines.map(line => {
+      const match = line.match(/['"](.*?)['"]/);
+      return match ? match[1] : '';
+    }).filter(f => f));
+  }
+  
+  // Extract breakingChanges array from CURRENT_VERSION only
+  const breakingMatch = currentVersionContent.match(/breakingChanges:\s*\[([\s\S]*?)\],/);
+  if (breakingMatch) {
+    const breakingContent = breakingMatch[1];
+    const breakingLines = breakingContent.split('\n').filter(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith("'") || trimmed.startsWith('"');
+    });
+    breakingChanges.push(...breakingLines.map(line => {
+      const match = line.match(/['"](.*?)['"]/);
+      return match ? match[1] : '';
+    }).filter(f => f));
+  }
+  
+  return { features, bugfixes, breakingChanges };
+}
+
 // Update version history in version.ts
 try {
   const versionTsPath = path.join(projectRoot, 'config/version.ts');
   if (fs.existsSync(versionTsPath)) {
     let content = fs.readFileSync(versionTsPath, 'utf8');
+    
+    // Extract features and bugfixes from CURRENT_VERSION
+    const { features, bugfixes, breakingChanges } = extractFeaturesAndBugfixes(content);
+    
+    // Format arrays as strings for the entry
+    const featuresStr = features.length > 0 
+      ? features.map(f => `      '${f.replace(/'/g, "\\'")}'`).join(',\n')
+      : '      // No new features';
+    const bugfixesStr = bugfixes.length > 0
+      ? bugfixes.map(f => `      '${f.replace(/'/g, "\\'")}'`).join(',\n')
+      : '      // No bugfixes';
+    const breakingStr = breakingChanges.length > 0
+      ? breakingChanges.map(f => `      '${f.replace(/'/g, "\\'")}'`).join(',\n')
+      : '';
     
     // Add new version to VERSION_HISTORY
     const newVersionEntry = `  '${newVersion}': {
@@ -216,27 +326,13 @@ try {
     releaseType: '${releaseType}',
     environment: 'development',
     features: [
-      'User pass management system',
-      'BSL 2025 event integration',
-      'Speaker profile system with avatars',
-      'Event agenda with live updates',
-      'Unified search and filter system',
-      'Dark mode support',
-      'Event banner component',
-      'Pass card UI with BSL branding',
-      'Agenda tabbed interface',
-      'Real-time countdown system'
+${featuresStr}
     ],
     bugfixes: [
-      'Fixed SVG logo rendering issues',
-      'Resolved TypeScript undefined property errors',
-      'Fixed agenda data grouping logic',
-      'Corrected speaker count discrepancies',
-      'Fixed dark mode contrast issues',
-      'Resolved navigation routing problems'
+${bugfixesStr}
     ],
-    breakingChanges: [],
-    notes: '${releaseNotes || `Version ${newVersion} release`}'
+    breakingChanges: [${breakingStr ? '\n' + breakingStr + '\n    ' : ''}],
+    notes: '${(releaseNotes || `Version ${newVersion} release`).replace(/'/g, "\\'")}'
   },`;
 
     // Insert the new version entry at the beginning of VERSION_HISTORY
@@ -252,27 +348,172 @@ try {
   allUpdated = false;
 }
 
-// Summary
-if (allUpdated) {
-  console.log(`\n🎉 Successfully updated to version ${newVersion}!`);
-  console.log(`📝 Release type: ${releaseType}`);
-  console.log(`📅 Release date: ${releaseDate}`);
-  console.log(`🔢 Build number: ${buildNumber}`);
-  if (releaseNotes) {
-    console.log(`📋 Notes: ${releaseNotes}`);
-  }
-  console.log('\n📁 Files updated:');
-  filesToUpdate.forEach(file => console.log(`   - ${file.path}`));
-  console.log('\n🚀 Next steps:');
-  console.log('   1. Review the changes: git diff');
-  console.log('   2. Test the build: npm run build:web');
-  console.log('   3. Commit the changes: git add . && git commit -m "Release v' + newVersion + '"');
-  console.log('   4. Push to repository: git push');
+// Update config/versions.json (used by sidebar version display)
+try {
+  const versionsJsonPath = path.join(projectRoot, 'config/versions.json');
+  const versionTsPath = path.join(projectRoot, 'config/version.ts');
   
-  // Ask if user wants to build now
-  console.log('\n🔨 Would you like to build the project now? (y/n)');
-  console.log('   Run: npm run build:web');
-} else {
-  console.log('\n❌ Some files could not be updated. Please check the errors above.');
-  process.exit(1);
+  if (fs.existsSync(versionsJsonPath) && fs.existsSync(versionTsPath)) {
+    const versionsData = JSON.parse(fs.readFileSync(versionsJsonPath, 'utf8'));
+    const versionTsContent = fs.readFileSync(versionTsPath, 'utf8');
+    
+    // Extract features and bugfixes from CURRENT_VERSION
+    const { features, bugfixes, breakingChanges } = extractFeaturesAndBugfixes(versionTsContent);
+    
+    // Update currentVersion
+    versionsData.currentVersion = newVersion;
+    
+    // Check if version already exists in versions array
+    const versionExists = versionsData.versions.some(v => v.version === newVersion);
+    
+    if (!versionExists) {
+      // Add new version entry at the beginning of versions array
+      const newVersionEntry = {
+        version: newVersion,
+        buildNumber: buildNumber,
+        releaseDate: releaseDate,
+        releaseType: releaseType,
+        environment: 'development',
+        features: features.length > 0 ? features : [],
+        bugfixes: bugfixes.length > 0 ? bugfixes : [],
+        breakingChanges: breakingChanges.length > 0 ? breakingChanges : [],
+        notes: releaseNotes || `Version ${newVersion} release`
+      };
+      
+      versionsData.versions.unshift(newVersionEntry);
+    }
+    
+    // Write updated JSON back to file
+    fs.writeFileSync(versionsJsonPath, JSON.stringify(versionsData, null, 2) + '\n', 'utf8');
+    console.log(`✅ Updated config/versions.json: currentVersion = ${newVersion}`);
+  }
+} catch (error) {
+  console.error('❌ Error updating config/versions.json:', error.message);
+  allUpdated = false;
 }
+
+// Update config/git-info.json with current git information
+try {
+  const gitInfoPath = path.join(projectRoot, 'config/git-info.json');
+  
+  // Get current git information
+  let gitCommit = 'unknown';
+  let gitCommitFull = 'unknown';
+  let gitBranch = 'main';
+  let gitRepoUrl = 'https://github.com/lstech-solutions/bsl2025.hashpass.tech';
+  
+  try {
+    gitCommit = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: projectRoot }).trim();
+    gitCommitFull = execSync('git rev-parse HEAD', { encoding: 'utf8', cwd: projectRoot }).trim();
+    gitBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8', cwd: projectRoot }).trim();
+    const remoteUrl = execSync('git remote get-url origin', { encoding: 'utf8', cwd: projectRoot }).trim();
+    
+    // Convert SSH URL to HTTPS if needed
+    if (remoteUrl.startsWith('git@')) {
+      gitRepoUrl = remoteUrl.replace('git@github.com:', 'https://github.com/').replace('.git', '');
+    } else if (remoteUrl.startsWith('https://')) {
+      gitRepoUrl = remoteUrl.replace('.git', '');
+    }
+  } catch (gitError) {
+    console.warn('⚠️  Could not get git information, using defaults');
+  }
+  
+  const gitInfo = {
+    gitCommit: gitCommit,
+    gitCommitFull: gitCommitFull,
+    gitBranch: gitBranch,
+    gitRepoUrl: gitRepoUrl
+  };
+  
+  fs.writeFileSync(gitInfoPath, JSON.stringify(gitInfo, null, 2) + '\n', 'utf8');
+  console.log(`✅ Updated config/git-info.json: commit = ${gitCommit}, branch = ${gitBranch}`);
+} catch (error) {
+  console.error('❌ Error updating config/git-info.json:', error.message);
+  // Don't fail the whole process if git info update fails
+}
+
+// Git operations (if requested)
+const performGitOperations = async () => {
+  if (!shouldCommit && !shouldTag && !shouldPush && !autoGit) {
+    return;
+  }
+
+  try {
+    const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8', cwd: projectRoot }).trim();
+    
+    // Commit changes
+    if (autoGit || shouldCommit) {
+      console.log('\n📝 Creating commit for version ' + newVersion + '...');
+      execSync('git add .', { cwd: projectRoot, stdio: 'inherit' });
+      execSync(`git commit -m "chore: bump version to ${newVersion} (build ${buildNumber})"`, { 
+        cwd: projectRoot, 
+        stdio: 'inherit' 
+      });
+    }
+
+    // Create tag
+    if (autoGit || shouldTag) {
+      console.log('🏷️  Creating tag v' + newVersion + '...');
+      execSync(`git tag -a "v${newVersion}" -m "Version ${newVersion}"`, { 
+        cwd: projectRoot, 
+        stdio: 'inherit' 
+      });
+    }
+
+    // Push changes
+    if (autoGit || shouldPush) {
+      console.log('🚀 Pushing changes to ' + currentBranch + '...');
+      execSync(`git push origin "${currentBranch}"`, { 
+        cwd: projectRoot, 
+        stdio: 'inherit' 
+      });
+      if (autoGit || shouldTag) {
+        execSync('git push --tags', { 
+          cwd: projectRoot, 
+          stdio: 'inherit' 
+        });
+      }
+      console.log(`\n🎉 Version ${newVersion} (build ${buildNumber}) has been successfully released!`);
+      console.log(`🔗 Changes have been pushed to the ${currentBranch} branch and tagged as v${newVersion}.`);
+    }
+  } catch (gitError) {
+    console.error('❌ Error performing git operations:', gitError.message);
+    console.log('\n⚠️  Git operations failed, but version files were updated successfully.');
+    console.log('You can manually commit and push the changes.');
+  }
+};
+
+// Summary
+(async () => {
+  if (allUpdated) {
+    console.log(`\n🎉 Successfully updated to version ${newVersion}!`);
+    console.log(`📝 Release type: ${releaseType}`);
+    console.log(`📅 Release date: ${releaseDate}`);
+    console.log(`🔢 Build number: ${buildNumber}`);
+    if (releaseNotes) {
+      console.log(`📋 Notes: ${releaseNotes}`);
+    }
+    console.log('\n📁 Files updated:');
+    filesToUpdate.forEach(file => console.log(`   - ${file.path}`));
+    console.log('   - config/versions.json');
+    console.log('   - config/git-info.json');
+    console.log('   - CHANGELOG.md');
+    
+    // Perform git operations if requested
+    await performGitOperations();
+    
+    if (!shouldCommit && !shouldTag && !shouldPush && !autoGit) {
+      console.log('\n🚀 Next steps:');
+      console.log('   1. Review the changes: git diff');
+      console.log('   2. Test the build: npm run build:web');
+      console.log('   3. Commit the changes: git add . && git commit -m "chore: bump version to ' + newVersion + '"');
+      console.log('   4. Create tag: git tag -a "v' + newVersion + '" -m "Version ' + newVersion + '"');
+      console.log('   5. Push to repository: git push origin <branch> && git push --tags');
+      console.log('\n💡 Tip: Use --auto-git flag to automatically commit, tag, and push');
+      console.log('   Example: npm run version:update ' + newVersion + ' -- --auto-git');
+    }
+  } else {
+    console.log('\n❌ Some files could not be updated. Please check the errors above.');
+    process.exit(1);
+  }
+})();

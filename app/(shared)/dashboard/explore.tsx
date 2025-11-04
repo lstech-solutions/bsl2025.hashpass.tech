@@ -15,6 +15,7 @@ import {
   type EventInfo 
 } from '../../../lib/event-detector';
 import { t } from '@lingui/macro';
+import { useLingui } from '@lingui/react';
 
 export default function ExploreScreen() {
   const { scrollY, headerHeight } = useScroll();
@@ -25,6 +26,10 @@ export default function ExploreScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const styles = getStyles(isDark, colors);
+  // Subscribe to locale changes to trigger re-renders when locale changes
+  const { i18n } = useLingui();
+  // Use i18n.locale to ensure component subscribes to locale changes
+  const currentLocale = i18n.locale;
   
   // Get current event from route - getCurrentEvent returns EventInfo | null
   const currentEventFromRoute = getCurrentEvent(params.eventId as string);

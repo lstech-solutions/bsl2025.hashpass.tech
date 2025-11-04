@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.4.9] - 2025-11-04
+
+### Beta
+- Version 1.4.9 release - Improved language switching experience
+
+### Features
+- Improved language switching with smooth updates without remounting
+- Enhanced I18nProvider to handle locale changes reactively
+- Added useLingui hook to explore component for proper translation updates
+
+### Bugfixes
+- Fixed language switching not updating explorer section immediately
+- Fixed locale changes requiring page reload to see translations
+- Improved translation reactivity without component remounting
+
+### Technical Details
+- Version: 1.4.9
+- Release Type: beta
+- Build Number: 202511041603
+- Release Date: 2025-11-04T16:03:00.000Z
+
 ## [1.4.8] - 2025-11-04
 
 ### Beta

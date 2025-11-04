@@ -22,27 +22,45 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202511040915, // Updated to current timestamp
+  buildNumber: 202511041603, // Updated to current timestamp
   releaseDate: '2025-11-04',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
-    'HashPass logo clickable with zoom animation - navigates to home page',
-    'Mouse wheel scroll support for Quick Access section on explore page',
-    'Snap-to-interval scrolling for Quick Access cards matching networking center behavior'
+    'Improved language switching with smooth updates without remounting',
+    'Enhanced I18nProvider to handle locale changes reactively',
+    'Added useLingui hook to explore component for proper translation updates'
   ],
   bugfixes: [
-    'Fixed admin status check error (PGRST116) - multiple rows returned issue',
-    'Fixed QR code authentication error - wait for auth to finish loading',
-    'Fixed arrow button scrolling on small viewports in Quick Access section',
-    'Fixed HashPass logo card background to not be affected by sidebar animation'
+    'Fixed language switching not updating explorer section immediately',
+    'Fixed locale changes requiring page reload to see translations',
+    'Improved translation reactivity without component remounting'
   ],
   breakingChanges: [],
-  notes: 'Version 1.4.8 release'
+  notes: 'Version 1.4.9 release - Improved language switching experience'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.4.9': {
+    version: '1.4.9',
+    buildNumber: 202511041603,
+    releaseDate: '2025-11-04',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Improved language switching with smooth updates without remounting',
+      'Enhanced I18nProvider to handle locale changes reactively',
+      'Added useLingui hook to explore component for proper translation updates'
+    ],
+    bugfixes: [
+      'Fixed language switching not updating explorer section immediately',
+      'Fixed locale changes requiring page reload to see translations',
+      'Improved translation reactivity without component remounting'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.4.9 release - Improved language switching experience'
+  },
   '1.4.8': {
     version: '1.4.8',
     buildNumber: 202511040915,

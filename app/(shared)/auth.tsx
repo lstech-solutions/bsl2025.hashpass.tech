@@ -107,14 +107,15 @@ export default function AuthScreen() {
         />
         <ThemeAndLanguageSwitcher />
         <TouchableOpacity
-          style={{ position: 'absolute', top: 20, left: 20, zIndex: 10 }}
-          onPress={() => router.push('/')}
+          style={{ position: 'absolute', top: 20, left: 20, zIndex: 1001 }}
+          onPress={() => router.push('/home')}
           accessibilityLabel="Go Back"
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <Ionicons name="arrow-back" size={28} color={isDark ? "#fff" : "#000"} />
         </TouchableOpacity>
         <View style={styles.content}>
-          <View style={styles.overlay} />
+          <View style={styles.overlay} pointerEvents="none" />
           <Text style={styles.title}>{t('title')}</Text>
           <Animated.View style={[styles.logoContainer, headerAnimatedStyle]}>            
             <Image

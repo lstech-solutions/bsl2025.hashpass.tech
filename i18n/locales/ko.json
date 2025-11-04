@@ -1,113 +1,121 @@
-{ 
+{
   "newsletter": {
-    "title": "뉴스레터 구독하기",
-    "subtitle": "커뮤니티에 참여하세요",
+    "title": "뉴스레터 구독",
+    "subtitle": "최신 소식을 받기 위해 뉴스레터에 가입하세요",
     "subscribers": "구독자",
-    "privacy": "개인정보를 존중합니다. 언제든지 구독을 취소할 수 있습니다.",
-    "description": "뉴스레터를 구독하시면 최신 소식, 기사 및 특별 제안을 놓치지 마세요. 모든 업데이트를 이메일로 받아보세요!",
-    "emailPlaceholder": "이메일 주소를 입력하세요",
+    "privacy": "우리는 귀하의 개인정보를 존중합니다. 언제든지 구독을 취소할 수 있습니다.",
+    "description": "뉴스레터를 구독하고 최신 소식과 기사, 독점 혜택을 이메일로 받아보세요!",
+    "emailPlaceholder": "이메일 입력",
     "subscribe": "구독하기",
     "processing": "처리 중...",
     "successTitle": "이메일이 전송되었습니다!",
-    "successMessage": "{{email}} 주소로 확인 이메일을 보냈습니다. 자세한 내용은 수신함을 확인해주세요.",
+    "successMessage": "{{email}} 로 확인 이메일을 보냈습니다. 받은 편지함을 확인해주세요.",
     "sendAnother": "다시 보내기",
-    "backToForm": "으로 돌아가기"  
+    "backToForm": "폼으로 돌아가기"
   },
   "wallet": {
-    "walletDesc": "블록체인으로 검증된 티켓에 접근하세요",
-    "loyaltyDesc": "포인트와 토큰 보상을 추적하세요",
+    "digitalWalletTitle": "디지털 티켓 지갑",
+    "walletDesc": "블록체인 검증된 티켓에 안전하게 접근하세요",
     "events": "이벤트 탐색",
-    "eventsDesc": "다가오는 이벤트를 찾고 토큰을 획득하세요",
-    "exchangeDesc": "포인트를 암호화폐로 전환하세요",
+    "eventsDesc": "다가오는 이벤트를 찾고 토큰을 적립하세요",
+    "exchangeDesc": "포인트를 암호화폐로 교환",
     "tabs": {
-      "tickets": "나의 티켓",
-      "loyalty": "로열티 보상",
-      "exchange": "토큰 교환"
+      "tickets": "내 티켓",
+      "loyalty": "리워드",
+      "exchange": "교환"
     },
     "tickets": {
-      "title": "나의 티켓",
-      "description": ""
+      "title": "내 티켓",
+      "description": "이벤트 패스와 적립된 리워드를 확인하세요."
     },
     "loyalty": {
-      "title": "로열티 보상",
-      "description": "포인트와 토큰 보상을 추적하세요"
+      "title": "리워드",
+      "description": "포인트와 토큰 리워드를 추적하세요."
     },
     "exchange": {
-      "title": "토큰 교환",
-      "description": "포인트를 암호화폐로 전환하세요"
+      "title": "교환",
+      "description": "포인트를 암호화폐로 교환하세요."
     }
   },
   "digitalWallet": {
-    "tokensEarned": "획득된 토큰",
-    "noTickets": "티켓이 없습니다",
-    "noTicketsDesc": "구매한 티켓이 여기에 표시됩니다. 이벤트 탐색으로 시작하세요!",
+    "tokensEarned": "적립된 토큰",
+    "noTickets": "티켓 없음",
+    "noTicketsDesc": "구매한 티켓이 여기에 표시됩니다. 이벤트를 탐색해보세요!",
     "discoverEvents": "이벤트 탐색",
-    "of": "~의" ,
-    "presentQR": "이벤트 입구에서 티켓을 확인하기 위해 QR 코드를 보여주세요",
-    "tapToEnlarge": "확대하기",
-    "tapToMinimize": "축소하기"
-  },
-  "common": {
-    "learnMore": "더 알아보기"
+    "of": "/",
+    "presentQR": "입장 시 QR 코드를 제시하세요",
+    "tapToEnlarge": "탭하여 확대",
+    "tapToMinimize": "탭하여 축소"
   },
   "tabs": {
     "explore": "탐색",
     "wallet": "지갑",
     "profile": "프로필"
   },
+  "common": {
+    "back": "뒤로"
+  },
   "auth": {
     "title": "환영합니다",
-    "subtitle": "디지털 라이프를 잠금 해제하기 위해 로그인하세요.",
+    "subtitle": "로그인하여 디지털 라이프를 시작하세요.",
     "signInWithGoogle": "Google로 로그인",
     "privacy": {
-      "text": "로그인하면",
-      "terms": "서비스 이용약관",
-      "privacy": "개인정보보호정책"
+      "text": "로그인함으로써 다음에 동의합니다",
+      "terms": "서비스 약관",
+      "privacy": "개인정보 처리방침"
+    }
+  },
+  "settings": {
+    "languages": {
+      "en": "영어",
+      "es": "스페인어",
+      "ko": "한국어"
     }
   },
   "index": {
     "tagline": "당신의 이벤트 - 당신의 커뮤니티 - 당신의 혜택",
     "taglineFlipText": "당신의",
-    "learnMore": "더 알아보기",
-    "taglineFlipList": "-당신의 이벤트-,-당신의 커뮤니티-,-당신의 혜택-",
-    "unlockPotential": "당신의 잠재력을 발휘하세요",
+    "learnMore": "자세히 알아보기",
+    "taglineFlipList": "- 당신의 이벤트 -,- 당신의 커뮤니티 -,- 당신의 혜택 -",
+    "unlockPotential": "잠재력을 발휘하세요",
     "features": {
       "secure": {
-        "title": "안전하고 프라이빗한",
-        "description": "귀하의 데이터는 업계 최고 수준의 보안 프로토콜로 암호화되어 보호됩니다. 우리는 무엇보다도 귀하의 개인정보 보호를 최우선으로 합니다."
+        "title": "안전하고 개인적",
+        "description": "업계 최고 수준의 보안으로 데이터를 보호합니다."
       },
       "management": {
-        "title": "쉬운 관리",
-        "description": "디지털 자격 증명, 멤버십 카드, 중요한 커뮤니티를 직관적인 한 곳에서 관리하세요."
+        "title": "손쉬운 관리",
+        "description": "디지털 자격증, 멤버십, 커뮤니티를 한 곳에서 관리하세요."
       },
       "sync": {
         "title": "크로스 플랫폼 동기화",
-        "description": "안전한 클라우드 동기화로 모든 기기에서 데이터에 접근하세요."
+        "description": "모든 기기에서 안전하게 접근하세요."
       }
     },
     "welcomeBack": "다시 오신 것을 환영합니다!",
     "goToApp": "앱으로 이동",
-    "readyToSimplify": "디지털 라이프를 간편하게 만들어보시겠어요?",
-    "getStartedNow": "지금 시작하기",
-    "trustedByThousands": "수천 명이 신뢰하는 서비스",
+    "readyToSimplify": "디지털 라이프를 단순화할 준비가 되셨나요?",
+    "getStartedNow": "지금 시작",
+    "trustedByThousands": "수천 명이 신뢰합니다",
     "testimonials":{
-      "title": "고객 후기",
-      "subtitle": "고객들이 말하는 것",
-      "description": "고객들이 말하는 것"
+      "title": "사용자 후기",
+      "subtitle": "사용자들의 이야기",
+      "description": "고객들의 후기를 확인하세요."
     },
-    "copyright": " 2025 HASHPASS™ 모든 권리 보유.",
+    "copyright": " 2025 HASHPASS™ 무단 복제 금지.",
     "cta": {
-      "title": "시작하기",
-      "subtitle": "당신의 디지털 생명을 HASHPASS와 함께하세요.",
-      "startNow": "시작하기"
+      "title": "지금 시작할까요?",
+      "subtitle": "수천 명의 사용자가 HASHPASS를 신뢰합니다.",
+      "startNow": "지금 시작"
     }
   },
-  "loyalty": "로열티 대시보드",
-  "loyaltyDesc": "포인트와 토큰 보상을 추적하세요",
+  "walletDesc": "블록체인 검증된 티켓에 접근",
+  "loyalty": "리워드 대시보드",
+  "loyaltyDesc": "포인트와 리워드 추적",
   "events": "이벤트 탐색",
-  "eventsDesc": "다가오는 이벤트를 찾고 토큰을 획득하세요",
-  "exchange": "토큰 교환",
-  "exchangeDesc": "포인트를 암호화폐로 전환하세요",
+  "eventsDesc": "이벤트를 찾고 토큰을 적립",
+  "exchange": "교환",
+  "exchangeDesc": "포인트를 암호화폐로 교환",
   "getStarted": "시작하기",
   "profile": {
     "languages": {
@@ -117,7 +125,7 @@
     },
     "biometric": {
       "title": "생체 인증",
-      "description": "생체 인증을 사용하여 로그인"
+      "description": "지문 또는 얼굴 인식을 사용하세요"
     },
     "settings": {
       "title": "설정",
@@ -132,5 +140,84 @@
     "account": "계정",
     "signOut": "로그아웃",
     "version": "HashPass v{version}"
+  },
+  "nav": {
+    "explore": "탐색",
+    "wallet": "지갑",
+    "notifications": "알림",
+    "profile": "프로필",
+    "settings": "설정",
+    "brandSubtitle": "디지털 이벤트 플랫폼"
+  },
+  "explore": {
+    "noEvent": "사용 가능한 이벤트가 없습니다",
+    "noSelection": "선택된 이벤트가 없습니다",
+    "banner": {
+      "title": "블록체인 서밋 라탐 2025",
+      "subtitle": "2025년 11월 12-14일 • Universidad EAFIT, 메데진",
+      "date": "2025년 11월 12-14일"
+    },
+    "selectEvent": "이벤트 선택",
+    "yourPasses": "나의 패스",
+    "quickAccess": "빠른 접근",
+    "quick": {
+      "speakers": {
+        "title": "연사",
+        "subtitle": "전문가들을 만나보세요"
+      },
+      "agenda": {
+        "title": "일정",
+        "subtitle": "이벤트 일정"
+      },
+      "info": {
+        "title": "이벤트 정보",
+        "subtitle": "세부사항 및 안내"
+      },
+      "networking": {
+        "title": "네트워킹 센터",
+        "subtitle": "찾고 연결하기"
+      },
+      "information": {
+        "title": "이벤트 정보",
+        "subtitle": "세부사항 및 안내"
+      },
+      "event-info": {
+        "title": "이벤트 정보",
+        "subtitle": "세부사항 및 안내"
+      }
+    }
+  },
+  "passes": {
+    "title": "나의 이벤트 패스",
+    "loading": "패스 정보를 불러오는 중...",
+    "showFullDetails": "전체 상세보기",
+    "alert": {
+      "createdTitle": "패스가 생성되었습니다! 🎉",
+      "ok": "확인",
+      "errorTitle": "오류",
+      "createFail": "패스를 생성할 수 없습니다. 다시 시도해주세요.",
+      "paymentTitle": "결제 연동",
+      "paymentMessage": "여기에 결제 시스템이 구현될 예정입니다"
+    },
+    "button": {
+      "passRequired": "패스 필요",
+      "limitReached": "한도 도달",
+      "requestMeeting": "미팅 요청"
+    },
+    "copiedTitle": "패스 정보가 복사되었습니다",
+    "copiedMessage": "패스 정보가 클립보드에 복사되었습니다. 공유하려면 어디든지 붙여넣기 하세요.",
+    "copyError": "패스를 공유할 수 없습니다. 다시 시도해주세요.",
+    "type": {
+      "business": "비즈니스",
+      "vip": "VIP",
+      "general": "일반",
+      "event": "이벤트"
+    },
+    "access": {
+      "business": "B2B + 클로징 파티",
+      "vip": "모든 VIP 혜택",
+      "general": "일반 입장",
+      "event": "이벤트 입장"
+    }
   }
 }

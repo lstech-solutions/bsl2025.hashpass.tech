@@ -14,6 +14,7 @@ import {
   getEventQuickAccessItems,
   type EventInfo 
 } from '../../../lib/event-detector';
+import { t } from '@lingui/macro';
 
 export default function ExploreScreen() {
   const { scrollY, headerHeight } = useScroll();
@@ -40,7 +41,7 @@ export default function ExploreScreen() {
   if (!currentEventInfo) {
     return (
       <View style={styles.container}>
-        <Text style={{ color: colors.text.primary }}>No event available</Text>
+        <Text style={{ color: colors.text.primary }}>{t({ id: 'explore.noEvent', message: 'No event available' })}</Text>
       </View>
     );
   }
@@ -51,7 +52,7 @@ export default function ExploreScreen() {
   if (!selectedEvent) {
     return (
       <View style={styles.container}>
-        <Text style={{ color: colors.text.primary }}>No event selected</Text>
+        <Text style={{ color: colors.text.primary }}>{t({ id: 'explore.noSelection', message: 'No event selected' })}</Text>
       </View>
     );
   }
@@ -115,7 +116,7 @@ export default function ExploreScreen() {
 
     let scrollElement: HTMLElement | null = null;
     let cleanupFn: (() => void) | null = null;
-    let initTimeout: NodeJS.Timeout | null = null;
+    let initTimeout: ReturnType<typeof setTimeout> | null = null;
 
     // Use a small delay to ensure the ScrollView is mounted
     const timeoutId = setTimeout(() => {
@@ -129,7 +130,7 @@ export default function ExploreScreen() {
           if (scrollRef._component) {
             const innerView = scrollRef._component.querySelector?.('div[style*="overflow"]') ||
                              scrollRef._component.querySelector?.('div[class*="scroll"]') ||
-                             scrollRef._component;
+                             scrollRef;
             return innerView;
           }
           return null;
@@ -245,6 +246,44 @@ export default function ExploreScreen() {
     </TouchableOpacity>
   );
 
+  const getQuickTitle = (id: string, fallback: string) => {
+    switch (id) {
+      case 'speakers':
+        return t({ id: 'explore.quick.speakers.title', message: 'Speakers' });
+      case 'agenda':
+        return t({ id: 'explore.quick.agenda.title', message: 'Agenda' });
+      case 'info':
+        return t({ id: 'explore.quick.info.title', message: 'Event Info' });
+      case 'networking':
+        return t({ id: 'explore.quick.networking.title', message: 'Networking Center' });
+      case 'information':
+        return t({ id: 'explore.quick.information.title', message: 'Event Information' });
+      case 'event-info':
+        return t({ id: 'explore.quick.event-info.title', message: 'Event Information' });
+      default:
+        return fallback;
+    }
+  };
+
+  const getQuickSubtitle = (id: string, fallback: string) => {
+    switch (id) {
+      case 'speakers':
+        return t({ id: 'explore.quick.speakers.subtitle', message: 'Meet the experts' });
+      case 'agenda':
+        return t({ id: 'explore.quick.agenda.subtitle', message: 'Event Schedule' });
+      case 'info':
+        return t({ id: 'explore.quick.info.subtitle', message: 'Details & Logistics' });
+      case 'networking':
+        return t({ id: 'explore.quick.networking.subtitle', message: 'Find and connect' });
+      case 'information':
+        return t({ id: 'explore.quick.information.subtitle', message: 'Details & Logistics' });
+      case 'event-info':
+        return t({ id: 'explore.quick.event-info.subtitle', message: 'Details & Logistics' });
+      default:
+        return fallback;
+    }
+  };
+
   const renderQuickAccessItem = (item: any, index: number) => (
     <TouchableOpacity
       key={item.id}
@@ -257,8 +296,8 @@ export default function ExploreScreen() {
       <View style={[styles.cardIcon, { backgroundColor: item.color }]}>
         <MaterialIcons name={item.icon as any} size={24} color="white" />
       </View>
-      <Text style={styles.cardTitle}>{item.title}</Text>
-      <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
+      <Text style={styles.cardTitle}>{getQuickTitle(item.id, item.title)}</Text>
+      <Text style={styles.cardSubtitle}>{getQuickSubtitle(item.id, item.subtitle)}</Text>
     </TouchableOpacity>
   );
 
@@ -282,12 +321,12 @@ export default function ExploreScreen() {
         {/* Event Banner (now scrolls with content) */}
         {/* Banner starts from top, nav bar floats on top with blur */}
         <EventBanner 
-          title={selectedEvent?.title || 'Blockchain Summit Latam 2025'}
-          subtitle={selectedEvent?.subtitle || 'November 12-14, 2025 • Universidad EAFIT, Medellín'}
-          date={selectedEvent?.eventDateString || selectedEvent?.subtitle || "November 12-14, 2025"}
+          title={selectedEvent?.title || t({ id: 'explore.banner.title', message: 'Blockchain Summit Latam 2025' })}
+          subtitle={selectedEvent?.subtitle || t({ id: 'explore.banner.subtitle', message: 'November 12-14, 2025 • Universidad EAFIT, Medellín' })}
+          date={selectedEvent?.eventDateString || selectedEvent?.subtitle || t({ id: 'explore.banner.date', message: 'November 12-14, 2025' })}
           showCountdown={true}
           showLiveIndicator={true}
-          eventStartDate={selectedEvent?.eventStartDate || "2025-11-12T09:00:00-05:00"}
+          eventStartDate={selectedEvent?.eventStartDate || '2025-11-12T09:00:00-05:00'}
           eventId={selectedEvent?.id}
         />
         {/* Header */}
@@ -298,7 +337,7 @@ export default function ExploreScreen() {
             {/* Event Selector - Only show if multiple events available */}
             {showEventSelector && (
               <View style={styles.eventSelectorContainer}>
-                <Text style={styles.eventSelectorTitle}>Select Event</Text>
+                <Text style={styles.eventSelectorTitle}>{t({ id: 'explore.selectEvent', message: 'Select Event' })}</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -313,7 +352,7 @@ export default function ExploreScreen() {
 
         {/* User Passes */}
         <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-          <Text style={styles.sectionTitle}>Your Passes</Text>
+          <Text style={styles.sectionTitle}>{t({ id: 'explore.yourPasses', message: 'Your Passes' })}</Text>
           <PassesDisplay 
             mode="dashboard"
             showTitle={false}
@@ -323,7 +362,7 @@ export default function ExploreScreen() {
 
         {/* Quick Access Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Access</Text>
+          <Text style={styles.sectionTitle}>{t({ id: 'explore.quickAccess', message: 'Quick Access' })}</Text>
           <View style={styles.quickAccessContainer}>
             {showLeftArrow && (
               <TouchableOpacity 

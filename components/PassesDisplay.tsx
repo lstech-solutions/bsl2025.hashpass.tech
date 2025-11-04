@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { passSystemService, PassInfo, PassRequestLimits, PassType } from '@/lib/pass-system';
 import DynamicQRDisplay from './DynamicQRDisplay';
 import * as Clipboard from 'expo-clipboard';
+import { t } from '@lingui/macro';
 
 interface PassesDisplayProps {
   // Display mode
@@ -110,15 +111,14 @@ export default function PassesDisplay({
     try {
       const passId = await passSystemService.createDefaultPass(user.id, passType);
       if (passId) {
-        Alert.alert(
-          'Pass Created! 🎉',
-          `Your ${passSystemService.getPassTypeDisplayName(passType)} has been created successfully.`,
-          [{ text: 'OK', onPress: loadPassInfo }]
+        Alert.alert(t({ id: 'passes.alert.createdTitle', message: 'Pass Created! 🎉' }),
+          undefined,
+          [{ text: t({ id: 'passes.alert.ok', message: 'OK' }), onPress: loadPassInfo }]
         );
       }
     } catch (error) {
       console.error('Error creating pass:', error);
-      Alert.alert('Error', 'Failed to create pass. Please try again.');
+      Alert.alert(t({ id: 'passes.alert.errorTitle', message: 'Error' }), t({ id: 'passes.alert.createFail', message: 'Failed to create pass. Please try again.' }));
     }
   };
 
@@ -145,7 +145,7 @@ export default function PassesDisplay({
         }}>
           <ActivityIndicator size="small" color={colors.primary} />
           <Text style={{ color: colors.text.secondary, marginTop: 8 }}>
-            Loading your passes...
+            {t({ id: 'passes.loading', message: 'Loading your pass information...' })}
           </Text>
         </View>
       );
@@ -168,7 +168,7 @@ export default function PassesDisplay({
               color: colors.text.primary,
               marginBottom: 16
             }}>
-              {title || 'Your Event Passes'}
+              {title || t({ id: 'passes.title', message: 'Your Event Passes' })}
             </Text>
           )}
           
@@ -181,14 +181,14 @@ export default function PassesDisplay({
               marginTop: 12,
               marginBottom: 8
             }}>
-              No passes found
+              {t({ id: 'passes.noPassFound', message: 'No passes found' })}
             </Text>
             <Text style={{ 
               color: colors.text.secondary, 
               textAlign: 'center',
               marginBottom: 20
             }}>
-              Contact support to get your event passes
+              {t({ id: 'passes.contactSupport', message: 'Contact support to get your event passes' })}
             </Text>
           </View>
         </View>
@@ -205,7 +205,7 @@ export default function PassesDisplay({
             color: colors.text.primary,
             marginBottom: 16
           }}>
-            {title || 'Your Event Passes'}
+            {title || t({ id: 'passes.title', message: 'Your Event Passes' })}
           </Text>
         )}
         
@@ -242,7 +242,7 @@ export default function PassesDisplay({
       }}>
         <ActivityIndicator size="small" color={colors.primary} />
         <Text style={{ color: colors.text.secondary, marginTop: 8 }}>
-          Loading your pass information...
+          {t({ id: 'passes.loading', message: 'Loading your pass information...' })}
         </Text>
       </View>
     );
@@ -266,7 +266,7 @@ export default function PassesDisplay({
             color: colors.text.primary,
             marginLeft: 8
           }}>
-            No Pass Found
+            {t({ id: 'passes.noPassFound', message: 'No passes found' })}
           </Text>
         </View>
         
@@ -276,8 +276,8 @@ export default function PassesDisplay({
           lineHeight: 20
         }}>
           {isDemoMode 
-            ? "You need a pass to request meetings with speakers. Without a pass, you cannot send meeting requests. Choose your pass type:"
-            : "You need a valid event pass to request meetings with speakers. Please purchase a pass to continue."
+            ? t({ id: 'passes.noPassMessage.demo', message: "You need a pass to request meetings with speakers. Without a pass, you cannot send meeting requests. Choose your pass type:" })
+            : t({ id: 'passes.noPassMessage.production', message: "You need a valid event pass to request meetings with speakers. Please purchase a pass to continue." })
           }
         </Text>
 
@@ -304,7 +304,7 @@ export default function PassesDisplay({
                 fontWeight: '600',
                 color: colors.text.primary
               }}>
-                All Pass Types & Pricing {showComparison ? '(Open)' : '(Closed)'}
+                {t({ id: 'passes.passTypes.all', message: 'All Pass Types & Pricing' })} {showComparison ? '(Open)' : '(Closed)'}
               </Text>
               <MaterialIcons
                 name={showComparison ? "keyboard-arrow-up" : "keyboard-arrow-down"}
@@ -322,7 +322,7 @@ export default function PassesDisplay({
               marginBottom: 12,
               textAlign: 'center'
             }}>
-              Compare features and choose the right pass for your needs
+              {t({ id: 'passes.passComparison.compare', message: 'Compare features and choose the right pass for your needs' })}
             </Text>
 
             <View style={{ gap: 12 }}>
@@ -339,14 +339,14 @@ export default function PassesDisplay({
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
-                    General Pass
+                    {t({ id: 'passes.type.general', message: 'General' })}
                   </Text>
                   <Text style={{ fontSize: 18, fontWeight: '700', color: '#34A853' }}>
                     $99
                   </Text>
                 </View>
                 <Text style={{ fontSize: 12, color: colors.text.secondary, marginBottom: 12 }}>
-                  Conferences only
+                  {t({ id: 'passes.passPerks.general.conferences', message: 'Conferences only' })}
                 </Text>
                 <View style={{ gap: 6 }}>
                   {passSystemService.getPassPerks('general').features.map((feature, index) => (
@@ -381,14 +381,14 @@ export default function PassesDisplay({
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
-                    Business Pass
+                    {t({ id: 'passes.type.business', message: 'Business' })}
                   </Text>
                   <Text style={{ fontSize: 18, fontWeight: '700', color: '#007AFF' }}>
                     $249
                   </Text>
                 </View>
                 <Text style={{ fontSize: 12, color: colors.text.secondary, marginBottom: 12 }}>
-                  + Networking & B2B sessions
+                  {t({ id: 'passes.passPerks.business.networking', message: '+ Networking & B2B sessions' })}
                 </Text>
                 <View style={{ gap: 6 }}>
                   {passSystemService.getPassPerks('business').features.map((feature, index) => (
@@ -423,14 +423,14 @@ export default function PassesDisplay({
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
-                    VIP Pass
+                    {t({ id: 'passes.type.vip', message: 'VIP' })}
                   </Text>
                   <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFD700' }}>
                     Premium
                   </Text>
                 </View>
                 <Text style={{ fontSize: 12, color: colors.text.secondary, marginBottom: 12 }}>
-                  + VIP networking with speakers
+                  {t({ id: 'passes.passPerks.vip.networking', message: '+ VIP networking with speakers' })}
                 </Text>
                 <View style={{ gap: 6 }}>
                   {passSystemService.getPassPerks('vip').features.map((feature, index) => (
@@ -472,14 +472,14 @@ export default function PassesDisplay({
                 color: colors.text.primary,
                 marginBottom: 8
               }}>
-                Purchase Event Pass
+                {t({ id: 'passes.purchasePass', message: 'Purchase Event Pass' })}
               </Text>
               <Text style={{
                 fontSize: 14,
                 color: colors.text.secondary,
                 marginBottom: 12
               }}>
-                Choose from our available pass types to access speaker meetings and networking opportunities.
+                {t({ id: 'passes.purchasePass.description', message: 'Choose from our available pass types to access speaker meetings and networking opportunities.' })}
               </Text>
               
               <View style={{ gap: 8 }}>
@@ -496,7 +496,7 @@ export default function PassesDisplay({
                   }}
                   onPress={() => {
                     // TODO: Implement real payment flow
-                    Alert.alert('Payment Integration', 'Payment system will be implemented here');
+                    Alert.alert(t({ id: 'passes.alert.paymentTitle', message: 'Payment Integration' }), t({ id: 'passes.alert.paymentMessage', message: 'Payment system will be implemented here' }));
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -512,7 +512,7 @@ export default function PassesDisplay({
                       <MaterialIcons name="person" size={16} color="#34A853" />
                     </View>
                     <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.primary }}>
-                      General Pass
+                      {t({ id: 'passes.type.general', message: 'General' })}
                     </Text>
                   </View>
                   <Text style={{ fontSize: 16, fontWeight: '700', color: '#34A853' }}>
@@ -533,7 +533,7 @@ export default function PassesDisplay({
                   }}
                   onPress={() => {
                     // TODO: Implement real payment flow
-                    Alert.alert('Payment Integration', 'Payment system will be implemented here');
+                    Alert.alert(t({ id: 'passes.alert.paymentTitle', message: 'Payment Integration' }), t({ id: 'passes.alert.paymentMessage', message: 'Payment system will be implemented here' }));
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -549,7 +549,7 @@ export default function PassesDisplay({
                       <MaterialIcons name="business" size={16} color="#007AFF" />
                     </View>
                     <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.primary }}>
-                      Business Pass
+                      {t({ id: 'passes.type.business', message: 'Business' })}
                     </Text>
                   </View>
                   <Text style={{ fontSize: 16, fontWeight: '700', color: '#007AFF' }}>
@@ -570,7 +570,7 @@ export default function PassesDisplay({
                   }}
                   onPress={() => {
                     // TODO: Implement real payment flow
-                    Alert.alert('Payment Integration', 'Payment system will be implemented here');
+                    Alert.alert(t({ id: 'passes.alert.paymentTitle', message: 'Payment Integration' }), t({ id: 'passes.alert.paymentMessage', message: 'Payment system will be implemented here' }));
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -586,7 +586,7 @@ export default function PassesDisplay({
                       <MaterialIcons name="star" size={16} color="#FFD700" />
                     </View>
                     <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.primary }}>
-                      VIP Pass
+                      {t({ id: 'passes.type.vip', message: 'VIP' })}
                     </Text>
                   </View>
                   <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFD700' }}>
@@ -617,7 +617,7 @@ export default function PassesDisplay({
               fontSize: 16,
               fontWeight: '600'
             }}>
-              Pass Required
+              {t({ id: 'passes.button.passRequired', message: 'Pass Required' })}
             </Text>
           </TouchableOpacity>
         )}
@@ -663,7 +663,7 @@ export default function PassesDisplay({
             fontSize: 14, 
             color: colors.text.secondary
           }}>
-            Pass #{passInfo.pass_number}
+            {t({ id: 'passes.passNumber', message: 'Pass #{pass_number}' })}
           </Text>
         </View>
         <View style={{
@@ -693,7 +693,7 @@ export default function PassesDisplay({
             {passInfo.pass_type === 'general' ? '5' : passInfo.pass_type === 'business' ? '20' : '50'}
           </Text>
           <Text style={{ fontSize: 12, color: colors.text.secondary, textAlign: 'center' }}>
-            Meeting Requests
+            {t({ id: 'passes.meetingRequests', message: 'Meeting Requests' })}
           </Text>
         </View>
         <View style={{ flex: 1, alignItems: 'center' }}>
@@ -701,7 +701,7 @@ export default function PassesDisplay({
             {passInfo.pass_type === 'general' ? '100' : passInfo.pass_type === 'business' ? '300' : '500'}
           </Text>
           <Text style={{ fontSize: 12, color: colors.text.secondary, textAlign: 'center' }}>
-            VOI Boost
+            {t({ id: 'passes.voiBoost', message: 'VOI Boost' })}
           </Text>
         </View>
       </View>
@@ -728,7 +728,7 @@ export default function PassesDisplay({
             fontWeight: '600', 
             color: colors.text.primary
           }}>
-            All Pass Types & Pricing {showComparison ? '(Open)' : '(Closed)'}
+            {t({ id: 'passes.passTypes.all', message: 'All Pass Types & Pricing' })} {showComparison ? '(Open)' : '(Closed)'}
           </Text>
           <MaterialIcons 
             name={showComparison ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
@@ -747,7 +747,7 @@ export default function PassesDisplay({
             marginBottom: 12,
             textAlign: 'center'
           }}>
-            Compare features and choose the right pass for your needs
+            {t({ id: 'passes.passComparison.compare', message: 'Compare features and choose the right pass for your needs' })}
           </Text>
           
           {/* Current Pass Info */}
@@ -766,13 +766,13 @@ export default function PassesDisplay({
                 color: colors.text.primary,
                 marginBottom: 4
               }}>
-                Your Current Pass: {getPassTypeDisplayName(passInfo.pass_type)}
+                {t({ id: 'passes.currentPass', message: 'Your Current Pass' })}: {getPassTypeDisplayName(passInfo.pass_type)}
               </Text>
               <Text style={{
                 fontSize: 12, 
                 color: colors.text.secondary
               }}>
-                {passInfo.pass_type === 'general' ? '5' : passInfo.pass_type === 'business' ? '20' : '50'} meeting requests • {passInfo.pass_type === 'general' ? '100' : passInfo.pass_type === 'business' ? '300' : '500'} VOI boost
+                {passInfo.pass_type === 'general' ? '5' : passInfo.pass_type === 'business' ? '20' : '50'} {t({ id: 'passes.meetingRequests', message: 'Meeting Requests' })} • {passInfo.pass_type === 'general' ? '100' : passInfo.pass_type === 'business' ? '300' : '500'} {t({ id: 'passes.voiBoost', message: 'VOI Boost' })}
               </Text>
             </View>
           )}
@@ -788,14 +788,14 @@ export default function PassesDisplay({
             }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
-                  General Pass
+                  {t({ id: 'passes.type.general', message: 'General' })}
                 </Text>
                 <Text style={{ fontSize: 18, fontWeight: '700', color: '#34A853' }}>
                   $99
                 </Text>
               </View>
               <Text style={{ fontSize: 12, color: colors.text.secondary, marginBottom: 12 }}>
-                Conferences only
+                {t({ id: 'passes.passPerks.general.conferences', message: 'Conferences only' })}
               </Text>
               <View style={{ gap: 6 }}>
                 {passSystemService.getPassPerks('general').features.map((feature, index) => (
@@ -827,14 +827,14 @@ export default function PassesDisplay({
             }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
-                  Business Pass
+                  {t({ id: 'passes.type.business', message: 'Business' })}
                 </Text>
                 <Text style={{ fontSize: 18, fontWeight: '700', color: '#007AFF' }}>
                   $249
                 </Text>
               </View>
               <Text style={{ fontSize: 12, color: colors.text.secondary, marginBottom: 12 }}>
-                + Networking & B2B sessions
+                {t({ id: 'passes.passPerks.business.networking', message: '+ Networking & B2B sessions' })}
               </Text>
               <View style={{ gap: 6 }}>
                 {passSystemService.getPassPerks('business').features.map((feature, index) => (
@@ -866,14 +866,14 @@ export default function PassesDisplay({
             }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>
-                  VIP Pass
+                  {t({ id: 'passes.type.vip', message: 'VIP' })}
                 </Text>
                 <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFD700' }}>
                   Premium
                 </Text>
               </View>
               <Text style={{ fontSize: 12, color: colors.text.secondary, marginBottom: 12 }}>
-                + VIP networking with speakers
+                {t({ id: 'passes.passPerks.vip.networking', message: '+ VIP networking with speakers' })}
               </Text>
               <View style={{ gap: 6 }}>
                 {passSystemService.getPassPerks('vip').features.map((feature, index) => (
@@ -912,7 +912,7 @@ export default function PassesDisplay({
             color: requestLimits.canSendRequest ? colors.primary : colors.error.main,
             marginBottom: 4
           }}>
-            {requestLimits.canSendRequest ? '✅ Can Request Meeting' : '❌ Cannot Request Meeting'}
+            {requestLimits.canSendRequest ? t({ id: 'passes.canRequestMeeting', message: '✅ Can Request Meeting' }) : t({ id: 'passes.cannotRequestMeeting', message: '❌ Cannot Request Meeting' })}
           </Text>
           <Text style={{ 
             fontSize: 12, 
@@ -942,9 +942,9 @@ export default function PassesDisplay({
             fontSize: 16,
             fontWeight: '600'
           }}>
-            {!passInfo ? 'Pass Required' : 
-             !requestLimits?.canSendRequest ? 'Limit Reached' :
-             'Request Meeting'}
+            {!passInfo ? t({ id: 'passes.button.passRequired', message: 'Pass Required' }) : 
+             !requestLimits?.canSendRequest ? t({ id: 'passes.button.limitReached', message: 'Limit Reached' }) :
+             t({ id: 'passes.button.requestMeeting', message: 'Request Meeting' })}
           </Text>
         </TouchableOpacity>
       )}
@@ -1011,9 +1011,9 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
         // Fallback: Copy to clipboard for browsers without Share API
         await Clipboard.setStringAsync(shareMessage);
         Alert.alert(
-          'Pass Information Copied',
-          'Pass information has been copied to your clipboard. You can paste it anywhere to share.',
-          [{ text: 'OK' }]
+          t({ id: 'passes.copiedTitle', message: 'Pass Information Copied' }),
+          t({ id: 'passes.copiedMessage', message: 'Pass information has been copied to your clipboard. You can paste it anywhere to share.' }),
+          [{ text: t({ id: 'passes.alert.ok', message: 'OK' })}]
         );
       }
     } catch (error: any) {
@@ -1028,13 +1028,13 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
         const shareMessage = `Check out my ${passTypeDisplay} pass for BSL 2025!\n\nPass Number: ${pass.pass_number}\nPass Type: ${passTypeDisplay}\n\nPresent this QR code at the event entrance.`;
         await Clipboard.setStringAsync(shareMessage);
         Alert.alert(
-          'Pass Information Copied',
-          'Pass information has been copied to your clipboard. You can paste it anywhere to share.',
-          [{ text: 'OK' }]
+          t({ id: 'passes.copiedTitle', message: 'Pass Information Copied' }),
+          t({ id: 'passes.copiedMessage', message: 'Pass information has been copied to your clipboard. You can paste it anywhere to share.' }),
+          [{ text: t({ id: 'passes.alert.ok', message: 'OK' })}]
         );
       } catch (clipboardError) {
         console.error('Error copying to clipboard:', clipboardError);
-        Alert.alert('Error', 'Unable to share pass. Please try again.');
+        Alert.alert(t({ id: 'passes.alert.errorTitle', message: 'Error' }), t({ id: 'passes.copyError', message: 'Unable to share pass. Please try again.' }));
       }
     }
   };
@@ -1050,10 +1050,10 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
 
   const getPassTypeLabel = (type: string) => {
     switch (type) {
-      case 'business': return 'Business';
-      case 'vip': return 'VIP';
-      case 'general': return 'General';
-      default: return 'Event';
+      case 'business': return t({ id: 'passes.type.business', message: 'Business' });
+      case 'vip': return t({ id: 'passes.type.vip', message: 'VIP' });
+      case 'general': return t({ id: 'passes.type.general', message: 'General' });
+      default: return t({ id: 'passes.type.event', message: 'Event' });
     }
   };
 
@@ -1068,10 +1068,10 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
 
   const getPassAccess = (type: string) => {
     switch (type) {
-      case 'business': return 'B2B + Closing Party';
-      case 'vip': return 'All VIP Benefits';
-      case 'general': return 'General Access';
-      default: return 'Event Access';
+      case 'business': return t({ id: 'passes.access.business', message: 'B2B + Closing Party' });
+      case 'vip': return t({ id: 'passes.access.vip', message: 'All VIP Benefits' });
+      case 'general': return t({ id: 'passes.access.general', message: 'General Access' });
+      default: return t({ id: 'passes.access.event', message: 'Event Access' });
     }
   };
 
@@ -1148,14 +1148,14 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
               minimumFontScale={0.8}
               adjustsFontSizeToFit
             >
-              {getPassTypeLabel(pass.pass_type)} Pass
+              {getPassTypeLabel(pass.pass_type)} {t({ id: 'passes.pass', message: 'Pass' })}
             </Text>
             <Text style={{ 
               fontSize: 9, 
               color: colors.text.secondary,
               opacity: 0.8
             }}>
-              Nov 12-14, 2025
+              {t({ id: 'passes.date', message: 'Nov 12-14, 2025' })}
             </Text>
           </View>
           <View style={{
@@ -1193,7 +1193,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             fontWeight: '600',
             textDecorationLine: 'underline'
           }}>
-            Show Full Details
+            {t({ id: 'passes.showFullDetails', message: 'Show Full Details' })}
           </Text>
           <MaterialIcons name="arrow-forward" size={12} color={getPassTypeColor(pass.pass_type)} style={{ marginLeft: 4 }} />
         </TouchableOpacity>
@@ -1307,7 +1307,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             {pass.pass_type === 'general' ? '5' : pass.pass_type === 'business' ? '20' : '50'}
           </Text>
           <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
-            Meeting Requests
+            {t({ id: 'passes.meetingRequests', message: 'Meeting Requests' })}
           </Text>
         </View>
         <View style={{ alignItems: 'center' }}>
@@ -1315,7 +1315,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             {pass.pass_type === 'general' ? '100' : pass.pass_type === 'business' ? '300' : '500'}
           </Text>
           <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
-            VOI Boost
+            {t({ id: 'passes.voiBoost', message: 'VOI Boost' })}
           </Text>
         </View>
       </View>
@@ -1349,7 +1349,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             color: '#4A90E2',
             marginLeft: 4
           }}>
-            QR Code
+            {t({ id: 'passes.qrCode', message: 'QR Code' })}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -1371,7 +1371,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             color: '#4A90E2',
             marginLeft: 4
           }}>
-            Details
+            {t({ id: 'passes.details', message: 'Details' })}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -1391,7 +1391,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             color: '#4A90E2',
             marginLeft: 4
           }}>
-            Share
+            {t({ id: 'passes.share', message: 'Share' })}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1469,14 +1469,14 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             minimumFontScale={0.8}
             adjustsFontSizeToFit
           >
-            Pass Summary
+            {t({ id: 'passes.passSummary', message: 'Pass Summary' })}
           </Text>
           <Text style={{ 
             fontSize: 9, 
             color: colors.text.secondary,
             opacity: 0.8
           }}>
-            Quick Overview
+            {t({ id: 'passes.quickOverview', message: 'Quick Overview' })}
           </Text>
         </View>
         <TouchableOpacity
@@ -1507,13 +1507,13 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
             <MaterialIcons name="event" size={18} color={colors.text.secondary} />
             <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 8 }}>
-              BSL 2025 • Nov 12-14, 2025
+              {t({ id: 'passes.bslDate', message: 'BSL 2025 • Nov 12-14, 2025' })}
             </Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
             <MaterialIcons name="label" size={18} color={colors.text.secondary} />
             <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 8 }}>
-              {getPassTypeLabel(pass.pass_type)} Pass • {pass.status.toUpperCase()}
+              {getPassTypeLabel(pass.pass_type)} {t({ id: 'passes.pass', message: 'Pass' })} • {pass.status.toUpperCase()}
             </Text>
           </View>
         </View>
@@ -1534,10 +1534,10 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
               {pass.remaining_requests}
             </Text>
             <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center', marginTop: 4 }}>
-              Requests Left
+              {t({ id: 'passes.requestsLeft', message: 'Requests Left' })}
             </Text>
             <Text style={{ fontSize: 9, color: colors.text.secondary, textAlign: 'center', marginTop: 2 }}>
-              {pass.used_requests} / {pass.max_requests} used
+              {pass.used_requests} / {pass.max_requests} {t({ id: 'passes.used', message: 'used' })}
             </Text>
           </View>
           <View style={{ width: 1, backgroundColor: colors.divider, marginHorizontal: 8 }} />
@@ -1546,10 +1546,10 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
               {pass.remaining_boost}
             </Text>
             <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center', marginTop: 4 }}>
-              Boost Left
+              {t({ id: 'passes.boostLeft', message: 'Boost Left' })}
             </Text>
             <Text style={{ fontSize: 9, color: colors.text.secondary, textAlign: 'center', marginTop: 2 }}>
-              {pass.used_boost} / {pass.max_boost} used
+              {pass.used_boost} / {pass.max_boost} {t({ id: 'passes.used', message: 'used' })}
             </Text>
           </View>
         </View>
@@ -1564,7 +1564,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             textTransform: 'uppercase',
             letterSpacing: 0.5
           }}>
-            Access Included
+            {t({ id: 'passes.accessIncluded', message: 'Access Included' })}
           </Text>
           <Text style={{
             fontSize: 12,
@@ -1605,7 +1605,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             color: '#FFFFFF',
             letterSpacing: 0.5
           }}>
-            View Full Details
+            {t({ id: 'passes.viewFullDetails', message: 'View Full Details' })}
           </Text>
           <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
         </TouchableOpacity>
@@ -1640,7 +1640,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             color: '#4A90E2',
             marginLeft: 4
           }}>
-            QR Code
+            {t({ id: 'passes.qrCode', message: 'QR Code' })}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -1662,7 +1662,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             color: '#4A90E2',
             marginLeft: 4
           }}>
-            Flip Back
+            {t({ id: 'passes.flipBack', message: 'Flip Back' })}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -1682,7 +1682,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             color: '#4A90E2',
             marginLeft: 4
           }}>
-            Share
+            {t({ id: 'passes.share', message: 'Share' })}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1764,7 +1764,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
                 fontWeight: '700',
                 color: colors.text.primary
               }}>
-                Your Pass QR Code
+                {t({ id: 'passes.qrCodeModalTitle', message: 'Your Pass QR Code' })}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowQRModal(false)}

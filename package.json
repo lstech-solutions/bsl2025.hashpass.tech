@@ -1,7 +1,7 @@
 {
   "name": "hashpass.tech",
   "main": "expo-router/entry",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -24,7 +24,9 @@
     "parameters:verify": "./scripts/setup-parameters.sh verify",
     "parameters:list": "./scripts/setup-parameters.sh list",
     "lambda:test": "aws lambda invoke --function-name agendaMonitor --payload '{\"force\": true}' response.json && cat response.json",
-    "deploy:amplify": "npm run build:web && npm run amplify:deploy"
+    "deploy:amplify": "npm run build:web && npm run amplify:deploy",
+    "i18n:extract": "lingui extract",
+    "i18n:compile": "lingui compile"
   },
   "expo": {
     "extra": {
@@ -37,6 +39,9 @@
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@expo/webpack-config": "^19.0.1",
+    "@lingui/core": "^5.5.2",
+    "@lingui/macro": "^5.5.2",
+    "@lingui/react": "^5.5.2",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-slot": "^1.2.3",
     "@react-native-async-storage/async-storage": "2.1.2",
@@ -105,6 +110,8 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@expo/metro-config": "^0.20.17",
+    "@lingui/cli": "^5.5.2",
+    "@lingui/format-json": "^5.5.2",
     "@types/expo-localization": "^1.0.1",
     "@types/jest": "^29.5.14",
     "@types/next": "^8.0.7",
@@ -114,6 +121,7 @@
     "@types/react-native": "^0.72.8",
     "@types/react-navigation": "^3.0.8",
     "@types/react-test-renderer": "^18.3.0",
+    "babel-plugin-macros": "^3.1.0",
     "dotenv": "^17.2.3",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~9.2.0",

@@ -140,5 +140,84 @@
     "account": "Account",
     "signOut": "Sign Out",
     "version": "HashPass v{version}"
+  },
+  "nav": {
+    "explore": "Explore",
+    "wallet": "Wallet",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "settings": "Settings",
+    "brandSubtitle": "Digital Event Platform"
+  },
+  "explore": {
+    "noEvent": "No event available",
+    "noSelection": "No event selected",
+    "banner": {
+      "title": "Blockchain Summit Latam 2025",
+      "subtitle": "November 12-14, 2025 • Universidad EAFIT, Medellín",
+      "date": "November 12-14, 2025"
+    },
+    "selectEvent": "Select Event",
+    "yourPasses": "Your Passes",
+    "quickAccess": "Quick Access",
+    "quick": {
+      "speakers": {
+        "title": "Speakers",
+        "subtitle": "Meet the experts"
+      },
+      "agenda": {
+        "title": "Agenda",
+        "subtitle": "Event Schedule"
+      },
+      "info": {
+        "title": "Event Info",
+        "subtitle": "Details & Logistics"
+      },
+      "networking": {
+        "title": "Networking Center",
+        "subtitle": "Find and connect"
+      },
+      "information": {
+        "title": "Event Information",
+        "subtitle": "Details & Logistics"
+      },
+      "event-info": {
+        "title": "Event Information",
+        "subtitle": "Details & Logistics"
+      }
+    }
+  },
+  "passes": {
+    "title": "Your Event Passes",
+    "loading": "Loading your pass information...",
+    "showFullDetails": "Show Full Details",
+    "alert": {
+      "createdTitle": "Pass Created! 🎉",
+      "ok": "OK",
+      "errorTitle": "Error",
+      "createFail": "Failed to create pass. Please try again.",
+      "paymentTitle": "Payment Integration",
+      "paymentMessage": "Payment system will be implemented here"
+    },
+    "button": {
+      "passRequired": "Pass Required",
+      "limitReached": "Limit Reached",
+      "requestMeeting": "Request Meeting"
+    },
+    "copiedTitle": "Pass Information Copied",
+    "copiedMessage": "Pass information has been copied to your clipboard. You can paste it anywhere to share.",
+    "copyError": "Unable to share pass. Please try again.",
+    "type": {
+      "business": "Business",
+      "vip": "VIP",
+      "general": "General",
+      "event": "Event"
+    },
+    "access": {
+      "business": "B2B + Closing Party",
+      "vip": "All VIP Benefits",
+      "general": "General Access",
+      "event": "Event Access"
+    }
   }
 }

@@ -126,6 +126,8 @@ function ThemedContent() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/auth" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/auth/callback" options={{ headerShown: false }} />
+        <Stack.Screen name="(shared)/privacy" options={{ headerShown: false }} />
+        <Stack.Screen name="(shared)/terms" options={{ headerShown: false }} />
         <Stack.Screen 
           name="(shared)/dashboard" 
           options={{ 

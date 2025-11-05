@@ -221,8 +221,11 @@ export default function ExploreScreen() {
 
   const handleEventSelect = (eventData: EventInfo) => {
     setSelectedEvent(eventData);
-    // Navigate to the event's home page
-    router.push(`/events/${eventData.id}/home` as any);
+    // Navigate to the event's home page - ensure id is valid and route is properly formatted
+    if (eventData?.id) {
+      const route = `/events/${eventData.id}/home`.replace(/\/+/g, '/'); // Remove any double slashes
+      router.push(route as any);
+    }
   };
 
   const renderEventCard = (eventData: EventInfo, index: number) => (

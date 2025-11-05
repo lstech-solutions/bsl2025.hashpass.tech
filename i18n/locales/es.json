@@ -1,6 +1,6 @@
 {
   "newsletter": {
-    "title": "Suscríbete a nuestro boletín",
+   "title": "Suscríbete a nuestro boletín",
     "subtitle": "Únete a nuestro boletín para las últimas novedades",
     "subscribers": "Suscriptores",
     "privacy": "Respetamos tu privacidad. Puedes darte de baja en cualquier momento.",
@@ -65,11 +65,105 @@
       "privacy": "Política de Privacidad"
     }
   },
+  "privacy": {
+    "title": "Política de Privacidad",
+    "lastUpdated": "Última actualización: 4 de noviembre de 2025",
+    "introduction": {
+      "title": "1. Introducción",
+      "text": "HashPass (\"nosotros\", \"nuestro\" o \"nos\") se compromete a proteger su privacidad. Esta Política de Privacidad explica cómo recopilamos, usamos, divulgamos y protegemos su información cuando utiliza nuestra plataforma de eventos digitales y servicios (el \"Servicio\"). Por favor, lea esta política de privacidad cuidadosamente. Si no está de acuerdo con los términos de esta política de privacidad, no acceda al Servicio."
+    },
+    "collection": {
+      "title": "2. Información que Recopilamos",
+      "text": "Recopilamos información que usted nos proporciona directamente, incluyendo:\n\n• Información de Cuenta: Cuando inicia sesión con Google, recopilamos su nombre, dirección de correo electrónico y foto de perfil.\n• Datos de Eventos: Información sobre eventos a los que asiste, pases que tiene e interacciones dentro de nuestra plataforma.\n• Datos de Uso: Información sobre cómo utiliza nuestro Servicio, incluyendo características accedidas y acciones tomadas.\n• Información del Dispositivo: Información técnica sobre su dispositivo, navegador y sistema operativo."
+    },
+    "use": {
+      "title": "3. Cómo Usamos Su Información",
+      "text": "Usamos la información que recopilamos para:\n\n• Proporcionar y mantener nuestro Servicio\n• Procesar sus registros de eventos y gestionar sus pases\n• Enviarle actualizaciones importantes sobre eventos y servicios\n• Mejorar y personalizar su experiencia\n• Detectar y prevenir fraudes o abusos\n• Cumplir con obligaciones legales"
+    },
+    "sharing": {
+      "title": "4. Compartir y Divulgación de Información",
+      "text": "No vendemos su información personal. Podemos compartir su información solo en las siguientes circunstancias:\n\n• Con organizadores de eventos para eventos en los que se registra\n• Con proveedores de servicios que nos ayudan a operar nuestra plataforma\n• Cuando sea requerido por ley o para proteger nuestros derechos\n• En relación con una fusión, adquisición o venta de activos"
+    },
+    "security": {
+      "title": "5. Seguridad de Datos",
+      "text": "Implementamos medidas de seguridad técnicas y organizativas apropiadas para proteger su información personal. Sin embargo, ningún método de transmisión por Internet o almacenamiento electrónico es 100% seguro, y no podemos garantizar seguridad absoluta."
+    },
+    "rights": {
+      "title": "6. Sus Derechos",
+      "text": "Usted tiene derecho a:\n\n• Acceder a su información personal\n• Corregir información inexacta\n• Solicitar la eliminación de su información\n• Oponerse al procesamiento de su información\n• Portabilidad de datos\n• Retirar el consentimiento en cualquier momento"
+    },
+    "cookies": {
+      "title": "7. Cookies y Seguimiento",
+      "text": "Utilizamos cookies y tecnologías de seguimiento similares para rastrear la actividad en nuestro Servicio y mantener cierta información. Puede instruir a su navegador para que rechace todas las cookies o indique cuando se está enviando una cookie."
+    },
+    "changes": {
+      "title": "8. Cambios a Esta Política de Privacidad",
+      "text": "Podemos actualizar nuestra Política de Privacidad de vez en cuando. Le notificaremos de cualquier cambio publicando la nueva Política de Privacidad en esta página y actualizando la fecha de \"Última actualización\"."
+    },
+    "contact": {
+      "title": "9. Contáctenos",
+      "text": "Si tiene alguna pregunta sobre esta Política de Privacidad, contáctenos en:\n\nCorreo electrónico: privacy@hashpass.tech\nSitio web: https://hashpass.tech"
+    }
+  },
+  "terms": {
+    "title": "Términos de Servicio",
+    "lastUpdated": "Última actualización: 4 de noviembre de 2025",
+    "acceptance": {
+      "title": "1. Aceptación de Términos",
+      "text": "Al acceder y usar HashPass (\"el Servicio\"), acepta y acuerda estar sujeto a los términos y disposiciones de este acuerdo. Si no está de acuerdo en cumplir con lo anterior, no use este servicio."
+    },
+    "description": {
+      "title": "2. Descripción del Servicio",
+      "text": "HashPass es una plataforma de eventos digitales que proporciona gestión de eventos, gestión de pases, características de networking y servicios relacionados. Nos reservamos el derecho de modificar, suspender o discontinuar cualquier parte del Servicio en cualquier momento."
+    },
+    "accounts": {
+      "title": "3. Cuentas de Usuario",
+      "text": "Usted es responsable de mantener la confidencialidad de las credenciales de su cuenta. Usted acepta:\n\n• Proporcionar información precisa y completa\n• Mantener actualizada la información de su cuenta\n• No compartir su cuenta con otros\n• Notificarnos inmediatamente de cualquier uso no autorizado\n• Aceptar responsabilidad por todas las actividades bajo su cuenta"
+    },
+    "conduct": {
+      "title": "4. Conducta del Usuario",
+      "text": "Usted acepta no:\n\n• Violar leyes o regulaciones\n• Infringir derechos de propiedad intelectual\n• Transmitir código malicioso o malware\n• Acosar, abusar o dañar a otros usuarios\n• Recopilar datos de usuarios sin permiso\n• Suplantar a otros o proporcionar información falsa\n• Interferir con la operación del Servicio"
+    },
+    "content": {
+      "title": "5. Contenido del Usuario",
+      "text": "Usted conserva la propiedad del contenido que envía al Servicio. Al enviar contenido, nos otorga una licencia mundial, no exclusiva, libre de regalías para usar, reproducir, modificar y distribuir su contenido con el fin de proporcionar y mejorar el Servicio."
+    },
+    "intellectual": {
+      "title": "6. Propiedad Intelectual",
+      "text": "El Servicio y su contenido original, características y funcionalidad son propiedad de HashPass y están protegidos por leyes internacionales de derechos de autor, marcas registradas, patentes, secretos comerciales y otras leyes de propiedad intelectual."
+    },
+    "termination": {
+      "title": "7. Terminación",
+      "text": "Podemos terminar o suspender su cuenta y acceso al Servicio inmediatamente, sin previo aviso, por cualquier razón, incluyendo si viola los Términos. Al terminar, su derecho a usar el Servicio cesará inmediatamente."
+    },
+    "disclaimer": {
+      "title": "8. Exención de Garantías",
+      "text": "El Servicio se proporciona \"tal cual\" y \"según disponibilidad\" sin garantías de ningún tipo, ya sean expresas o implícitas. No garantizamos que el Servicio será ininterrumpido, seguro o libre de errores."
+    },
+    "limitation": {
+      "title": "9. Limitación de Responsabilidad",
+      "text": "En ningún caso HashPass será responsable de daños indirectos, incidentales, especiales, consecuentes o punitivos, incluyendo pérdida de ganancias, datos o uso, incurridos por usted o cualquier tercero, ya sea en una acción en contrato o agravio."
+    },
+    "changes": {
+      "title": "10. Cambios a los Términos",
+      "text": "Nos reservamos el derecho de modificar estos Términos en cualquier momento. Notificaremos a los usuarios de cualquier cambio material publicando los nuevos Términos en esta página y actualizando la fecha de \"Última actualización\". Su uso continuo del Servicio después de tales modificaciones constituye la aceptación de los Términos actualizados."
+    },
+    "contact": {
+      "title": "11. Información de Contacto",
+      "text": "Si tiene alguna pregunta sobre estos Términos de Servicio, contáctenos en:\n\nCorreo electrónico: legal@hashpass.tech\nSitio web: https://hashpass.tech"
+    }
+  },
   "settings": {
     "languages": {
       "en": "Inglés",
       "es": "Español",
       "ko": "Coreano"
+    },
+    "terms": {
+      "subtitle": "Lee nuestros términos y condiciones"
+    },
+    "privacy": {
+      "subtitle": "Aprende cómo protegemos tus datos"
     }
   },
   "index": {

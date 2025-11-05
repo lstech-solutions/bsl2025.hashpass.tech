@@ -145,9 +145,29 @@ export default function AuthScreen() {
             )}
           </TouchableOpacity>
 
-          <Text style={styles.privacyText}>
-            {t('privacy.text')} <Text style={styles.linkText}>{t('privacy.terms')}</Text> and <Text style={styles.linkText}>{t('privacy.privacy')}</Text>.
-          </Text>
+          <View style={styles.privacyContainer}>
+            <Text style={styles.privacyText}>{t('privacy.text')} </Text>
+            <TouchableOpacity 
+              activeOpacity={0.7}
+              onPress={() => router.push('/(shared)/terms')}
+              style={styles.linkButton}
+            >
+              <Text style={styles.linkText}>
+                {t('privacy.terms')}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.privacyText}> and </Text>
+            <TouchableOpacity 
+              activeOpacity={0.7}
+              onPress={() => router.push('/(shared)/privacy')}
+              style={styles.linkButton}
+            >
+              <Text style={styles.linkText}>
+                {t('privacy.privacy')}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.privacyText}>.</Text>
+          </View>
         </View>
       </SafeAreaView>
   );
@@ -226,10 +246,17 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     backgroundColor: '#1DA1F2',
     shadowColor: '#1DA1F2',
   },
+  privacyContainer: {
+    marginTop: 20,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   privacyText: {
     fontSize: 14,
     color: isDark ? '#FFFFFF' : '#121212',
-    marginTop: 20,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -240,6 +267,11 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   linkText: {
     color: isDark ? '#FFFFFF' : '#7A5ECC',
     fontWeight: 'bold',
+    textDecorationLine: 'underline',
+  },
+  linkButton: {
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
   tagline: {
     fontSize: 18,

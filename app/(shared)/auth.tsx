@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import * as Linking from 'expo-linking';
 import ThemeAndLanguageSwitcher from '../../components/ThemeAndLanguageSwitcher';
-import { SplashCursor } from '../../components/SplashBackground';
+import { OptimizedSplashCursor } from '../../components/OptimizedSplashCursor';
 import { useTheme } from '../../hooks/useTheme';
 
 export default function AuthScreen() {
@@ -86,7 +86,7 @@ export default function AuthScreen() {
 
   return (
       <SafeAreaView style={styles.container}>
-        <SplashCursor
+        <OptimizedSplashCursor
           style={{
             position: 'absolute',
             top: 0,
@@ -95,18 +95,18 @@ export default function AuthScreen() {
             bottom: 0,
             zIndex: -1
           }}
-          SIM_RESOLUTION={64}
-          DYE_RESOLUTION={512}
-          CAPTURE_RESOLUTION={256}
-          DENSITY_DISSIPATION={4.0}
-          VELOCITY_DISSIPATION={2.5}
+          SIM_RESOLUTION={32}
+          DYE_RESOLUTION={256}
+          CAPTURE_RESOLUTION={128}
+          DENSITY_DISSIPATION={5.0}
+          VELOCITY_DISSIPATION={3.0}
           PRESSURE={0.1}
-          PRESSURE_ITERATIONS={10}
-          CURL={2}
-          SPLAT_RADIUS={0.15}
-          SPLAT_FORCE={4000}
+          PRESSURE_ITERATIONS={5}
+          CURL={1}
+          SPLAT_RADIUS={0.1}
+          SPLAT_FORCE={2000}
           SHADING={false}
-          COLOR_UPDATE_SPEED={5}
+          COLOR_UPDATE_SPEED={3}
         />
         <ThemeAndLanguageSwitcher />
         <TouchableOpacity

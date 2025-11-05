@@ -148,12 +148,19 @@ export default function AuthScreen() {
             )}
           </TouchableOpacity>
 
-          <View style={styles.privacyContainer}>
+          <View style={styles.privacyContainer} pointerEvents="box-none">
             <Text style={styles.privacyText}>{t('privacy.text')} </Text>
             <TouchableOpacity 
               activeOpacity={0.7}
-              onPress={() => router.push('/(shared)/terms')}
+              onPress={() => {
+                try {
+                  router.push('/(shared)/terms');
+                } catch (error) {
+                  console.error('Navigation error:', error);
+                }
+              }}
               style={styles.linkButton}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
             >
               <Text style={styles.linkText}>
                 {t('privacy.terms')}
@@ -162,8 +169,15 @@ export default function AuthScreen() {
             <Text style={styles.privacyText}> and </Text>
             <TouchableOpacity 
               activeOpacity={0.7}
-              onPress={() => router.push('/(shared)/privacy')}
+              onPress={() => {
+                try {
+                  router.push('/(shared)/privacy');
+                } catch (error) {
+                  console.error('Navigation error:', error);
+                }
+              }}
               style={styles.linkButton}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
             >
               <Text style={styles.linkText}>
                 {t('privacy.privacy')}
@@ -256,6 +270,8 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 200,
+    position: 'relative',
   },
   privacyText: {
     fontSize: 14,
@@ -275,6 +291,8 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   linkButton: {
     paddingHorizontal: 4,
     paddingVertical: 2,
+    zIndex: 201,
+    position: 'relative',
   },
   tagline: {
     fontSize: 18,

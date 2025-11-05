@@ -148,19 +148,16 @@ export default function AuthScreen() {
             )}
           </TouchableOpacity>
 
-          <View style={styles.privacyContainer} pointerEvents="box-none">
+          <View style={styles.privacyContainer}>
             <Text style={styles.privacyText}>{t('privacy.text')} </Text>
             <TouchableOpacity 
               activeOpacity={0.7}
               onPress={() => {
-                try {
-                  router.push('/(shared)/terms');
-                } catch (error) {
-                  console.error('Navigation error:', error);
-                }
+                console.log('Terms clicked');
+                router.push('/(shared)/terms' as any);
               }}
               style={styles.linkButton}
-              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
             >
               <Text style={styles.linkText}>
                 {t('privacy.terms')}
@@ -170,14 +167,11 @@ export default function AuthScreen() {
             <TouchableOpacity 
               activeOpacity={0.7}
               onPress={() => {
-                try {
-                  router.push('/(shared)/privacy');
-                } catch (error) {
-                  console.error('Navigation error:', error);
-                }
+                console.log('Privacy clicked');
+                router.push('/(shared)/privacy' as any);
               }}
               style={styles.linkButton}
-              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
             >
               <Text style={styles.linkText}>
                 {t('privacy.privacy')}
@@ -272,6 +266,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     alignItems: 'center',
     zIndex: 200,
     position: 'relative',
+    pointerEvents: 'auto',
   },
   privacyText: {
     fontSize: 14,

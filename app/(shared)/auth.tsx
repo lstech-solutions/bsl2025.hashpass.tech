@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/i18n';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+// Removed reanimated imports - not needed for auth screen
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -19,16 +19,7 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const styles = getStyles(isDark, colors);
 
-  // Animated header state
-  const headerScale = useSharedValue(1);
-  
-  const headerAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { scale: headerScale.value }
-      ]
-    };
-  });
+  // Removed unused animation to improve performance
 
   useEffect(() => {
     const handleAuthChange = async (event: AuthChangeEvent, session: Session | null) => {
@@ -104,6 +95,18 @@ export default function AuthScreen() {
             bottom: 0,
             zIndex: -1
           }}
+          SIM_RESOLUTION={64}
+          DYE_RESOLUTION={512}
+          CAPTURE_RESOLUTION={256}
+          DENSITY_DISSIPATION={4.0}
+          VELOCITY_DISSIPATION={2.5}
+          PRESSURE={0.1}
+          PRESSURE_ITERATIONS={10}
+          CURL={2}
+          SPLAT_RADIUS={0.15}
+          SPLAT_FORCE={4000}
+          SHADING={false}
+          COLOR_UPDATE_SPEED={5}
         />
         <ThemeAndLanguageSwitcher />
         <TouchableOpacity
@@ -117,7 +120,7 @@ export default function AuthScreen() {
         <View style={styles.content}>
           <View style={styles.overlay} pointerEvents="none" />
           <Text style={styles.title}>{t('title')}</Text>
-          <Animated.View style={[styles.logoContainer, headerAnimatedStyle]}>            
+          <View style={styles.logoContainer}>            
             <Image
               source={isDark
                 ? require('../../assets/logos/hashpass/logo-full-hashpass-black.svg')
@@ -126,7 +129,7 @@ export default function AuthScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-          </Animated.View>
+          </View>
           <Text style={styles.tagline}>{t('subtitle')}</Text>
 
           <TouchableOpacity

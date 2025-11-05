@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.1] - 2025-11-05
+
+### Beta
+- Version 1.5.1 release
+
+### Technical Details
+- Version: 1.5.1
+- Release Type: beta
+- Build Number: 202511050304
+- Release Date: 2025-11-05T03:04:50.194Z
+
+
 ## [1.5.0] - 2025-11-05
 
 ### Beta

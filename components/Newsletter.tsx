@@ -54,9 +54,12 @@ const Newsletter = ({ mode }: Props) => {
             const locale = getCurrentLocale();
             
             // Use the API client which already points to the .co domain
+            // Subscribe is a global endpoint, not event-specific, so skip the event segment
             const response = await apiClient.post('/subscribe', {
                 email,
                 locale
+            }, {
+                skipEventSegment: true
             });
 
             if (!response.success) {

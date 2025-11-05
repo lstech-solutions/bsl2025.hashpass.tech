@@ -26,6 +26,7 @@ export interface ApiRequestOptions {
   retries?: number;
   endpoint?: string;
   params?: Record<string, any>;
+  skipEventSegment?: boolean; // Skip event-specific segment for global endpoints
 }
 
 export class EventApiClient {
@@ -102,10 +103,15 @@ export class EventApiClient {
     
     let baseUrl: string;
     if (envBase) {
-      // If we have an env base URL (e.g., https://hashpass.co/api/), append event-specific segment
-      const eventSegment = this.getEventApiSegment(event);
-      const cleanEnvBase = envBase.endsWith('/') ? envBase : `${envBase}/`;
-      baseUrl = `${cleanEnvBase}${eventSegment}`;
+      // If skipEventSegment is true, use the base URL directly (for global endpoints)
+      if (options.skipEventSegment) {
+        baseUrl = envBase.endsWith('/') ? envBase.slice(0, -1) : envBase;
+      } else {
+        // If we have an env base URL (e.g., https://hashpass.co/api/), append event-specific segment
+        const eventSegment = this.getEventApiSegment(event);
+        const cleanEnvBase = envBase.endsWith('/') ? envBase : `${envBase}/`;
+        baseUrl = `${cleanEnvBase}${eventSegment}`;
+      }
     } else {
       // Fallback to event config or constructor default
       baseUrl = event?.api?.basePath || this.baseURL;

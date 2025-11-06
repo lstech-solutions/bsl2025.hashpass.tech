@@ -33,40 +33,40 @@ const WalletScreen = () => {
         <View style={{ marginBottom: 32 }}>
           <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
             <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text.primary }}>
-              {t("tickets.title")}
-            </Text>
+                {t("tickets.title")}
+              </Text>
             <Text style={{ marginTop: 4, color: colors.text.secondary }}>
-              {t("tickets.description")}
-            </Text>
+                {t("tickets.description")}
+              </Text>
+            </View>
+            <DigitalTicketWallet />
           </View>
-          <DigitalTicketWallet />
-        </View>
 
         {/* Loyalty Section */}
         <View style={{ marginBottom: 32 }}>
           <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
             <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text.primary }}>
-              {t("loyalty.title")}
-            </Text>
+                {t("loyalty.title")}
+              </Text>
             <Text style={{ marginTop: 4, color: colors.text.secondary }}>
-              {t("loyalty.description")}
-            </Text>
+                {t("loyalty.description")}
+              </Text>
+            </View>
+            <LoyaltyDashboard />
           </View>
-          <LoyaltyDashboard />
-        </View>
 
         {/* Exchange Section */}
         <View style={{ marginBottom: 32 }}>
           <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
             <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text.primary }}>
-              {t("exchange.title")}
-            </Text>
+                {t("exchange.title")}
+              </Text>
             <Text style={{ marginTop: 4, color: colors.text.secondary }}>
-              {t("exchange.description")}
-            </Text>
+                {t("exchange.description")}
+              </Text>
+            </View>
+            <ExchangeView />
           </View>
-          <ExchangeView />
-        </View>
       </ScrollView>
     </View>
   );

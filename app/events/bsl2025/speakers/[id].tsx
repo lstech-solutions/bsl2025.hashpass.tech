@@ -58,6 +58,7 @@ export default function SpeakerDetail() {
   const [selectedRequestToCancel, setSelectedRequestToCancel] = useState<any>(null);
   const [showRequestDetailModal, setShowRequestDetailModal] = useState(false);
   const [selectedRequestDetail, setSelectedRequestDetail] = useState<any>(null);
+  const [passRefreshTrigger, setPassRefreshTrigger] = useState(0);
   
   // Debug modal state changes
   useEffect(() => {
@@ -432,6 +433,9 @@ export default function SpeakerDetail() {
       console.log('🔄 Refreshing request limits...');
       await loadRequestLimits();
       
+      // Trigger pass display refresh
+      setPassRefreshTrigger(prev => prev + 1);
+      
       console.log('✅ All updates completed successfully');
       
     } catch (error: any) {
@@ -640,6 +644,9 @@ export default function SpeakerDetail() {
 
       // Reload request limits to update the UI
       await loadRequestLimits();
+      
+      // Trigger pass display refresh
+      setPassRefreshTrigger(prev => prev + 1);
       
     } catch (error) {
       console.error('Error sending meeting request:', error);
@@ -964,13 +971,13 @@ export default function SpeakerDetail() {
                 </View>
               </View>
               
-              {request.message && (
+              {request.message && request.requester_id === user?.id && (
                 <Text style={styles.simpleRequestMessage} numberOfLines={2}>
                   {request.message}
                 </Text>
               )}
               
-              {request.note && (
+              {request.note && request.requester_id === user?.id && (
                 <View style={styles.simpleRequestIntentions}>
                   <Text style={styles.simpleRequestIntentionsLabel}>Intentions:</Text>
                   <Text style={styles.simpleRequestIntentionsText} numberOfLines={1}>
@@ -1012,7 +1019,7 @@ export default function SpeakerDetail() {
                   </Text>
                 </View>
                 
-                {request.message && (
+                {request.message && request.requester_id === user?.id && (
                   <Text style={styles.cancelledRequestMessage} numberOfLines={2}>
                     {request.message}
                   </Text>
@@ -1044,6 +1051,7 @@ export default function SpeakerDetail() {
         speakerId={speaker.id}
         showRequestButton={true}
         onRequestPress={handleRequestMeeting}
+        refreshTrigger={passRefreshTrigger}
         onPassInfoLoaded={(passInfo) => {
           console.log('Pass info loaded:', passInfo);
         }}
@@ -1420,16 +1428,16 @@ export default function SpeakerDetail() {
                 </View>
               </View>
 
-              {/* Message */}
-              {selectedRequestDetail.message && (
+              {/* Message - Only show for user's own requests */}
+              {selectedRequestDetail.message && selectedRequestDetail.requester_id === user?.id && (
                 <View style={styles.detailInfoSection}>
                   <Text style={styles.detailSectionTitle}>Your Message</Text>
                   <Text style={styles.detailMessage}>{selectedRequestDetail.message}</Text>
                 </View>
               )}
 
-              {/* Note/Intentions */}
-              {selectedRequestDetail.note && (
+              {/* Note/Intentions - Only show for user's own requests */}
+              {selectedRequestDetail.note && selectedRequestDetail.requester_id === user?.id && (
                 <View style={styles.detailInfoSection}>
                   <Text style={styles.detailSectionTitle}>Meeting Intentions</Text>
                   <View style={styles.detailIntentionsContainer}>

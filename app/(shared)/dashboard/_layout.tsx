@@ -456,11 +456,11 @@ function CustomDrawerContent() {
             activeOpacity={0.7}
           >
             <View style={[styles.quickToggleIcon, { backgroundColor: isDark ? '#FFD700' : '#6C63FF' }]}>
-              <Ionicons 
-                name={isDark ? 'sunny' : 'moon'} 
+            <Ionicons 
+              name={isDark ? 'sunny' : 'moon'} 
                 size={24} 
                 color="white" 
-              />
+            />
             </View>
             <Text style={styles.quickToggleLabel}>
               {isDark ? 'Light' : 'Dark'}
@@ -474,11 +474,11 @@ function CustomDrawerContent() {
             activeOpacity={0.7}
           >
             <View style={[styles.quickToggleIcon, { backgroundColor: colors.error.main }]}>
-              <Ionicons 
-                name="log-out-outline" 
+            <Ionicons 
+              name="log-out-outline" 
                 size={24} 
                 color="white" 
-              />
+            />
             </View>
             <Text style={[styles.quickToggleLabel, { color: colors.error.main }]}>
               Logout

@@ -26,9 +26,27 @@ config.resolver = {
   },
   // Add source extensions
   sourceExts: [...(config.resolver.sourceExts || []), 'mjs', 'cjs'],
-  // Don't override resolveRequest - let Metro use default resolution
-  // Metro's platform-specific file handling will ensure .web.ts files
-  // are only bundled on web platform
+  // Custom resolveRequest to handle problematic imports
+  resolveRequest: (context, moduleName, platform) => {
+    // Handle qrcode trying to import server module - return empty module
+    if (moduleName === './server' && context.originModulePath?.includes('qrcode')) {
+      return { type: 'empty' };
+    }
+    
+    // On native platforms, block web-only packages
+    // On web, allow them to be resolved normally
+    if (platform !== 'web') {
+      // Check if this is a web-only package
+      for (const pkg of webOnlyPackages) {
+        if (moduleName === pkg || moduleName.startsWith(`${pkg}/`)) {
+          return { type: 'empty' };
+        }
+      }
+    }
+    
+    // Use default resolution for everything else
+    return context.resolveRequest(context, moduleName, platform);
+  },
 };
 
 // Reduce memory usage

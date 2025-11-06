@@ -296,6 +296,41 @@ function extractCompanyFromTitle(title) {
   return null;
 }
 
+function normalizeImageUrl(url, slug) {
+  if (!url) return null;
+  
+  try {
+    // Decode URL to handle encoded characters
+    const decodedUrl = decodeURIComponent(url);
+    
+    // Extract the filename from the URL
+    const urlMatch = decodedUrl.match(/foto-([^/]+\.(png|jpg|jpeg))/i);
+    if (urlMatch) {
+      // Extract the name part (without extension)
+      const filenamePart = urlMatch[1].replace(/\.(png|jpg|jpeg)$/i, '');
+      // Normalize the filename part to remove accents
+      const normalizedFilename = slugifyName(filenamePart);
+      // Reconstruct URL with normalized filename
+      const extension = urlMatch[2].toLowerCase();
+      return decodedUrl.replace(/foto-[^/]+\.(png|jpg|jpeg)/i, `foto-${normalizedFilename}.${extension}`);
+    }
+    
+    // If pattern doesn't match, try to replace any encoded characters in the filename
+    return decodedUrl.replace(/%[0-9A-F]{2}/gi, (match) => {
+      try {
+        const char = decodeURIComponent(match);
+        // If it's an accented character, remove the accent
+        return char.normalize('NFD').replace(/\p{Diacritic}+/gu, '');
+      } catch {
+        return match;
+      }
+    });
+  } catch (error) {
+    // If normalization fails, return the slug-based URL
+    return `https://blockchainsummit.la/wp-content/uploads/2025/09/foto-${slug}.png`;
+  }
+}
+
 async function main() {
   const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
   const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -360,7 +395,10 @@ async function main() {
       console.log(`📥 Fetching ${name}...`);
       const html = await httpGet(url);
       const parsed = parseImageTag(html);
-      const imageUrl = parsed ? pickBestImage(parsed) : null;
+      const rawImageUrl = parsed ? pickBestImage(parsed) : null;
+      
+      // Normalize image URL to remove accents from filename
+      const imageUrl = rawImageUrl ? normalizeImageUrl(rawImageUrl, slug) : null;
       
       const title = SPEAKER_TITLES[name] || '';
       const company = extractCompanyFromTitle(title) || '';

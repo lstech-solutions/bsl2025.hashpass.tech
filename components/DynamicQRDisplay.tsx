@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { qrSystemService, QRCode } from '../lib/qr-system';
 import { passSystemService } from '../lib/pass-system';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSpring } from 'react-native-reanimated';
+import QRCodeSvg from 'react-native-qrcode-svg';
+import Svg, { Image as SvgImage } from 'react-native-svg';
 
 interface DynamicQRDisplayProps {
   passId: string;
@@ -181,12 +183,8 @@ export default function DynamicQRDisplay({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getQRImageUrl = (token: string): string => {
-    // Using a public QR code API - in production, you might want to use a library
-    // or generate QR codes server-side
-    const qrPayload = qrSystemService.generateQRPayload(token);
-    const encoded = encodeURIComponent(qrPayload);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encoded}`;
+  const getQRPayload = (token: string): string => {
+    return qrSystemService.generateQRPayload(token);
   };
 
   const animatedRefreshStyle = useAnimatedStyle(() => {
@@ -230,17 +228,37 @@ export default function DynamicQRDisplay({
     return null;
   }
 
-  const qrImageUrl = getQRImageUrl(qrCode.token);
+  const qrPayload = getQRPayload(qrCode.token);
+  
+  // Get logo for embedding in QR code center - use higher resolution android-chrome-192x192.png
+  // Use URI for both platforms to avoid require() issues
+  const getLogoUri = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      return `${window.location.origin}/assets/android-chrome-192x192.png`;
+    }
+    // For native platforms, use the production URL or localhost for development
+    const baseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.replace('/rest/v1', '') || 'https://hashpass.co';
+    return `${baseUrl}/assets/android-chrome-192x192.png`;
+  };
+  
+  const logoSource = { uri: getLogoUri() };
 
   return (
     <View style={styles.container}>
       {/* QR Code Display */}
       <View style={styles.qrContainer}>
         <Animated.View style={[styles.qrWrapper, animatedPulseStyle]}>
-          <Image
-            source={{ uri: qrImageUrl }}
-            style={styles.qrImage}
-            resizeMode="contain"
+          <QRCodeSvg
+            value={qrPayload}
+            size={size}
+            color={isDark ? '#FFFFFF' : '#000000'}
+            backgroundColor={isDark ? '#1A1A1A' : '#FFFFFF'}
+            logo={logoSource}
+            logoSize={size * 0.2}
+            logoBackgroundColor="transparent"
+            logoMargin={2}
+            logoBorderRadius={8}
+            quietZone={10}
           />
           
           {/* Status Badge */}
@@ -255,27 +273,6 @@ export default function DynamicQRDisplay({
           )}
         </Animated.View>
 
-        {/* Expiry Timer */}
-        {timeUntilExpiry !== null && timeUntilExpiry > 0 && (
-          <View style={styles.expiryContainer}>
-            <Ionicons name="time-outline" size={16} color={colors.text.secondary} />
-            <Text style={styles.expiryText}>
-              Expires in {formatTime(timeUntilExpiry)}
-            </Text>
-          </View>
-        )}
-
-        {/* Pass Info */}
-        {passNumber && (
-          <View style={styles.passInfo}>
-            <Text style={styles.passNumber}>{passNumber}</Text>
-            {passType && (
-              <Text style={styles.passType}>
-                {passSystemService.getPassTypeDisplayName(passType as any)}
-              </Text>
-            )}
-          </View>
-        )}
       </View>
 
       {/* Refresh Button */}
@@ -301,13 +298,6 @@ export default function DynamicQRDisplay({
         </TouchableOpacity>
       )}
 
-      {/* Security Notice */}
-      <View style={styles.securityNotice}>
-        <Ionicons name="shield-checkmark" size={16} color={colors.text.secondary} />
-        <Text style={styles.securityText}>
-          This QR code updates automatically to prevent unauthorized use
-        </Text>
-      </View>
     </View>
   );
 }

@@ -83,19 +83,32 @@ class PassSystemService {
     try {
       // First, try to get the actual pass information from the passes table
       // Get the most recent active pass (in case user has multiple passes)
-      const { data: passData, error: passError } = await supabase
+      const { data: passDataArray, error: passError } = await supabase
         .from('passes')
         .select('*')
         .eq('user_id', userId)
         .eq('event_id', 'bsl2025')
         .eq('status', 'active')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
+        .limit(1);
+      
+      // Handle the case where no pass exists (404/406 errors are expected)
+      if (passError && (passError.code === 'PGRST116' || passError.code === '406' || passError.message?.includes('No rows'))) {
+        // No pass found, fallback to counts
+        return await this.getUserPassInfoFromCounts(userId);
+      }
+      
       if (passError) {
         console.error('Error getting pass data:', passError);
         // Fallback to the counting function
+        return await this.getUserPassInfoFromCounts(userId);
+      }
+      
+      // Extract the first (and only) pass from the array
+      const passData = passDataArray && passDataArray.length > 0 ? passDataArray[0] : null;
+      
+      if (!passData) {
+        // No pass found, fallback to counts
         return await this.getUserPassInfoFromCounts(userId);
       }
 

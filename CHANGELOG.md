@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.8] - 2025-11-06
+
+### Beta
+- Version 1.5.8 release
+
+### Technical Details
+- Version: 1.5.8
+- Release Type: beta
+- Build Number: 202511061859
+- Release Date: 2025-11-06T18:59:33.008Z
+
+
 ## [1.5.7] - 2025-11-06
 
 ### Beta

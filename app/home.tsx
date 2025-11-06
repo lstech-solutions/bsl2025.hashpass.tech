@@ -308,7 +308,10 @@ export default function HomeScreen() {
             autoPlay={true}
             autoPlayInterval={5000}
             onEventPress={(event) => {
-              router.push(event.routes.home as any);
+              if (event?.routes?.home) {
+                const route = event.routes.home.replace(/\/+/g, '/'); // Remove any double slashes
+                router.push(route as any);
+              }
             }}
           />
         </Animated.View>

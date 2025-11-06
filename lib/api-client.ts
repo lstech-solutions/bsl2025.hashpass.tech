@@ -26,6 +26,7 @@ export interface ApiRequestOptions {
   retries?: number;
   endpoint?: string;
   params?: Record<string, any>;
+  skipEventSegment?: boolean; // Skip event-specific segment for global endpoints
 }
 
 export class EventApiClient {
@@ -102,10 +103,15 @@ export class EventApiClient {
     
     let baseUrl: string;
     if (envBase) {
-      // If we have an env base URL (e.g., https://hashpass.co/api/), append event-specific segment
-      const eventSegment = this.getEventApiSegment(event);
-      const cleanEnvBase = envBase.endsWith('/') ? envBase : `${envBase}/`;
-      baseUrl = `${cleanEnvBase}${eventSegment}`;
+      // If skipEventSegment is true, use the base URL directly (for global endpoints)
+      if (options.skipEventSegment) {
+        baseUrl = envBase.endsWith('/') ? envBase.slice(0, -1) : envBase;
+      } else {
+        // If we have an env base URL (e.g., https://hashpass.co/api/), append event-specific segment
+        const eventSegment = this.getEventApiSegment(event);
+        const cleanEnvBase = envBase.endsWith('/') ? envBase : `${envBase}/`;
+        baseUrl = `${cleanEnvBase}${eventSegment}`;
+      }
     } else {
       // Fallback to event config or constructor default
       baseUrl = event?.api?.basePath || this.baseURL;
@@ -173,11 +179,26 @@ export class EventApiClient {
 
         clearTimeout(timeoutId);
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // Parse response body first (for both success and error cases)
+        let data: any;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            data = await response.json();
+          } catch (e) {
+            // If JSON parsing fails, use empty object
+            data = {};
+          }
+        } else {
+          data = {};
         }
 
-        const data = await response.json();
+        if (!response.ok) {
+          // Extract error message from response body if available
+          const errorMessage = data?.error || data?.message || `HTTP ${response.status}: ${response.statusText}`;
+          throw new Error(errorMessage);
+        }
+
         return {
           data,
           success: true

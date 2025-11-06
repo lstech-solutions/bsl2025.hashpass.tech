@@ -9,7 +9,8 @@
     "subscribe": "Subscribe",
     "processing": "Processing...",
     "successTitle": "Email Sent!",
-    "successMessage": "We have sent a confirmation email to {{email}}. Check your inbox for more details.",
+    "successMessage": "We have sent a confirmation email to",
+    "successMessageEmail": "Check your inbox for more details.",
     "sendAnother": "Send Another",
     "backToForm": "Back to Form"
   },
@@ -65,11 +66,105 @@
       "privacy": "Privacy Policy"
     }
   },
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last Updated: November 4, 2025",
+    "introduction": {
+      "title": "1. Introduction",
+      "text": "HashPass (\"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our digital event platform and services (the \"Service\"). Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the Service."
+    },
+    "collection": {
+      "title": "2. Information We Collect",
+      "text": "We collect information that you provide directly to us, including:\n\n• Account Information: When you sign in with Google, we collect your name, email address, and profile picture.\n• Event Data: Information about events you attend, passes you hold, and interactions within our platform.\n• Usage Data: Information about how you use our Service, including features accessed and actions taken.\n• Device Information: Technical information about your device, browser, and operating system."
+    },
+    "use": {
+      "title": "3. How We Use Your Information",
+      "text": "We use the information we collect to:\n\n• Provide and maintain our Service\n• Process your event registrations and manage your passes\n• Send you important updates about events and services\n• Improve and personalize your experience\n• Detect and prevent fraud or abuse\n• Comply with legal obligations"
+    },
+    "sharing": {
+      "title": "4. Information Sharing and Disclosure",
+      "text": "We do not sell your personal information. We may share your information only in the following circumstances:\n\n• With event organizers for events you register for\n• With service providers who assist us in operating our platform\n• When required by law or to protect our rights\n• In connection with a merger, acquisition, or sale of assets"
+    },
+    "security": {
+      "title": "5. Data Security",
+      "text": "We implement appropriate technical and organizational security measures to protect your personal information. However, no method of transmission over the Internet or electronic storage is 100% secure, and we cannot guarantee absolute security."
+    },
+    "rights": {
+      "title": "6. Your Rights",
+      "text": "You have the right to:\n\n• Access your personal information\n• Correct inaccurate information\n• Request deletion of your information\n• Object to processing of your information\n• Data portability\n• Withdraw consent at any time"
+    },
+    "cookies": {
+      "title": "7. Cookies and Tracking",
+      "text": "We use cookies and similar tracking technologies to track activity on our Service and hold certain information. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent."
+    },
+    "changes": {
+      "title": "8. Changes to This Privacy Policy",
+      "text": "We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the \"Last Updated\" date."
+    },
+    "contact": {
+      "title": "9. Contact Us",
+      "text": "If you have any questions about this Privacy Policy, please contact us at:\n\nEmail: privacy@hashpass.tech\nWebsite: https://hashpass.tech"
+    }
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last Updated: November 4, 2025",
+    "acceptance": {
+      "title": "1. Acceptance of Terms",
+      "text": "By accessing and using HashPass (\"the Service\"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service."
+    },
+    "description": {
+      "title": "2. Service Description",
+      "text": "HashPass is a digital event platform that provides event management, pass management, networking features, and related services. We reserve the right to modify, suspend, or discontinue any part of the Service at any time."
+    },
+    "accounts": {
+      "title": "3. User Accounts",
+      "text": "You are responsible for maintaining the confidentiality of your account credentials. You agree to:\n\n• Provide accurate and complete information\n• Keep your account information updated\n• Not share your account with others\n• Notify us immediately of any unauthorized use\n• Accept responsibility for all activities under your account"
+    },
+    "conduct": {
+      "title": "4. User Conduct",
+      "text": "You agree not to:\n\n• Violate any laws or regulations\n• Infringe on intellectual property rights\n• Transmit harmful code or malware\n• Harass, abuse, or harm other users\n• Collect user data without permission\n• Impersonate others or provide false information\n• Interfere with the Service's operation"
+    },
+    "content": {
+      "title": "5. User Content",
+      "text": "You retain ownership of content you submit to the Service. By submitting content, you grant us a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, and distribute your content for the purpose of providing and improving the Service."
+    },
+    "intellectual": {
+      "title": "6. Intellectual Property",
+      "text": "The Service and its original content, features, and functionality are owned by HashPass and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws."
+    },
+    "termination": {
+      "title": "7. Termination",
+      "text": "We may terminate or suspend your account and access to the Service immediately, without prior notice, for any reason, including if you breach the Terms. Upon termination, your right to use the Service will cease immediately."
+    },
+    "disclaimer": {
+      "title": "8. Disclaimer of Warranties",
+      "text": "The Service is provided \"as is\" and \"as available\" without warranties of any kind, either express or implied. We do not warrant that the Service will be uninterrupted, secure, or error-free."
+    },
+    "limitation": {
+      "title": "9. Limitation of Liability",
+      "text": "In no event shall HashPass be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or use, incurred by you or any third party, whether in an action in contract or tort."
+    },
+    "changes": {
+      "title": "10. Changes to Terms",
+      "text": "We reserve the right to modify these Terms at any time. We will notify users of any material changes by posting the new Terms on this page and updating the \"Last Updated\" date. Your continued use of the Service after such modifications constitutes acceptance of the updated Terms."
+    },
+    "contact": {
+      "title": "11. Contact Information",
+      "text": "If you have any questions about these Terms of Service, please contact us at:\n\nEmail: legal@hashpass.tech\nWebsite: https://hashpass.tech"
+    }
+  },
   "settings": {
     "languages": {
       "en": "English",
       "es": "Spanish",
       "ko": "Korean"
+    },
+    "terms": {
+      "subtitle": "Read our terms and conditions"
+    },
+    "privacy": {
+      "subtitle": "Learn how we protect your data"
     }
   },
   "index": {
@@ -140,5 +235,84 @@
     "account": "Account",
     "signOut": "Sign Out",
     "version": "HashPass v{version}"
+  },
+  "nav": {
+    "explore": "Explore",
+    "wallet": "Wallet",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "settings": "Settings",
+    "brandSubtitle": "Digital Event Platform"
+  },
+  "explore": {
+    "noEvent": "No event available",
+    "noSelection": "No event selected",
+    "banner": {
+      "title": "Blockchain Summit Latam 2025",
+      "subtitle": "November 12-14, 2025 • Universidad EAFIT, Medellín",
+      "date": "November 12-14, 2025"
+    },
+    "selectEvent": "Select Event",
+    "yourPasses": "Your Passes",
+    "quickAccess": "Quick Access",
+    "quick": {
+      "speakers": {
+        "title": "Speakers",
+        "subtitle": "Meet the experts"
+      },
+      "agenda": {
+        "title": "Agenda",
+        "subtitle": "Event Schedule"
+      },
+      "info": {
+        "title": "Event Info",
+        "subtitle": "Details & Logistics"
+      },
+      "networking": {
+        "title": "Networking Center",
+        "subtitle": "Find and connect"
+      },
+      "information": {
+        "title": "Event Information",
+        "subtitle": "Details & Logistics"
+      },
+      "event-info": {
+        "title": "Event Information",
+        "subtitle": "Details & Logistics"
+      }
+    }
+  },
+  "passes": {
+    "title": "Your Event Passes",
+    "loading": "Loading your pass information...",
+    "showFullDetails": "Show Full Details",
+    "alert": {
+      "createdTitle": "Pass Created! 🎉",
+      "ok": "OK",
+      "errorTitle": "Error",
+      "createFail": "Failed to create pass. Please try again.",
+      "paymentTitle": "Payment Integration",
+      "paymentMessage": "Payment system will be implemented here"
+    },
+    "button": {
+      "passRequired": "Pass Required",
+      "limitReached": "Limit Reached",
+      "requestMeeting": "Request Meeting"
+    },
+    "copiedTitle": "Pass Information Copied",
+    "copiedMessage": "Pass information has been copied to your clipboard. You can paste it anywhere to share.",
+    "copyError": "Unable to share pass. Please try again.",
+    "type": {
+      "business": "Business",
+      "vip": "VIP",
+      "general": "General",
+      "event": "Event"
+    },
+    "access": {
+      "business": "B2B + Closing Party",
+      "vip": "All VIP Benefits",
+      "general": "General Access",
+      "event": "Event Access"
+    }
   }
 }

@@ -7,6 +7,7 @@ module.exports = function (api) {
       "nativewind/babel",
     ],
     plugins: [
+      'macros',
       [
         'module-resolver',
         {

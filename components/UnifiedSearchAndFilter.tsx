@@ -291,7 +291,14 @@ export default function UnifiedSearchAndFilter<T extends BaseItem>({
         <View style={styles.filtersDropdown}>
           <Text style={styles.filtersTitle}>Filters</Text>
           
-          {filterGroups.map(renderFilterGroup)}
+          <ScrollView 
+            style={styles.filtersScrollView}
+            contentContainerStyle={styles.filtersScrollContent}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+          >
+            {filterGroups.map(renderFilterGroup)}
+          </ScrollView>
 
           {/* Clear All Filters */}
           {hasActiveFilters && (
@@ -415,12 +422,19 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
+    maxHeight: 400, // Maximum height before scrolling
   },
   filtersTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text.primary,
     marginBottom: 16,
+  },
+  filtersScrollView: {
+    maxHeight: 320, // Max height for scrollable area (leaving room for title and clear button)
+  },
+  filtersScrollContent: {
+    paddingBottom: 8,
   },
   filterGroup: {
     marginBottom: 16,

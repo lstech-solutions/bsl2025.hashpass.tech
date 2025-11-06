@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/i18n';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+// Removed reanimated imports - not needed for auth screen
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import * as Linking from 'expo-linking';
 import ThemeAndLanguageSwitcher from '../../components/ThemeAndLanguageSwitcher';
-import { SplashCursor } from '../../components/SplashBackground';
+import { OptimizedSplashCursor } from '../../components/OptimizedSplashCursor';
 import { useTheme } from '../../hooks/useTheme';
 
 export default function AuthScreen() {
@@ -19,16 +19,7 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const styles = getStyles(isDark, colors);
 
-  // Animated header state
-  const headerScale = useSharedValue(1);
-  
-  const headerAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { scale: headerScale.value }
-      ]
-    };
-  });
+  // Removed unused animation to improve performance
 
   useEffect(() => {
     const handleAuthChange = async (event: AuthChangeEvent, session: Session | null) => {
@@ -95,7 +86,7 @@ export default function AuthScreen() {
 
   return (
       <SafeAreaView style={styles.container}>
-        <SplashCursor
+        <OptimizedSplashCursor
           style={{
             position: 'absolute',
             top: 0,
@@ -104,19 +95,32 @@ export default function AuthScreen() {
             bottom: 0,
             zIndex: -1
           }}
+          SIM_RESOLUTION={32}
+          DYE_RESOLUTION={256}
+          CAPTURE_RESOLUTION={128}
+          DENSITY_DISSIPATION={5.0}
+          VELOCITY_DISSIPATION={3.0}
+          PRESSURE={0.1}
+          PRESSURE_ITERATIONS={5}
+          CURL={1}
+          SPLAT_RADIUS={0.1}
+          SPLAT_FORCE={2000}
+          SHADING={false}
+          COLOR_UPDATE_SPEED={3}
         />
         <ThemeAndLanguageSwitcher />
         <TouchableOpacity
-          style={{ position: 'absolute', top: 20, left: 20, zIndex: 10 }}
-          onPress={() => router.push('/')}
+          style={{ position: 'absolute', top: 20, left: 20, zIndex: 1001 }}
+          onPress={() => router.push('/home')}
           accessibilityLabel="Go Back"
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <Ionicons name="arrow-back" size={28} color={isDark ? "#fff" : "#000"} />
         </TouchableOpacity>
         <View style={styles.content}>
-          <View style={styles.overlay} />
+          <View style={styles.overlay} pointerEvents="none" />
           <Text style={styles.title}>{t('title')}</Text>
-          <Animated.View style={[styles.logoContainer, headerAnimatedStyle]}>            
+          <View style={styles.logoContainer}>            
             <Image
               source={isDark
                 ? require('../../assets/logos/hashpass/logo-full-hashpass-black.svg')
@@ -125,7 +129,7 @@ export default function AuthScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-          </Animated.View>
+          </View>
           <Text style={styles.tagline}>{t('subtitle')}</Text>
 
           <TouchableOpacity
@@ -144,9 +148,37 @@ export default function AuthScreen() {
             )}
           </TouchableOpacity>
 
-          <Text style={styles.privacyText}>
-            {t('privacy.text')} <Text style={styles.linkText}>{t('privacy.terms')}</Text> and <Text style={styles.linkText}>{t('privacy.privacy')}</Text>.
-          </Text>
+          <View style={styles.privacyContainer}>
+            <Text style={styles.privacyText}>{t('privacy.text')} </Text>
+            <TouchableOpacity 
+              activeOpacity={0.7}
+              onPress={() => {
+                console.log('Terms clicked');
+                router.push('/(shared)/terms' as any);
+              }}
+              style={styles.linkButton}
+              hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+            >
+              <Text style={styles.linkText}>
+                {t('privacy.terms')}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.privacyText}> and </Text>
+            <TouchableOpacity 
+              activeOpacity={0.7}
+              onPress={() => {
+                console.log('Privacy clicked');
+                router.push('/(shared)/privacy' as any);
+              }}
+              style={styles.linkButton}
+              hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+            >
+              <Text style={styles.linkText}>
+                {t('privacy.privacy')}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.privacyText}>.</Text>
+          </View>
         </View>
       </SafeAreaView>
   );
@@ -225,10 +257,20 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     backgroundColor: '#1DA1F2',
     shadowColor: '#1DA1F2',
   },
+  privacyContainer: {
+    marginTop: 20,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 200,
+    position: 'relative',
+    pointerEvents: 'auto',
+  },
   privacyText: {
     fontSize: 14,
     color: isDark ? '#FFFFFF' : '#121212',
-    marginTop: 20,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -239,6 +281,13 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   linkText: {
     color: isDark ? '#FFFFFF' : '#7A5ECC',
     fontWeight: 'bold',
+    textDecorationLine: 'underline',
+  },
+  linkButton: {
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    zIndex: 201,
+    position: 'relative',
   },
   tagline: {
     fontSize: 18,

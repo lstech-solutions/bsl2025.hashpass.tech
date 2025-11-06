@@ -9,7 +9,8 @@
     "subscribe": "구독하기",
     "processing": "처리 중...",
     "successTitle": "이메일이 전송되었습니다!",
-    "successMessage": "{{email}} 로 확인 이메일을 보냈습니다. 받은 편지함을 확인해주세요.",
+    "successMessage": "로 확인 이메일을 보냈습니다.",
+    "successMessageEmail": "받은 편지함을 확인해주세요.",
     "sendAnother": "다시 보내기",
     "backToForm": "폼으로 돌아가기"
   },

@@ -9,7 +9,8 @@
     "subscribe": "Subscribe",
     "processing": "Processing...",
     "successTitle": "Email Sent!",
-    "successMessage": "We have sent a confirmation email to {{email}}. Check your inbox for more details.",
+    "successMessage": "We have sent a confirmation email to",
+    "successMessageEmail": "Check your inbox for more details.",
     "sendAnother": "Send Another",
     "backToForm": "Back to Form"
   },

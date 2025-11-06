@@ -179,11 +179,26 @@ export class EventApiClient {
 
         clearTimeout(timeoutId);
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // Parse response body first (for both success and error cases)
+        let data: any;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            data = await response.json();
+          } catch (e) {
+            // If JSON parsing fails, use empty object
+            data = {};
+          }
+        } else {
+          data = {};
         }
 
-        const data = await response.json();
+        if (!response.ok) {
+          // Extract error message from response body if available
+          const errorMessage = data?.error || data?.message || `HTTP ${response.status}: ${response.statusText}`;
+          throw new Error(errorMessage);
+        }
+
         return {
           data,
           success: true

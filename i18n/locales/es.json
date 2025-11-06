@@ -9,7 +9,8 @@
     "subscribe": "Suscribirse",
     "processing": "Procesando...",
     "successTitle": "¡Correo enviado!",
-    "successMessage": "Hemos enviado un correo de confirmación a {{email}}. Revisa tu bandeja de entrada para más detalles.",
+    "successMessage": "Hemos enviado un correo de confirmación a",
+    "successMessageEmail": "Revisa tu bandeja de entrada para más detalles.",
     "sendAnother": "Enviar otro",
     "backToForm": "Volver al formulario"
   },

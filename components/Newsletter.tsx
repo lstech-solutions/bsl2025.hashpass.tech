@@ -63,15 +63,32 @@ const Newsletter = ({ mode }: Props) => {
             });
 
             if (!response.success) {
-                throw new Error(response.error || 'Failed to subscribe');
+                // Check if the error is "already subscribed" - treat this as a success
+                const errorMessage = response.error || '';
+                if (errorMessage.toLowerCase().includes('already subscribed')) {
+                    // Show success message for already subscribed users
+                    setSubscribed(true);
+                    // Don't increment subscriber count since they're already subscribed
+                } else {
+                    // Show error for other cases
+                    setError(errorMessage || 'Failed to subscribe. Please try again.');
+                }
+                return;
             }
 
+            // Success case - new subscription
             setSubscribed(true);
             setSubscribers(subscribers + 1);
         } catch (error) {
             console.error('Subscription error:', error);
             const errorMessage = error instanceof Error ? error.message : 'Failed to subscribe. Please try again.';
-            setError(errorMessage);
+            
+            // Check if error is about already being subscribed
+            if (errorMessage.toLowerCase().includes('already subscribed')) {
+                setSubscribed(true);
+            } else {
+                setError(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -198,7 +215,15 @@ const Newsletter = ({ mode }: Props) => {
                             </div>
                             <h3 className={`text-2xl font-bold mb-3 ${isDark ? 'text-white' : 'text-black'}`}>{t('successTitle')}</h3>
                             <p className='text-gray-600 dark:text-gray-300 mb-6 max-w-xs'>
-                                {t('successMessage', { email })}
+                                {getCurrentLocale() === 'ko' ? (
+                                    <>
+                                        <span className='font-bold'>{email}</span> {t('successMessage')} {t('successMessageEmail')}
+                                    </>
+                                ) : (
+                                    <>
+                                        {t('successMessage')} <span className='font-bold'>{email}</span>. {t('successMessageEmail')}
+                                    </>
+                                )}
                             </p>
                             <button
                                 onClick={() => {

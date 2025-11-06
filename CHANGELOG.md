@@ -1,5 +1,134 @@
 # Changelog
 
+## [1.5.6] - 2025-11-05
+
+### Beta
+- Version 1.5.6 release
+
+### Technical Details
+- Version: 1.5.6
+- Release Type: beta
+- Build Number: 202511052256
+- Release Date: 2025-11-05T22:56:37.501Z
+
+
+## [1.5.5] - 2025-11-05
+
+### Beta
+- Version 1.5.5 release
+
+### Technical Details
+- Version: 1.5.5
+- Release Type: beta
+- Build Number: 202511052229
+- Release Date: 2025-11-05T22:29:09.517Z
+
+
+## [1.5.4] - 2025-11-05
+
+### Beta
+- Version 1.5.4 release
+
+### Technical Details
+- Version: 1.5.4
+- Release Type: beta
+- Build Number: 202511050332
+- Release Date: 2025-11-05T03:32:56.954Z
+
+
+## [1.5.3] - 2025-11-05
+
+### Beta
+- Version 1.5.3 release
+
+### Technical Details
+- Version: 1.5.3
+- Release Type: beta
+- Build Number: 202511050324
+- Release Date: 2025-11-05T03:24:58.425Z
+
+
+## [1.5.2] - 2025-11-05
+
+### Beta
+- Version 1.5.2 release
+
+### Technical Details
+- Version: 1.5.2
+- Release Type: beta
+- Build Number: 202511050316
+- Release Date: 2025-11-05T03:16:33.267Z
+
+
+## [1.5.1] - 2025-11-05
+
+### Beta
+- Version 1.5.1 release
+
+### Technical Details
+- Version: 1.5.1
+- Release Type: beta
+- Build Number: 202511050304
+- Release Date: 2025-11-05T03:04:50.194Z
+
+
+## [1.5.0] - 2025-11-05
+
+### Beta
+- Version 1.5.0 release
+
+### Technical Details
+- Version: 1.5.0
+- Release Type: beta
+- Build Number: 202511050249
+- Release Date: 2025-11-05T02:49:38.778Z
+
+
+## [1.4.9] - 2025-11-04
+
+### Beta
+- Version 1.4.9 release - Improved language switching experience
+
+### Features
+- Improved language switching with smooth updates without remounting
+- Enhanced I18nProvider to handle locale changes reactively
+- Added useLingui hook to explore component for proper translation updates
+
+### Bugfixes
+- Fixed language switching not updating explorer section immediately
+- Fixed locale changes requiring page reload to see translations
+- Improved translation reactivity without component remounting
+
+### Technical Details
+- Version: 1.4.9
+- Release Type: beta
+- Build Number: 202511041603
+- Release Date: 2025-11-04T16:03:00.000Z
+
+## [1.4.8] - 2025-11-04
+
+### Beta
+- Version 1.4.8 release
+
+### Technical Details
+- Version: 1.4.8
+- Release Type: beta
+- Build Number: 202511040915
+- Release Date: 2025-11-04T09:15:52.952Z
+
+
+## [1.4.7] - 2025-11-03
+
+### Beta
+- Version 1.4.7 release
+
+### Technical Details
+- Version: 1.4.7
+- Release Type: beta
+- Build Number: 202511030135
+- Release Date: 2025-11-03T01:35:53.797Z
+
+
 ## [1.4.6] - 2025-11-02
 
 ### Beta

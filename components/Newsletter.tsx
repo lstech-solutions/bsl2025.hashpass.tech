@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Image } from 'react-native';
 import { useTranslation, getCurrentLocale } from '../i18n/i18n';
 import { useTheme } from '../hooks/useTheme';
+import { apiClient } from '../lib/api-client';
 type Mode = "light" | "dark";
 
 interface Props {
@@ -51,29 +52,43 @@ const Newsletter = ({ mode }: Props) => {
 
         try {
             const locale = getCurrentLocale();
-            const response = await fetch('/api/subscribe', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email,
-                    locale
-                }),
+            
+            // Use the API client which already points to the .co domain
+            // Subscribe is a global endpoint, not event-specific, so skip the event segment
+            const response = await apiClient.post('/subscribe', {
+                email,
+                locale
+            }, {
+                skipEventSegment: true
             });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to subscribe');
+            if (!response.success) {
+                // Check if the error is "already subscribed" - treat this as a success
+                const errorMessage = response.error || '';
+                if (errorMessage.toLowerCase().includes('already subscribed')) {
+                    // Show success message for already subscribed users
+                    setSubscribed(true);
+                    // Don't increment subscriber count since they're already subscribed
+                } else {
+                    // Show error for other cases
+                    setError(errorMessage || 'Failed to subscribe. Please try again.');
+                }
+                return;
             }
 
+            // Success case - new subscription
             setSubscribed(true);
             setSubscribers(subscribers + 1);
         } catch (error) {
             console.error('Subscription error:', error);
             const errorMessage = error instanceof Error ? error.message : 'Failed to subscribe. Please try again.';
-            setError(errorMessage);
+            
+            // Check if error is about already being subscribed
+            if (errorMessage.toLowerCase().includes('already subscribed')) {
+                setSubscribed(true);
+            } else {
+                setError(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -94,10 +109,10 @@ const Newsletter = ({ mode }: Props) => {
                         >
                             <div className='text-center mb-6'>
                                 <h2 className={`text-2xl font-bold mb-2 ${mode === "dark" ? 'text-white' : 'text-black'}`}>
-                                    {t('title', 'Stay Updated')}
+                                    {t('title')}
                                 </h2>
                                 <p className='text-sm text-gray-500 dark:text-gray-400 text-black dark:text-white'>
-                                    {t('subtitle', 'Join our newsletter for the latest updates')}
+                                    {t('subtitle')}
                                 </p>
                             </div>
 
@@ -124,7 +139,7 @@ const Newsletter = ({ mode }: Props) => {
                                     ))}
                                 </div>
                                 <span className='ml-3 text-sm text-gray-500 dark:text-gray-400'>
-                                    <span className='font-bold'>{subscribers}+</span> {t('subscribers', 'Join our community')}
+                                    <span className='font-bold'>{subscribers}+</span> {t('subscribers')}
                                 </span>
                             </div>
 
@@ -141,7 +156,7 @@ const Newsletter = ({ mode }: Props) => {
                                                 setEmail(e.target.value);
                                                 if (error) setError('');
                                             }}
-                                            placeholder={t('emailPlaceholder', 'your@email.com')}
+                                            placeholder={t('emailPlaceholder')}
                                             className='w-full px-4 py-3 pl-10 text-sm sm:text-base rounded-full  bg-transparent outline-none transition-all duration-200 placeholder-gray-400 dark:placeholder-white dark:text-white text-gray-600 dark:text-gray-300'
                                             disabled={isLoading}
                                             onKeyDown={(e) => e.key === 'Enter' && handleSubscribe()}
@@ -170,18 +185,18 @@ const Newsletter = ({ mode }: Props) => {
                                                 <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4'></circle>
                                                 <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'></path>
                                             </svg>
-                                            <span>{t('processing', 'Processing...')}</span>
+                                            <span>{t('processing')}</span>
                                         </>
                                     ) : (
                                         <>
-                                            <span>{t('subscribe', 'Subscribe')}</span>
+                                            <span>{t('subscribe')}</span>
                                         </>
                                     )}
                                 </button>
                             </div>
 
                             <p className='text-xs text-center text-gray-400 dark:text-gray-500 mt-4 px-4'>
-                                {t('privacy', 'We respect your privacy. Unsubscribe at any time.')}
+                                {t('privacy')}
                             </p>
                         </motion.div>
                     ) : (
@@ -198,9 +213,17 @@ const Newsletter = ({ mode }: Props) => {
                                     <path strokeLinecap='round' strokeLinejoin='round' d='M5 13l4 4L19 7' />
                                 </svg>
                             </div>
-                            <h3 className={`text-2xl font-bold mb-3 ${isDark ? 'text-white' : 'text-black'}`}>{t('successTitle', 'You\'re in!')}</h3>
+                            <h3 className={`text-2xl font-bold mb-3 ${isDark ? 'text-white' : 'text-black'}`}>{t('successTitle')}</h3>
                             <p className='text-gray-600 dark:text-gray-300 mb-6 max-w-xs'>
-                                {t('successMessage', { email })}
+                                {getCurrentLocale() === 'ko' ? (
+                                    <>
+                                        <span className='font-bold'>{email}</span> {t('successMessage')} {t('successMessageEmail')}
+                                    </>
+                                ) : (
+                                    <>
+                                        {t('successMessage')} <span className='font-bold'>{email}</span>. {t('successMessageEmail')}
+                                    </>
+                                )}
                             </p>
                             <button
                                 onClick={() => {
@@ -209,7 +232,7 @@ const Newsletter = ({ mode }: Props) => {
                                 }}
                                 className='text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors flex items-center group'
                             >
-                                <span className='group-hover:-translate-x-0.5 transition-transform'>{t('backToForm', 'Back to form')}</span>
+                                <span className='group-hover:-translate-x-0.5 transition-transform'>{t('backToForm')}</span>
                                 <svg xmlns='http://www.w3.org/2000/svg' className='h-4 w-4 ml-1 transform group-hover:translate-x-0.5 transition-transform' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
                                     <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M14 5l7 7m0 0l-7 7m7-7H3' />
                                 </svg>

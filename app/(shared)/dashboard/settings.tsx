@@ -8,7 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from '../../../i18n/i18n';
 import { version } from '../../../package.json';
 import { useScroll } from '../../../contexts/ScrollContext';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { t } from '@lingui/macro';
 
 export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
@@ -19,7 +21,8 @@ export default function SettingsScreen() {
   const { animationsEnabled, setAnimationsEnabled } = useAnimations();
   const { headerHeight } = useScroll();
   const { showSuccess, showInfo } = useToastHelpers();
-  const { t } = useTranslation('profile');
+  const { t: tProfile } = useTranslation('profile');
+  const router = useRouter();
   const styles = getStyles(isDark, colors);
   
   // Calculate safe area for nav bar overlay
@@ -238,20 +241,20 @@ export default function SettingsScreen() {
 
           {renderSettingItem({
             icon: 'document-text-outline',
-            title: 'Terms of Service',
-            subtitle: 'Read our terms and conditions',
+            title: t({ id: 'terms.title', message: 'Terms of Service' }),
+            subtitle: t({ id: 'settings.terms.subtitle', message: 'Read our terms and conditions' }),
             onPress: () => {
-              Alert.alert('Terms of Service', 'Terms of service will be available soon.');
+              router.push('/(shared)/terms');
             },
             showChevron: true,
           })}
 
           {renderSettingItem({
             icon: 'shield-checkmark-outline',
-            title: 'Privacy Policy',
-            subtitle: 'Learn how we protect your data',
+            title: t({ id: 'privacy.title', message: 'Privacy Policy' }),
+            subtitle: t({ id: 'settings.privacy.subtitle', message: 'Learn how we protect your data' }),
             onPress: () => {
-              Alert.alert('Privacy Policy', 'Privacy policy will be available soon.');
+              router.push('/(shared)/privacy');
             },
             showChevron: true,
           })}

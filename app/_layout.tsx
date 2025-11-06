@@ -17,6 +17,7 @@ import { useAuth } from '../hooks/useAuth';
 import "./global.css";
 import PWAPrompt from '../components/PWAPrompt';
 import * as SplashScreen from 'expo-splash-screen';
+import { I18nProvider } from '../providers/I18nProvider';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -34,11 +35,13 @@ export default function RootLayout() {
           />
           <EventProvider>
             <LanguageProvider>
-              <ToastProvider>
-                <ScrollProvider>
-                  <ThemedContent />
-                </ScrollProvider>
-              </ToastProvider>
+              <I18nProvider>
+                <ToastProvider>
+                  <ScrollProvider>
+                    <ThemedContent />
+                  </ScrollProvider>
+                </ToastProvider>
+              </I18nProvider>
             </LanguageProvider>
           </EventProvider>
         </ThemeProvider>
@@ -60,6 +63,7 @@ function ThemedContent() {
   // Check if we're in the auth flow
   const isAuthFlow = (segments[0] === '(shared)' && segments[1] === 'auth') || pathname.startsWith('/(shared)/auth');
   const isBSLPublic = pathname.startsWith('/events/bsl2025');
+  const isHomePage = pathname === '/home' || pathname === '/' || pathname === '/index';
 
   // Handle loading state and splash screen
   useEffect(() => {
@@ -82,11 +86,11 @@ function ThemedContent() {
   // Handle auth redirection
   useEffect(() => {
     if (isReady && !isLoading) {
-      if (!isLoggedIn && !isAuthFlow && !isBSLPublic) {
+      if (!isLoggedIn && !isAuthFlow && !isBSLPublic && !isHomePage) {
         router.replace('/(shared)/auth' as any);
       }
     }
-  }, [isLoggedIn, isAuthFlow, isBSLPublic, isReady, isLoading, router]);
+  }, [isLoggedIn, isAuthFlow, isBSLPublic, isHomePage, isReady, isLoading, router]);
 
   // Show loading state
   if (isLoading || !isReady || showSplash) {
@@ -122,6 +126,10 @@ function ThemedContent() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/auth" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/auth/callback" options={{ headerShown: false }} />
+        <Stack.Screen name="(shared)/privacy" options={{ headerShown: false }} />
+        <Stack.Screen name="(shared)/terms" options={{ headerShown: false }} />
+        <Stack.Screen name="privacy" options={{ headerShown: false }} />
+        <Stack.Screen name="terms" options={{ headerShown: false }} />
         <Stack.Screen 
           name="(shared)/dashboard" 
           options={{ 

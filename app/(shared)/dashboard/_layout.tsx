@@ -14,13 +14,13 @@ import { useTheme } from '../../../hooks/useTheme';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { useAuth } from '../../../hooks/useAuth';
 import { useLanguage } from '../../../providers/LanguageProvider';
-import { color } from 'motion/react';
 import { ScrollProvider, useScroll } from '../../../contexts/ScrollContext';
 import { NotificationProvider, useNotifications } from '../../../contexts/NotificationContext';
 import { AnimationProvider, useAnimations } from '../../../providers/AnimationProvider';
 import VersionDisplay from '../../../components/VersionDisplay';
 import QRScanner from '../../../components/QRScanner';
 import MiniNotificationDropdown from '../../../components/MiniNotificationDropdown';
+import { t } from '@lingui/macro';
 
 // Define the type for our drawer navigation
 type DrawerNavigation = CompositeNavigationProp<
@@ -152,12 +152,29 @@ function CustomDrawerContent() {
   });
 
   const menuItems = [
-    { label: 'Explore', icon: 'compass-outline', route: './explore' as const },
-    { label: 'Wallet', icon: 'wallet-outline', route: './wallet' as const },
-    { label: 'Notifications', icon: 'notifications-outline', route: './notifications' as const },
-    { label: 'Profile', icon: 'person-outline', route: './profile' as const },
-    { label: 'Settings', icon: 'settings-outline', route: './settings' as const },
+    { id: 'nav.explore', message: 'Explore', icon: 'compass-outline', route: './explore' as const },
+    { id: 'nav.wallet', message: 'Wallet', icon: 'wallet-outline', route: './wallet' as const },
+    { id: 'nav.notifications', message: 'Notifications', icon: 'notifications-outline', route: './notifications' as const },
+    { id: 'nav.profile', message: 'Profile', icon: 'person-outline', route: './profile' as const },
+    { id: 'nav.settings', message: 'Settings', icon: 'settings-outline', route: './settings' as const },
   ] as const;
+
+  const getLabel = (id: typeof menuItems[number]['id']) => {
+    switch (id) {
+      case 'nav.explore':
+        return t({ id: 'nav.explore', message: 'Explore' });
+      case 'nav.wallet':
+        return t({ id: 'nav.wallet', message: 'Wallet' });
+      case 'nav.notifications':
+        return t({ id: 'nav.notifications', message: 'Notifications' });
+      case 'nav.profile':
+        return t({ id: 'nav.profile', message: 'Profile' });
+      case 'nav.settings':
+        return t({ id: 'nav.settings', message: 'Settings' });
+      default:
+        return '';
+    }
+  };
 
   const handleNavigation = (route: typeof menuItems[number]['route']) => {
     // Close the drawer
@@ -333,7 +350,7 @@ function CustomDrawerContent() {
             </TouchableOpacity>
           </View>
           <View style={styles.brandingSection}>
-            <Text style={styles.brandSubtitle}>Digital Event Platform</Text>
+            <Text style={styles.brandSubtitle}>{t({ id: 'nav.brandSubtitle', message: 'Digital Event Platform' })}</Text>
             <View style={[styles.brandBadge, { backgroundColor: '#007AFF' }]}>
               <Text style={styles.brandBadgeText}>BSL2025</Text>
             </View>
@@ -398,7 +415,7 @@ function CustomDrawerContent() {
                   }
                 ]}
               >
-                {item.label}
+                {getLabel(item.id)}
               </Text>
               {item.route === './notifications' && unreadCount > 0 && (
                 <View style={styles.menuBadge}>

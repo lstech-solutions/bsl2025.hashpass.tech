@@ -1,56 +1,60 @@
 {
   "newsletter": {
    "title": "Suscríbete a nuestro boletín",
-    "subtitle": "Unete a nuestra comunidad",
+    "subtitle": "Únete a nuestro boletín para las últimas novedades",
     "subscribers": "Suscriptores",
-    "privacy": "Respetamos tu privacidad. Cancela la suscripción en cualquier momento.",
-    "description": "Suscríbete a nuestro boletín y nunca te pierdas una actualización. Recibe las últimas noticias, artículos y ofertas exclusivas directamente en tu bandeja de entrada!",
-    "emailPlaceholder": "Introduce correo electrónico",
-    "subscribe": "Suscríbete",
+    "privacy": "Respetamos tu privacidad. Puedes darte de baja en cualquier momento.",
+    "description": "Suscríbete a nuestro boletín y no te pierdas ninguna novedad. ¡Recibe las últimas noticias, artículos y ofertas exclusivas directamente en tu correo!",
+    "emailPlaceholder": "Ingresa tu correo",
+    "subscribe": "Suscribirse",
     "processing": "Procesando...",
-    "successTitle": "Correo electrónico enviado!",
-    "successMessage": "Hemos enviado un correo electrónico de confirmación a {{email}}. Revisa tu bandeja de entrada para más detalles.",
+    "successTitle": "¡Correo enviado!",
+    "successMessage": "Hemos enviado un correo de confirmación a",
+    "successMessageEmail": "Revisa tu bandeja de entrada para más detalles.",
     "sendAnother": "Enviar otro",
     "backToForm": "Volver al formulario"
   },
   "wallet": {
-    "walletDesc": "Accede a tus entradas verificadas por blockchain",
-    "loyaltyDesc": "Sigue tus puntos y recompensas de tokens",
-    "events": "Descubrimiento de Eventos",
-    "eventsDesc": "Encuentra próximos eventos y gana tokens",
-    "exchangeDesc": "Convierte puntos en criptomonedas",
+    "digitalWalletTitle": "Billetera de Boletos Digitales",
+    "walletDesc": "Accede a tus boletos verificados en blockchain",
+    "events": "Descubrir Eventos",
+    "eventsDesc": "Encuentra eventos y gana tokens",
+    "exchangeDesc": "Convierte puntos a criptomonedas",
     "tabs": {
-      "tickets": "Mis Entradas",
-      "loyalty": "Recompensas de Fidelización",
-      "exchange": "Intercambio de Tokens"
+      "tickets": "Mis Boletos",
+      "loyalty": "Recompensas",
+      "exchange": "Intercambio"
     },
     "tickets": {
-      "title": "Mis Entradas",
-      "description": "Accede a tus entradas verificadas por blockchain."
+      "title": "Mis Boletos",
+      "description": "Accede a tus pases y recompensas ganadas."
     },
     "loyalty": {
-      "title": "Recompensas de Fidelización",
-      "description": "Sigue tus puntos y recompensas de tokens."
+      "title": "Recompensas",
+      "description": "Sigue tus puntos y tokens."
     },
     "exchange": {
-      "title": "Intercambio de Tokens",
-      "description": "Convierte puntos en criptomonedas."
+      "title": "Intercambio",
+      "description": "Convierte puntos a criptomonedas."
     }
   },
   "digitalWallet": {
     "tokensEarned": "Tokens Ganados",
-    "noTickets": "No hay Entradas",
-    "noTicketsDesc": "Tus entradas compradas aparecerán aquí. Descubre eventos para comenzar!",
-    "discoverEvents": "Descubre Eventos",
+    "noTickets": "Sin boletos aún",
+    "noTicketsDesc": "Tus boletos aparecerán aquí. ¡Explora eventos para empezar!",
+    "discoverEvents": "Descubrir Eventos",
     "of": "de",
-    "presentQR": "Presenta este código QR en la entrada del evento para verificar",
-    "tapToEnlarge": "Tap to enlarge",
-    "tapToMinimize": "Tap to minimize"
+    "presentQR": "Presenta este código QR en la entrada para verificación",
+    "tapToEnlarge": "Toca para ampliar",
+    "tapToMinimize": "Toca para minimizar"
   },
   "tabs": {
     "explore": "Explorar",
     "wallet": "Billetera",
     "profile": "Perfil"
+  },
+  "common": {
+    "back": "Atrás"
   },
   "auth": {
     "title": "Bienvenido a",
@@ -62,50 +66,152 @@
       "privacy": "Política de Privacidad"
     }
   },
+  "privacy": {
+    "title": "Política de Privacidad",
+    "lastUpdated": "Última actualización: 4 de noviembre de 2025",
+    "introduction": {
+      "title": "1. Introducción",
+      "text": "HashPass (\"nosotros\", \"nuestro\" o \"nos\") se compromete a proteger su privacidad. Esta Política de Privacidad explica cómo recopilamos, usamos, divulgamos y protegemos su información cuando utiliza nuestra plataforma de eventos digitales y servicios (el \"Servicio\"). Por favor, lea esta política de privacidad cuidadosamente. Si no está de acuerdo con los términos de esta política de privacidad, no acceda al Servicio."
+    },
+    "collection": {
+      "title": "2. Información que Recopilamos",
+      "text": "Recopilamos información que usted nos proporciona directamente, incluyendo:\n\n• Información de Cuenta: Cuando inicia sesión con Google, recopilamos su nombre, dirección de correo electrónico y foto de perfil.\n• Datos de Eventos: Información sobre eventos a los que asiste, pases que tiene e interacciones dentro de nuestra plataforma.\n• Datos de Uso: Información sobre cómo utiliza nuestro Servicio, incluyendo características accedidas y acciones tomadas.\n• Información del Dispositivo: Información técnica sobre su dispositivo, navegador y sistema operativo."
+    },
+    "use": {
+      "title": "3. Cómo Usamos Su Información",
+      "text": "Usamos la información que recopilamos para:\n\n• Proporcionar y mantener nuestro Servicio\n• Procesar sus registros de eventos y gestionar sus pases\n• Enviarle actualizaciones importantes sobre eventos y servicios\n• Mejorar y personalizar su experiencia\n• Detectar y prevenir fraudes o abusos\n• Cumplir con obligaciones legales"
+    },
+    "sharing": {
+      "title": "4. Compartir y Divulgación de Información",
+      "text": "No vendemos su información personal. Podemos compartir su información solo en las siguientes circunstancias:\n\n• Con organizadores de eventos para eventos en los que se registra\n• Con proveedores de servicios que nos ayudan a operar nuestra plataforma\n• Cuando sea requerido por ley o para proteger nuestros derechos\n• En relación con una fusión, adquisición o venta de activos"
+    },
+    "security": {
+      "title": "5. Seguridad de Datos",
+      "text": "Implementamos medidas de seguridad técnicas y organizativas apropiadas para proteger su información personal. Sin embargo, ningún método de transmisión por Internet o almacenamiento electrónico es 100% seguro, y no podemos garantizar seguridad absoluta."
+    },
+    "rights": {
+      "title": "6. Sus Derechos",
+      "text": "Usted tiene derecho a:\n\n• Acceder a su información personal\n• Corregir información inexacta\n• Solicitar la eliminación de su información\n• Oponerse al procesamiento de su información\n• Portabilidad de datos\n• Retirar el consentimiento en cualquier momento"
+    },
+    "cookies": {
+      "title": "7. Cookies y Seguimiento",
+      "text": "Utilizamos cookies y tecnologías de seguimiento similares para rastrear la actividad en nuestro Servicio y mantener cierta información. Puede instruir a su navegador para que rechace todas las cookies o indique cuando se está enviando una cookie."
+    },
+    "changes": {
+      "title": "8. Cambios a Esta Política de Privacidad",
+      "text": "Podemos actualizar nuestra Política de Privacidad de vez en cuando. Le notificaremos de cualquier cambio publicando la nueva Política de Privacidad en esta página y actualizando la fecha de \"Última actualización\"."
+    },
+    "contact": {
+      "title": "9. Contáctenos",
+      "text": "Si tiene alguna pregunta sobre esta Política de Privacidad, contáctenos en:\n\nCorreo electrónico: privacy@hashpass.tech\nSitio web: https://hashpass.tech"
+    }
+  },
+  "terms": {
+    "title": "Términos de Servicio",
+    "lastUpdated": "Última actualización: 4 de noviembre de 2025",
+    "acceptance": {
+      "title": "1. Aceptación de Términos",
+      "text": "Al acceder y usar HashPass (\"el Servicio\"), acepta y acuerda estar sujeto a los términos y disposiciones de este acuerdo. Si no está de acuerdo en cumplir con lo anterior, no use este servicio."
+    },
+    "description": {
+      "title": "2. Descripción del Servicio",
+      "text": "HashPass es una plataforma de eventos digitales que proporciona gestión de eventos, gestión de pases, características de networking y servicios relacionados. Nos reservamos el derecho de modificar, suspender o discontinuar cualquier parte del Servicio en cualquier momento."
+    },
+    "accounts": {
+      "title": "3. Cuentas de Usuario",
+      "text": "Usted es responsable de mantener la confidencialidad de las credenciales de su cuenta. Usted acepta:\n\n• Proporcionar información precisa y completa\n• Mantener actualizada la información de su cuenta\n• No compartir su cuenta con otros\n• Notificarnos inmediatamente de cualquier uso no autorizado\n• Aceptar responsabilidad por todas las actividades bajo su cuenta"
+    },
+    "conduct": {
+      "title": "4. Conducta del Usuario",
+      "text": "Usted acepta no:\n\n• Violar leyes o regulaciones\n• Infringir derechos de propiedad intelectual\n• Transmitir código malicioso o malware\n• Acosar, abusar o dañar a otros usuarios\n• Recopilar datos de usuarios sin permiso\n• Suplantar a otros o proporcionar información falsa\n• Interferir con la operación del Servicio"
+    },
+    "content": {
+      "title": "5. Contenido del Usuario",
+      "text": "Usted conserva la propiedad del contenido que envía al Servicio. Al enviar contenido, nos otorga una licencia mundial, no exclusiva, libre de regalías para usar, reproducir, modificar y distribuir su contenido con el fin de proporcionar y mejorar el Servicio."
+    },
+    "intellectual": {
+      "title": "6. Propiedad Intelectual",
+      "text": "El Servicio y su contenido original, características y funcionalidad son propiedad de HashPass y están protegidos por leyes internacionales de derechos de autor, marcas registradas, patentes, secretos comerciales y otras leyes de propiedad intelectual."
+    },
+    "termination": {
+      "title": "7. Terminación",
+      "text": "Podemos terminar o suspender su cuenta y acceso al Servicio inmediatamente, sin previo aviso, por cualquier razón, incluyendo si viola los Términos. Al terminar, su derecho a usar el Servicio cesará inmediatamente."
+    },
+    "disclaimer": {
+      "title": "8. Exención de Garantías",
+      "text": "El Servicio se proporciona \"tal cual\" y \"según disponibilidad\" sin garantías de ningún tipo, ya sean expresas o implícitas. No garantizamos que el Servicio será ininterrumpido, seguro o libre de errores."
+    },
+    "limitation": {
+      "title": "9. Limitación de Responsabilidad",
+      "text": "En ningún caso HashPass será responsable de daños indirectos, incidentales, especiales, consecuentes o punitivos, incluyendo pérdida de ganancias, datos o uso, incurridos por usted o cualquier tercero, ya sea en una acción en contrato o agravio."
+    },
+    "changes": {
+      "title": "10. Cambios a los Términos",
+      "text": "Nos reservamos el derecho de modificar estos Términos en cualquier momento. Notificaremos a los usuarios de cualquier cambio material publicando los nuevos Términos en esta página y actualizando la fecha de \"Última actualización\". Su uso continuo del Servicio después de tales modificaciones constituye la aceptación de los Términos actualizados."
+    },
+    "contact": {
+      "title": "11. Información de Contacto",
+      "text": "Si tiene alguna pregunta sobre estos Términos de Servicio, contáctenos en:\n\nCorreo electrónico: legal@hashpass.tech\nSitio web: https://hashpass.tech"
+    }
+  },
+  "settings": {
+    "languages": {
+      "en": "Inglés",
+      "es": "Español",
+      "ko": "Coreano"
+    },
+    "terms": {
+      "subtitle": "Lee nuestros términos y condiciones"
+    },
+    "privacy": {
+      "subtitle": "Aprende cómo protegemos tus datos"
+    }
+  },
   "index": {
     "tagline": "TU EVENTO - TU COMUNIDAD - TUS BENEFICIOS",
-    "taglineFlipText": "TUS",
-    "learnMore": "Conoce más",
+    "taglineFlipText": "TU",
+    "learnMore": "Saber más",
     "taglineFlipList": "- TU EVENTO -,- TU COMUNIDAD -,- TUS BENEFICIOS -",
     "unlockPotential": "Desbloquea tu Potencial",
     "features": {
       "secure": {
         "title": "Seguro y Privado",
-        "description": "Tus datos están encriptados y protegidos con protocolos de seguridad líderes en la industria. Tu privacidad es nuestra máxima prioridad."
+        "description": "Tus datos están cifrados y protegidos con protocolos de seguridad líderes."
       },
       "management": {
-        "title": "Gestión Sin Esfuerzo",
-        "description": "Organiza todas tus credenciales digitales, tarjetas de fidelización y comunidades en un solo lugar intuitivo."
+        "title": "Gestión Sencilla",
+        "description": "Organiza credenciales, tarjetas y comunidades en un solo lugar."
       },
       "sync": {
         "title": "Sincronización Multiplataforma",
-        "description": "Accede a tus datos en todos tus dispositivos con nuestra sincronización segura en la nube."
+        "description": "Accede a tus datos en todos tus dispositivos."
       }
     },
     "welcomeBack": "¡Bienvenido de nuevo!",
     "goToApp": "Ir a la App",
     "readyToSimplify": "¿Listo para simplificar tu vida digital?",
-    "getStartedNow": "Inicia Aquí",
-    "trustedByThousands": "Con la confianza de miles",
-    "testimonials": {
-      "title": "Testimoniales",
-      "subtitle": "Qué nuestros usuarios dicen",
-      "description": "Ver lo que nuestros clientes tienen que decirnos sobre nosotros."
+    "getStartedNow": "Comenzar ahora",
+    "trustedByThousands": "Confiado por miles",
+    "testimonials":{
+      "title": "Testimonios",
+      "subtitle": "Lo que dicen nuestros usuarios",
+      "description": "Descubre qué opinan nuestros clientes."
     },
     "copyright": " 2025 HASHPASS™ Todos los derechos reservados.",
     "cta": {
       "title": "¿Listo para comenzar?",
-      "subtitle": "Únete a miles de usuarios que confían en HASHPASS con su vida digital.",
-      "startNow": "Comienzar"
+      "subtitle": "Únete a miles que confían en HASHPASS.",
+      "startNow": "Comenzar"
     }
   },
-  "loyalty": "Panel de Fidelización",
-  "loyaltyDesc": "Sigue tus puntos y recompensas de tokens",
-  "events": "Descubrimiento de Eventos",
-  "eventsDesc": "Encuentra próximos eventos y gana tokens",
-  "exchange": "Intercambio de Tokens",
-  "exchangeDesc": "Convierte puntos en criptomonedas",
-  "getStarted": "Comenzar",
+  "walletDesc": "Accede a tus boletos verificados en blockchain",
+  "loyalty": "Panel de Lealtad",
+  "loyaltyDesc": "Sigue tus puntos y recompensas",
+  "events": "Descubrir Eventos",
+  "eventsDesc": "Encuentra eventos y gana tokens",
+  "exchange": "Intercambio",
+  "exchangeDesc": "Convierte puntos a criptomonedas",
+  "getStarted": "Empezar",
   "profile": {
     "languages": {
       "english": "Inglés",
@@ -114,10 +220,10 @@
     },
     "biometric": {
       "title": "Autenticación Biométrica",
-      "description": "Usa huella dactilar o reconocimiento facial para autenticarte"
+      "description": "Usa huella o rostro para autenticarte"
     },
     "settings": {
-      "title": "CONFIGURACIÓN",
+      "title": "AJUSTES",
       "account": "CUENTA",
       "language": "Idioma",
       "changePassword": "Cambiar Contraseña",
@@ -126,8 +232,87 @@
       "biometricAuthentication": "Autenticación Biométrica",
       "animations": "Animaciones"
     },
-    "account": "CUENTA",
-    "signOut": "Cerrar Sesión",
+    "account": "Cuenta",
+    "signOut": "Cerrar sesión",
     "version": "HashPass v{version}"
+  },
+  "nav": {
+    "explore": "Explorar",
+    "wallet": "Billetera",
+    "notifications": "Notificaciones",
+    "profile": "Perfil",
+    "settings": "Ajustes",
+    "brandSubtitle": "Plataforma de Eventos Digitales"
+  },
+  "explore": {
+    "noEvent": "No hay evento disponible",
+    "noSelection": "Ningún evento seleccionado",
+    "banner": {
+      "title": "Blockchain Summit Latam 2025",
+      "subtitle": "12-14 de Noviembre de 2025 • Universidad EAFIT, Medellín",
+      "date": "12-14 de Noviembre de 2025"
+    },
+    "selectEvent": "Seleccionar Evento",
+    "yourPasses": "Tus Pases",
+    "quickAccess": "Accesos Rápidos",
+    "quick": {
+      "speakers": {
+        "title": "Oradores",
+        "subtitle": "Conoce a los expertos"
+      },
+      "agenda": {
+        "title": "Agenda",
+        "subtitle": "Programa del evento"
+      },
+      "info": {
+        "title": "Información",
+        "subtitle": "Detalles y logística"
+      },
+      "networking": {
+        "title": "Centro de Networking",
+        "subtitle": "Encuentra y conecta"
+      },
+      "information": {
+        "title": "Información del Evento",
+        "subtitle": "Detalles y logística"
+      },
+      "event-info": {
+        "title": "Información del Evento",
+        "subtitle": "Detalles y logística"
+      }
+    }
+  },
+  "passes": {
+    "title": "Tus Pases del Evento",
+    "loading": "Cargando la información de tu pase...",
+    "showFullDetails": "Ver detalles completos",
+    "alert": {
+      "createdTitle": "¡Pase creado! 🎉",
+      "ok": "OK",
+      "errorTitle": "Error",
+      "createFail": "No se pudo crear el pase. Inténtalo de nuevo.",
+      "paymentTitle": "Integración de Pago",
+      "paymentMessage": "El sistema de pago se implementará aquí"
+    },
+    "button": {
+      "passRequired": "Se requiere pase",
+      "limitReached": "Límite alcanzado",
+      "requestMeeting": "Solicitar reunión"
+    },
+    "copiedTitle": "Información del pase copiada",
+    "copiedMessage": "La información del pase se copió al portapapeles. Puedes pegarla para compartir.",
+    "copyError": "No se puede compartir el pase. Inténtalo de nuevo.",
+    "type": {
+      "business": "Business",
+      "vip": "VIP",
+      "general": "General",
+      "event": "Evento"
+    },
+    "access": {
+      "business": "B2B + Fiesta de clausura",
+      "vip": "Todos los beneficios VIP",
+      "general": "Acceso general",
+      "event": "Acceso al evento"
+    }
   }
 }

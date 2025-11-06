@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/i18n';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image, Platform } from 'react-native';
 // Removed reanimated imports - not needed for auth screen
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,13 +11,26 @@ import * as Linking from 'expo-linking';
 import ThemeAndLanguageSwitcher from '../../components/ThemeAndLanguageSwitcher';
 import { OptimizedSplashCursor } from '../../components/OptimizedSplashCursor';
 import { useTheme } from '../../hooks/useTheme';
+import { isEthereumWalletAvailable, isSolanaWalletAvailable } from '../../lib/wallet-auth';
+import { useToastHelpers } from '../../contexts/ToastContext';
 
 export default function AuthScreen() {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation('auth');
   const router = useRouter();
+  const { showError, showSuccess, showWarning, showInfo } = useToastHelpers();
   const [loading, setLoading] = useState(false);
+  const [ethereumAvailable, setEthereumAvailable] = useState(false);
+  const [solanaAvailable, setSolanaAvailable] = useState(false);
   const styles = getStyles(isDark, colors);
+
+  // Check wallet availability on web
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      setEthereumAvailable(isEthereumWalletAvailable());
+      setSolanaAvailable(isSolanaWalletAvailable());
+    }
+  }, []);
 
   // Removed unused animation to improve performance
 
@@ -61,7 +74,7 @@ export default function AuthScreen() {
     };
   }, []);
 
-  const signInWithOAuth = async (provider: 'google') => {
+  const signInWithOAuth = async (provider: 'google' | 'discord') => {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -81,6 +94,267 @@ export default function AuthScreen() {
       Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const signInWithEthereum = async () => {
+    setLoading(true);
+    try {
+      const { authenticateWithEthereum } = await import('../../lib/wallet-auth');
+      const authData = await authenticateWithEthereum();
+      
+      console.log('🔐 Auth data received:', { 
+        hasTokenHash: !!authData.tokenHash, 
+        hasMagicLink: !!authData.magicLink,
+        email: authData.email 
+      });
+      
+      // Try to verify OTP with token hash
+      if (authData.tokenHash) {
+        console.log('🔑 Verifying OTP with token hash...');
+        const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: authData.tokenHash,
+          type: 'magiclink'
+        });
+        
+        if (!verifyError && verifyData?.session) {
+          console.log('✅ Session established via token hash');
+          setLoading(false);
+          showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
+          // Wait a moment for session to propagate
+          await new Promise(resolve => setTimeout(resolve, 100));
+          router.replace('/(shared)/dashboard/explore');
+          return;
+        }
+        
+        if (verifyError) {
+          console.warn('⚠️ Token hash verification failed:', verifyError.message);
+        }
+      }
+      
+      // Fallback: Use magic link redirect URL
+      if (authData.magicLink || authData.redirectUrl) {
+        const linkToUse = authData.magicLink || authData.redirectUrl;
+        console.log('🔄 Using magic link redirect...');
+        
+        // For web, we can extract tokens from the URL and use them
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          try {
+            // Try to extract and verify token from the link
+            const url = new URL(linkToUse);
+            const token = url.searchParams.get('token_hash') || url.searchParams.get('token');
+            
+            if (token) {
+              const { data: retryData, error: retryError } = await supabase.auth.verifyOtp({
+                token_hash: token,
+                type: 'magiclink'
+              });
+              
+              if (!retryError && retryData?.session) {
+                console.log('✅ Session established via magic link token');
+                setLoading(false);
+                showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
+                await new Promise(resolve => setTimeout(resolve, 100));
+                router.replace('/(shared)/dashboard/explore');
+                return;
+              }
+            }
+            
+            // Last resort: redirect to the magic link
+            // The callback handler will process the session
+            console.log('🔄 Redirecting to magic link...');
+            setLoading(false); // Reset loading before redirect
+            window.location.href = linkToUse;
+            return;
+          } catch (urlError) {
+            console.error('❌ Error processing magic link:', urlError);
+            setLoading(false);
+            throw urlError;
+          }
+        } else {
+          // For mobile, open the link
+          setLoading(false);
+          Linking.openURL(linkToUse);
+          return;
+        }
+      }
+      
+      // Check if session was established anyway (maybe by auth state change)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log('✅ Session found after auth flow');
+        setLoading(false);
+        showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
+        router.replace('/(shared)/dashboard/explore');
+        return;
+      }
+      
+      // If we get here, session wasn't established
+      setLoading(false);
+      throw new Error('Failed to establish session. Please try again.');
+    } catch (error: any) {
+      console.error('❌ Ethereum auth error:', error);
+      setLoading(false);
+      
+      // Show user-friendly error messages
+      const errorMessage = error.message || 'Failed to authenticate with Ethereum wallet';
+      
+      // Handle specific error cases
+      if (errorMessage.includes('Too many authentication attempts')) {
+        showError(
+          'Rate Limit Exceeded',
+          'Please wait a few minutes before trying again. Too many authentication attempts were made.'
+        );
+      } else if (errorMessage.includes('timed out') || errorMessage.includes('check if MetaMask popup')) {
+        showWarning(
+          'MetaMask Popup Not Appearing',
+          'The signature request timed out. Please check your MetaMask extension - the popup may be hidden. Try clicking the MetaMask icon in your browser toolbar.'
+        );
+      } else if (errorMessage.includes('rejected')) {
+        showWarning(
+          'Request Rejected',
+          'You rejected the wallet request. Please try again and approve the connection or signature.'
+        );
+      } else if (errorMessage.includes('wallet not found')) {
+        showError(
+          'Wallet Not Found',
+          'Please install MetaMask or another Ethereum wallet extension.'
+        );
+      } else {
+        showError(
+          'Authentication Failed',
+          errorMessage
+        );
+      }
+    }
+  };
+
+  const signInWithSolana = async () => {
+    setLoading(true);
+    try {
+      const { authenticateWithSolana } = await import('../../lib/wallet-auth');
+      const authData = await authenticateWithSolana();
+      
+      console.log('🔐 Auth data received:', { 
+        hasTokenHash: !!authData.tokenHash, 
+        hasMagicLink: !!authData.magicLink,
+        email: authData.email 
+      });
+      
+      // Try to verify OTP with token hash
+      if (authData.tokenHash) {
+        console.log('🔑 Verifying OTP with token hash...');
+        const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: authData.tokenHash,
+          type: 'magiclink'
+        });
+        
+        if (!verifyError && verifyData?.session) {
+          console.log('✅ Session established via token hash');
+          setLoading(false);
+          await new Promise(resolve => setTimeout(resolve, 100));
+          router.replace('/(shared)/dashboard/explore');
+          return;
+        }
+        
+        if (verifyError) {
+          console.warn('⚠️ Token hash verification failed:', verifyError.message);
+        }
+      }
+      
+      // Fallback: Use magic link redirect URL
+      if (authData.magicLink || authData.redirectUrl) {
+        const linkToUse = authData.magicLink || authData.redirectUrl;
+        console.log('🔄 Using magic link redirect...');
+        
+        // For web, we can extract tokens from the URL and use them
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          try {
+            // Try to extract and verify token from the link
+            const url = new URL(linkToUse);
+            const token = url.searchParams.get('token_hash') || url.searchParams.get('token');
+            
+            if (token) {
+              const { data: retryData, error: retryError } = await supabase.auth.verifyOtp({
+                token_hash: token,
+                type: 'magiclink'
+              });
+              
+              if (!retryError && retryData?.session) {
+                console.log('✅ Session established via magic link token');
+                setLoading(false);
+                showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
+                await new Promise(resolve => setTimeout(resolve, 100));
+                router.replace('/(shared)/dashboard/explore');
+                return;
+              }
+            }
+            
+            // Last resort: redirect to the magic link
+            console.log('🔄 Redirecting to magic link...');
+            setLoading(false);
+            window.location.href = linkToUse;
+            return;
+          } catch (urlError) {
+            console.error('❌ Error processing magic link:', urlError);
+            setLoading(false);
+            throw urlError;
+          }
+        } else {
+          // For mobile, open the link
+          setLoading(false);
+          Linking.openURL(linkToUse);
+          return;
+        }
+      }
+      
+      // Check if session was established anyway
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log('✅ Session found after auth flow');
+        setLoading(false);
+        showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
+        router.replace('/(shared)/dashboard/explore');
+        return;
+      }
+      
+      // If we get here, session wasn't established
+      setLoading(false);
+      throw new Error('Failed to establish session. Please try again.');
+    } catch (error: any) {
+      console.error('❌ Solana auth error:', error);
+      setLoading(false);
+      
+      // Show user-friendly error messages
+      const errorMessage = error.message || 'Failed to authenticate with Solana wallet';
+      
+      // Handle specific error cases
+      if (errorMessage.includes('Too many authentication attempts')) {
+        showError(
+          'Rate Limit Exceeded',
+          'Please wait a few minutes before trying again. Too many authentication attempts were made.'
+        );
+      } else if (errorMessage.includes('timed out') || errorMessage.includes('check if')) {
+        showWarning(
+          'Wallet Popup Not Appearing',
+          'The signature request timed out. Please check your wallet extension - the popup may be hidden. Try clicking the wallet icon in your browser toolbar.'
+        );
+      } else if (errorMessage.includes('rejected')) {
+        showWarning(
+          'Request Rejected',
+          'You rejected the wallet request. Please try again and approve the connection or signature.'
+        );
+      } else if (errorMessage.includes('wallet not found')) {
+        showError(
+          'Wallet Not Found',
+          'Please install Phantom or another Solana wallet extension.'
+        );
+      } else {
+        showError(
+          'Authentication Failed',
+          errorMessage
+        );
+      }
     }
   };
 
@@ -147,6 +421,58 @@ export default function AuthScreen() {
               </View>
             )}
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.discordButton]}
+            onPress={() => signInWithOAuth('discord')}
+            disabled={loading}
+            accessibilityLabel="Sign in with Discord"
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <View style={styles.buttonContent}>
+                <Ionicons name="logo-discord" size={28} color="#FFFFFF" />
+                <Text style={styles.buttonText}>Sign in with Discord</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {Platform.OS === 'web' && ethereumAvailable && (
+            <TouchableOpacity
+              style={[styles.button, styles.ethereumButton]}
+              onPress={signInWithEthereum}
+              disabled={loading}
+              accessibilityLabel="Sign in with Ethereum"
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <View style={styles.buttonContent}>
+                  <Ionicons name="logo-bitcoin" size={28} color="#FFFFFF" />
+                  <Text style={styles.buttonText}>Sign in with Ethereum</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {Platform.OS === 'web' && solanaAvailable && (
+            <TouchableOpacity
+              style={[styles.button, styles.solanaButton]}
+              onPress={signInWithSolana}
+              disabled={loading}
+              accessibilityLabel="Sign in with Solana"
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <View style={styles.buttonContent}>
+                  <Ionicons name="logo-bitcoin" size={28} color="#FFFFFF" />
+                  <Text style={styles.buttonText}>Sign in with Solana</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
 
           <View style={styles.privacyContainer}>
             <Text style={styles.privacyText}>{t('privacy.text')} </Text>
@@ -252,6 +578,18 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   googleButton: {
     backgroundColor: '#DB4437',
     shadowColor: '#DB4437',
+  },
+  discordButton: {
+    backgroundColor: '#5865F2',
+    shadowColor: '#5865F2',
+  },
+  ethereumButton: {
+    backgroundColor: '#627EEA',
+    shadowColor: '#627EEA',
+  },
+  solanaButton: {
+    backgroundColor: '#14F195',
+    shadowColor: '#14F195',
   },
   twitterButton: {
     backgroundColor: '#1DA1F2',

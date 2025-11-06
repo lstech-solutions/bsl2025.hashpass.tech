@@ -1,18 +1,22 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, StatusBar } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { useNotifications } from '../../../contexts/NotificationContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import UnifiedSearchAndFilter from '../../../components/UnifiedSearchAndFilter';
+import { useScroll } from '../../../contexts/ScrollContext';
 
 type TabType = 'all' | 'archive';
 
 export default function NotificationsScreen() {
   const { isDark, colors } = useTheme();
+  const { headerHeight } = useScroll();
   const { notifications, unreadCount, isLoading, markAsRead, markAsUnread, markAllAsRead, archiveNotification, deleteNotification, refreshNotifications } = useNotifications();
   const router = useRouter();
-  const styles = getStyles(isDark, colors);
+  // Calculate nav bar height (StatusBar + header content)
+  const navBarHeight = (StatusBar.currentHeight || 0) + 80;
+  const styles = getStyles(isDark, colors, navBarHeight, headerHeight);
 
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
@@ -38,10 +42,10 @@ export default function NotificationsScreen() {
     // Navigate based on notification type (without marking as read)
     if (notification.meeting_request_id) {
       // Navigate to meeting request details
-      router.push(`/events/bsl2025/meeting-request/${notification.meeting_request_id}`);
+      router.push(`/events/bsl2025/meeting-request/${notification.meeting_request_id}` as any);
     } else if (notification.speaker_id) {
       // Navigate to speaker details
-      router.push(`/events/bsl2025/speakers/${notification.speaker_id}`);
+      router.push(`/events/bsl2025/speakers/${notification.speaker_id}` as any);
     }
   };
 
@@ -499,10 +503,11 @@ export default function NotificationsScreen() {
   );
 }
 
-const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
+const getStyles = (isDark: boolean, colors: any, navBarHeight: number = 0, scrollHeaderHeight: number = 0) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.default,
+    paddingTop: Math.max(scrollHeaderHeight || 0, (StatusBar.currentHeight || 0) + 80),
   },
   loadingContainer: {
     flex: 1,
@@ -520,7 +525,8 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
     backgroundColor: colors.background.paper,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,

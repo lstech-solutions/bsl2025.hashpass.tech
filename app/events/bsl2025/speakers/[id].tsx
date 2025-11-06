@@ -949,7 +949,7 @@ export default function SpeakerDetail() {
                 </View>
                 
                 <View style={styles.simpleRequestActions}>
-                  {request.status === 'pending' && (
+                  {request.status === 'pending' && request.requester_id === user?.id && (
                     <TouchableOpacity
                       style={styles.simpleCancelButton}
                       onPress={(e) => {
@@ -1474,7 +1474,7 @@ export default function SpeakerDetail() {
               )}
 
               {/* Action Buttons */}
-              {selectedRequestDetail.status === 'pending' && (
+              {selectedRequestDetail.status === 'pending' && selectedRequestDetail.requester_id === user?.id && (
                 <View style={styles.detailActions}>
                   <TouchableOpacity
                     style={styles.detailCancelButton}

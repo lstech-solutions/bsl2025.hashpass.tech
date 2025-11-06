@@ -1,6 +1,25 @@
 {
-  "currentVersion": "1.5.8",
+  "currentVersion": "1.5.9",
   "versions": [
+    {
+      "version": "1.5.9",
+      "buildNumber": 202511062041,
+      "releaseDate": "2025-11-06",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "Improved language switching with smooth updates without remounting",
+        "Enhanced I18nProvider to handle locale changes reactively",
+        "Added useLingui hook to explore component for proper translation updates"
+      ],
+      "bugfixes": [
+        "Fixed language switching not updating explorer section immediately",
+        "Fixed locale changes requiring page reload to see translations",
+        "Improved translation reactivity without component remounting"
+      ],
+      "breakingChanges": [],
+      "notes": "Version 1.5.9 release"
+    },
     {
       "version": "1.5.8",
       "buildNumber": 202511061859,

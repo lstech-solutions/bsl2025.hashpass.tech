@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { passSystemService, PassInfo, PassRequestLimits, PassType } from '@/lib/pass-system';
 import DynamicQRDisplay from './DynamicQRDisplay';
 import * as Clipboard from 'expo-clipboard';
-import { t } from '@lingui/macro';
+import { useLingui } from '@lingui/react';
 
 interface PassesDisplayProps {
   // Display mode
@@ -42,6 +42,7 @@ export default function PassesDisplay({
   title,
   showPassComparison = false
 }: PassesDisplayProps) {
+  const { i18n } = useLingui();
   const { colors } = useTheme();
   const { user } = useAuth();
   const [passInfo, setPassInfo] = useState<PassInfo | null>(null);
@@ -49,6 +50,11 @@ export default function PassesDisplay({
   const [loading, setLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
   const [showComparison, setShowComparison] = useState(showPassComparison);
+  
+  // Helper function to translate
+  const t = (translation: { id: string; message: string }) => {
+    return i18n._(translation.id, translation.message) || translation.message;
+  };
   
   // Demo mode check
   const isDemoMode = process.env.NODE_ENV === 'development';
@@ -111,14 +117,14 @@ export default function PassesDisplay({
     try {
       const passId = await passSystemService.createDefaultPass(user.id, passType);
       if (passId) {
-        Alert.alert(t({ id: 'passes.alert.createdTitle', message: 'Pass Created! 🎉' }),
+        Alert.alert(i18n._('passes.alert.createdTitle', 'Pass Created! 🎉'),
           undefined,
-          [{ text: t({ id: 'passes.alert.ok', message: 'OK' }), onPress: loadPassInfo }]
+          [{ text: i18n._('passes.alert.ok', 'OK'), onPress: loadPassInfo }]
         );
       }
     } catch (error) {
       console.error('Error creating pass:', error);
-      Alert.alert(t({ id: 'passes.alert.errorTitle', message: 'Error' }), t({ id: 'passes.alert.createFail', message: 'Failed to create pass. Please try again.' }));
+      Alert.alert(i18n._('passes.alert.errorTitle', 'Error'), i18n._('passes.alert.createFail', 'Failed to create pass. Please try again.'));
     }
   };
 
@@ -693,7 +699,7 @@ export default function PassesDisplay({
             {passInfo.pass_type === 'general' ? '5' : passInfo.pass_type === 'business' ? '20' : '50'}
           </Text>
           <Text style={{ fontSize: 12, color: colors.text.secondary, textAlign: 'center' }}>
-            {t({ id: 'passes.meetingRequests', message: 'Meeting Requests' })}
+            {i18n._('passes.meetingRequests', 'Meeting Requests')}
           </Text>
         </View>
         <View style={{ flex: 1, alignItems: 'center' }}>
@@ -701,7 +707,7 @@ export default function PassesDisplay({
             {passInfo.pass_type === 'general' ? '100' : passInfo.pass_type === 'business' ? '300' : '500'}
           </Text>
           <Text style={{ fontSize: 12, color: colors.text.secondary, textAlign: 'center' }}>
-            {t({ id: 'passes.voiBoost', message: 'VOI Boost' })}
+            {i18n._('passes.voiBoost', 'VOI Boost')}
           </Text>
         </View>
       </View>
@@ -954,10 +960,16 @@ export default function PassesDisplay({
 
 // PassCard component for dashboard mode - enhanced ticket-style design with flip animation
 const PassCard = ({ pass }: { pass: PassInfo }) => {
+  const { i18n } = useLingui();
   const { colors } = useTheme();
   const router = useRouter();
   const [showQRModal, setShowQRModal] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
+  
+  // Helper function to translate
+  const t = (translation: { id: string; message: string }) => {
+    return i18n._(translation.id, translation.message) || translation.message;
+  };
   
   // Flip animation values
   const flipRotation = useSharedValue(0);
@@ -1307,7 +1319,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             {pass.pass_type === 'general' ? '5' : pass.pass_type === 'business' ? '20' : '50'}
           </Text>
           <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
-            {t({ id: 'passes.meetingRequests', message: 'Meeting Requests' })}
+            {i18n._('passes.meetingRequests', 'Meeting Requests')}
           </Text>
         </View>
         <View style={{ alignItems: 'center' }}>
@@ -1315,7 +1327,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             {pass.pass_type === 'general' ? '100' : pass.pass_type === 'business' ? '300' : '500'}
           </Text>
           <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
-            {t({ id: 'passes.voiBoost', message: 'VOI Boost' })}
+            {i18n._('passes.voiBoost', 'VOI Boost')}
           </Text>
         </View>
       </View>
@@ -1469,14 +1481,14 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             minimumFontScale={0.8}
             adjustsFontSizeToFit
           >
-            {t({ id: 'passes.passSummary', message: 'Pass Summary' })}
+            {i18n._('passes.passSummary', 'Pass Summary')}
           </Text>
           <Text style={{ 
             fontSize: 9, 
             color: colors.text.secondary,
             opacity: 0.8
           }}>
-            {t({ id: 'passes.quickOverview', message: 'Quick Overview' })}
+            {i18n._('passes.quickOverview', 'Quick Overview')}
           </Text>
         </View>
         <TouchableOpacity
@@ -1534,7 +1546,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
               {pass.remaining_requests}
             </Text>
             <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center', marginTop: 4 }}>
-              {t({ id: 'passes.requestsLeft', message: 'Requests Left' })}
+              {i18n._('passes.requestsLeft', 'Requests Left')}
             </Text>
             <Text style={{ fontSize: 9, color: colors.text.secondary, textAlign: 'center', marginTop: 2 }}>
               {pass.used_requests} / {pass.max_requests} {t({ id: 'passes.used', message: 'used' })}
@@ -1546,7 +1558,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
               {pass.remaining_boost}
             </Text>
             <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center', marginTop: 4 }}>
-              {t({ id: 'passes.boostLeft', message: 'Boost Left' })}
+              {i18n._('passes.boostLeft', 'Boost Left')}
             </Text>
             <Text style={{ fontSize: 9, color: colors.text.secondary, textAlign: 'center', marginTop: 2 }}>
               {pass.used_boost} / {pass.max_boost} {t({ id: 'passes.used', message: 'used' })}
@@ -1564,7 +1576,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             textTransform: 'uppercase',
             letterSpacing: 0.5
           }}>
-            {t({ id: 'passes.accessIncluded', message: 'Access Included' })}
+            {i18n._('passes.accessIncluded', 'Access Included')}
           </Text>
           <Text style={{
             fontSize: 12,

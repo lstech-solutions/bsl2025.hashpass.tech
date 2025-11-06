@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/i18n';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Platform, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Platform, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -512,9 +512,15 @@ export default function AuthScreen() {
       >
         <Ionicons name="arrow-back" size={28} color={isDark ? "#fff" : "#000"} />
       </TouchableOpacity>
-      <View style={styles.content}>
-        <View style={styles.overlay} pointerEvents="none" />
-        <Text style={styles.title}>{t('title')}</Text>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.content}>
+          <View style={styles.overlay} pointerEvents="none" />
+          <Text style={styles.title}>{t('title')}</Text>
         <View style={styles.logoContainer}>            
           <Image
             source={isDark
@@ -755,6 +761,7 @@ export default function AuthScreen() {
           <Text style={styles.privacyText}>.</Text>
         </View>
       </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -763,21 +770,26 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
-    justifyContent: 'center',
+  },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  scrollContent: {
+    flexGrow: 1,
     alignItems: 'center',
-    position: 'absolute',
-    zIndex: 10,
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    minHeight: '100%',
   },
   content: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     padding: 20,
-    position: 'absolute',
-    top: 200,
-    zIndex: 100,
     width: '100%',
     maxWidth: 400,
+    position: 'relative',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

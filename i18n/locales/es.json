@@ -313,6 +313,52 @@
       "vip": "Todos los beneficios VIP",
       "general": "Acceso general",
       "event": "Acceso al evento"
-    }
+    },
+    "meetingRequests": "Solicitudes de Reunión",
+    "voiBoost": "Impulso VOI",
+    "passSummary": "Resumen del Pase",
+    "quickOverview": "Vista Rápida",
+    "requestsLeft": "Solicitudes Restantes",
+    "boostLeft": "Impulso Restante",
+    "accessIncluded": "Acceso Incluido",
+    "used": "usado",
+    "passNumber": "Pase #{pass_number}",
+    "noPassFound": "No se encontraron pases",
+    "contactSupport": "Contacta con soporte para obtener tus pases del evento",
+    "noPassMessage": {
+      "demo": "Necesitas un pase para solicitar reuniones con los ponentes. Sin un pase, no puedes enviar solicitudes de reunión. Elige tu tipo de pase:",
+      "production": "Necesitas un pase válido del evento para solicitar reuniones con los ponentes. Por favor, compra un pase para continuar."
+    },
+    "passTypes": {
+      "all": "Todos los Tipos de Pase y Precios"
+    },
+    "passComparison": {
+      "compare": "Compara características y elige el pase adecuado para tus necesidades"
+    },
+    "passPerks": {
+      "general": {
+        "conferences": "Solo conferencias"
+      },
+      "business": {
+        "networking": "+ Networking y sesiones B2B"
+      },
+      "vip": {
+        "networking": "+ Networking VIP con ponentes"
+      }
+    },
+    "purchasePass": "Comprar Pase del Evento",
+    "purchasePass.description": "Elige entre nuestros tipos de pase disponibles para acceder a reuniones con ponentes y oportunidades de networking.",
+    "currentPass": "Tu Pase Actual",
+    "canRequestMeeting": "✅ Puede Solicitar Reunión",
+    "cannotRequestMeeting": "❌ No Puede Solicitar Reunión",
+    "qrCode": "Código QR",
+    "details": "Detalles",
+    "share": "Compartir",
+    "bslDate": "BSL 2025 • 12-14 Nov, 2025",
+    "date": "12-14 Nov, 2025",
+    "pass": "Pase",
+    "viewFullDetails": "Ver Detalles Completos",
+    "flipBack": "Volver",
+    "qrCodeModalTitle": "Tu Código QR del Pase"
   }
 }

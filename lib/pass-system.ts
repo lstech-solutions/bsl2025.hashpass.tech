@@ -97,7 +97,7 @@ class PassSystemService {
         // No pass found, fallback to counts
         return await this.getUserPassInfoFromCounts(userId);
       }
-      
+
       if (passError) {
         console.error('Error getting pass data:', passError);
         // Fallback to the counting function

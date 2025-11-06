@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
+import { sortSpeakersByPriority } from '../lib/speaker-priority';
 
 interface Speaker {
   id: string;
@@ -55,7 +56,13 @@ export default function SpeakerSearchAndSort({
     );
   };
 
-  const sortSpeakers = (speakers: Speaker[], sortBy: SortOption): Speaker[] => {
+  const sortSpeakers = (speakers: Speaker[], sortBy: SortOption, searchQuery: string): Speaker[] => {
+    // If no search query, use priority order
+    if (!searchQuery.trim() && sortBy === 'name') {
+      return sortSpeakersByPriority(speakers);
+    }
+    
+    // Otherwise, use the selected sort option
     return [...speakers].sort((a, b) => {
       let aValue = '';
       let bValue = '';
@@ -80,8 +87,8 @@ export default function SpeakerSearchAndSort({
   };
 
   // Group speakers by first letter for alphabetical dividers
-  const groupSpeakersByLetter = (speakers: Speaker[], sortBy: SortOption): { [key: string]: Speaker[] } => {
-    const sorted = sortSpeakers(speakers, sortBy);
+  const groupSpeakersByLetter = (speakers: Speaker[], sortBy: SortOption, searchQuery: string): { [key: string]: Speaker[] } => {
+    const sorted = sortSpeakers(speakers, sortBy, searchQuery);
     const grouped: { [key: string]: Speaker[] } = {};
     
     sorted.forEach(speaker => {
@@ -120,11 +127,12 @@ export default function SpeakerSearchAndSort({
   // Initialize with all speakers
   useEffect(() => {
     if (speakers.length > 0 && onGroupedSpeakers && onFilteredSpeakers) {
-      const grouped = groupSpeakersByLetter(speakers, sortBy);
+      const sorted = sortSpeakers(speakers, sortBy, searchQuery);
+      const grouped = groupSpeakersByLetter(speakers, sortBy, searchQuery);
       onGroupedSpeakers(grouped);
-      onFilteredSpeakers(speakers);
+      onFilteredSpeakers(sorted);
     }
-  }, [speakers, sortBy]);
+  }, [speakers, sortBy, searchQuery]);
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
@@ -132,11 +140,11 @@ export default function SpeakerSearchAndSort({
     
     // Filter and sort speakers
     const filtered = filterSpeakers(speakers, query);
-    const sorted = sortSpeakers(filtered, sortBy);
+    const sorted = sortSpeakers(filtered, sortBy, query);
     if (onFilteredSpeakers) onFilteredSpeakers(sorted);
     
     // Group speakers for alphabetical dividers
-    const grouped = groupSpeakersByLetter(filtered, sortBy);
+    const grouped = groupSpeakersByLetter(filtered, sortBy, query);
     if (onGroupedSpeakers) onGroupedSpeakers(grouped);
   };
 
@@ -147,11 +155,11 @@ export default function SpeakerSearchAndSort({
     
     // Filter and sort speakers
     const filtered = filterSpeakers(speakers, searchQuery);
-    const sorted = sortSpeakers(filtered, newSortBy);
+    const sorted = sortSpeakers(filtered, newSortBy, searchQuery);
     if (onFilteredSpeakers) onFilteredSpeakers(sorted);
     
     // Group speakers for alphabetical dividers
-    const grouped = groupSpeakersByLetter(filtered, newSortBy);
+    const grouped = groupSpeakersByLetter(filtered, newSortBy, searchQuery);
     if (onGroupedSpeakers) onGroupedSpeakers(grouped);
   };
 

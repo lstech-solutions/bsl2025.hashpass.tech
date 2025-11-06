@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202511061859, // Updated to current timestamp
+  buildNumber: 202511062041, // Updated to current timestamp
   releaseDate: '2025-11-06',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -37,11 +37,30 @@ export const CURRENT_VERSION: VersionInfo = {
     'Improved translation reactivity without component remounting'
   ],
   breakingChanges: [],
-  notes: 'Version 1.5.8 release'
+  notes: 'Version 1.5.9 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.5.9': {
+    version: '1.5.9',
+    buildNumber: 202511062041,
+    releaseDate: '2025-11-06',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Improved language switching with smooth updates without remounting',
+      'Enhanced I18nProvider to handle locale changes reactively',
+      'Added useLingui hook to explore component for proper translation updates'
+    ],
+    bugfixes: [
+      'Fixed language switching not updating explorer section immediately',
+      'Fixed locale changes requiring page reload to see translations',
+      'Improved translation reactivity without component remounting'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.5.9 release'
+  },
   '1.5.8': {
     version: '1.5.8',
     buildNumber: 202511061859,

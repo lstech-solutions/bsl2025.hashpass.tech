@@ -435,69 +435,54 @@ function CustomDrawerContent() {
       {/* Quick Settings & Actions */}
       <View style={styles.quickSettingsSection}>
         <View style={styles.quickTogglesRow}>
-          {/* Theme Toggle */}
-          <TouchableOpacity
-            style={[
-              styles.quickToggleButton,
-              {
-                backgroundColor: isDark 
-                  ? 'rgba(255, 215, 0, 0.15)' 
-                  : 'rgba(108, 99, 255, 0.1)',
-                borderColor: isDark 
-                  ? 'rgba(255, 215, 0, 0.3)' 
-                  : 'rgba(108, 99, 255, 0.2)',
-              }
-            ]}
-            onPress={toggleTheme}
-            activeOpacity={0.6}
-          >
-            <Ionicons 
-              name={isDark ? 'sunny' : 'moon'} 
-              size={22} 
-              color={isDark ? '#FFD700' : '#6C63FF'} 
-            />
-          </TouchableOpacity>
-
           {/* Language Toggle */}
           <TouchableOpacity
-            style={[
-              styles.quickToggleButton,
-              {
-                backgroundColor: isDark 
-                  ? 'rgba(255, 255, 255, 0.08)' 
-                  : 'rgba(0, 0, 0, 0.05)',
-                borderColor: isDark 
-                  ? 'rgba(255, 255, 255, 0.15)' 
-                  : 'rgba(0, 0, 0, 0.1)',
-              }
-            ]}
+            style={styles.quickToggleButton}
             onPress={handleLanguageToggle}
-            activeOpacity={0.6}
+            activeOpacity={0.7}
           >
-            <Text style={styles.languageFlag}>{getLanguageFlag(locale)}</Text>
+            <View style={styles.quickToggleIcon}>
+              <Text style={styles.languageFlag}>{getLanguageFlag(locale)}</Text>
+            </View>
+            <Text style={styles.quickToggleLabel}>
+              {locale.toUpperCase()}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Theme Toggle */}
+          <TouchableOpacity
+            style={styles.quickToggleButton}
+            onPress={toggleTheme}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.quickToggleIcon, { backgroundColor: isDark ? '#FFD700' : '#6C63FF' }]}>
+              <Ionicons 
+                name={isDark ? 'sunny' : 'moon'} 
+                size={24} 
+                color="white" 
+              />
+            </View>
+            <Text style={styles.quickToggleLabel}>
+              {isDark ? 'Light' : 'Dark'}
+            </Text>
           </TouchableOpacity>
 
           {/* Logout Button */}
           <TouchableOpacity
-            style={[
-              styles.quickToggleButton,
-              {
-                backgroundColor: isDark 
-                  ? 'rgba(255, 59, 48, 0.15)' 
-                  : 'rgba(255, 59, 48, 0.1)',
-                borderColor: isDark 
-                  ? 'rgba(255, 59, 48, 0.3)' 
-                  : 'rgba(255, 59, 48, 0.2)',
-              }
-            ]}
+            style={styles.quickToggleButton}
             onPress={handleLogout}
-            activeOpacity={0.6}
+            activeOpacity={0.7}
           >
-            <Ionicons 
-              name="log-out-outline" 
-              size={22} 
-              color={colors.error.main} 
-            />
+            <View style={[styles.quickToggleIcon, { backgroundColor: colors.error.main }]}>
+              <Ionicons 
+                name="log-out-outline" 
+                size={24} 
+                color="white" 
+              />
+            </View>
+            <Text style={[styles.quickToggleLabel, { color: colors.error.main }]}>
+              Logout
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1140,19 +1125,38 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   },
   quickToggleButton: {
     flex: 1,
-    height: 56,
-    borderRadius: 14,
+    minHeight: 80,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    shadowColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+    borderColor: colors.divider,
+    backgroundColor: colors.background.paper,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    shadowColor: colors.text.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
   },
+  quickToggleIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+  },
+  quickToggleLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.text.secondary,
+    textAlign: 'center',
+  },
   languageFlag: {
-    fontSize: 18,
+    fontSize: 20,
   },
   mainContent: {
     flex: 1,

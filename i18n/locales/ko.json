@@ -313,6 +313,52 @@
       "vip": "모든 VIP 혜택",
       "general": "일반 입장",
       "event": "이벤트 입장"
-    }
+    },
+    "meetingRequests": "미팅 요청",
+    "voiBoost": "VOI 부스트",
+    "passSummary": "패스 요약",
+    "quickOverview": "빠른 개요",
+    "requestsLeft": "남은 요청",
+    "boostLeft": "남은 부스트",
+    "accessIncluded": "포함된 액세스",
+    "used": "사용됨",
+    "passNumber": "패스 #{pass_number}",
+    "noPassFound": "패스를 찾을 수 없습니다",
+    "contactSupport": "이벤트 패스를 받으려면 지원팀에 문의하세요",
+    "noPassMessage": {
+      "demo": "연사와의 미팅을 요청하려면 패스가 필요합니다. 패스 없이는 미팅 요청을 보낼 수 없습니다. 패스 유형을 선택하세요:",
+      "production": "연사와의 미팅을 요청하려면 유효한 이벤트 패스가 필요합니다. 계속하려면 패스를 구매해주세요."
+    },
+    "passTypes": {
+      "all": "모든 패스 유형 및 가격"
+    },
+    "passComparison": {
+      "compare": "기능을 비교하고 필요에 맞는 패스를 선택하세요"
+    },
+    "passPerks": {
+      "general": {
+        "conferences": "컨퍼런스만"
+      },
+      "business": {
+        "networking": "+ 네트워킹 및 B2B 세션"
+      },
+      "vip": {
+        "networking": "+ 연사와의 VIP 네트워킹"
+      }
+    },
+    "purchasePass": "이벤트 패스 구매",
+    "purchasePass.description": "연사 미팅 및 네트워킹 기회에 액세스하려면 사용 가능한 패스 유형 중에서 선택하세요.",
+    "currentPass": "현재 패스",
+    "canRequestMeeting": "✅ 미팅 요청 가능",
+    "cannotRequestMeeting": "❌ 미팅 요청 불가",
+    "qrCode": "QR 코드",
+    "details": "세부 정보",
+    "share": "공유",
+    "bslDate": "BSL 2025 • 2025년 11월 12-14일",
+    "date": "2025년 11월 12-14일",
+    "pass": "패스",
+    "viewFullDetails": "전체 세부 정보 보기",
+    "flipBack": "뒤로",
+    "qrCodeModalTitle": "패스 QR 코드"
   }
 }

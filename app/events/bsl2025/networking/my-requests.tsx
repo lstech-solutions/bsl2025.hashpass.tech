@@ -17,6 +17,10 @@ import { useToastHelpers } from '../../../../contexts/ToastContext';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
 import LoadingScreen from '../../../../components/LoadingScreen';
 import { MeetingRequest } from '@/types/networking';
+import { CopilotStep, walkthroughable } from 'react-native-copilot';
+
+const CopilotView = walkthroughable(View);
+const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
 
 
 export default function MyRequestsView() {
@@ -608,34 +612,38 @@ export default function MyRequestsView() {
                 </ScrollView>
                 
                 {/* Direction filter pills */}
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={[styles.sortButtons, { marginTop: 8 }]}
-                >
-                  {directionFilters.map((dir) => (
-                    <TouchableOpacity
-                      key={dir.key}
-                      style={[
-                        styles.sortButton,
-                        directionFilter === dir.key && styles.sortButtonActive
-                      ]}
-                      onPress={() => setDirectionFilter(dir.key)}
+                <CopilotStep text="If you're a speaker, use the 'Incoming' filter to see meeting requests sent to you. You can then view each request and accept or decline it. Tap on a request to see details and respond." order={102} name="networkingIncomingRequests">
+                  <CopilotView>
+                    <ScrollView 
+                      horizontal 
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={[styles.sortButtons, { marginTop: 8 }]}
                     >
-                      <MaterialIcons 
-                        name={dir.key === 'incoming' ? 'inbox' : dir.key === 'sent' ? 'send' : 'all-inbox'} 
-                        size={16} 
-                        color={directionFilter === dir.key ? colors.primary : (colors.text?.secondary || (isDark ? '#cccccc' : '#666666'))} 
-                      />
-                      <Text style={[
-                        styles.sortButtonText,
-                        directionFilter === dir.key && styles.sortButtonTextActive
-                      ]}>
-                        {dir.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                      {directionFilters.map((dir) => (
+                        <CopilotTouchableOpacity
+                          key={dir.key}
+                          style={[
+                            styles.sortButton,
+                            directionFilter === dir.key && styles.sortButtonActive
+                          ]}
+                          onPress={() => setDirectionFilter(dir.key)}
+                        >
+                          <MaterialIcons 
+                            name={dir.key === 'incoming' ? 'inbox' : dir.key === 'sent' ? 'send' : 'all-inbox'} 
+                            size={16} 
+                            color={directionFilter === dir.key ? colors.primary : (colors.text?.secondary || (isDark ? '#cccccc' : '#666666'))} 
+                          />
+                          <Text style={[
+                            styles.sortButtonText,
+                            directionFilter === dir.key && styles.sortButtonTextActive
+                          ]}>
+                            {dir.label}
+                          </Text>
+                        </CopilotTouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </CopilotView>
+                </CopilotStep>
               </View>
             </View>
 

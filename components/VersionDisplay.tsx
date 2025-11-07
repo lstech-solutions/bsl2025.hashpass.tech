@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Linking } 
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { versionService } from '../lib/services/version-service';
+import { t } from '@lingui/macro';
 
 type VersionInfo = ReturnType<typeof versionService.getCurrentVersion>;
 
@@ -36,7 +37,7 @@ export default function VersionDisplay({ showInSidebar = false, compact = false 
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Version Information</Text>
+          <Text style={styles.modalTitle}>{t({ id: 'version.title', message: 'Version Information' })}</Text>
           <TouchableOpacity
             style={styles.closeButton}
             onPress={() => setShowDetails(false)}
@@ -48,22 +49,22 @@ export default function VersionDisplay({ showInSidebar = false, compact = false 
         <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
           {/* Current Version */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Current Version</Text>
+            <Text style={styles.sectionTitle}>{t({ id: 'version.current', message: 'Current Version' })}</Text>
             <View style={styles.versionCard}>
               <View style={styles.versionHeader}>
                 <Text style={styles.versionNumber}>v{versionInfo.version}</Text>
                 <VersionBadge />
               </View>
-              <Text style={styles.versionDate}>Released: {versionInfo.releaseDate}</Text>
+              <Text style={styles.versionDate}>{t({ id: 'version.released', message: 'Released:' })} {versionInfo.releaseDate}</Text>
               <Text style={styles.versionNotes}>{versionInfo.notes}</Text>
               
               {buildInfo && (
                 <View style={styles.buildInfo}>
-                  <Text style={styles.buildLabel}>Build Information:</Text>
-                  <Text style={styles.buildText}>Build ID: {buildInfo.buildId}</Text>
-                  <Text style={styles.buildText}>Build Time: {new Date(buildInfo.buildTime).toLocaleString()}</Text>
+                  <Text style={styles.buildLabel}>{t({ id: 'version.buildInfo', message: 'Build Information:' })}</Text>
+                  <Text style={styles.buildText}>{t({ id: 'version.buildId', message: 'Build ID:' })} {buildInfo.buildId}</Text>
+                  <Text style={styles.buildText}>{t({ id: 'version.buildTime', message: 'Build Time:' })} {new Date(buildInfo.buildTime).toLocaleString()}</Text>
                   <View style={styles.buildRow}>
-                    <Text style={styles.buildText}>Git Commit: </Text>
+                    <Text style={styles.buildText}>{t({ id: 'version.gitCommit', message: 'Git Commit:' })} </Text>
                     {buildInfo.gitCommitUrl && buildInfo.gitCommit !== 'unknown' ? (
                       <TouchableOpacity
                         onPress={() => Linking.openURL(buildInfo.gitCommitUrl)}
@@ -76,7 +77,7 @@ export default function VersionDisplay({ showInSidebar = false, compact = false 
                       <Text style={styles.buildText}>{buildInfo.gitCommit}</Text>
                     )}
                   </View>
-                  <Text style={styles.buildText}>Branch: {buildInfo.gitBranch}</Text>
+                  <Text style={styles.buildText}>{t({ id: 'version.branch', message: 'Branch:' })} {buildInfo.gitBranch}</Text>
                 </View>
               )}
             </View>
@@ -85,7 +86,7 @@ export default function VersionDisplay({ showInSidebar = false, compact = false 
           {/* Features */}
           {versionInfo.features.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>New Features</Text>
+              <Text style={styles.sectionTitle}>{t({ id: 'version.features', message: 'New Features' })}</Text>
               {versionInfo.features.map((feature, index) => (
                 <View key={index} style={styles.featureItem}>
                   <MaterialIcons name="check-circle" size={16} color="#34A853" />
@@ -98,7 +99,7 @@ export default function VersionDisplay({ showInSidebar = false, compact = false 
           {/* Bug Fixes */}
           {versionInfo.bugfixes.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Bug Fixes</Text>
+              <Text style={styles.sectionTitle}>{t({ id: 'version.bugfixes', message: 'Bug Fixes' })}</Text>
               {versionInfo.bugfixes.map((fix, index) => (
                 <View key={index} style={styles.featureItem}>
                   <MaterialIcons name="bug-report" size={16} color="#FF9500" />
@@ -111,7 +112,7 @@ export default function VersionDisplay({ showInSidebar = false, compact = false 
           {/* Breaking Changes */}
           {versionInfo.breakingChanges.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Breaking Changes</Text>
+              <Text style={styles.sectionTitle}>{t({ id: 'version.breakingChanges', message: 'Breaking Changes' })}</Text>
               {versionInfo.breakingChanges.map((change, index) => (
                 <View key={index} style={styles.featureItem}>
                   <MaterialIcons name="warning" size={16} color="#FF3B30" />
@@ -123,7 +124,7 @@ export default function VersionDisplay({ showInSidebar = false, compact = false 
 
           {/* Version History */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Version History</Text>
+            <Text style={styles.sectionTitle}>{t({ id: 'version.history', message: 'Version History' })}</Text>
             {versionHistory.slice(0, 5).map((version, index) => {
               const tagUrl = buildInfo?.gitRepoUrl 
                 ? `${buildInfo.gitRepoUrl}/releases/tag/v${version.version}`

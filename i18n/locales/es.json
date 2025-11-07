@@ -242,7 +242,10 @@
     "notifications": "Notificaciones",
     "profile": "Perfil",
     "settings": "Ajustes",
-    "brandSubtitle": "Plataforma de Eventos Digitales"
+    "brandSubtitle": "Plataforma de Eventos Digitales",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "logout": "Cerrar sesión"
   },
   "explore": {
     "noEvent": "No hay evento disponible",

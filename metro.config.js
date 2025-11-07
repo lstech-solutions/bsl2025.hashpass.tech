@@ -49,6 +49,64 @@ config.resolver = {
   },
 };
 
+// Serve static files from public folder in development
+// This middleware intercepts requests BEFORE Metro's asset resolver
+config.server = {
+  ...config.server,
+  enhanceMiddleware: (middleware) => {
+    const path = require('path');
+    const fs = require('fs');
+    
+    // Return a new middleware that wraps the original
+    return (req, res, next) => {
+      // Intercept /assets/ requests BEFORE Metro tries to resolve them
+      if (req.url && req.url.startsWith('/assets/')) {
+        const contentTypes = {
+          '.png': 'image/png',
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.gif': 'image/gif',
+          '.svg': 'image/svg+xml',
+          '.webp': 'image/webp',
+        };
+        
+        // Try public folder first
+        const publicPath = path.join(__dirname, 'public', req.url);
+        if (fs.existsSync(publicPath)) {
+          const stat = fs.statSync(publicPath);
+          if (stat.isFile()) {
+            const ext = path.extname(publicPath).toLowerCase();
+            res.writeHead(200, {
+              'Content-Type': contentTypes[ext] || 'application/octet-stream',
+              'Content-Length': stat.size,
+              'Cache-Control': 'public, max-age=31536000',
+            });
+            return fs.createReadStream(publicPath).pipe(res);
+          }
+        }
+        
+        // Fallback: try assets folder (without /assets/ prefix)
+        const fileName = req.url.replace('/assets/', '');
+        const assetsPath = path.join(__dirname, 'assets', fileName);
+        if (fs.existsSync(assetsPath)) {
+          const stat = fs.statSync(assetsPath);
+          if (stat.isFile()) {
+            const ext = path.extname(assetsPath).toLowerCase();
+            res.writeHead(200, {
+              'Content-Type': contentTypes[ext] || 'application/octet-stream',
+              'Content-Length': stat.size,
+              'Cache-Control': 'public, max-age=31536000',
+            });
+            return fs.createReadStream(assetsPath).pipe(res);
+          }
+        }
+      }
+      // If not handled, pass to original middleware
+      return middleware(req, res, next);
+    };
+  },
+};
+
 // Reduce memory usage
 config.maxWorkers = 1; // Use single worker to reduce memory
 config.cacheStores = config.cacheStores || [];

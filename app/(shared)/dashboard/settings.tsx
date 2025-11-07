@@ -11,6 +11,7 @@ import { useScroll } from '../../../contexts/ScrollContext';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { t } from '@lingui/macro';
+import { useTutorialPreferences } from '../../../hooks/useTutorialPreferences';
 
 export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
@@ -23,6 +24,7 @@ export default function SettingsScreen() {
   const { showSuccess, showInfo } = useToastHelpers();
   const { t: tProfile } = useTranslation('profile');
   const router = useRouter();
+  const { resetTutorial, resetAllTutorials, mainTutorialCompleted, networkingTutorialCompleted } = useTutorialPreferences();
   const styles = getStyles(isDark, colors);
   
   // Calculate safe area for nav bar overlay
@@ -157,6 +159,68 @@ export default function SettingsScreen() {
                 thumbColor={animationsEnabled ? '#4f46e5' : '#f3f4f6'}
               />
             ),
+          })}
+        </View>
+
+        {/* Tutorial Settings */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tutorials</Text>
+          
+          {renderSettingItem({
+            icon: 'school-outline',
+            title: 'Main Screen Tutorial',
+            subtitle: mainTutorialCompleted ? 'Completed' : 'Not completed',
+            onPress: async () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              await resetTutorial('main');
+              showSuccess('Tutorial Reset', 'The main screen tutorial will start automatically when you visit the explore screen.');
+              // Navigate after a short delay to ensure state is updated
+              setTimeout(() => {
+                router.push('./explore');
+              }, 500);
+            },
+            showChevron: true,
+          })}
+
+          {renderSettingItem({
+            icon: 'people-outline',
+            title: 'Networking Tutorial',
+            subtitle: networkingTutorialCompleted ? 'Completed' : 'Not completed',
+            onPress: async () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              await resetTutorial('networking');
+              showSuccess('Tutorial Reset', 'The networking tutorial will start automatically when you visit the networking center.');
+              // Navigate after a short delay to ensure state is updated
+              setTimeout(() => {
+                router.push('/events/bsl2025/networking' as any);
+              }, 500);
+            },
+            showChevron: true,
+          })}
+
+          {renderSettingItem({
+            icon: 'refresh-outline',
+            title: 'Reset All Tutorials',
+            subtitle: 'Restart all tutorials from the beginning',
+            onPress: () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              Alert.alert(
+                'Reset All Tutorials',
+                'This will reset both the main screen and networking tutorials. They will start automatically the next time you visit those screens.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Reset',
+                    style: 'destructive',
+                    onPress: async () => {
+                      await resetAllTutorials();
+                      showSuccess('Tutorials Reset', 'All tutorials have been reset and will start automatically.');
+                    },
+                  },
+                ]
+              );
+            },
+            showChevron: true,
           })}
         </View>
 

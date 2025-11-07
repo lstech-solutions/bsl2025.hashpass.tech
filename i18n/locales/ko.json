@@ -242,7 +242,10 @@
     "notifications": "알림",
     "profile": "프로필",
     "settings": "설정",
-    "brandSubtitle": "디지털 이벤트 플랫폼"
+    "brandSubtitle": "디지털 이벤트 플랫폼",
+    "light": "밝게",
+    "dark": "어둡게",
+    "logout": "로그아웃"
   },
   "explore": {
     "noEvent": "사용 가능한 이벤트가 없습니다",

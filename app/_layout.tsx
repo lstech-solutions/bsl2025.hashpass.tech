@@ -18,6 +18,7 @@ import "./global.css";
 import PWAPrompt from '../components/PWAPrompt';
 import * as SplashScreen from 'expo-splash-screen';
 import { I18nProvider } from '../providers/I18nProvider';
+import { CopilotProvider } from 'react-native-copilot';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -38,7 +39,9 @@ export default function RootLayout() {
               <I18nProvider>
                 <ToastProvider>
                   <ScrollProvider>
-                    <ThemedContent />
+                    <CopilotProvider overlay="view">
+                      <ThemedContent />
+                    </CopilotProvider>
                   </ScrollProvider>
                 </ToastProvider>
               </I18nProvider>

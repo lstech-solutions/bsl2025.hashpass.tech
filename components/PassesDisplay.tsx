@@ -1370,25 +1370,26 @@ const PassCard = ({ pass, refreshTrigger }: { pass: PassInfo; refreshTrigger?: n
             position: 'absolute',
             top: 12,
             right: 12,
-            width: 44,
-            height: 44,
-            borderRadius: 22,
+            width: 50,
+            height: 50,
+            borderRadius: 25,
             backgroundColor: colors.background.paper,
-            borderWidth: 2,
+            borderWidth: 3,
             borderColor: getPassTypeColor(pass.pass_type),
             alignItems: 'center',
             justifyContent: 'center',
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            elevation: 3,
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: 0.3,
+            shadowRadius: 6,
+            elevation: 5,
             zIndex: 10
           }}>
             <Text style={{ 
-              fontSize: 8, 
-              fontWeight: '700', 
-              color: getPassTypeColor(pass.pass_type)
+              fontSize: 9, 
+              fontWeight: '800', 
+              color: getPassTypeColor(pass.pass_type),
+              letterSpacing: 0.5
             }}>
               BSL2025
             </Text>

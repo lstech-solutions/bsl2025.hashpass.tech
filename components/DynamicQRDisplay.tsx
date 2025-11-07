@@ -234,7 +234,16 @@ export default function DynamicQRDisplay({
   // Use URI for both platforms to avoid require() issues
   const getLogoUri = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      return `${window.location.origin}/assets/android-chrome-192x192.png`;
+      const origin = window.location.origin;
+      // For localhost development, Metro bundler doesn't serve public folder
+      // Use the assets folder which Metro can bundle, or try public folder path
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        // Try public folder first (for webpack), then fallback
+        // In development, Metro may not serve public folder, so we'll use production URL as fallback
+        return `${origin}/assets/android-chrome-192x192.png`;
+      }
+      // Production: use public folder path
+      return `${origin}/assets/android-chrome-192x192.png`;
     }
     // For native platforms, use the production URL or localhost for development
     const baseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.replace('/rest/v1', '') || 'https://hashpass.co';

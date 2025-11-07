@@ -21,6 +21,7 @@ import VersionDisplay from '../../../components/VersionDisplay';
 import QRScanner from '../../../components/QRScanner';
 import MiniNotificationDropdown from '../../../components/MiniNotificationDropdown';
 import { t } from '@lingui/macro';
+import { CopilotStep, walkthroughable, useCopilot } from 'react-native-copilot';
 
 // Define the type for our drawer navigation
 type DrawerNavigation = CompositeNavigationProp<
@@ -28,6 +29,8 @@ type DrawerNavigation = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >;
 
+const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
+const CopilotView = walkthroughable(View);
 
 // Custom drawer content component
 function CustomDrawerContent() {
@@ -39,6 +42,7 @@ function CustomDrawerContent() {
   const router = useRouter();
   const pathname = usePathname();
   const navigation = useNavigation<DrawerNavigation>();
+  const copilotHook = useCopilot();
   const isMobile = useIsMobile();
   const styles = getStyles(isDark, colors, isMobile);
 
@@ -365,28 +369,71 @@ function CustomDrawerContent() {
         paddingTop: 24,
         paddingBottom: 16,
       }]}>
-        {menuItems.map((item) => {
+        {menuItems.map((item, index) => {
           const isActive = pathname === item.route;
+          const stepOrder = index + 2; // Start from 2 (after menu button)
+          const stepNames: Record<string, string> = {
+            './explore': 'sidebarExplore',
+            './wallet': 'sidebarWallet',
+            './notifications': 'sidebarNotifications',
+            './profile': 'sidebarProfile',
+            './settings': 'sidebarSettings',
+          };
+          const stepTexts: Record<string, string> = {
+            './explore': 'Explore: Browse events, view your passes, and access quick links to speakers, agenda, and networking. Tap to continue.',
+            './wallet': 'Wallet: View and manage your digital passes and tickets for events. Tap to continue.',
+            './notifications': 'Notifications: Check your meeting requests, updates, and important alerts. The badge shows unread count. Tap to continue.',
+            './profile': 'Profile: View and edit your profile information and account settings. Tap to continue.',
+            './settings': 'Settings: Customize app preferences, theme, language, and tutorials. Tap to finish sidebar tour.',
+          };
           return (
-            <TouchableOpacity
+            <CopilotStep 
               key={item.route as string}
-              style={[
-                styles.menuItem,
-                {
-                  backgroundColor: isActive 
-                    ? (isDark 
-                        ? `rgba(175, 13, 1, 0.15)` // Red with transparency
-                        : `rgba(175, 13, 1, 0.1)`) // Red with transparency
-                    : (isDark 
-                        ? 'rgba(255, 255, 255, 0.05)' 
-                        : 'rgba(0, 0, 0, 0.03)'), // Subtle background
-                  borderLeftWidth: isActive ? 4 : 0,
-                  borderLeftColor: isActive ? colors.primaryLight : 'transparent',
-                }
-              ]}
-              onPress={() => handleNavigation(item.route)}
-              activeOpacity={0.6}
+              text={stepTexts[item.route] || `Navigate to ${getLabel(item.id)}`}
+              order={stepOrder}
+              name={stepNames[item.route] || `sidebar${item.id}`}
             >
+              <CopilotTouchableOpacity
+                style={[
+                  styles.menuItem,
+                  {
+                    backgroundColor: isActive 
+                      ? (isDark 
+                          ? `rgba(175, 13, 1, 0.15)` // Red with transparency
+                          : `rgba(175, 13, 1, 0.1)`) // Red with transparency
+                      : (isDark 
+                          ? 'rgba(255, 255, 255, 0.05)' 
+                          : 'rgba(0, 0, 0, 0.03)'), // Subtle background
+                    borderLeftWidth: isActive ? 4 : 0,
+                    borderLeftColor: isActive ? colors.primaryLight : 'transparent',
+                  }
+                ]}
+                onPress={() => {
+                  console.log(`Sidebar item clicked: ${item.route}, stepOrder: ${stepOrder}`);
+                  
+                  // Navigate to the actual view first
+                  handleNavigation(item.route);
+                  
+                  // Continue to next tutorial step after a short delay
+                  const nextStep = stepOrder + 1;
+                  setTimeout(() => {
+                    if (copilotHook?.handleNext && typeof copilotHook.handleNext === 'function') {
+                      copilotHook.handleNext();
+                    } else if (copilotHook?.handleNth && typeof copilotHook.handleNth === 'function') {
+                      copilotHook.handleNth(nextStep);
+                    }
+                    
+                    // If this is the last sidebar item (Settings), close drawer after tutorial moves
+                    // This ensures main content steps (Your Passes, Quick Access, etc.) are visible
+                    if (index === menuItems.length - 1) {
+                      setTimeout(() => {
+                        navigation.dispatch(DrawerActions.closeDrawer());
+                      }, 500); // Wait for tutorial to move to next step (order 8)
+                    }
+                  }, 300); // Small delay to allow navigation to complete
+                }}
+                activeOpacity={0.6}
+              >
               <View style={[
                 styles.menuIconContainer,
                 {
@@ -427,7 +474,8 @@ function CustomDrawerContent() {
               {isActive && (
                 <View style={styles.activeIndicator} />
               )}
-            </TouchableOpacity>
+              </CopilotTouchableOpacity>
+            </CopilotStep>
           );
         })}
       </View>
@@ -463,7 +511,7 @@ function CustomDrawerContent() {
             />
             </View>
             <Text style={styles.quickToggleLabel}>
-              {isDark ? 'Light' : 'Dark'}
+              {isDark ? t({ id: 'nav.light', message: 'Light' }) : t({ id: 'nav.dark', message: 'Dark' })}
             </Text>
           </TouchableOpacity>
 
@@ -481,7 +529,7 @@ function CustomDrawerContent() {
             />
             </View>
             <Text style={[styles.quickToggleLabel, { color: colors.error.main }]}>
-              Logout
+              {t({ id: 'nav.logout', message: 'Logout' })}
             </Text>
           </TouchableOpacity>
         </View>
@@ -506,6 +554,8 @@ export default function DashboardLayout() {
     const { headerOpacity, headerBackground, headerTint, headerBlur, headerBorderWidth, headerShadowOpacity, headerHeight, setHeaderHeight, scrollY } = useScroll();
     const { animationsEnabled } = useAnimations();
     const { user } = useAuth();
+    const copilotHook = useCopilot();
+    const handleNext = copilotHook?.handleNext || copilotHook?.handleNth;
     const [qrScannerVisible, setQrScannerVisible] = React.useState(false);
 
     // Adjust header background color based on theme to match app background
@@ -709,17 +759,49 @@ export default function DashboardLayout() {
             }
           ]}
         >
-          <TouchableOpacity
-            onPress={() => drawerNavigation.dispatch(DrawerActions.toggleDrawer())}
-            style={styles.headerIconButton}
-            activeOpacity={0.8}
+          <CopilotStep 
+            text="Welcome! Tap the menu button (☰) to open the sidebar. You'll see navigation options like Explore, Wallet, Notifications, Profile, and Settings." 
+            order={1} 
+            name="menuButton"
           >
-            <Ionicons 
-              name="menu" 
-              size={26} 
-              color={isDark ? '#FFFFFF' : '#000000'}
-            />
-          </TouchableOpacity>
+            <View style={{ position: 'relative' }}>
+              <CopilotTouchableOpacity
+                onPress={() => {
+                  console.log('Menu button clicked in tutorial');
+                  // Open the drawer first
+                  try {
+                    drawerNavigation.dispatch(DrawerActions.openDrawer());
+                  } catch (e) {
+                    console.error('Error opening drawer:', e);
+                  }
+                  
+                  // Wait for drawer animation, then continue tutorial
+                  setTimeout(() => {
+                    console.log('Continuing tutorial to step 2');
+                    // Use handleNth to go directly to step 2 (first sidebar item)
+                    if (copilotHook?.handleNth && typeof copilotHook.handleNth === 'function') {
+                      copilotHook.handleNth(2);
+                    } else if (copilotHook?.handleNext && typeof copilotHook.handleNext === 'function') {
+                      copilotHook.handleNext();
+                    } else {
+                      console.warn('No handleNext or handleNth available', copilotHook);
+                    }
+                  }, 1200); // Increased delay to ensure drawer is fully open
+                }}
+                style={styles.headerIconButton}
+                activeOpacity={0.8}
+                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                // Make sure this is clickable even during tutorial
+                pointerEvents="auto"
+              >
+                <Ionicons 
+                  name="menu" 
+                  size={26} 
+                  color={isDark ? '#FFFFFF' : '#000000'}
+                />
+              </CopilotTouchableOpacity>
+            </View>
+          </CopilotStep>
 
           <TouchableOpacity
             onPress={() => headerRouter.push('./explore' as any)}
@@ -737,18 +819,24 @@ export default function DashboardLayout() {
           </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <MiniNotificationDropdown />
-            <TouchableOpacity
-              onPress={() => setQrScannerVisible(true)}
-              style={styles.headerIconButton}
-              activeOpacity={0.8}
-            >
-              <Ionicons 
-                name="qr-code-outline" 
-                size={26} 
-                color={isDark ? '#FFFFFF' : '#000000'}
-              />
-            </TouchableOpacity>
+            <CopilotStep text="Tap the notifications icon to view your recent notifications. The red badge shows the number of unread notifications. You can also access the full notifications screen from the sidebar." order={10} name="notificationsButton">
+              <CopilotView>
+                <MiniNotificationDropdown />
+              </CopilotView>
+            </CopilotStep>
+            <CopilotStep text="Tap the QR code scanner to scan QR codes for event check-ins, networking, or accessing event features." order={11} name="qrScannerButton">
+              <CopilotTouchableOpacity
+                onPress={() => setQrScannerVisible(true)}
+                style={styles.headerIconButton}
+                activeOpacity={0.8}
+              >
+                <Ionicons 
+                  name="qr-code-outline" 
+                  size={26} 
+                  color={isDark ? '#FFFFFF' : '#000000'}
+                />
+              </CopilotTouchableOpacity>
+            </CopilotStep>
           </View>
         </Animated.View>
         

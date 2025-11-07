@@ -13,6 +13,9 @@ import SpeakerAvatar from '../../../../components/SpeakerAvatar';
 import PassesDisplay from '../../../../components/PassesDisplay';
 import { getSpeakerAvatarUrl, getSpeakerLinkedInUrl, getSpeakerTwitterUrl } from '../../../../lib/string-utils';
 import LoadingScreen from '../../../../components/LoadingScreen';
+import { CopilotStep, walkthroughable } from 'react-native-copilot';
+
+const CopilotView = walkthroughable(View);
 
 interface Speaker {
   id: string;
@@ -1046,19 +1049,23 @@ export default function SpeakerDetail() {
       )}
 
       {/* Pass Display */}
-      <PassesDisplay
-        mode="speaker"
-        speakerId={speaker.id}
-        showRequestButton={true}
-        onRequestPress={handleRequestMeeting}
-        refreshTrigger={passRefreshTrigger}
-        onPassInfoLoaded={(passInfo) => {
-          console.log('Pass info loaded:', passInfo);
-        }}
-        onRequestLimitsLoaded={(limits) => {
-          console.log('Request limits loaded:', limits);
-        }}
-      />
+      <CopilotStep text="To request a meeting with this speaker, click the 'Request Meeting' button below. You can optionally add a message to increase your chances of approval. Your pass type determines how many requests you can make." order={101} name="networkingRequestMeeting">
+        <CopilotView>
+          <PassesDisplay
+            mode="speaker"
+            speakerId={speaker.id}
+            showRequestButton={true}
+            onRequestPress={handleRequestMeeting}
+            refreshTrigger={passRefreshTrigger}
+            onPassInfoLoaded={(passInfo) => {
+              console.log('Pass info loaded:', passInfo);
+            }}
+            onRequestLimitsLoaded={(limits) => {
+              console.log('Request limits loaded:', limits);
+            }}
+          />
+        </CopilotView>
+      </CopilotStep>
 
       {/* Social Links */}
       {speaker.social && (

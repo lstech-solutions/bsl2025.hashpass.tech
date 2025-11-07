@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.13] - 2025-11-07
+
+### Beta
+- Improved toast styling to match theme colors and enhance text contrast
+
+### Technical Details
+- Version: 1.5.13
+- Release Type: beta
+- Build Number: 202511070248
+- Release Date: 2025-11-07T02:48:28.693Z
+
+
 ## [1.5.12] - 2025-11-07
 
 ### Beta

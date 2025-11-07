@@ -22,26 +22,58 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202511070059, // Updated to current timestamp
+  buildNumber: 202511070249, // Updated to current timestamp
   releaseDate: '2025-11-07',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
-    'Improved language switching with smooth updates without remounting',
-    'Enhanced I18nProvider to handle locale changes reactively',
-    'Added useLingui hook to explore component for proper translation updates'
+    'Added Privacy/Terms modal component for in-app viewing',
+    'Improved mobile responsiveness for theme/language switcher on auth page'
   ],
   bugfixes: [
-    'Fixed language switching not updating explorer section immediately',
-    'Fixed locale changes requiring page reload to see translations',
-    'Improved translation reactivity without component remounting'
+    'Fixed theme and language switcher overlapping with auth card on mobile views',
+    'Replaced navigation with modal for privacy and terms links on auth screen'
   ],
   breakingChanges: [],
-  notes: 'Fixed'
+  notes: 'Improved toast styling to match theme colors and enhance text contrast'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.5.13': {
+    version: '1.5.13',
+    buildNumber: 202511070249,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Improved toast styling to match theme colors and enhance text contrast'
+  },
+  '1.5.13': {
+    version: '1.5.13',
+    buildNumber: 202511070248,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Improved toast styling to match theme colors and enhance text contrast'
+  },
   '1.5.12': {
     version: '1.5.12',
     buildNumber: 202511070059,
@@ -49,17 +81,15 @@ export const VERSION_HISTORY: VersionHistory = {
     releaseType: 'beta',
     environment: 'development',
     features: [
-      'Improved language switching with smooth updates without remounting',
-      'Enhanced I18nProvider to handle locale changes reactively',
-      'Added useLingui hook to explore component for proper translation updates'
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
     ],
     bugfixes: [
-      'Fixed language switching not updating explorer section immediately',
-      'Fixed locale changes requiring page reload to see translations',
-      'Improved translation reactivity without component remounting'
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
     ],
     breakingChanges: [],
-    notes: 'Fixed'
+    notes: 'Fixed mobile overlap issue and added privacy/terms modal'
   },
   '1.5.11': {
     version: '1.5.11',

@@ -1,6 +1,23 @@
 {
-  "currentVersion": "1.5.13",
+  "currentVersion": "1.5.14",
   "versions": [
+    {
+      "version": "1.5.14",
+      "buildNumber": 202511070301,
+      "releaseDate": "2025-11-07",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "Added Privacy/Terms modal component for in-app viewing",
+        "Improved mobile responsiveness for theme/language switcher on auth page"
+      ],
+      "bugfixes": [
+        "Fixed theme and language switcher overlapping with auth card on mobile views",
+        "Replaced navigation with modal for privacy and terms links on auth screen"
+      ],
+      "breakingChanges": [],
+      "notes": "Removed tutorial buttons from explore and networking screens, tutorials now auto-start automatically"
+    },
     {
       "version": "1.5.13",
       "buildNumber": 202511070248,

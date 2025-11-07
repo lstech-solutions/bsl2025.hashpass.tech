@@ -472,31 +472,6 @@ export default function NetworkingView() {
         </View>
       </View>
 
-      {/* Tutorial Start Button - Always visible for manual start */}
-      <TouchableOpacity
-        style={[styles.tutorialButton, { backgroundColor: colors.primary }]}
-          onPress={async () => {
-            tutorialStartedRef.current = false; // Reset ref to allow manual start
-            
-            // Mark tutorial as started in database
-            await updateTutorialStep('networking', 100);
-            
-            // Start networking tutorial at order 100 (first networking step)
-            setTimeout(() => {
-              if (handleNth && typeof handleNth === 'function') {
-                handleNth(100);
-              } else {
-                startNetworkingTutorial();
-              }
-            }, 100);
-          }}
-      >
-        <MaterialIcons name="help-outline" size={20} color="white" />
-        <Text style={styles.tutorialButtonText}>
-          {networkingTutorialCompleted ? 'Restart Networking Tutorial' : 'Start Networking Tutorial'}
-        </Text>
-      </TouchableOpacity>
-
       {/* Quick Access Section */}
       <CopilotStep text="Welcome to the Networking Center! Use the Quick Access cards below to navigate. 'Find Speakers' lets you browse and request meetings. 'My Requests' shows your meeting requests. 'My Schedule' helps you manage your calendar." order={100} name="networkingQuickAccess">
         <CopilotView>
@@ -845,22 +820,5 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: colors.text?.secondary || (isDark ? '#F0F0F0' : '#666666'),
     marginTop: 8,
     textAlign: 'center',
-  },
-  tutorialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 20,
-    gap: 8,
-  },
-  tutorialButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

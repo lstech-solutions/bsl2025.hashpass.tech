@@ -520,51 +520,6 @@ export default function ExploreScreen() {
           </CopilotView>
         </CopilotStep>
 
-        {/* Tutorial Start Button - Always visible for manual start */}
-        <TouchableOpacity
-          style={[styles.tutorialButton, { backgroundColor: colors.primary }]}
-          onPress={() => {
-            console.log('Tutorial button clicked');
-            tutorialStartedRef.current = false; // Reset ref to allow manual start
-            
-            // Stop any existing tutorial first
-            if (handleStop && typeof handleStop === 'function') {
-              console.log('Stopping existing tutorial');
-              handleStop();
-            }
-            
-            // Wait a bit for tutorial to stop, then start fresh
-            setTimeout(() => {
-              // Mark tutorial as started in database
-              updateTutorialStep('main', 1).catch(err => console.error('Error updating tutorial step:', err));
-              
-              // Use InteractionManager to ensure UI is ready
-              InteractionManager.runAfterInteractions(() => {
-                // Additional delay to ensure all CopilotSteps are registered
-                setTimeout(() => {
-                  try {
-                    if (startTutorial && typeof startTutorial === 'function') {
-                      console.log('Starting tutorial using startTutorial');
-                      tutorialStartedRef.current = true;
-                      startTutorial();
-                    } else {
-                      console.warn('startTutorial is not available', { startTutorial, handleNth });
-                    }
-                  } catch (error) {
-                    console.error('Error starting tutorial:', error);
-                    tutorialStartedRef.current = false;
-                  }
-                }, 800); // Delay to ensure steps are registered
-              });
-            }, 500); // Wait for tutorial to stop
-          }}
-        >
-          <MaterialIcons name="help-outline" size={20} color="white" />
-          <Text style={styles.tutorialButtonText}>
-            {mainTutorialCompleted ? 'Restart Tutorial' : 'Start Tutorial'}
-          </Text>
-        </TouchableOpacity>
-
         {/* Bottom Spacing handled via contentContainerStyle paddingBottom */}
       </Animated.ScrollView>
     </View>
@@ -729,23 +684,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: 14,
-  },
-  tutorialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 20,
-    gap: 8,
-  },
-  tutorialButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
   },
   bottomSpacing: {
     height: 40,

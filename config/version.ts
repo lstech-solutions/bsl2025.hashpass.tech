@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202511070249, // Updated to current timestamp
+  buildNumber: 202511070301, // Updated to current timestamp
   releaseDate: '2025-11-07',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -35,11 +35,28 @@ export const CURRENT_VERSION: VersionInfo = {
     'Replaced navigation with modal for privacy and terms links on auth screen'
   ],
   breakingChanges: [],
-  notes: 'Improved toast styling to match theme colors and enhance text contrast'
+  notes: 'Removed tutorial buttons from explore and networking screens, tutorials now auto-start automatically'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.5.14': {
+    version: '1.5.14',
+    buildNumber: 202511070301,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Removed tutorial buttons from explore and networking screens, tutorials now auto-start automatically'
+  },
   '1.5.13': {
     version: '1.5.13',
     buildNumber: 202511070249,

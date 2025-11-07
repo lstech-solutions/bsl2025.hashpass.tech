@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.14] - 2025-11-07
+
+### Beta
+- Removed tutorial buttons from explore and networking screens, tutorials now auto-start automatically
+
+### Technical Details
+- Version: 1.5.14
+- Release Type: beta
+- Build Number: 202511070301
+- Release Date: 2025-11-07T03:01:41.537Z
+
+
 ## [1.5.13] - 2025-11-07
 
 ### Beta

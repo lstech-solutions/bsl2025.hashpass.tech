@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 
@@ -136,29 +137,25 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         {children}
       </ToastContext.Provider>
       
-      {/* Toast Container - Using Modal to ensure it's always on top */}
-      <Modal
-        visible={toasts.length > 0}
-        transparent={true}
-        animationType="none"
-        statusBarTranslucent={true}
-        onRequestClose={() => {}}
-      >
-        <View style={styles.toastModalContainer}>
-          {toasts.map((toast, index) => (
-            <ToastItem
-              key={toast.id}
-              toast={toast}
-              index={index}
-              onHide={() => hideToast(toast.id)}
-              getToastStyles={getToastStyles}
-              getToastIcon={getToastIcon}
-              colors={colors}
-              isDark={isDark}
-            />
-          ))}
+      {/* Toast Container - Using absolute positioning to avoid blocking interactions */}
+      {toasts.length > 0 && (
+        <View style={styles.toastContainer} pointerEvents="box-none">
+          <SafeAreaView edges={['top', 'left', 'right']} style={styles.toastSafeArea} pointerEvents="box-none">
+            {toasts.map((toast, index) => (
+              <ToastItem
+                key={toast.id}
+                toast={toast}
+                index={index}
+                onHide={() => hideToast(toast.id)}
+                getToastStyles={getToastStyles}
+                getToastIcon={getToastIcon}
+                colors={colors}
+                isDark={isDark}
+              />
+            ))}
+          </SafeAreaView>
         </View>
-      </Modal>
+      )}
     </>
   );
 };
@@ -233,6 +230,7 @@ const ToastItem: React.FC<ToastItemProps> = ({
           marginTop: index * 12,
         },
       ]}
+      pointerEvents="box-none"
     >
       <View 
         style={[
@@ -246,6 +244,7 @@ const ToastItem: React.FC<ToastItemProps> = ({
             elevation: 8,
           }
         ]}
+        pointerEvents="auto"
       >
         <View style={styles.toastContent}>
           <View style={styles.toastHeader}>
@@ -314,13 +313,25 @@ const ToastItem: React.FC<ToastItemProps> = ({
 };
 
 const styles = StyleSheet.create({
-  toastModalContainer: {
-    flex: 1,
+  toastContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingBottom: 40,
     paddingHorizontal: 20,
-    backgroundColor: 'transparent',
+    zIndex: 9999,
+    elevation: 9999,
+    pointerEvents: 'box-none',
+  },
+  toastSafeArea: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    width: '100%',
     pointerEvents: 'box-none',
   },
   toastItem: {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet, Alert, StatusBar, TextInput, Modal } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { useLanguage } from '../../../providers/LanguageProvider';
@@ -36,12 +36,24 @@ export default function SettingsScreen() {
   const [otpSent, setOtpSent] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const otpInputRef = useRef<TextInput>(null);
   const styles = getStyles(isDark, colors);
   
   // Debug: Log modal state changes
   useEffect(() => {
     console.log('showDeleteConfirm state changed:', showDeleteConfirm);
   }, [showDeleteConfirm]);
+
+  // Focus the OTP input when it becomes visible
+  useEffect(() => {
+    if (otpSent && showDeleteConfirm && otpInputRef.current) {
+      // Small delay to ensure modal is fully rendered
+      const timer = setTimeout(() => {
+        otpInputRef.current?.focus();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [otpSent, showDeleteConfirm]);
   
   // Calculate safe area for nav bar overlay
   const navBarHeight = (StatusBar.currentHeight || 0) + 80;
@@ -648,15 +660,17 @@ export default function SettingsScreen() {
                   </Text>
                 )}
                 <TextInput
+                  ref={otpInputRef}
                   style={styles.modalInput}
                   value={otpCode}
                   onChangeText={(text) => setOtpCode(text.replace(/[^0-9]/g, '').slice(0, 6))}
                   placeholder="Enter 6-digit code"
                   placeholderTextColor={colors.text.secondary}
-                  keyboardType="number-pad"
+                  keyboardType="numeric"
                   maxLength={6}
-                  autoFocus={true}
+                  textContentType="oneTimeCode"
                   editable={!verifyingOtp && !deletingAccount}
+                  selectTextOnFocus={false}
                 />
                 <TouchableOpacity
                   style={styles.resendButton}

@@ -108,7 +108,7 @@ export const SPEAKER_PRIORITY_MAP = new Map(
 /**
  * Sort speakers by priority order (if in priority list) or alphabetically (if not)
  */
-export function sortSpeakersByPriority(speakers: Array<{ name: string }>): Array<{ name: string }> {
+export function sortSpeakersByPriority<T extends { name: string }>(speakers: T[]): T[] {
   return [...speakers].sort((a, b) => {
     const aName = a.name.toLowerCase();
     const bName = b.name.toLowerCase();

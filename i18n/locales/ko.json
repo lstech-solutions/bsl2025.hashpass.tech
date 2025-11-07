@@ -16,18 +16,49 @@
   },
   "wallet": {
     "digitalWalletTitle": "디지털 티켓 지갑",
-    "walletDesc": "블록체인 검증된 티켓에 안전하게 접근하세요",
+    "walletDesc": "블록체인 검증된 티켓, 토큰 및 포인트에 안전하게 접근하세요",
     "events": "이벤트 탐색",
     "eventsDesc": "다가오는 이벤트를 찾고 토큰을 적립하세요",
     "exchangeDesc": "포인트를 암호화폐로 교환",
     "tabs": {
-      "tickets": "내 티켓",
+      "tokens": "토큰",
+      "points": "포인트",
+      "tickets": "티켓",
       "loyalty": "리워드",
       "exchange": "교환"
     },
+    "tokens": {
+      "title": "블록체인 토큰",
+      "description": "$LUKAS, $COP, $VOI 토큰 관리",
+      "swap": "교환",
+      "totalPortfolio": "총 포트폴리오 가치",
+      "portfolioDesc": "모든 토큰의 합산 가치"
+    },
+    "points": {
+      "title": "Hash POINTS",
+      "description": "이벤트에서 획득한 교환 가능한 리워드 포인트",
+      "balance": "잔액",
+      "swappable": "포인트를 다양한 토큰으로 교환할 수 있습니다",
+      "swapOptions": "교환 옵션",
+      "swapNow": "지금 교환",
+      "recentActivity": "최근 활동",
+      "noActivity": "아직 활동이 없습니다",
+      "activityDesc": "교환 내역이 여기에 표시됩니다"
+    },
     "tickets": {
-      "title": "내 티켓",
-      "description": "이벤트 패스와 적립된 리워드를 확인하세요."
+      "title": "블록체인 티켓",
+      "description": "블록체인에서 검증된 NFT 티켓",
+      "noBlockchainTickets": "블록체인 티켓 없음",
+      "noBlockchainTicketsDesc": "BSL2025와 같은 이벤트의 블록체인 검증된 NFT 티켓이 여기에 표시됩니다",
+      "viewEvents": "이벤트 보기",
+      "blockchainVerified": "블록체인 검증됨",
+      "blockchainInfo": "블록체인 정보",
+      "network": "네트워크",
+      "nftId": "NFT ID",
+      "viewOnExplorer": "익스플로러에서 보기",
+      "tapToEnlarge": "탭하여 QR 코드 확대",
+      "tapToMinimize": "탭하여 축소",
+      "of": "/"
     },
     "loyalty": {
       "title": "리워드",

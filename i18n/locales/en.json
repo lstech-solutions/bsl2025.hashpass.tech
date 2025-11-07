@@ -16,18 +16,49 @@
   },
   "wallet": {
     "digitalWalletTitle": "Digital Ticket Wallet",
-    "walletDesc": "Access your secure blockchain-verified tickets",
+    "walletDesc": "Access your secure blockchain-verified tickets, tokens, and points",
     "events": "Event Discovery",
     "eventsDesc": "Find upcoming events and earn tokens",
     "exchangeDesc": "Convert points to cryptocurrency",
     "tabs": {
-      "tickets": "My Tickets",
+      "tokens": "Tokens",
+      "points": "Points",
+      "tickets": "Tickets",
       "loyalty": "Loyalty Rewards",
       "exchange": "Token Exchange"
     },
+    "tokens": {
+      "title": "Blockchain Tokens",
+      "description": "Manage your $LUKAS, $COP, and $VOI tokens",
+      "swap": "Swap",
+      "totalPortfolio": "Total Portfolio Value",
+      "portfolioDesc": "Combined value of all your tokens"
+    },
+    "points": {
+      "title": "Hash POINTS",
+      "description": "Swappable loyalty points earned from events",
+      "balance": "Your Balance",
+      "swappable": "Points can be swapped to different tokens",
+      "swapOptions": "Swap Options",
+      "swapNow": "Swap Now",
+      "recentActivity": "Recent Activity",
+      "noActivity": "No activity yet",
+      "activityDesc": "Your swap history will appear here"
+    },
     "tickets": {
-      "title": "My Tickets",
-      "description": "Access your event passes and earned rewards."
+      "title": "Blockchain Tickets",
+      "description": "Your NFT tickets verified on the blockchain",
+      "noBlockchainTickets": "No Blockchain Tickets",
+      "noBlockchainTicketsDesc": "Blockchain-verified NFT tickets from events like BSL2025 will appear here",
+      "viewEvents": "View Events",
+      "blockchainVerified": "Blockchain Verified",
+      "blockchainInfo": "Blockchain Information",
+      "network": "Network",
+      "nftId": "NFT ID",
+      "viewOnExplorer": "View on Explorer",
+      "tapToEnlarge": "Tap to enlarge QR code",
+      "tapToMinimize": "Tap to minimize",
+      "of": "of"
     },
     "loyalty": {
       "title": "Loyalty Rewards",

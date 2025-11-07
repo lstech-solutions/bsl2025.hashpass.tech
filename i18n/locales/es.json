@@ -16,18 +16,49 @@
   },
   "wallet": {
     "digitalWalletTitle": "Billetera de Boletos Digitales",
-    "walletDesc": "Accede a tus boletos verificados en blockchain",
+    "walletDesc": "Accede a tus boletos verificados en blockchain, tokens y puntos",
     "events": "Descubrir Eventos",
     "eventsDesc": "Encuentra eventos y gana tokens",
     "exchangeDesc": "Convierte puntos a criptomonedas",
     "tabs": {
-      "tickets": "Mis Boletos",
+      "tokens": "Tokens",
+      "points": "Puntos",
+      "tickets": "Boletos",
       "loyalty": "Recompensas",
       "exchange": "Intercambio"
     },
+    "tokens": {
+      "title": "Tokens Blockchain",
+      "description": "Gestiona tus tokens $LUKAS, $COP y $VOI",
+      "swap": "Intercambiar",
+      "totalPortfolio": "Valor Total del Portafolio",
+      "portfolioDesc": "Valor combinado de todos tus tokens"
+    },
+    "points": {
+      "title": "Hash POINTS",
+      "description": "Puntos de lealtad intercambiables ganados en eventos",
+      "balance": "Tu Saldo",
+      "swappable": "Los puntos se pueden intercambiar por diferentes tokens",
+      "swapOptions": "Opciones de Intercambio",
+      "swapNow": "Intercambiar Ahora",
+      "recentActivity": "Actividad Reciente",
+      "noActivity": "Aún no hay actividad",
+      "activityDesc": "Tu historial de intercambios aparecerá aquí"
+    },
     "tickets": {
-      "title": "Mis Boletos",
-      "description": "Accede a tus pases y recompensas ganadas."
+      "title": "Boletos Blockchain",
+      "description": "Tus boletos NFT verificados en blockchain",
+      "noBlockchainTickets": "Sin Boletos Blockchain",
+      "noBlockchainTicketsDesc": "Los boletos NFT verificados en blockchain de eventos como BSL2025 aparecerán aquí",
+      "viewEvents": "Ver Eventos",
+      "blockchainVerified": "Verificado en Blockchain",
+      "blockchainInfo": "Información Blockchain",
+      "network": "Red",
+      "nftId": "ID NFT",
+      "viewOnExplorer": "Ver en Explorador",
+      "tapToEnlarge": "Toca para ampliar código QR",
+      "tapToMinimize": "Toca para minimizar",
+      "of": "de"
     },
     "loyalty": {
       "title": "Recompensas",

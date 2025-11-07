@@ -124,15 +124,16 @@ export default function SpeakerSearchAndSort({
     return option ? option.label : 'Sort by...';
   };
 
-  // Initialize with all speakers
+  // Initialize with all speakers (only when speakers array changes, not on search/sort)
   useEffect(() => {
     if (speakers.length > 0 && onGroupedSpeakers && onFilteredSpeakers) {
-      const sorted = sortSpeakers(speakers, sortBy, searchQuery);
-      const grouped = groupSpeakersByLetter(speakers, sortBy, searchQuery);
+      const filtered = filterSpeakers(speakers, searchQuery);
+      const sorted = sortSpeakers(filtered, sortBy, searchQuery);
+      const grouped = groupSpeakersByLetter(filtered, sortBy, searchQuery);
       onGroupedSpeakers(grouped);
       onFilteredSpeakers(sorted);
     }
-  }, [speakers, sortBy, searchQuery]);
+  }, [speakers]); // Only depend on speakers, not searchQuery or sortBy
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);

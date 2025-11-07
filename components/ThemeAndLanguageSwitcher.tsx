@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Animated, Easing, Text, Modal, TouchableWithoutFeedback, Dimensions, Platform } from 'react-native';
 import { useTheme } from '../hooks/useTheme';

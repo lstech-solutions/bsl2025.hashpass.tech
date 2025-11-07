@@ -233,7 +233,7 @@
       "animations": "Animaciones"
     },
     "account": "Cuenta",
-    "signOut": "Cerrar sesión",
+    "signOut": "Salir",
     "version": "HashPass v{version}"
   },
   "nav": {
@@ -245,7 +245,7 @@
     "brandSubtitle": "Plataforma de Eventos Digitales",
     "light": "Claro",
     "dark": "Oscuro",
-    "logout": "Cerrar sesión"
+    "logout": "Salir"
   },
   "explore": {
     "noEvent": "No hay evento disponible",

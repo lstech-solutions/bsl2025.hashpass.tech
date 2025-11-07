@@ -330,9 +330,14 @@ export default function SpeakerDetail() {
       } else {
         console.log('✅ Meeting requests result:', data);
         // Handle both direct array and wrapped response
-        const requests = Array.isArray(data) ? data : (data?.requests || []);
-        console.log('📊 Number of requests found:', requests.length);
-        setMeetingRequests(requests);
+        const allRequests = Array.isArray(data) ? data : (data?.requests || []);
+        console.log('📊 Number of requests found:', allRequests.length);
+        
+        // Filter to show only the current user's requests when viewing a speaker profile
+        // (not when the user is the speaker themselves)
+        const userRequests = allRequests.filter((req: any) => req.requester_id === user.id);
+        console.log('📊 Number of user requests:', userRequests.length);
+        setMeetingRequests(userRequests);
       }
     } catch (error) {
       console.error('❌ Error in loadMeetingRequestStatus:', error);
@@ -889,12 +894,14 @@ export default function SpeakerDetail() {
         </View>
       )}
 
-        {/* Your Request Status - Show if there's an existing request */}
-        {meetingRequests.length > 0 && (
+        {/* Meeting Requests Status - Show requests sent to this speaker */}
+        {meetingRequests.length > 0 && !isCurrentUserSpeaker && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <MaterialIcons name="assignment" size={24} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Your Meeting Requests ({meetingRequests.length})</Text>
+              <Text style={styles.sectionTitle}>
+                Your Meeting Request{meetingRequests.length > 1 ? 's' : ''} ({meetingRequests.length})
+              </Text>
               <TouchableOpacity 
                 onPress={loadMeetingRequestStatus}
                 disabled={loadingRequestStatus}
@@ -1303,7 +1310,7 @@ export default function SpeakerDetail() {
 
             <View style={styles.cancelModalHeader}>
               <MaterialIcons name="warning" size={28} color={colors.error.main} />
-              <Text style={styles.cancelModalTitle}>Cancel Meeting Request</Text>
+              <Text style={styles.cancelModalTitle}>Cancel Your Meeting Request</Text>
             </View>
             
             <Text style={styles.cancelModalMessage}>
@@ -1353,7 +1360,11 @@ export default function SpeakerDetail() {
             >
               <MaterialIcons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Meeting Request Details</Text>
+            <Text style={styles.modalTitle}>
+              {selectedRequestDetail?.requester_id === user?.id 
+                ? 'Your Meeting Request Details' 
+                : 'Meeting Request Details'}
+            </Text>
             <View style={styles.modalHeaderSpacer} />
           </View>
 
@@ -1389,9 +1400,13 @@ export default function SpeakerDetail() {
                              '#FF9500'
                     }
                   ]}>
-                    {selectedRequestDetail.status === 'approved' ? 'Meeting Request Approved' :
-                     selectedRequestDetail.status === 'declined' ? 'Meeting Request Declined' :
-                     'Meeting Request Pending'}
+                    {selectedRequestDetail.requester_id === user?.id
+                      ? (selectedRequestDetail.status === 'approved' ? 'Your Meeting Request Approved' :
+                         selectedRequestDetail.status === 'declined' ? 'Your Meeting Request Declined' :
+                         'Your Meeting Request Pending')
+                      : (selectedRequestDetail.status === 'approved' ? 'Meeting Request Approved' :
+                         selectedRequestDetail.status === 'declined' ? 'Meeting Request Declined' :
+                         'Meeting Request Pending')}
                   </Text>
                 </View>
               </View>

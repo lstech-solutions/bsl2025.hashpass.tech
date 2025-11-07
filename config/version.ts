@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202511070329, // Updated to current timestamp
+  buildNumber: 202511070644, // Updated to current timestamp
   releaseDate: '2025-11-07',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -35,11 +35,28 @@ export const CURRENT_VERSION: VersionInfo = {
     'Replaced navigation with modal for privacy and terms links on auth screen'
   ],
   breakingChanges: [],
-  notes: 'Fixed blocked users loading issue, improved dark mode contrast, added mute functionality, and fixed duplicate navigation bar'
+  notes: 'Added email provider detection with clickable links in toasts, fixed pass creation for deleted users, improved delete account flow with OTP verification, fixed cancel meeting request function, and updated meeting request labels in speaker view'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.5.16': {
+    version: '1.5.16',
+    buildNumber: 202511070644,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Added email provider detection with clickable links in toasts, fixed pass creation for deleted users, improved delete account flow with OTP verification, fixed cancel meeting request function, and updated meeting request labels in speaker view'
+  },
   '1.5.15': {
     version: '1.5.15',
     buildNumber: 202511070329,

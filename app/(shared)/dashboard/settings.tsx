@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet, Alert, StatusBar } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet, Alert, StatusBar, TextInput, Modal } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { useLanguage } from '../../../providers/LanguageProvider';
 import { useAnimations } from '../../../providers/AnimationProvider';
@@ -12,6 +12,9 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { t } from '@lingui/macro';
 import { useTutorialPreferences } from '../../../hooks/useTutorialPreferences';
+import { useAuth } from '../../../hooks/useAuth';
+import { supabase } from '../../../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
@@ -21,11 +24,24 @@ export default function SettingsScreen() {
   const { locale, setLocale } = useLanguage();
   const { animationsEnabled, setAnimationsEnabled } = useAnimations();
   const { headerHeight } = useScroll();
-  const { showSuccess, showInfo } = useToastHelpers();
+  const { showSuccess, showInfo, showError } = useToastHelpers();
   const { t: tProfile } = useTranslation('profile');
   const router = useRouter();
   const { resetTutorial, resetAllTutorials, mainTutorialCompleted, networkingTutorialCompleted } = useTutorialPreferences();
+  const { user, signOut } = useAuth();
+  const [clearingCache, setClearingCache] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
   const styles = getStyles(isDark, colors);
+  
+  // Debug: Log modal state changes
+  useEffect(() => {
+    console.log('showDeleteConfirm state changed:', showDeleteConfirm);
+  }, [showDeleteConfirm]);
   
   // Calculate safe area for nav bar overlay
   const navBarHeight = (StatusBar.currentHeight || 0) + 80;
@@ -61,6 +77,235 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleClearCache = async () => {
+    try {
+      setClearingCache(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // Get all keys from AsyncStorage
+      const allKeys = await AsyncStorage.getAllKeys();
+      
+      // Keep essential keys (auth, theme, language)
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+      const supabaseProjectId = supabaseUrl.split('//')[1]?.split('.')[0] || 'supabase';
+      
+      const essentialKeys = [
+        '@theme_preference',
+        'user_locale',
+        `sb-${supabaseProjectId}-auth-token`, // Supabase auth token pattern
+      ];
+      
+      // Filter out essential keys - keep auth tokens and user preferences
+      const keysToRemove = allKeys.filter(key => {
+        // Keep Supabase auth tokens
+        if (key.includes('sb-') && key.includes('auth-token')) {
+          return false;
+        }
+        // Keep theme and language preferences
+        if (essentialKeys.some(essential => key === essential || key.includes(essential))) {
+          return false;
+        }
+        return true;
+      });
+
+      // Remove non-essential keys
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
+      }
+
+      // Also clear web localStorage if on web (but keep auth)
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const localStorageKeys = Object.keys(window.localStorage);
+        
+        localStorageKeys.forEach(key => {
+          // Keep Supabase auth tokens
+          if (key.includes('sb-') && key.includes('auth-token')) {
+            return;
+          }
+          // Remove everything else
+          window.localStorage.removeItem(key);
+        });
+      }
+
+      showSuccess('Cache Cleared', 'App cache has been cleared successfully. Essential data has been preserved.');
+    } catch (error: any) {
+      console.error('Error clearing cache:', error);
+      showError('Clear Cache Failed', error.message || 'Failed to clear cache. Please try again.');
+    } finally {
+      setClearingCache(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    console.log('Delete account button clicked');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    // Open the modal - don't send OTP automatically
+    // User must click "Send Code" button to request the OTP
+    console.log('Opening delete confirmation modal');
+    setShowDeleteConfirm(true);
+    setOtpCode('');
+    setOtpSent(false);
+  };
+
+  const sendDeleteOtp = async () => {
+    console.log('sendDeleteOtp called, user email:', user?.email);
+    
+    if (!user?.email) {
+      console.error('No user email found');
+      showError('Error', 'User email not found. Please try logging in again.');
+      setShowDeleteConfirm(false);
+      return;
+    }
+
+    try {
+      setSendingOtp(true);
+      console.log('Sending OTP to:', user.email);
+      
+      const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
+      const response = await fetch(`${apiUrl}/api/auth/delete-account-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: user.email }),
+      });
+
+      const data = await response.json();
+      console.log('OTP response:', { ok: response.ok, data });
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send verification code');
+      }
+
+      setOtpSent(true);
+      console.log('OTP sent successfully, showing success message');
+      showSuccess('Code Sent', 'Please check your email for the 6-digit verification code.');
+    } catch (error: any) {
+      console.error('Error sending OTP:', error);
+      showError('Send Failed', error.message || 'Failed to send verification code. Please try again.');
+      // Don't close modal on error, let user try again
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      showError('Invalid Code', 'Please enter a valid 6-digit code.');
+      return;
+    }
+
+    if (!user?.email) {
+      showError('Error', 'User email not found. Please try logging in again.');
+      return;
+    }
+
+    try {
+      setVerifyingOtp(true);
+      
+      const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
+      const response = await fetch(`${apiUrl}/api/auth/delete-account-otp/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email: user.email,
+          code: otpCode 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Invalid verification code');
+      }
+
+      // OTP verified, proceed with account deletion
+      await proceedWithDeletion();
+    } catch (error: any) {
+      console.error('Error verifying OTP:', error);
+      showError('Verification Failed', error.message || 'Invalid code. Please try again.');
+      setOtpCode('');
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
+  const proceedWithDeletion = async () => {
+    try {
+      setDeletingAccount(true);
+      setShowDeleteConfirm(false);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
+      if (!user?.id) {
+        showError('Error', 'User not found. Please try logging in again.');
+        return;
+      }
+
+      // Store user email and name before deletion (for sending confirmation email)
+      const userEmail = user.email;
+      const userName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0];
+
+      // Call the delete user function
+      const { data, error } = await supabase.rpc('delete_user_account', {
+        p_user_id: user.id,
+      });
+
+      if (error) {
+        console.error('Error deleting user account:', error);
+        throw error;
+      }
+
+      // Send confirmation email (don't wait for it, as it's not critical)
+      if (userEmail) {
+        try {
+          const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
+          await fetch(`${apiUrl}/api/auth/delete-account-email`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              email: userEmail,
+              userName: userName 
+            }),
+          });
+          // Don't wait for response or throw errors - email is not critical
+        } catch (emailError) {
+          console.error('Error sending deletion confirmation email:', emailError);
+          // Continue with deletion even if email fails
+        }
+      }
+
+      // Sign out the user
+      await signOut();
+
+      // Clear all local storage
+      await AsyncStorage.clear();
+      
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.clear();
+      }
+
+      showSuccess('Account Deleted', 'Your account has been deleted successfully. A confirmation email has been sent.');
+      
+      // Navigate to home/auth screen
+      setTimeout(() => {
+        router.replace('/');
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      showError('Delete Failed', error.message || 'Failed to delete account. Please contact support.');
+    } finally {
+      setDeletingAccount(false);
+      setOtpCode('');
+      setOtpSent(false);
+    }
+  };
+
   const renderSettingItem = ({
     icon,
     title,
@@ -68,6 +313,7 @@ export default function SettingsScreen() {
     onPress,
     rightComponent,
     showChevron = false,
+    disabled = false,
   }: {
     icon: string;
     title: string;
@@ -75,12 +321,13 @@ export default function SettingsScreen() {
     onPress?: () => void;
     rightComponent?: React.ReactNode;
     showChevron?: boolean;
+    disabled?: boolean;
   }) => (
     <TouchableOpacity
-      style={styles.settingItem}
+      style={[styles.settingItem, disabled && styles.settingItemDisabled]}
       onPress={onPress}
       activeOpacity={0.7}
-      disabled={!onPress}
+      disabled={!onPress || disabled}
     >
       <View style={styles.settingItemLeft}>
         <View style={styles.iconContainer}>
@@ -275,11 +522,19 @@ export default function SettingsScreen() {
           {renderSettingItem({
             icon: 'trash-outline',
             title: 'Clear Cache',
-            subtitle: 'Free up storage space',
-            onPress: () => {
-              Alert.alert('Cache Cleared', 'App cache has been cleared successfully.');
-            },
+            subtitle: clearingCache ? 'Clearing...' : 'Free up storage space',
+            onPress: handleClearCache,
+            showChevron: false,
+            disabled: clearingCache,
+          })}
+
+          {renderSettingItem({
+            icon: 'warning-outline',
+            title: 'Delete Account',
+            subtitle: 'Permanently delete your account and all data',
+            onPress: handleDeleteAccount,
             showChevron: true,
+            disabled: deletingAccount,
           })}
         </View>
 
@@ -325,6 +580,125 @@ export default function SettingsScreen() {
         </View>
 
       </ScrollView>
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal
+        visible={showDeleteConfirm}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          console.log('Modal onRequestClose called');
+          if (!sendingOtp && !verifyingOtp && !deletingAccount) {
+            setShowDeleteConfirm(false);
+            setOtpCode('');
+            setOtpSent(false);
+          }
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirm Account Deletion</Text>
+            
+            {!otpSent ? (
+              <>
+                <Text style={styles.modalMessage}>
+                  A verification code will be sent to your email address to confirm account deletion.
+                </Text>
+                {user?.email && (
+                  <Text style={[styles.modalMessage, { marginTop: 8, fontWeight: '600' }]}>
+                    {user.email}
+                  </Text>
+                )}
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonCancel, { marginRight: 6 }]}
+                    onPress={() => {
+                      setShowDeleteConfirm(false);
+                      setOtpCode('');
+                      setOtpSent(false);
+                    }}
+                    disabled={sendingOtp}
+                  >
+                    <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.modalButton,
+                      styles.modalButtonDelete,
+                      { marginLeft: 6 },
+                      sendingOtp && styles.modalButtonDisabled
+                    ]}
+                    onPress={sendDeleteOtp}
+                    disabled={sendingOtp}
+                  >
+                    <Text style={styles.modalButtonDeleteText}>
+                      {sendingOtp ? 'Sending...' : 'Send Code'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalMessage}>
+                  Enter the 6-digit verification code sent to:
+                </Text>
+                {user?.email && (
+                  <Text style={[styles.modalMessage, { marginTop: 4, fontWeight: '600', color: colors.primary?.main || '#4f46e5' }]}>
+                    {user.email}
+                  </Text>
+                )}
+                <TextInput
+                  style={styles.modalInput}
+                  value={otpCode}
+                  onChangeText={(text) => setOtpCode(text.replace(/[^0-9]/g, '').slice(0, 6))}
+                  placeholder="Enter 6-digit code"
+                  placeholderTextColor={colors.text.secondary}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  autoFocus={true}
+                  editable={!verifyingOtp && !deletingAccount}
+                />
+                <TouchableOpacity
+                  style={styles.resendButton}
+                  onPress={sendDeleteOtp}
+                  disabled={sendingOtp || verifyingOtp || deletingAccount}
+                >
+                  <Text style={styles.resendButtonText}>
+                    {sendingOtp ? 'Sending...' : "Didn't receive code? Resend"}
+                  </Text>
+                </TouchableOpacity>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonCancel, { marginRight: 6 }]}
+                    onPress={() => {
+                      setShowDeleteConfirm(false);
+                      setOtpCode('');
+                      setOtpSent(false);
+                    }}
+                    disabled={verifyingOtp || deletingAccount}
+                  >
+                    <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.modalButton,
+                      styles.modalButtonDelete,
+                      { marginLeft: 6 },
+                      (otpCode.length !== 6 || verifyingOtp || deletingAccount) && styles.modalButtonDisabled
+                    ]}
+                    onPress={handleVerifyOtp}
+                    disabled={otpCode.length !== 6 || verifyingOtp || deletingAccount}
+                  >
+                    <Text style={styles.modalButtonDeleteText}>
+                      {verifyingOtp ? 'Verifying...' : deletingAccount ? 'Deleting...' : 'Verify & Delete'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -421,5 +795,96 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontWeight: '600',
     color: '#ef4444',
     marginLeft: 8,
+  },
+  settingItemDisabled: {
+    opacity: 0.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: colors.background.paper,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 16,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  modalBoldText: {
+    fontWeight: 'bold',
+    color: '#F44336',
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: colors.divider,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: colors.text.primary,
+    backgroundColor: colors.background.default,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: colors.background.default,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  modalButtonCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  modalButtonDelete: {
+    backgroundColor: '#F44336',
+  },
+  modalButtonDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#999',
+  },
+  modalButtonDeleteText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  resendButton: {
+    marginTop: -12,
+    marginBottom: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  resendButtonText: {
+    fontSize: 14,
+    color: colors.primary?.main || '#4f46e5',
+    fontWeight: '500',
   },
 });

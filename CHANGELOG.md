@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.16] - 2025-11-07
+
+### Beta
+- Added email provider detection with clickable links in toasts, fixed pass creation for deleted users, improved delete account flow with OTP verification, fixed cancel meeting request function, and updated meeting request labels in speaker view
+
+### Technical Details
+- Version: 1.5.16
+- Release Type: beta
+- Build Number: 202511070644
+- Release Date: 2025-11-07T06:44:23.421Z
+
+
 ## [1.5.15] - 2025-11-07
 
 ### Beta

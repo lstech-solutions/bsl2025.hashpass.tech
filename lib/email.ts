@@ -39,8 +39,11 @@ if (missingVars.length > 0) {
 
 const emailEnabled = missingVars.length === 0;
 
+const smtpHost = process.env.NODEMAILER_HOST || '';
+const isBrevo = smtpHost.includes('brevo.com') || smtpHost.includes('sendinblue.com');
+
 const transporter = emailEnabled ? nodemailer.createTransport({
-  host: process.env.NODEMAILER_HOST,
+  host: smtpHost,
   port: parseInt(process.env.NODEMAILER_PORT || '587'),
   secure: false,
   auth: {
@@ -52,7 +55,10 @@ const transporter = emailEnabled ? nodemailer.createTransport({
   // Add TLS options
   tls: {
     // Do not fail on invalid certs
-    rejectUnauthorized: process.env.NODE_ENV === 'production'
+    rejectUnauthorized: process.env.NODE_ENV === 'production',
+    // For Brevo/Sendinblue, allow hostname mismatch but still verify certificate
+    servername: isBrevo ? 'smtp-relay.sendinblue.com' : undefined,
+    checkServerIdentity: isBrevo ? () => undefined : undefined,
   },
   requireTLS: true,
 }) : null;

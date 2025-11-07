@@ -1,6 +1,23 @@
 {
-  "currentVersion": "1.5.15",
+  "currentVersion": "1.5.16",
   "versions": [
+    {
+      "version": "1.5.16",
+      "buildNumber": 202511070644,
+      "releaseDate": "2025-11-07",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "Added Privacy/Terms modal component for in-app viewing",
+        "Improved mobile responsiveness for theme/language switcher on auth page"
+      ],
+      "bugfixes": [
+        "Fixed theme and language switcher overlapping with auth card on mobile views",
+        "Replaced navigation with modal for privacy and terms links on auth screen"
+      ],
+      "breakingChanges": [],
+      "notes": "Added email provider detection with clickable links in toasts, fixed pass creation for deleted users, improved delete account flow with OTP verification, fixed cancel meeting request function, and updated meeting request labels in speaker view"
+    },
     {
       "version": "1.5.15",
       "buildNumber": 202511070329,

@@ -180,10 +180,10 @@ export const useTutorialPreferences = (): TutorialPreferences => {
           }
         }
       } else {
-        // Insert new record
+        // Insert new record using upsert to handle race conditions
         const { error } = await supabase
           .from('user_tutorial_progress')
-          .insert({
+          .upsert({
             user_id: user.id,
             tutorial_type: type,
             status: 'in_progress',
@@ -191,6 +191,8 @@ export const useTutorialPreferences = (): TutorialPreferences => {
             total_steps_completed: totalStepsCompleted,
             started_at: new Date().toISOString(),
             last_step_at: new Date().toISOString(),
+          }, {
+            onConflict: 'user_id,tutorial_type'
           });
 
         if (!error) {
@@ -240,14 +242,17 @@ export const useTutorialPreferences = (): TutorialPreferences => {
             })
             .eq('id', existing.id);
         } else {
+          // Use upsert to handle race conditions
           await supabase
             .from('user_tutorial_progress')
-            .insert({
+            .upsert({
               user_id: user.id,
               tutorial_type: type,
               status: 'completed',
               completed_at: new Date().toISOString(),
               started_at: new Date().toISOString(),
+            }, {
+              onConflict: 'user_id,tutorial_type'
             });
         }
       }
@@ -290,13 +295,16 @@ export const useTutorialPreferences = (): TutorialPreferences => {
             })
             .eq('id', existing.id);
         } else {
+          // Use upsert to handle race conditions
           await supabase
             .from('user_tutorial_progress')
-            .insert({
+            .upsert({
               user_id: user.id,
               tutorial_type: type,
               status: 'skipped',
               skipped_at: new Date().toISOString(),
+            }, {
+              onConflict: 'user_id,tutorial_type'
             });
         }
       }

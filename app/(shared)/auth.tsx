@@ -12,6 +12,7 @@ import { OptimizedSplashCursor } from '../../components/OptimizedSplashCursor';
 import { useTheme } from '../../hooks/useTheme';
 import { isEthereumWalletAvailable, isSolanaWalletAvailable } from '../../lib/wallet-auth';
 import { useToastHelpers } from '../../contexts/ToastContext';
+import { getEmailProviderUrl, openEmailProvider } from '../../lib/email-provider';
 import PrivacyTermsModal from '../../components/PrivacyTermsModal';
 
 type AuthMethod = 'magiclink' | 'otp';
@@ -142,7 +143,19 @@ export default function AuthScreen() {
           }
 
           setOtpSent(true);
-          showSuccess('Code Sent', 'Please check your email for the 6-digit verification code.');
+          
+          // Get email provider to add a link in the toast
+          const emailProvider = getEmailProviderUrl(email.trim());
+          const providerName = emailProvider?.name || 'your email';
+          
+          showSuccess(
+            'Code Sent',
+            `Please check ${providerName} for the 6-digit verification code.`,
+            emailProvider ? {
+              label: `Open ${emailProvider.name}`,
+              onPress: () => openEmailProvider(email.trim()),
+            } : undefined
+          );
           setLoading(false);
           return;
         } catch (apiError: any) {
@@ -162,7 +175,19 @@ export default function AuthScreen() {
           }
 
           setOtpSent(true);
-          showSuccess('Code Sent', 'Please check your email for the verification code.');
+          
+          // Get email provider to add a link in the toast
+          const emailProvider = getEmailProviderUrl(email.trim());
+          const providerName = emailProvider?.name || 'your email';
+          
+          showSuccess(
+            'Code Sent',
+            `Please check ${providerName} for the verification code.`,
+            emailProvider ? {
+              label: `Open ${emailProvider.name}`,
+              onPress: () => openEmailProvider(email.trim()),
+            } : undefined
+          );
           setLoading(false);
           return;
         }
@@ -181,7 +206,18 @@ export default function AuthScreen() {
           return;
         }
 
-        showSuccess('Magic Link Sent', 'Please check your email and click the link to sign in.');
+        // Get email provider to add a link in the toast
+        const emailProvider = getEmailProviderUrl(email.trim());
+        const providerName = emailProvider?.name || 'your email';
+        
+        showSuccess(
+          'Magic Link Sent',
+          `Please check ${providerName} and click the link to sign in.`,
+          emailProvider ? {
+            label: `Open ${emailProvider.name}`,
+            onPress: () => openEmailProvider(email.trim()),
+          } : undefined
+        );
       }
       setLoading(false);
     } catch (error: any) {

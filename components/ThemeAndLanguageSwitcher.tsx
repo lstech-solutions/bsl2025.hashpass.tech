@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, Animated, Easing, Text, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Animated, Easing, Text, Modal, TouchableWithoutFeedback, Dimensions, Platform } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -23,6 +23,25 @@ const ThemeAndLanguageSwitcher = () => {
 
   // Check if we're on the auth page
   const isOnAuthPage = pathname?.includes('/auth') || pathname === '/(shared)/auth';
+  
+  // Check if mobile view
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const updateDimensions = () => {
+      const { width } = Dimensions.get('window');
+      setIsMobile(width < 768);
+    };
+    
+    updateDimensions();
+    const subscription = Dimensions.addEventListener('change', updateDimensions);
+    
+    return () => {
+      if (subscription) {
+        subscription.remove();
+      }
+    };
+  }, []);
 
   const currentLanguage = availableLocales.find(lang => lang.code === locale) || availableLocales[0];
 
@@ -134,7 +153,10 @@ const ThemeAndLanguageSwitcher = () => {
   });
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      isOnAuthPage && isMobile && styles.containerMobile
+    ]}>
       <View style={styles.languageContainer}>
         <TouchableOpacity
           style={[styles.button, { backgroundColor: colors.surface }]}
@@ -250,6 +272,10 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 1000,
     alignItems: 'flex-start',
+  },
+  containerMobile: {
+    top: Platform.OS === 'web' ? 10 : 60,
+    right: 10,
   },
   languageContainer: {
     position: 'relative',

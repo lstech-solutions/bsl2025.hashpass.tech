@@ -12,6 +12,7 @@ import { OptimizedSplashCursor } from '../../components/OptimizedSplashCursor';
 import { useTheme } from '../../hooks/useTheme';
 import { isEthereumWalletAvailable, isSolanaWalletAvailable } from '../../lib/wallet-auth';
 import { useToastHelpers } from '../../contexts/ToastContext';
+import PrivacyTermsModal from '../../components/PrivacyTermsModal';
 
 type AuthMethod = 'magiclink' | 'otp';
 
@@ -28,6 +29,8 @@ export default function AuthScreen() {
   const [emailError, setEmailError] = useState('');
   const [ethereumAvailable, setEthereumAvailable] = useState(false);
   const [solanaAvailable, setSolanaAvailable] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<'privacy' | 'terms'>('privacy');
   const styles = getStyles(isDark, colors);
 
   // Check wallet availability on web
@@ -743,7 +746,10 @@ export default function AuthScreen() {
           <Text style={styles.privacyText}>{t('privacy.text')} </Text>
           <TouchableOpacity 
             activeOpacity={0.7}
-            onPress={() => router.push('/(shared)/terms' as any)}
+            onPress={() => {
+              setModalType('terms');
+              setModalVisible(true);
+            }}
             style={styles.linkButton}
             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
           >
@@ -752,7 +758,10 @@ export default function AuthScreen() {
           <Text style={styles.privacyText}> and </Text>
           <TouchableOpacity 
             activeOpacity={0.7}
-            onPress={() => router.push('/(shared)/privacy' as any)}
+            onPress={() => {
+              setModalType('privacy');
+              setModalVisible(true);
+            }}
             style={styles.linkButton}
             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
           >
@@ -762,6 +771,11 @@ export default function AuthScreen() {
         </View>
       </View>
       </ScrollView>
+      <PrivacyTermsModal
+        visible={modalVisible}
+        type={modalType}
+        onClose={() => setModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }

@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.12] - 2025-11-07
+
+### Beta
+- Fixed
+
+### Technical Details
+- Version: 1.5.12
+- Release Type: beta
+- Build Number: 202511070059
+- Release Date: 2025-11-07T00:59:46.094Z
+
+
 ## [1.5.11] - 2025-11-06
 
 ### Beta

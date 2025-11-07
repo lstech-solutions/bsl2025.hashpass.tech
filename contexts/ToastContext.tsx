@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1.5,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
   },
   actionButtonText: {
     fontSize: 14,
@@ -395,20 +395,63 @@ const styles = StyleSheet.create({
 export const useToastHelpers = () => {
   const { showToast } = useToast();
 
-  const showSuccess = useCallback((title: string, message?: string, action?: Toast['action']) => {
-    showToast({ type: 'success', title, message, action });
+  const showSuccess = useCallback((title: string, message?: string, actionOrDuration?: Toast['action'] | number, action?: Toast['action']) => {
+    // Handle both old signature (action as 3rd param) and new signature (duration as 3rd param, action as 4th)
+    let duration: number | undefined;
+    let finalAction: Toast['action'] | undefined;
+    
+    if (typeof actionOrDuration === 'number') {
+      // New signature: (title, message, duration, action)
+      duration = actionOrDuration;
+      finalAction = action;
+    } else if (actionOrDuration && typeof actionOrDuration === 'object') {
+      // Old signature: (title, message, action)
+      finalAction = actionOrDuration;
+    }
+    
+    showToast({ type: 'success', title, message, duration, action: finalAction });
   }, [showToast]);
 
-  const showError = useCallback((title: string, message?: string, action?: Toast['action']) => {
-    showToast({ type: 'error', title, message, action });
+  const showError = useCallback((title: string, message?: string, actionOrDuration?: Toast['action'] | number, action?: Toast['action']) => {
+    let duration: number | undefined;
+    let finalAction: Toast['action'] | undefined;
+    
+    if (typeof actionOrDuration === 'number') {
+      duration = actionOrDuration;
+      finalAction = action;
+    } else if (actionOrDuration && typeof actionOrDuration === 'object') {
+      finalAction = actionOrDuration;
+    }
+    
+    showToast({ type: 'error', title, message, duration, action: finalAction });
   }, [showToast]);
 
-  const showWarning = useCallback((title: string, message?: string, action?: Toast['action']) => {
-    showToast({ type: 'warning', title, message, action });
+  const showWarning = useCallback((title: string, message?: string, actionOrDuration?: Toast['action'] | number, action?: Toast['action']) => {
+    let duration: number | undefined;
+    let finalAction: Toast['action'] | undefined;
+    
+    if (typeof actionOrDuration === 'number') {
+      duration = actionOrDuration;
+      finalAction = action;
+    } else if (actionOrDuration && typeof actionOrDuration === 'object') {
+      finalAction = actionOrDuration;
+    }
+    
+    showToast({ type: 'warning', title, message, duration, action: finalAction });
   }, [showToast]);
 
-  const showInfo = useCallback((title: string, message?: string, action?: Toast['action']) => {
-    showToast({ type: 'info', title, message, action });
+  const showInfo = useCallback((title: string, message?: string, actionOrDuration?: Toast['action'] | number, action?: Toast['action']) => {
+    let duration: number | undefined;
+    let finalAction: Toast['action'] | undefined;
+    
+    if (typeof actionOrDuration === 'number') {
+      duration = actionOrDuration;
+      finalAction = action;
+    } else if (actionOrDuration && typeof actionOrDuration === 'object') {
+      finalAction = actionOrDuration;
+    }
+    
+    showToast({ type: 'info', title, message, duration, action: finalAction });
   }, [showToast]);
 
   return {

@@ -1,3 +1,5 @@
+import { Platform, Linking } from 'react-native';
+
 /**
  * Detects the email provider from an email address and returns the URL to open it
  */
@@ -5,6 +7,7 @@
 export interface EmailProvider {
   name: string;
   url: string;
+  deepLink?: string; // Mobile deep link
   icon?: string;
 }
 
@@ -20,6 +23,7 @@ export function getEmailProviderUrl(email: string): EmailProvider | null {
     return {
       name: 'Gmail',
       url: 'https://mail.google.com',
+      deepLink: 'googlegmail://', // Gmail app deep link
       icon: 'gmail',
     };
   }
@@ -39,6 +43,7 @@ export function getEmailProviderUrl(email: string): EmailProvider | null {
     return {
       name: 'Outlook',
       url: 'https://outlook.live.com',
+      deepLink: 'ms-outlook://', // Outlook app deep link
       icon: 'outlook',
     };
   }
@@ -57,6 +62,7 @@ export function getEmailProviderUrl(email: string): EmailProvider | null {
     return {
       name: 'Yahoo Mail',
       url: 'https://mail.yahoo.com',
+      deepLink: 'ymail://', // Yahoo Mail app deep link
       icon: 'yahoo',
     };
   }
@@ -66,6 +72,7 @@ export function getEmailProviderUrl(email: string): EmailProvider | null {
     return {
       name: 'iCloud Mail',
       url: 'https://www.icloud.com/mail',
+      deepLink: 'message://', // iOS Mail app (fallback to mailto)
       icon: 'apple',
     };
   }
@@ -120,13 +127,50 @@ export function getEmailProviderUrl(email: string): EmailProvider | null {
 }
 
 /**
- * Opens the email provider in a new window/tab
+ * Opens the email provider in a new window/tab (web) or app (mobile)
  */
-export function openEmailProvider(email: string): void {
+export async function openEmailProvider(email: string): Promise<void> {
   const provider = getEmailProviderUrl(email);
   
-  if (provider && typeof window !== 'undefined') {
-    window.open(provider.url, '_blank', 'noopener,noreferrer');
+  if (!provider) {
+    // Fallback to mailto: if no provider detected
+    if (Platform.OS !== 'web') {
+      try {
+        await Linking.openURL(`mailto:${email}`);
+      } catch (error) {
+        console.error('Error opening mailto:', error);
+      }
+    }
+    return;
+  }
+
+  if (Platform.OS === 'web') {
+    // Web: open in new tab
+    if (typeof window !== 'undefined') {
+      window.open(provider.url, '_blank', 'noopener,noreferrer');
+    }
+  } else {
+    // Mobile: try deep link first, then fallback to mailto
+    try {
+      if (provider.deepLink) {
+        // Try to open the specific email app
+        const canOpen = await Linking.canOpenURL(provider.deepLink);
+        if (canOpen) {
+          await Linking.openURL(provider.deepLink);
+          return;
+        }
+      }
+      // Fallback to mailto: which opens default email app
+      await Linking.openURL(`mailto:${email}`);
+    } catch (error) {
+      console.error('Error opening email provider:', error);
+      // Final fallback to mailto
+      try {
+        await Linking.openURL(`mailto:${email}`);
+      } catch (fallbackError) {
+        console.error('Error opening mailto fallback:', fallbackError);
+      }
+    }
   }
 }
 

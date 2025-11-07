@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Platform, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
@@ -15,7 +15,17 @@ interface PrivacyTermsModalProps {
 
 export default function PrivacyTermsModal({ visible, type, onClose }: PrivacyTermsModalProps) {
   const { colors, isDark } = useTheme();
-  const styles = getStyles(isDark, colors);
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+  
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    
+    return () => subscription?.remove();
+  }, []);
+  
+  const styles = getStyles(isDark, colors, screenWidth);
 
   const renderContent = () => {
     if (type === 'privacy') {
@@ -277,7 +287,7 @@ export default function PrivacyTermsModal({ visible, type, onClose }: PrivacyTer
   );
 }
 
-const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
+const getStyles = (isDark: boolean, colors: any, screenWidth: number) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -288,14 +298,23 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     backgroundColor: colors.background.default,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     maxHeight: '90%',
     ...Platform.select({
       web: {
-        maxWidth: 600,
-        alignSelf: 'center',
         width: '100%',
-        borderRadius: 20,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
         marginTop: 40,
+        ...(screenWidth >= 768 ? {
+          maxWidth: '100%',
+        } : {
+          maxWidth: 600,
+          alignSelf: 'center',
+        }),
       },
     }),
   },

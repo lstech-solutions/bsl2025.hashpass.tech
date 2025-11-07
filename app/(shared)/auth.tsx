@@ -151,9 +151,10 @@ export default function AuthScreen() {
           showSuccess(
             'Code Sent',
             `Please check ${providerName} for the 6-digit verification code.`,
+            10000, // 10 seconds duration
             emailProvider ? {
               label: `Open ${emailProvider.name}`,
-              onPress: () => openEmailProvider(email.trim()),
+              onPress: async () => await openEmailProvider(email.trim()),
             } : undefined
           );
           setLoading(false);
@@ -183,9 +184,10 @@ export default function AuthScreen() {
           showSuccess(
             'Code Sent',
             `Please check ${providerName} for the verification code.`,
+            10000, // 10 seconds duration
             emailProvider ? {
               label: `Open ${emailProvider.name}`,
-              onPress: () => openEmailProvider(email.trim()),
+              onPress: async () => await openEmailProvider(email.trim()),
             } : undefined
           );
           setLoading(false);
@@ -213,9 +215,10 @@ export default function AuthScreen() {
         showSuccess(
           'Magic Link Sent',
           `Please check ${providerName} and click the link to sign in.`,
+          10000, // 10 seconds duration
           emailProvider ? {
             label: `Open ${emailProvider.name}`,
-            onPress: () => openEmailProvider(email.trim()),
+            onPress: async () => await openEmailProvider(email.trim()),
           } : undefined
         );
       }
@@ -614,30 +617,76 @@ export default function AuthScreen() {
               {/* Method Toggle */}
               <View style={styles.methodToggleContainer}>
                 <TouchableOpacity
-                  style={[styles.methodToggle, authMethod === 'magiclink' && styles.methodToggleActive]}
-                  onPress={() => setAuthMethod('magiclink')}
+                  style={[
+                    styles.methodToggle, 
+                    authMethod === 'magiclink' && styles.methodToggleActive,
+                    loading && styles.methodToggleDisabled
+                  ]}
+                  onPress={() => {
+                    if (!loading) {
+                      setAuthMethod('magiclink');
+                      // Clear any email errors when switching
+                      if (emailError) {
+                        setEmailError('');
+                      }
+                    }
+                  }}
                   disabled={loading}
+                  activeOpacity={0.7}
                 >
                   <Ionicons 
                     name="link" 
                     size={16} 
-                    color={authMethod === 'magiclink' ? (isDark ? '#fff' : '#000') : (isDark ? '#999' : '#666')} 
+                    color={
+                      loading 
+                        ? (isDark ? '#666' : '#999')
+                        : authMethod === 'magiclink' 
+                          ? (isDark ? '#fff' : '#000') 
+                          : (isDark ? '#999' : '#666')
+                    } 
                   />
-                  <Text style={[styles.methodToggleText, authMethod === 'magiclink' && styles.methodToggleTextActive]}>
+                  <Text style={[
+                    styles.methodToggleText, 
+                    authMethod === 'magiclink' && styles.methodToggleTextActive,
+                    loading && styles.methodToggleTextDisabled
+                  ]}>
                     Magic Link
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.methodToggle, authMethod === 'otp' && styles.methodToggleActive]}
-                  onPress={() => setAuthMethod('otp')}
+                  style={[
+                    styles.methodToggle, 
+                    authMethod === 'otp' && styles.methodToggleActive,
+                    loading && styles.methodToggleDisabled
+                  ]}
+                  onPress={() => {
+                    if (!loading) {
+                      setAuthMethod('otp');
+                      // Clear any email errors when switching
+                      if (emailError) {
+                        setEmailError('');
+                      }
+                    }
+                  }}
                   disabled={loading}
+                  activeOpacity={0.7}
                 >
                   <Ionicons 
                     name="keypad" 
                     size={16} 
-                    color={authMethod === 'otp' ? (isDark ? '#fff' : '#000') : (isDark ? '#999' : '#666')} 
+                    color={
+                      loading 
+                        ? (isDark ? '#666' : '#999')
+                        : authMethod === 'otp' 
+                          ? (isDark ? '#fff' : '#000') 
+                          : (isDark ? '#999' : '#666')
+                    } 
                   />
-                  <Text style={[styles.methodToggleText, authMethod === 'otp' && styles.methodToggleTextActive]}>
+                  <Text style={[
+                    styles.methodToggleText, 
+                    authMethod === 'otp' && styles.methodToggleTextActive,
+                    loading && styles.methodToggleTextDisabled
+                  ]}>
                     OTP Code
                   </Text>
                 </TouchableOpacity>
@@ -941,6 +990,12 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   methodToggleTextActive: {
     color: isDark ? '#fff' : '#121212',
     fontWeight: '600',
+  },
+  methodToggleDisabled: {
+    opacity: 0.5,
+  },
+  methodToggleTextDisabled: {
+    opacity: 0.5,
   },
   primaryButton: {
     backgroundColor: colors.primary || '#7A5ECC',

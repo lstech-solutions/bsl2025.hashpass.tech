@@ -19,20 +19,43 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, '..');
 
+// Function to get current version from package.json
+function getCurrentVersion() {
+  const packageJsonPath = path.join(projectRoot, 'package.json');
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    return packageJson.version;
+  } catch (error) {
+    console.error('❌ Error: Could not read package.json');
+    process.exit(1);
+  }
+}
+
+// Function to increment version
+function incrementVersion(version, bumpType = 'patch') {
+  const parts = version.split('.').map(Number);
+  if (parts.length !== 3) {
+    throw new Error('Invalid version format');
+  }
+
+  switch (bumpType) {
+    case 'major':
+      return `${parts[0] + 1}.0.0`;
+    case 'minor':
+      return `${parts[0]}.${parts[1] + 1}.0`;
+    case 'patch':
+    default:
+      return `${parts[0]}.${parts[1]}.${parts[2] + 1}`;
+  }
+}
+
 // Parse command line arguments
 const args = process.argv.slice(2);
 
 // Find version number (first argument that matches version format)
 const versionRegex = /^\d+\.\d+\.\d+$/;
 const versionIndex = args.findIndex(arg => versionRegex.test(arg));
-const versionArg = versionIndex !== -1 ? args[versionIndex] : args[0];
-
-// If version is not found or doesn't match format, try first non-flag argument
-let newVersionFinal = versionArg;
-if (!versionRegex.test(newVersionFinal)) {
-  const nonFlagArgs = args.filter(arg => !arg.startsWith('--') && !arg.startsWith('-'));
-  newVersionFinal = nonFlagArgs[0] || newVersionFinal;
-}
+const bumpTypeIndex = args.findIndex(arg => ['patch', 'minor', 'major'].includes(arg));
 
 const releaseType = args.find(arg => arg.startsWith('--type='))?.split('=')[1] || 'beta';
 const releaseNotes = args.find(arg => arg.startsWith('--notes='))?.split('=')[1] || '';
@@ -43,33 +66,54 @@ const shouldTag = args.includes('--tag') || args.includes('-t');
 const shouldPush = args.includes('--push') || args.includes('-p');
 const autoGit = args.includes('--auto-git'); // Shorthand for --commit --tag --push
 
-// Validate version format
-if (!newVersionFinal || !versionRegex.test(newVersionFinal)) {
-  console.error('❌ Error: Please provide a valid version number in format X.Y.Z');
-  console.log('');
-  console.log('Usage: node scripts/update-version.mjs <version> [options]');
-  console.log('   or: npm run version:update <version> [-- --options]');
-  console.log('   or: npm run version:bump <version>');
-  console.log('');
-  console.log('Options:');
-  console.log('  --type=<type>        Release type: alpha, beta, rc, stable (default: beta)');
-  console.log('  --notes="<notes>"    Release notes');
-  console.log('  --commit, -c         Commit changes automatically');
-  console.log('  --tag, -t            Create git tag automatically');
-  console.log('  --push, -p           Push to remote automatically');
-  console.log('  --auto-git           Shorthand for --commit --tag --push');
-  console.log('');
-  console.log('Examples:');
-  console.log('  node scripts/update-version.mjs 1.3.7');
-  console.log('  node scripts/update-version.mjs 1.3.7 --type=beta --notes="Bug fixes"');
-  console.log('  node scripts/update-version.mjs 1.3.7 --auto-git');
-  console.log('  npm run version:update 1.3.7 -- --type=beta');
-  console.log('  npm run version:bump 1.3.7');
-  process.exit(1);
+// Determine version
+let newVersion;
+
+if (versionIndex !== -1) {
+  // Explicit version provided
+  newVersion = args[versionIndex];
+} else if (bumpTypeIndex !== -1) {
+  // Bump type provided, auto-increment
+  const bumpType = args[bumpTypeIndex];
+  const currentVersion = getCurrentVersion();
+  newVersion = incrementVersion(currentVersion, bumpType);
+  console.log(`📦 Auto-detected current version: ${currentVersion}`);
+  console.log(`⬆️  Bumping ${bumpType} version to: ${newVersion}`);
+} else {
+  // No version or bump type, default to patch increment
+  const currentVersion = getCurrentVersion();
+  newVersion = incrementVersion(currentVersion, 'patch');
+  console.log(`📦 Auto-detected current version: ${currentVersion}`);
+  console.log(`⬆️  Auto-incrementing patch version to: ${newVersion}`);
 }
 
-// Use the validated version (rename to avoid conflict)
-const newVersion = newVersionFinal;
+// Validate version format
+if (!newVersion || !versionRegex.test(newVersion)) {
+  console.error('❌ Error: Invalid version format');
+  console.log('');
+  console.log('Usage: node scripts/update-version.mjs [version] [options]');
+  console.log('   or: npm run version:update [version] [-- --options]');
+  console.log('   or: npm run version:bump [version|patch|minor|major]');
+  console.log('');
+  console.log('Options:');
+  console.log('  <version>            Explicit version (e.g., 1.3.7) - optional');
+  console.log('  patch|minor|major     Auto-increment version type - optional (default: patch)');
+  console.log('  --type=<type>         Release type: alpha, beta, rc, stable (default: beta)');
+  console.log('  --notes="<notes>"     Release notes');
+  console.log('  --commit, -c          Commit changes automatically');
+  console.log('  --tag, -t             Create git tag automatically');
+  console.log('  --push, -p            Push to remote automatically');
+  console.log('  --auto-git            Shorthand for --commit --tag --push');
+  console.log('');
+  console.log('Examples:');
+  console.log('  npm run version:bump                    # Auto-increment patch (1.6.1 -> 1.6.2)');
+  console.log('  npm run version:bump patch               # Auto-increment patch');
+  console.log('  npm run version:bump minor               # Auto-increment minor (1.6.1 -> 1.7.0)');
+  console.log('  npm run version:bump major               # Auto-increment major (1.6.1 -> 2.0.0)');
+  console.log('  npm run version:bump 1.3.7               # Explicit version');
+  console.log('  npm run version:bump --type=stable       # Auto-increment with release type');
+  process.exit(1);
+}
 
 // Validate release type
 const validTypes = ['alpha', 'beta', 'rc', 'stable'];

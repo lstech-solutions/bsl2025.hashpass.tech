@@ -101,8 +101,7 @@ export default function BSL2025Layout() {
       <Stack.Screen 
         name="networking/blocked" 
         options={{
-          title: 'Blocked Users',
-          headerBackTitle: 'Networking',
+          headerShown: false, // Hide header - blocked.tsx has its own custom header
         }}
       />
       <Stack.Screen 

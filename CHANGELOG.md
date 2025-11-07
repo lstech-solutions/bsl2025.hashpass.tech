@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.15] - 2025-11-07
+
+### Beta
+- Fixed blocked users loading issue, improved dark mode contrast, added mute functionality, and fixed duplicate navigation bar
+
+### Technical Details
+- Version: 1.5.15
+- Release Type: beta
+- Build Number: 202511070329
+- Release Date: 2025-11-07T03:29:04.951Z
+
+
 ## [1.5.14] - 2025-11-07
 
 ### Beta

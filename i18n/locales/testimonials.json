@@ -94,5 +94,101 @@
       "wallet": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
       "role": "재무 관리자"
     }
+  ],
+  "fr": [
+    {
+      "text": "\"HashPass a transformé la gestion de notre communauté avec son puissant système de portefeuille numérique. L'intégration transparente avec les événements locaux a rendu notre communauté plus engagée que jamais.\"",
+      "wallet": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb5",
+      "role": "Organisateur communautaire"
+    },
+    {
+      "text": "\"La fonctionnalité de découverte d'événements du système Hash Pass est un changement de jeu. Elle nous aide à trouver et assister à des événements locaux sans effort, enrichissant notre expérience de la ville.\"",
+      "wallet": "0x8ba1f109551bD432803012645Hac136c85d8a7b3",
+      "role": "Résident local"
+    },
+    {
+      "text": "\"La gestion des portefeuilles numériques de notre communauté n'a jamais été aussi facile avec Hash Pass. Les fonctionnalités de sécurité nous donnent la tranquillité d'esprit lors de la gestion des transactions.\"",
+      "wallet": "0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE",
+      "role": "Trésorier communautaire"
+    },
+    {
+      "text": "\"Le système HashPass a révolutionné la façon dont nous découvrons et participons aux événements locaux. L'interface conviviale de la plateforme la rend accessible à tous.\"",
+      "wallet": "0x9f8f72aA9304c8B593d555F12eF6589cC3A579A2",
+      "role": "Organisateur d'événements"
+    },
+    {
+      "text": "\"Les fonctionnalités communautaires de HashPass ont rapproché notre quartier. C'est un outil puissant pour construire des communautés plus fortes.\"",
+      "wallet": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      "role": "Leader communautaire"
+    },
+    {
+      "text": "\"La gestion des transactions de portefeuille numérique de notre communauté n'a jamais été plus efficace avec le système Hash Pass. Les outils de reporting fournissent des informations précieuses sur la santé financière de notre communauté.\"",
+      "wallet": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "role": "Administrateur financier"
+    }
+  ],
+  "pt": [
+    {
+      "text": "\"HashPass transformou o gerenciamento da nossa comunidade com seu poderoso sistema de carteira digital. A integração perfeita com eventos locais tornou nossa comunidade mais engajada do que nunca.\"",
+      "wallet": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb5",
+      "role": "Organizador Comunitário"
+    },
+    {
+      "text": "\"A funcionalidade de descoberta de eventos do Sistema Hash Pass é um divisor de águas. Ela nos ajuda a encontrar e participar de eventos locais sem esforço, enriquecendo nossa experiência na cidade.\"",
+      "wallet": "0x8ba1f109551bD432803012645Hac136c85d8a7b3",
+      "role": "Residente Local"
+    },
+    {
+      "text": "\"Gerenciar as carteiras digitais da nossa comunidade nunca foi tão fácil com Hash Pass. Os recursos de segurança nos dão tranquilidade ao lidar com transações.\"",
+      "wallet": "0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE",
+      "role": "Tesoureiro Comunitário"
+    },
+    {
+      "text": "\"O Sistema HashPass revolucionou a forma como descobrimos e participamos de eventos locais. A interface amigável da plataforma a torna acessível a todos.\"",
+      "wallet": "0x9f8f72aA9304c8B593d555F12eF6589cC3A579A2",
+      "role": "Organizador de Eventos"
+    },
+    {
+      "text": "\"Os recursos comunitários do HashPass aproximaram nosso bairro. É uma ferramenta poderosa para construir comunidades mais fortes.\"",
+      "wallet": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      "role": "Líder Comunitário"
+    },
+    {
+      "text": "\"Gerenciar as transações de carteira digital da nossa comunidade nunca foi mais eficiente com o Sistema Hash Pass. As ferramentas de relatório fornecem insights valiosos sobre a saúde financeira da nossa comunidade.\"",
+      "wallet": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "role": "Administrador Financeiro"
+    }
+  ],
+  "de": [
+    {
+      "text": "\"HashPass hat unser Community-Management mit seinem leistungsstarken digitalen Wallet-System transformiert. Die nahtlose Integration mit lokalen Events hat unsere Community engagierter gemacht als je zuvor.\"",
+      "wallet": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb5",
+      "role": "Community-Organisator"
+    },
+    {
+      "text": "\"Die Event-Entdeckungsfunktion des Hash Pass Systems ist ein Game-Changer. Sie hilft uns, lokale Events mühelos zu finden und daran teilzunehmen, was unser Stadterlebnis bereichert.\"",
+      "wallet": "0x8ba1f109551bD432803012645Hac136c85d8a7b3",
+      "role": "Lokaler Bewohner"
+    },
+    {
+      "text": "\"Die Verwaltung der digitalen Wallets unserer Community war mit Hash Pass noch nie einfacher. Die Sicherheitsfunktionen geben uns Ruhe beim Umgang mit Transaktionen.\"",
+      "wallet": "0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE",
+      "role": "Community-Kassenwart"
+    },
+    {
+      "text": "\"Das HashPass System hat revolutioniert, wie wir lokale Events entdecken und daran teilnehmen. Die benutzerfreundliche Oberfläche der Plattform macht sie für alle zugänglich.\"",
+      "wallet": "0x9f8f72aA9304c8B593d555F12eF6589cC3A579A2",
+      "role": "Event-Organisator"
+    },
+    {
+      "text": "\"Die Community-Funktionen von HashPass haben unsere Nachbarschaft näher zusammengebracht. Es ist ein mächtiges Tool zum Aufbau stärkerer Gemeinschaften.\"",
+      "wallet": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      "role": "Community-Leader"
+    },
+    {
+      "text": "\"Die Verwaltung der digitalen Wallet-Transaktionen unserer Community war mit dem Hash Pass System noch nie effizienter. Die Berichtstools liefern wertvolle Einblicke in die finanzielle Gesundheit unserer Community.\"",
+      "wallet": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "role": "Finanzadministrator"
+    }
   ]
 }

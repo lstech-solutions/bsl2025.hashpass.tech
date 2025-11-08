@@ -6,6 +6,9 @@ import { useEffect, useState, useCallback } from 'react';
 import enMessages from './locales/en.json';
 import esMessages from './locales/es.json';
 import koMessages from './locales/ko.json';
+import frMessages from './locales/fr.json';
+import ptMessages from './locales/pt.json';
+import deMessages from './locales/de.json';
 
 // If your messages are nested under keys, map them here, otherwise export as-is
 function transformMessages(nested: any): Record<string, string> {
@@ -33,6 +36,9 @@ const messagesByLocale: Record<string, Record<string, string>> = {
   en: transformMessages(enMessages as any),
   es: transformMessages(esMessages as any),
   ko: transformMessages(koMessages as any),
+  fr: transformMessages(frMessages as any),
+  pt: transformMessages(ptMessages as any),
+  de: transformMessages(deMessages as any),
 };
 
 // Use the global singleton so @lingui/macro can see current locale
@@ -49,6 +55,9 @@ export function getAvailableLocales() {
     { code: 'en', name: 'english' },
     { code: 'es', name: 'spanish' },
     { code: 'ko', name: 'korean' },
+    { code: 'fr', name: 'french' },
+    { code: 'pt', name: 'portuguese' },
+    { code: 'de', name: 'german' },
   ];
 }
 

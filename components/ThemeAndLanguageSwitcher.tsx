@@ -297,7 +297,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 60,
     right: 0,
-    minWidth: 120,
+    minWidth: 140,
+    maxWidth: 180,
     borderRadius: 12,
     paddingVertical: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -305,6 +306,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
     zIndex: 1001,
+    maxHeight: 400,
   },
   languageItem: {
     paddingVertical: 10,

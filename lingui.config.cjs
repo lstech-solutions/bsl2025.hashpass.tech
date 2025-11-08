@@ -1,7 +1,7 @@
 const { formatter } = require("@lingui/format-json");
 
 module.exports = {
-  locales: ["en", "es", "ko"],
+  locales: ["en", "es", "ko", "fr", "pt", "de"],
   catalogs: [
     {
       path: "i18n/locales/{locale}.json",

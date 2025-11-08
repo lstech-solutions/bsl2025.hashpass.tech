@@ -248,6 +248,16 @@ BEGIN
                     NEW.speaker_id,
                     false
                 );
+                
+            WHEN 'cancelled' THEN
+                -- Notify requester (notification already sent by cancel_meeting_request function, but we can add a trigger notification if needed)
+                -- The cancel_meeting_request function already handles notifications, so we can skip here
+                -- or add a duplicate notification if desired
+                NULL;
+                
+            ELSE
+                -- For any other status changes, do nothing (prevents "case not found" error)
+                NULL;
         END CASE;
         
         -- Update pass based on response (if function exists)

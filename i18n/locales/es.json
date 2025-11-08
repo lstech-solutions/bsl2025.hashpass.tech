@@ -189,7 +189,10 @@
     "languages": {
       "en": "Inglés",
       "es": "Español",
-      "ko": "Coreano"
+      "ko": "Coreano",
+      "fr": "Francés",
+      "pt": "Portugués",
+      "de": "Alemán"
     },
     "terms": {
       "subtitle": "Lee nuestros términos y condiciones"
@@ -247,7 +250,10 @@
     "languages": {
       "english": "Inglés",
       "spanish": "Español",
-      "korean": "Coreano"
+      "korean": "Coreano",
+      "french": "Francés",
+      "portuguese": "Portugués",
+      "german": "Alemán"
     },
     "biometric": {
       "title": "Autenticación Biométrica",

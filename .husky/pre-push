@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-push validation..."
+
+# Run version validation
+node scripts/validate-version-change.js
+
+# If validation passes, continue with push
+exit 0
+

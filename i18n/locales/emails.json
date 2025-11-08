@@ -32,6 +32,39 @@
         "copyright": "© {year} HashPass. 모든 권리 보유.",
         "website": "https://hashpass.tech"
       }
+    },
+    "fr": {
+      "subject": "🎉 Bienvenue dans la newsletter HashPass !",
+      "html": {
+        "header": "Bienvenue sur HashPass !",
+        "greeting": "Merci de vous être abonné à notre newsletter. Vous faites maintenant partie de notre communauté !",
+        "body": "Nous vous tiendrons informé des dernières actualités, conseils et contenus exclusifs sur la gestion de communauté et les événements dans l'espace crypto.",
+        "footer": "Si vous n'avez pas demandé cet abonnement, veuillez ignorer cet email.",
+        "copyright": "© {year} HashPass. Tous droits réservés.",
+        "website": "https://hashpass.tech"
+      }
+    },
+    "pt": {
+      "subject": "🎉 Bem-vindo à newsletter HashPass!",
+      "html": {
+        "header": "Bem-vindo ao HashPass!",
+        "greeting": "Obrigado por se inscrever em nossa newsletter. Agora você faz parte da nossa comunidade!",
+        "body": "Mantenemos você atualizado com as últimas notícias, dicas e conteúdo exclusivo sobre gestão de comunidades e eventos no espaço cripto.",
+        "footer": "Se você não solicitou esta assinatura, por favor ignore este email.",
+        "copyright": "© {year} HashPass. Todos os direitos reservados.",
+        "website": "https://hashpass.tech"
+      }
+    },
+    "de": {
+      "subject": "🎉 Willkommen beim HashPass Newsletter!",
+      "html": {
+        "header": "Willkommen bei HashPass!",
+        "greeting": "Vielen Dank, dass Sie unseren Newsletter abonniert haben. Sie sind jetzt Teil unserer Community!",
+        "body": "Wir halten Sie mit den neuesten Nachrichten, Tipps und exklusiven Inhalten über Community-Management und Events im Krypto-Bereich auf dem Laufenden.",
+        "footer": "Wenn Sie dieses Abonnement nicht angefordert haben, ignorieren Sie bitte diese E-Mail.",
+        "copyright": "© {year} HashPass. Alle Rechte vorbehalten.",
+        "website": "https://hashpass.tech"
+      }
     }
   }
 }

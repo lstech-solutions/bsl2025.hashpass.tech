@@ -37,7 +37,7 @@ export interface MeetingRequest {
   meeting_type: string;
   message: string;
   note: string;
-  status: 'requested' | 'accepted' | 'rejected' | 'cancelled';
+  status: 'requested' | 'pending' | 'accepted' | 'rejected' | 'declined' | 'cancelled' | 'expired' | 'completed';
   scheduled_at?: string;
   created_at: string;
   updated_at: string;

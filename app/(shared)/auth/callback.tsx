@@ -18,7 +18,9 @@ export default function AuthCallback() {
     const handleAuthCallback = async () => {
         try {
             setStatus('processing');
-            setMessage('🔍 Processing Google authentication...');
+            // Detect authentication type from URL params
+            const isWalletAuth = params.type === 'magiclink' || params.token_hash || params.token;
+            setMessage(isWalletAuth ? '🔍 Processing wallet authentication...' : '🔍 Processing authentication...');
 
             console.log('🔄 Auth callback started');
             console.log('📋 Callback params:', params);
@@ -68,7 +70,13 @@ export default function AuthCallback() {
             if (session && session.user) {
                 console.log('✅ Session created successfully:', session.user.id);
                 setStatus('success');
-                setMessage('✅ Google authentication successful!');
+                // Detect auth type from user metadata
+                const authProvider = session.user.user_metadata?.auth_provider || 
+                                   session.user.user_metadata?.wallet_type ? 'wallet' : 'OAuth';
+                const authType = authProvider === 'wallet' 
+                    ? (session.user.user_metadata?.wallet_type === 'ethereum' ? 'Ethereum' : 'Solana')
+                    : 'Google';
+                setMessage(`✅ ${authType} authentication successful!`);
 
                 setTimeout(() => {
                     router.replace('/(shared)/dashboard/explore');

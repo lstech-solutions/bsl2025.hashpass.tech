@@ -6,9 +6,10 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, int
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { passSystemService, PassInfo, PassRequestLimits, PassType } from '@/lib/pass-system';
+import { supabase } from '@/lib/supabase';
 import DynamicQRDisplay from './DynamicQRDisplay';
 import * as Clipboard from 'expo-clipboard';
-import { t } from '@lingui/macro';
+import { useTranslation } from '@/i18n/i18n';
 
 interface PassesDisplayProps {
   // Display mode
@@ -28,6 +29,9 @@ interface PassesDisplayProps {
   showTitle?: boolean;
   title?: string;
   showPassComparison?: boolean;
+  
+  // Refresh trigger
+  refreshTrigger?: number;
 }
 
 export default function PassesDisplay({
@@ -40,8 +44,10 @@ export default function PassesDisplay({
   onRequestLimitsLoaded,
   showTitle = true,
   title,
-  showPassComparison = false
+  showPassComparison = false,
+  refreshTrigger
 }: PassesDisplayProps) {
+  const { t: translate } = useTranslation('passes');
   const { colors } = useTheme();
   const { user } = useAuth();
   const [passInfo, setPassInfo] = useState<PassInfo | null>(null);
@@ -50,18 +56,37 @@ export default function PassesDisplay({
   const [initialLoad, setInitialLoad] = useState(true);
   const [showComparison, setShowComparison] = useState(showPassComparison);
   
+  // Helper function to translate
+  // Note: useTranslation('passes') already sets the namespace, so remove 'passes.' prefix if present
+  const t = (translation: { id: string; message: string }) => {
+    try {
+      // Remove 'passes.' prefix if present since useTranslation('passes') already adds it
+      const key = translation.id.startsWith('passes.') 
+        ? translation.id.replace(/^passes\./, '') 
+        : translation.id;
+      const translated = translate(key, {});
+      // If translation returns the key itself (not found), use the fallback message
+      if (!translated || translated === key || translated.startsWith('passes.')) {
+        return translation.message;
+      }
+      return translated;
+    } catch {
+      return translation.message;
+    }
+  };
+  
   // Demo mode check
   const isDemoMode = process.env.NODE_ENV === 'development';
 
   useEffect(() => {
     loadPassInfo();
-  }, [user]);
+  }, [user, refreshTrigger]);
 
   useEffect(() => {
     if (speakerId && user) {
       loadRequestLimits();
     }
-  }, [speakerId, user, boostAmount]);
+  }, [speakerId, user, boostAmount, refreshTrigger]);
 
   const loadPassInfo = async () => {
     if (!user) {
@@ -111,14 +136,14 @@ export default function PassesDisplay({
     try {
       const passId = await passSystemService.createDefaultPass(user.id, passType);
       if (passId) {
-        Alert.alert(t({ id: 'passes.alert.createdTitle', message: 'Pass Created! 🎉' }),
+        Alert.alert(translate('alert.createdTitle', {}),
           undefined,
-          [{ text: t({ id: 'passes.alert.ok', message: 'OK' }), onPress: loadPassInfo }]
+          [{ text: translate('alert.ok', {}), onPress: loadPassInfo }]
         );
       }
     } catch (error) {
       console.error('Error creating pass:', error);
-      Alert.alert(t({ id: 'passes.alert.errorTitle', message: 'Error' }), t({ id: 'passes.alert.createFail', message: 'Failed to create pass. Please try again.' }));
+      Alert.alert(translate('alert.errorTitle', {}), translate('alert.createFail', {}));
     }
   };
 
@@ -214,7 +239,7 @@ export default function PassesDisplay({
             data={[passInfo]}
             renderItem={({ item }) => (
               <View style={{ width: 340, marginRight: 20, paddingHorizontal: 4 }}>
-                <PassCard pass={item} />
+                <PassCard pass={item} refreshTrigger={refreshTrigger} />
               </View>
             )}
             keyExtractor={item => item.pass_id}
@@ -693,7 +718,7 @@ export default function PassesDisplay({
             {passInfo.pass_type === 'general' ? '5' : passInfo.pass_type === 'business' ? '20' : '50'}
           </Text>
           <Text style={{ fontSize: 12, color: colors.text.secondary, textAlign: 'center' }}>
-            {t({ id: 'passes.meetingRequests', message: 'Meeting Requests' })}
+            {translate('meetingRequests', {})}
           </Text>
         </View>
         <View style={{ flex: 1, alignItems: 'center' }}>
@@ -701,7 +726,7 @@ export default function PassesDisplay({
             {passInfo.pass_type === 'general' ? '100' : passInfo.pass_type === 'business' ? '300' : '500'}
           </Text>
           <Text style={{ fontSize: 12, color: colors.text.secondary, textAlign: 'center' }}>
-            {t({ id: 'passes.voiBoost', message: 'VOI Boost' })}
+            {translate('voiBoost', {})}
           </Text>
         </View>
       </View>
@@ -953,14 +978,78 @@ export default function PassesDisplay({
 }
 
 // PassCard component for dashboard mode - enhanced ticket-style design with flip animation
-const PassCard = ({ pass }: { pass: PassInfo }) => {
-  const { colors } = useTheme();
+const PassCard = ({ pass, refreshTrigger }: { pass: PassInfo; refreshTrigger?: number }) => {
+  const { t: translate } = useTranslation('passes');
+  const { colors, isDark } = useTheme();
+  const { user } = useAuth();
   const router = useRouter();
   const [showQRModal, setShowQRModal] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [meetingRequests, setMeetingRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  
+  // Helper function to translate
+  // Note: useTranslation('passes') already sets the namespace, so remove 'passes.' prefix if present
+  const t = (translation: { id: string; message: string }) => {
+    try {
+      // Remove 'passes.' prefix if present since useTranslation('passes') already adds it
+      const key = translation.id.startsWith('passes.') 
+        ? translation.id.replace(/^passes\./, '') 
+        : translation.id;
+      const translated = translate(key, {});
+      // If translation returns the key itself (not found), use the fallback message
+      if (!translated || translated === key || translated.startsWith('passes.')) {
+        return translation.message;
+      }
+      return translated;
+    } catch {
+      return translation.message;
+    }
+  };
   
   // Flip animation values
   const flipRotation = useSharedValue(0);
+  
+  // Load meeting requests when component mounts, pass changes, or refreshTrigger changes
+  useEffect(() => {
+    if (user && pass.pass_id) {
+      loadMeetingRequests();
+    }
+  }, [user, pass.pass_id, refreshTrigger]);
+  
+  const loadMeetingRequests = async () => {
+    if (!user) return;
+    
+    setLoadingRequests(true);
+    try {
+      const { data, error } = await supabase
+        .from('meeting_requests')
+        .select('id, speaker_name, status, boost_amount, created_at')
+        .eq('requester_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (error) {
+        console.error('Error loading meeting requests:', error);
+        setMeetingRequests([]);
+      } else {
+        setMeetingRequests(data || []);
+      }
+    } catch (error) {
+      console.error('Error in loadMeetingRequests:', error);
+      setMeetingRequests([]);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+  
+  // Get initials from speaker name
+  const getInitials = (name: string): string => {
+    if (!name) return '';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
   
   // Handle flip animation
   const handleFlip = () => {
@@ -1089,15 +1178,14 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
       elevation: 3,
       overflow: 'visible', // Changed to visible to show ticket notches
       width: '100%',
-      minHeight: 480,
-      flex: 1,
+      height: 390, // Fixed height (25% less than 520)
       flexDirection: 'column',
     }}>
       {/* Ticket-style side notches */}
       <View style={{
         position: 'absolute',
         left: -8,
-        top: '50%',
+        top: '58%',
         width: 16,
         height: 16,
         borderRadius: 8,
@@ -1108,7 +1196,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
       <View style={{
         position: 'absolute',
         right: -8,
-        top: '50%',
+        top: '58%',
         width: 16,
         height: 16,
         borderRadius: 8,
@@ -1117,13 +1205,18 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
         transform: [{ translateY: -8 }]
       }} />
       {/* Content wrapper with overflow hidden for internal content */}
-      <View style={{ overflow: 'hidden', flex: 1, flexDirection: 'column' }}>
+      <View style={{ overflow: 'hidden', height: '100%', flexDirection: 'column', position: 'relative', borderRadius: 15 }}>
       {/* Ticket Header */}
       <View style={{
-        padding: 14,
-        paddingBottom: 10,
+        padding: 16,
+        paddingBottom: 12,
         borderBottomWidth: 1,
-        borderBottomColor: colors.divider
+        borderBottomColor: colors.divider,
+        borderTopLeftRadius: 15,
+        borderTopRightRadius: 15,
+        position: 'relative',
+        zIndex: 2,
+        backgroundColor: colors.background.paper
       }}>
         <View style={{
           flexDirection: 'row',
@@ -1175,147 +1268,233 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             </Text>
           </View>
         </View>
-        {/* Show Full Details Link */}
-        <TouchableOpacity
-          onPress={() => {
-            router.push(`/dashboard/pass-details?passId=${pass.pass_id}`);
-          }}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            alignSelf: 'flex-start',
-            marginTop: 4
-          }}
-        >
-          <Text style={{
-            fontSize: 10,
-            color: getPassTypeColor(pass.pass_type),
-            fontWeight: '600',
-            textDecorationLine: 'underline'
-          }}>
-            {t({ id: 'passes.showFullDetails', message: 'Show Full Details' })}
-          </Text>
-          <MaterialIcons name="arrow-forward" size={12} color={getPassTypeColor(pass.pass_type)} style={{ marginLeft: 4 }} />
-        </TouchableOpacity>
       </View>
       
-      {/* Ticket Image Container */}
-      <ImageBackground
-        source={{ uri: getPassImage(pass.pass_type) }}
-        style={{
-          height: 120,
-          position: 'relative',
-        }}
-        imageStyle={{
-          opacity: 0.3,
-        }}
-      >
-        <View style={{
-          height: 120,
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: `${getPassTypeColor(pass.pass_type)}20`
-        }} />
-        <View style={{
-          position: 'absolute',
-          bottom: 12,
-          left: 16,
-          right: 16,
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'flex-end'
-        }}>
-          <View>
-            <Text style={{ 
-              fontSize: 14, 
-              fontWeight: '600', 
-              color: colors.text.primary,
-              marginBottom: 2
-            }}>
-              {getPassAccess(pass.pass_type)}
-            </Text>
-            <Text 
-              style={{ 
-                fontSize: 12, 
-                color: colors.text.secondary,
-                maxWidth: 120,
-                fontFamily: 'monospace' // Use monospace for better character alignment
-              }}
-              numberOfLines={1}
-              ellipsizeMode="head"
-            >
-              {pass.pass_number.length > 12 
-                ? `#${pass.pass_number.slice(0, 6)}...${pass.pass_number.slice(-4)}` 
-                : `#${pass.pass_number}}`}
-            </Text>
-          </View>
+      {/* Ticket Image Container - Extends from top to dotted line (58% of card) */}
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: '42%', // Adjusted to match dotted line at 58%
+        zIndex: 0,
+        borderTopLeftRadius: 15,
+        borderTopRightRadius: 15,
+        overflow: 'hidden'
+      }}>
+        <ImageBackground
+          source={{ uri: getPassImage(pass.pass_type) }}
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+          }}
+          imageStyle={{
+            opacity: 0.3,
+            resizeMode: 'cover'
+          }}
+        >
           <View style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: `${getPassTypeColor(pass.pass_type)}20`
+          }} />
+          <View style={{
+            position: 'absolute',
+            bottom: 12,
+            left: 16,
+            right: 16,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end'
+          }}>
+            <View>
+              <Text style={{ 
+                fontSize: 15, 
+                fontWeight: '700', 
+                color: isDark ? '#FFFFFF' : colors.text.primary,
+                marginBottom: 4,
+                textShadowColor: 'rgba(0, 0, 0, 0.3)',
+                textShadowOffset: { width: 0, height: 1 },
+                textShadowRadius: 2
+              }}>
+                {getPassAccess(pass.pass_type)}
+              </Text>
+              <Text 
+                style={{ 
+                  fontSize: 13, 
+                  color: isDark ? 'rgba(255, 255, 255, 0.9)' : colors.text.secondary,
+                  maxWidth: 140,
+                  fontFamily: 'monospace',
+                  fontWeight: '600',
+                  textShadowColor: 'rgba(0, 0, 0, 0.3)',
+                  textShadowOffset: { width: 0, height: 1 },
+                  textShadowRadius: 2
+                }}
+                numberOfLines={1}
+                ellipsizeMode="head"
+              >
+                {pass.pass_number.length > 12 
+                  ? `#${pass.pass_number.slice(0, 6)}...${pass.pass_number.slice(-4)}` 
+                  : `#${pass.pass_number}`}
+              </Text>
+            </View>
+            <View style={{
+              backgroundColor: colors.background.paper,
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.divider,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 3,
+              elevation: 2
+            }}>
+              <Text style={{ 
+                fontSize: 11, 
+                fontWeight: '700', 
+                color: getPassTypeColor(pass.pass_type)
+              }}>
+                {pass.status.toUpperCase()}
+              </Text>
+            </View>
+          </View>
+          
+          {/* BSL2025 Logo Seal - Top right corner */}
+          <View style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            width: 50,
+            height: 50,
+            borderRadius: 25,
             backgroundColor: colors.background.paper,
-            paddingHorizontal: 8,
-            paddingVertical: 4,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: colors.divider
+            borderWidth: 3,
+            borderColor: getPassTypeColor(pass.pass_type),
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: 0.3,
+            shadowRadius: 6,
+            elevation: 5,
+            zIndex: 10
           }}>
             <Text style={{ 
-              fontSize: 12, 
-              fontWeight: '600', 
-              color: getPassTypeColor(pass.pass_type)
+              fontSize: 9, 
+              fontWeight: '800', 
+              color: getPassTypeColor(pass.pass_type),
+              letterSpacing: 0.5
             }}>
-              {pass.status.toUpperCase()}
+              BSL2025
             </Text>
           </View>
-        </View>
-        
-        {/* BSL2025 Logo Seal */}
-        <View style={{
-          position: 'absolute',
-          top: 12,
-          right: 12,
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: colors.background.paper,
-          borderWidth: 2,
-          borderColor: getPassTypeColor(pass.pass_type),
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <Text style={{ 
-            fontSize: 8, 
-            fontWeight: '700', 
-            color: getPassTypeColor(pass.pass_type)
-          }}>
-            BSL2025
-          </Text>
-        </View>
-      </ImageBackground>
+        </ImageBackground>
+      </View>
       
-      {/* Ticket Stats */}
+      {/* Dotted Ticket Perforation Line - 90% width, centered at 58% height (aligned with side notches) */}
+      <View style={{
+        position: 'absolute',
+        left: '5%',
+        right: '5%',
+        top: '58%',
+        height: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transform: [{ translateY: -0.5 }], // Center the line
+        zIndex: 2
+      }}>
+        {Array.from({ length: 25 }).map((_, i) => (
+          <View
+            key={i}
+            style={{
+              width: 8,
+              height: 1,
+              backgroundColor: colors.divider,
+              marginHorizontal: 2
+            }}
+          />
+        ))}
+      </View>
+      
+      {/* Ticket Stats - Requests and VOI Boost - Centered between dotted line and footer */}
       <View style={{ 
         flexDirection: 'row', 
         justifyContent: 'space-around',
-        padding: 16,
-        paddingTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: colors.divider
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        position: 'absolute',
+        top: '72%', // Centered between dotted line (58%) and footer (bottom)
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        transform: [{ translateY: -40 }] // Center the stats vertically in the available space
       }}>
-        <View style={{ alignItems: 'center' }}>
-          <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text.primary }}>
-            {pass.pass_type === 'general' ? '5' : pass.pass_type === 'business' ? '20' : '50'}
+        <View style={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
+          <Text style={{ 
+            fontSize: 24, 
+            fontWeight: '700', 
+            color: colors.text.primary,
+            textShadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 2
+          }}>
+            {pass.remaining_requests}
           </Text>
-          <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
-            {t({ id: 'passes.meetingRequests', message: 'Meeting Requests' })}
+          <Text style={{ 
+            fontSize: 10, 
+            color: isDark ? colors.text.primary : colors.text.secondary, 
+            textAlign: 'center', 
+            marginTop: 4,
+            fontWeight: '600'
+          }}>
+            {translate('requestsLeft', {})}
+          </Text>
+          <Text style={{ 
+            fontSize: 9, 
+            color: colors.text.secondary, 
+            textAlign: 'center', 
+            marginTop: 2,
+            opacity: 0.8
+          }}>
+            {pass.used_requests} / {pass.max_requests} {t({ id: 'passes.used', message: 'used' })}
           </Text>
         </View>
-        <View style={{ alignItems: 'center' }}>
-          <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text.primary }}>
-            {pass.pass_type === 'general' ? '100' : pass.pass_type === 'business' ? '300' : '500'}
+        <View style={{ width: 1, backgroundColor: colors.divider, marginHorizontal: 8, height: 50 }} />
+        <View style={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
+          <Text style={{ 
+            fontSize: 24, 
+            fontWeight: '700', 
+            color: (isDark ? '#FFB84D' : (typeof colors.warning === 'string' ? colors.warning : '#FF9500')) as any,
+            textShadowColor: isDark ? 'rgba(255, 184, 77, 0.5)' : 'rgba(255, 149, 0, 0.2)',
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 2
+          }}>
+            {pass.remaining_boost}
           </Text>
-          <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center' }}>
-            {t({ id: 'passes.voiBoost', message: 'VOI Boost' })}
+          <Text style={{ 
+            fontSize: 10, 
+            color: isDark ? '#FFFFFF' : colors.text.secondary, 
+            textAlign: 'center', 
+            marginTop: 4,
+            fontWeight: '700'
+          }}>
+            {translate('boostLeft', {})}
+          </Text>
+          <Text style={{ 
+            fontSize: 9, 
+            color: isDark ? 'rgba(255, 255, 255, 0.9)' : colors.text.secondary, 
+            textAlign: 'center', 
+            marginTop: 2,
+            opacity: 0.8
+          }}>
+            {pass.used_boost} / {pass.max_boost} {t({ id: 'passes.used', message: 'used' })}
           </Text>
         </View>
       </View>
@@ -1325,7 +1504,11 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
         flexDirection: 'row',
         borderTopWidth: 1,
         borderTopColor: colors.divider,
-        marginTop: 'auto' // Push footer to bottom
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: colors.background.paper
       }}>
         <TouchableOpacity 
           style={{
@@ -1413,15 +1596,14 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
       elevation: 3,
       overflow: 'visible', // Changed to visible to show ticket notches
       width: '100%',
-      minHeight: 480,
-      flex: 1,
+      height: 390, // Fixed height (25% less than 520, matching front card)
       flexDirection: 'column',
     }}>
       {/* Ticket-style side notches */}
       <View style={{
         position: 'absolute',
         left: -8,
-        top: '50%',
+        top: '58%',
         width: 16,
         height: 16,
         borderRadius: 8,
@@ -1432,7 +1614,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
       <View style={{
         position: 'absolute',
         right: -8,
-        top: '50%',
+        top: '58%',
         width: 16,
         height: 16,
         borderRadius: 8,
@@ -1440,8 +1622,33 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
         zIndex: 1,
         transform: [{ translateY: -8 }]
       }} />
+      {/* Dotted Ticket Perforation Line - 90% width, centered at 58% height (aligned with side notches) */}
+      <View style={{
+        position: 'absolute',
+        left: '5%',
+        right: '5%',
+        top: '58%',
+        height: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transform: [{ translateY: -0.5 }], // Center the line
+        zIndex: 1
+      }}>
+        {Array.from({ length: 25 }).map((_, i) => (
+          <View
+            key={i}
+            style={{
+              width: 8,
+              height: 1,
+              backgroundColor: colors.divider,
+              marginHorizontal: 2
+            }}
+          />
+        ))}
+      </View>
       {/* Content wrapper */}
-      <View style={{ overflow: 'hidden', flex: 1, flexDirection: 'column' }}>
+      <View style={{ overflow: 'hidden', height: '100%', flexDirection: 'column', position: 'relative', borderRadius: 15 }}>
       {/* Ticket Header - Same as front */}
       <View style={{
         flexDirection: 'row',
@@ -1450,7 +1657,12 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
         padding: 14,
         paddingBottom: 10,
         borderBottomWidth: 1,
-        borderBottomColor: colors.divider
+        borderBottomColor: colors.divider,
+        borderTopLeftRadius: 15,
+        borderTopRightRadius: 15,
+        position: 'relative',
+        zIndex: 2,
+        backgroundColor: colors.background.paper
       }}>
         <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
           <Text 
@@ -1469,14 +1681,14 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             minimumFontScale={0.8}
             adjustsFontSizeToFit
           >
-            {t({ id: 'passes.passSummary', message: 'Pass Summary' })}
+            {translate('passSummary', {})}
           </Text>
           <Text style={{ 
             fontSize: 9, 
             color: colors.text.secondary,
             opacity: 0.8
           }}>
-            {t({ id: 'passes.quickOverview', message: 'Quick Overview' })}
+            {translate('quickOverview', {})}
           </Text>
         </View>
         <TouchableOpacity
@@ -1495,15 +1707,9 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
       </View>
       
       {/* Summary Content */}
-      <View style={{ flex: 1, padding: 16, justifyContent: 'space-between' }}>
+      <View style={{ flex: 1, padding: 16, paddingTop: 12, paddingBottom: 60, justifyContent: 'flex-start', position: 'relative' }}>
         {/* Pass Info Summary */}
         <View style={{ marginBottom: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-            <MaterialIcons name="confirmation-number" size={18} color={colors.text.secondary} />
-            <Text style={{ fontSize: 12, color: colors.text.primary, marginLeft: 8, fontWeight: '600' }}>
-              #{pass.pass_number}
-            </Text>
-          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
             <MaterialIcons name="event" size={18} color={colors.text.secondary} />
             <Text style={{ fontSize: 12, color: colors.text.secondary, marginLeft: 8 }}>
@@ -1518,44 +1724,8 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
           </View>
         </View>
 
-        {/* Stats Grid */}
-        <View style={{ 
-          flexDirection: 'row', 
-          justifyContent: 'space-around',
-          paddingVertical: 16,
-          borderTopWidth: 1,
-          borderTopColor: colors.divider,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.divider,
-          marginBottom: 16
-        }}>
-          <View style={{ alignItems: 'center', flex: 1 }}>
-            <Text style={{ fontSize: 28, fontWeight: '700', color: colors.text.primary }}>
-              {pass.remaining_requests}
-            </Text>
-            <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center', marginTop: 4 }}>
-              {t({ id: 'passes.requestsLeft', message: 'Requests Left' })}
-            </Text>
-            <Text style={{ fontSize: 9, color: colors.text.secondary, textAlign: 'center', marginTop: 2 }}>
-              {pass.used_requests} / {pass.max_requests} {t({ id: 'passes.used', message: 'used' })}
-            </Text>
-          </View>
-          <View style={{ width: 1, backgroundColor: colors.divider, marginHorizontal: 8 }} />
-          <View style={{ alignItems: 'center', flex: 1 }}>
-            <Text style={{ fontSize: 28, fontWeight: '700', color: colors.warning || '#FF9500' }}>
-              {pass.remaining_boost}
-            </Text>
-            <Text style={{ fontSize: 10, color: colors.text.secondary, textAlign: 'center', marginTop: 4 }}>
-              {t({ id: 'passes.boostLeft', message: 'Boost Left' })}
-            </Text>
-            <Text style={{ fontSize: 9, color: colors.text.secondary, textAlign: 'center', marginTop: 2 }}>
-              {pass.used_boost} / {pass.max_boost} {t({ id: 'passes.used', message: 'used' })}
-            </Text>
-          </View>
-        </View>
-
         {/* Quick Access Info */}
-        <View style={{ marginBottom: 16 }}>
+        <View style={{ marginBottom: 24 }}>
           <Text style={{
             fontSize: 11,
             fontWeight: '600',
@@ -1564,7 +1734,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             textTransform: 'uppercase',
             letterSpacing: 0.5
           }}>
-            {t({ id: 'passes.accessIncluded', message: 'Access Included' })}
+            {translate('accessIncluded', {})}
           </Text>
           <Text style={{
             fontSize: 12,
@@ -1574,49 +1744,57 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
             {getPassAccess(pass.pass_type)}
           </Text>
         </View>
-
-        {/* Full Details Button */}
-        <TouchableOpacity
-          style={{
-            backgroundColor: getPassTypeColor(pass.pass_type),
-            paddingVertical: 14,
-            borderRadius: 10,
-            alignItems: 'center',
-            flexDirection: 'row',
-            justifyContent: 'center',
-            gap: 8,
-            marginTop: 'auto',
-            shadowColor: getPassTypeColor(pass.pass_type),
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 4,
-          }}
-          onPress={() => {
-            handleFlip();
-            router.push(`/dashboard/pass-details?passId=${pass.pass_id}`);
-          }}
-          activeOpacity={0.8}
-        >
-          <MaterialIcons name="info" size={18} color="#FFFFFF" />
-          <Text style={{
-            fontSize: 14,
-            fontWeight: '700',
-            color: '#FFFFFF',
-            letterSpacing: 0.5
-          }}>
-            {t({ id: 'passes.viewFullDetails', message: 'View Full Details' })}
-          </Text>
-          <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
+
+      {/* Full Details Button - Centered between dotted line and footer */}
+      <TouchableOpacity
+        style={{
+          position: 'absolute',
+          top: '79%', // Centered between dotted line (58%) and footer (bottom)
+          left: 16,
+          right: 16,
+          backgroundColor: getPassTypeColor(pass.pass_type),
+          paddingVertical: 14,
+          borderRadius: 10,
+          alignItems: 'center',
+          flexDirection: 'row',
+          justifyContent: 'center',
+          gap: 8,
+          shadowColor: getPassTypeColor(pass.pass_type),
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 4,
+          elevation: 4,
+          transform: [{ translateY: -21 }] // Center the button vertically (half of button height ~42px)
+        }}
+        onPress={() => {
+          handleFlip();
+          router.push(`/dashboard/pass-details?passId=${pass.pass_id}` as any);
+        }}
+        activeOpacity={0.8}
+      >
+        <MaterialIcons name="info" size={18} color="#FFFFFF" />
+        <Text style={{
+          fontSize: 14,
+          fontWeight: '700',
+          color: '#FFFFFF',
+          letterSpacing: 0.5
+        }}>
+          {t({ id: 'passes.viewFullDetails', message: 'View Full Details' })}
+        </Text>
+        <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+      </TouchableOpacity>
 
       {/* Ticket Footer Actions - Same style as front */}
       <View style={{
         flexDirection: 'row',
         borderTopWidth: 1,
         borderTopColor: colors.divider,
-        marginTop: 'auto' // Push footer to bottom
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: colors.background.paper
       }}>
         <TouchableOpacity 
           style={{
@@ -1771,7 +1949,7 @@ const PassCard = ({ pass }: { pass: PassInfo }) => {
                 style={{
                   padding: 8,
                   borderRadius: 20,
-                  backgroundColor: colors.background.secondary
+                  backgroundColor: colors.background.paper
                 }}
               >
                 <MaterialIcons name="close" size={24} color={colors.text.primary} />

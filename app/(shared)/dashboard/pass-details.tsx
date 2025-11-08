@@ -6,23 +6,26 @@ import { useTheme } from '../../../hooks/useTheme';
 import { useAuth } from '../../../hooks/useAuth';
 import { passSystemService, PassInfo } from '../../../lib/pass-system';
 import DynamicQRDisplay from '../../../components/DynamicQRDisplay';
-import { qrSystemService } from '../../../lib/qr-system';
 import * as Clipboard from 'expo-clipboard';
 
 export default function PassDetailsScreen() {
   const { colors, isDark } = useTheme();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams();
   const [passInfo, setPassInfo] = useState<PassInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [qrToken, setQrToken] = useState<string | null>(null);
 
   const styles = getStyles(isDark, colors);
   const passId = params.passId as string;
 
   useEffect(() => {
+    // Wait for auth to finish loading before checking
+    if (authLoading) {
+      return;
+    }
+
     if (!user) {
       setError('User not authenticated');
       setLoading(false);
@@ -30,7 +33,7 @@ export default function PassDetailsScreen() {
     }
 
     loadPassInfo();
-  }, [user, passId]);
+  }, [user, passId, authLoading]);
 
   const loadPassInfo = async () => {
     if (!user) return;
@@ -51,9 +54,6 @@ export default function PassDetailsScreen() {
       }
 
       setPassInfo(pass);
-      
-      // Load QR token for sharing
-      await loadQRToken(pass.pass_id);
     } catch (err: any) {
       setError(err.message || 'Error loading pass information');
     } finally {
@@ -61,16 +61,6 @@ export default function PassDetailsScreen() {
     }
   };
 
-  const loadQRToken = async (passId: string) => {
-    try {
-      const qr = await qrSystemService.generatePassQR(passId);
-      if (qr?.token) {
-        setQrToken(qr.token);
-      }
-    } catch (err) {
-      console.error('Error loading QR token:', err);
-    }
-  };
 
   const handleShare = async () => {
     if (!passInfo) return;
@@ -79,11 +69,6 @@ export default function PassDetailsScreen() {
       const passTypeDisplay = passSystemService.getPassTypeDisplayName(passInfo.pass_type);
       let shareMessage = `Check out my ${passTypeDisplay} pass for BSL 2025!\n\nPass Number: ${passInfo.pass_number}\nPass Type: ${passTypeDisplay}\n\nPresent this QR code at the event entrance.`;
 
-      // If we have a QR token, include it in the share
-      if (qrToken) {
-        const qrUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL?.replace('/rest/v1', '')}/qr/${qrToken}`;
-        shareMessage = `${shareMessage}\n\nQR Code: ${qrUrl}`;
-      }
 
       // Check if Share API is available (works on mobile and some browsers)
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.share) {
@@ -122,10 +107,6 @@ export default function PassDetailsScreen() {
         const passTypeDisplay = passSystemService.getPassTypeDisplayName(passInfo.pass_type);
         let shareMessage = `Check out my ${passTypeDisplay} pass for BSL 2025!\n\nPass Number: ${passInfo.pass_number}\nPass Type: ${passTypeDisplay}\n\nPresent this QR code at the event entrance.`;
         
-        if (qrToken) {
-          const qrUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL?.replace('/rest/v1', '')}/qr/${qrToken}`;
-          shareMessage = `${shareMessage}\n\nQR Code: ${qrUrl}`;
-        }
         
         await Clipboard.setStringAsync(shareMessage);
         Alert.alert(
@@ -140,64 +121,6 @@ export default function PassDetailsScreen() {
     }
   };
 
-  const handleShareQR = async () => {
-    if (!qrToken) {
-      Alert.alert('Error', 'QR code not available. Please try again.');
-      return;
-    }
-
-    try {
-      const qrUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL?.replace('/rest/v1', '')}/qr/${qrToken}`;
-      const shareMessage = `BSL 2025 Pass QR Code\n\nScan this QR code to verify my pass:\n${qrUrl}`;
-
-      // Check if Share API is available
-      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.share) {
-        // Use Web Share API if available
-        await navigator.share({
-          title: 'BSL 2025 Pass QR Code',
-          text: shareMessage,
-        });
-      } else if (Platform.OS !== 'web' && Share.share) {
-        // Use React Native Share on mobile
-        const result = await Share.share({
-          message: shareMessage,
-          title: 'BSL 2025 Pass QR Code',
-        });
-
-        if (result.action === Share.sharedAction) {
-          console.log('QR code shared successfully');
-        }
-      } else {
-        // Fallback: Copy to clipboard
-        await Clipboard.setStringAsync(shareMessage);
-        Alert.alert(
-          'QR Code Copied',
-          'QR code information has been copied to your clipboard. You can paste it anywhere to share.',
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error: any) {
-      // If share was cancelled, don't show error
-      if (error?.message?.includes('cancel') || error?.message?.includes('AbortError')) {
-        return;
-      }
-      
-      // For other errors, fallback to clipboard
-      try {
-        const qrUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL?.replace('/rest/v1', '')}/qr/${qrToken}`;
-        const shareMessage = `BSL 2025 Pass QR Code\n\nScan this QR code to verify my pass:\n${qrUrl}`;
-        await Clipboard.setStringAsync(shareMessage);
-        Alert.alert(
-          'QR Code Copied',
-          'QR code information has been copied to your clipboard. You can paste it anywhere to share.',
-          [{ text: 'OK' }]
-        );
-      } catch (clipboardError) {
-        console.error('Error copying to clipboard:', clipboardError);
-        Alert.alert('Error', 'Unable to share QR code. Please try again.');
-      }
-    }
-  };
 
   if (loading) {
     return (
@@ -229,13 +152,20 @@ export default function PassDetailsScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity 
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(shared)/dashboard/explore');
+            }
+          }} 
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Pass Details</Text>
-        <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
-          <Ionicons name="share-outline" size={24} color={colors.primary} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
       </View>
 
       {/* Pass Info Card */}
@@ -261,24 +191,32 @@ export default function PassDetailsScreen() {
             label="Event"
             value="BSL 2025"
             colors={colors}
+            styles={styles}
+            isDark={isDark}
           />
           <DetailRow
             icon="calendar-outline"
             label="Date"
             value="November 12-14, 2025"
             colors={colors}
+            styles={styles}
+            isDark={isDark}
           />
           <DetailRow
             icon="ticket-outline"
             label="Meeting Requests"
             value={`${passInfo.used_requests} / ${passInfo.max_requests} used`}
             colors={colors}
+            styles={styles}
+            isDark={isDark}
           />
           <DetailRow
             icon="flash-outline"
             label="Boost Available"
             value={`${passInfo.remaining_boost} / ${passInfo.max_boost}`}
             colors={colors}
+            styles={styles}
+            isDark={isDark}
           />
         </View>
       </View>
@@ -290,7 +228,11 @@ export default function PassDetailsScreen() {
           <View style={styles.featuresList}>
             {passInfo.access_features.map((feature, index) => (
               <View key={index} style={styles.featureItem}>
-                <Ionicons name="checkmark-circle" size={20} color={colors.success || '#34A853'} />
+                <Ionicons 
+                  name="checkmark-circle" 
+                  size={20} 
+                  color={isDark ? '#4ADE80' : (colors.success || '#34A853')} 
+                />
                 <Text style={styles.featureText}>{feature}</Text>
               </View>
             ))}
@@ -305,7 +247,11 @@ export default function PassDetailsScreen() {
           <View style={styles.featuresList}>
             {passInfo.special_perks.map((perk, index) => (
               <View key={index} style={styles.featureItem}>
-                <Ionicons name="star" size={20} color={colors.warning || '#FF9500'} />
+                <Ionicons 
+                  name="star" 
+                  size={20} 
+                  color={isDark ? '#FFB84D' : (colors.warning || '#FF9500')} 
+                />
                 <Text style={styles.featureText}>{perk}</Text>
               </View>
             ))}
@@ -331,38 +277,19 @@ export default function PassDetailsScreen() {
             refreshInterval={30}
           />
         </View>
-
-        <TouchableOpacity style={styles.shareQRButton} onPress={handleShareQR}>
-          <Ionicons name="share-outline" size={20} color={colors.primary} />
-          <Text style={styles.shareQRButtonText}>Share QR Code</Text>
-        </TouchableOpacity>
       </View>
 
-      {/* Action Buttons */}
-      <View style={styles.actionsSection}>
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.primaryButton]} 
-          onPress={() => router.push(`/dashboard/qr-view?passId=${passInfo.pass_id}`)}
-        >
-          <Ionicons name="qr-code-outline" size={24} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>View QR Code</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.secondaryButton]} 
-          onPress={handleShare}
-        >
-          <Ionicons name="share-outline" size={24} color={colors.primary} />
-          <Text style={[styles.actionButtonText, { color: colors.primary }]}>Share Pass</Text>
-        </TouchableOpacity>
-      </View>
     </ScrollView>
   );
 }
 
-const DetailRow = ({ icon, label, value, colors }: { icon: string; label: string; value: string; colors: any }) => (
+const DetailRow = ({ icon, label, value, colors, styles, isDark }: { icon: string; label: string; value: string; colors: any; styles: any; isDark?: boolean }) => (
   <View style={styles.detailRow}>
-    <Ionicons name={icon as any} size={20} color={colors.text.secondary} />
+    <Ionicons 
+      name={icon as any} 
+      size={20} 
+      color={isDark ? colors.text.primary : colors.text.secondary} 
+    />
     <View style={styles.detailContent}>
       <Text style={styles.detailLabel}>{label}</Text>
       <Text style={styles.detailValue}>{value}</Text>
@@ -553,21 +480,6 @@ const getStyles = (isDark: boolean, colors: any) =>
       width: '100%',
       alignItems: 'center',
       marginBottom: 20,
-    },
-    shareQRButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      paddingVertical: 12,
-      paddingHorizontal: 24,
-      borderRadius: 8,
-      backgroundColor: colors.background.secondary,
-    },
-    shareQRButtonText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.primary,
     },
     actionsSection: {
       gap: 12,

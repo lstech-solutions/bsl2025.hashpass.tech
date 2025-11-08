@@ -16,18 +16,49 @@
   },
   "wallet": {
     "digitalWalletTitle": "Billetera de Boletos Digitales",
-    "walletDesc": "Accede a tus boletos verificados en blockchain",
+    "walletDesc": "Accede a tus boletos verificados en blockchain, tokens y puntos",
     "events": "Descubrir Eventos",
     "eventsDesc": "Encuentra eventos y gana tokens",
     "exchangeDesc": "Convierte puntos a criptomonedas",
     "tabs": {
-      "tickets": "Mis Boletos",
+      "tokens": "Tokens",
+      "points": "Puntos",
+      "tickets": "Boletos",
       "loyalty": "Recompensas",
       "exchange": "Intercambio"
     },
+    "tokens": {
+      "title": "Tokens Blockchain",
+      "description": "Gestiona tus tokens $LUKAS, $COP y $VOI",
+      "swap": "Intercambiar",
+      "totalPortfolio": "Valor Total del Portafolio",
+      "portfolioDesc": "Valor combinado de todos tus tokens"
+    },
+    "points": {
+      "title": "Hash POINTS",
+      "description": "Puntos de lealtad intercambiables ganados en eventos",
+      "balance": "Tu Saldo",
+      "swappable": "Los puntos se pueden intercambiar por diferentes tokens",
+      "swapOptions": "Opciones de Intercambio",
+      "swapNow": "Intercambiar Ahora",
+      "recentActivity": "Actividad Reciente",
+      "noActivity": "Aún no hay actividad",
+      "activityDesc": "Tu historial de intercambios aparecerá aquí"
+    },
     "tickets": {
-      "title": "Mis Boletos",
-      "description": "Accede a tus pases y recompensas ganadas."
+      "title": "Boletos Blockchain",
+      "description": "Tus boletos NFT verificados en blockchain",
+      "noBlockchainTickets": "Sin Boletos Blockchain",
+      "noBlockchainTicketsDesc": "Los boletos NFT verificados en blockchain de eventos como BSL2025 aparecerán aquí",
+      "viewEvents": "Ver Eventos",
+      "blockchainVerified": "Verificado en Blockchain",
+      "blockchainInfo": "Información Blockchain",
+      "network": "Red",
+      "nftId": "ID NFT",
+      "viewOnExplorer": "Ver en Explorador",
+      "tapToEnlarge": "Toca para ampliar código QR",
+      "tapToMinimize": "Toca para minimizar",
+      "of": "de"
     },
     "loyalty": {
       "title": "Recompensas",
@@ -233,7 +264,7 @@
       "animations": "Animaciones"
     },
     "account": "Cuenta",
-    "signOut": "Cerrar sesión",
+    "signOut": "Salir",
     "version": "HashPass v{version}"
   },
   "nav": {
@@ -242,7 +273,10 @@
     "notifications": "Notificaciones",
     "profile": "Perfil",
     "settings": "Ajustes",
-    "brandSubtitle": "Plataforma de Eventos Digitales"
+    "brandSubtitle": "Plataforma de Eventos Digitales",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "logout": "Salir"
   },
   "explore": {
     "noEvent": "No hay evento disponible",
@@ -313,6 +347,52 @@
       "vip": "Todos los beneficios VIP",
       "general": "Acceso general",
       "event": "Acceso al evento"
-    }
+    },
+    "meetingRequests": "Solicitudes de Reunión",
+    "voiBoost": "Impulso VOI",
+    "passSummary": "Resumen del Pase",
+    "quickOverview": "Vista Rápida",
+    "requestsLeft": "Solicitudes Restantes",
+    "boostLeft": "Impulso Restante",
+    "accessIncluded": "Acceso Incluido",
+    "used": "usado",
+    "passNumber": "Pase #{pass_number}",
+    "noPassFound": "No se encontraron pases",
+    "contactSupport": "Contacta con soporte para obtener tus pases del evento",
+    "noPassMessage": {
+      "demo": "Necesitas un pase para solicitar reuniones con los ponentes. Sin un pase, no puedes enviar solicitudes de reunión. Elige tu tipo de pase:",
+      "production": "Necesitas un pase válido del evento para solicitar reuniones con los ponentes. Por favor, compra un pase para continuar."
+    },
+    "passTypes": {
+      "all": "Todos los Tipos de Pase y Precios"
+    },
+    "passComparison": {
+      "compare": "Compara características y elige el pase adecuado para tus necesidades"
+    },
+    "passPerks": {
+      "general": {
+        "conferences": "Solo conferencias"
+      },
+      "business": {
+        "networking": "+ Networking y sesiones B2B"
+      },
+      "vip": {
+        "networking": "+ Networking VIP con ponentes"
+      }
+    },
+    "purchasePass": "Comprar Pase del Evento",
+    "purchasePass.description": "Elige entre nuestros tipos de pase disponibles para acceder a reuniones con ponentes y oportunidades de networking.",
+    "currentPass": "Tu Pase Actual",
+    "canRequestMeeting": "✅ Puede Solicitar Reunión",
+    "cannotRequestMeeting": "❌ No Puede Solicitar Reunión",
+    "qrCode": "Código QR",
+    "details": "Detalles",
+    "share": "Compartir",
+    "bslDate": "BSL 2025 • 12-14 Nov, 2025",
+    "date": "12-14 Nov, 2025",
+    "pass": "Pase",
+    "viewFullDetails": "Ver Detalles Completos",
+    "flipBack": "Volver",
+    "qrCodeModalTitle": "Tu Código QR del Pase"
   }
 }

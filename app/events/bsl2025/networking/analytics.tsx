@@ -57,7 +57,7 @@ export default function AnalyticsView() {
         .from('bsl_speakers')
         .select('id', { count: 'exact' });
 
-      // Get meeting request statistics
+      // Get meeting request statistics with speaker names
       const { data: requestsData, error: requestsError } = await supabase
         .from('meeting_requests')
         .select('status, created_at, updated_at, speaker_id, speaker_name');
@@ -102,8 +102,14 @@ export default function AnalyticsView() {
       const speakerCounts = requestsData?.reduce((acc, req) => {
         if (!req.speaker_id) return acc;
         const key = req.speaker_id;
+        const speakerName = req.speaker_name || 'Unknown Speaker';
+        
         if (!acc[key]) {
-          acc[key] = { speaker_id: req.speaker_id, name: req.speaker_name, meeting_count: 0 };
+          acc[key] = { 
+            speaker_id: req.speaker_id, 
+            name: speakerName, 
+            meeting_count: 0 
+          };
         }
         acc[key].meeting_count++;
         return acc;
@@ -174,13 +180,13 @@ setStats({
   );
 
   const renderTopSpeaker = (speaker: any, index: number) => (
-    <View key={speaker.speaker_id} style={styles.topSpeakerItem}>
+    <View key={speaker.speaker_id || index} style={styles.topSpeakerItem}>
       <View style={styles.speakerRank}>
         <Text style={styles.speakerRankText}>#{index + 1}</Text>
       </View>
       <View style={styles.speakerInfo}>
-        <Text style={styles.speakerName}>{speaker.speaker_name}</Text>
-        <Text style={styles.speakerCount}>{speaker.count} requests</Text>
+        <Text style={styles.speakerName}>{speaker.name || 'Unknown Speaker'}</Text>
+        <Text style={styles.speakerCount}>{speaker.meeting_count || 0} requests</Text>
       </View>
     </View>
   );

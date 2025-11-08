@@ -16,18 +16,49 @@
   },
   "wallet": {
     "digitalWalletTitle": "Digital Ticket Wallet",
-    "walletDesc": "Access your secure blockchain-verified tickets",
+    "walletDesc": "Access your secure blockchain-verified tickets, tokens, and points",
     "events": "Event Discovery",
     "eventsDesc": "Find upcoming events and earn tokens",
     "exchangeDesc": "Convert points to cryptocurrency",
     "tabs": {
-      "tickets": "My Tickets",
+      "tokens": "Tokens",
+      "points": "Points",
+      "tickets": "Tickets",
       "loyalty": "Loyalty Rewards",
       "exchange": "Token Exchange"
     },
+    "tokens": {
+      "title": "Blockchain Tokens",
+      "description": "Manage your $LUKAS, $COP, and $VOI tokens",
+      "swap": "Swap",
+      "totalPortfolio": "Total Portfolio Value",
+      "portfolioDesc": "Combined value of all your tokens"
+    },
+    "points": {
+      "title": "Hash POINTS",
+      "description": "Swappable loyalty points earned from events",
+      "balance": "Your Balance",
+      "swappable": "Points can be swapped to different tokens",
+      "swapOptions": "Swap Options",
+      "swapNow": "Swap Now",
+      "recentActivity": "Recent Activity",
+      "noActivity": "No activity yet",
+      "activityDesc": "Your swap history will appear here"
+    },
     "tickets": {
-      "title": "My Tickets",
-      "description": "Access your event passes and earned rewards."
+      "title": "Blockchain Tickets",
+      "description": "Your NFT tickets verified on the blockchain",
+      "noBlockchainTickets": "No Blockchain Tickets",
+      "noBlockchainTicketsDesc": "Blockchain-verified NFT tickets from events like BSL2025 will appear here",
+      "viewEvents": "View Events",
+      "blockchainVerified": "Blockchain Verified",
+      "blockchainInfo": "Blockchain Information",
+      "network": "Network",
+      "nftId": "NFT ID",
+      "viewOnExplorer": "View on Explorer",
+      "tapToEnlarge": "Tap to enlarge QR code",
+      "tapToMinimize": "Tap to minimize",
+      "of": "of"
     },
     "loyalty": {
       "title": "Loyalty Rewards",
@@ -242,7 +273,10 @@
     "notifications": "Notifications",
     "profile": "Profile",
     "settings": "Settings",
-    "brandSubtitle": "Digital Event Platform"
+    "brandSubtitle": "Digital Event Platform",
+    "light": "Light",
+    "dark": "Dark",
+    "logout": "Logout"
   },
   "explore": {
     "noEvent": "No event available",
@@ -313,6 +347,53 @@
       "vip": "All VIP Benefits",
       "general": "General Access",
       "event": "Event Access"
-    }
+    },
+    "meetingRequests": "Meeting Requests",
+    "voiBoost": "VOI Boost",
+    "passSummary": "Pass Summary",
+    "quickOverview": "Quick Overview",
+    "requestsLeft": "Requests Left",
+    "boostLeft": "Boost Left",
+    "accessIncluded": "Access Included",
+    "used": "used",
+    "passNumber": "Pass #{pass_number}",
+    "noPassFound": "No passes found",
+    "contactSupport": "Contact support to get your event passes",
+    "noPassMessage": {
+      "demo": "You need a pass to request meetings with speakers. Without a pass, you cannot send meeting requests. Choose your pass type:",
+      "production": "You need a valid event pass to request meetings with speakers. Please purchase a pass to continue."
+    },
+    "passTypes": {
+      "all": "All Pass Types & Pricing"
+    },
+    "passComparison": {
+      "compare": "Compare features and choose the right pass for your needs"
+    },
+    "passPerks": {
+      "general": {
+        "conferences": "Conferences only"
+      },
+      "business": {
+        "networking": "+ Networking & B2B sessions"
+      },
+      "vip": {
+        "networking": "+ VIP networking with speakers"
+      }
+    },
+    "purchasePass": "Purchase Event Pass",
+    "purchasePass.description": "Choose from our available pass types to access speaker meetings and networking opportunities.",
+    "currentPass": "Your Current Pass",
+    "canRequestMeeting": "✅ Can Request Meeting",
+    "cannotRequestMeeting": "❌ Cannot Request Meeting",
+    "qrCode": "QR Code",
+    "details": "Details",
+    "share": "Share",
+    "bslDate": "BSL 2025 • Nov 12-14, 2025",
+    "date": "Nov 12-14, 2025",
+    "pass": "Pass",
+    "showFullDetails": "Show Full Details",
+    "viewFullDetails": "View Full Details",
+    "flipBack": "Flip Back",
+    "qrCodeModalTitle": "Your Pass QR Code"
   }
 }

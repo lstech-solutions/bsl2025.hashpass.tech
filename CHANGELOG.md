@@ -1,5 +1,161 @@
 # Changelog
 
+## [1.6.3] - 2025-11-07
+
+### Beta
+- Version 1.6.3 release
+
+### Technical Details
+- Version: 1.6.3
+- Release Type: beta
+- Build Number: 202511072207
+- Release Date: 2025-11-07T22:07:16.807Z
+
+
+## [1.6.2] - 2025-11-07
+
+### Beta
+- Version 1.6.2 release
+
+### Technical Details
+- Version: 1.6.2
+- Release Type: beta
+- Build Number: 202511072038
+- Release Date: 2025-11-07T20:38:06.545Z
+
+
+## [1.6.1] - 2025-11-07
+
+### Beta
+- Version 1.6.1 release
+
+### Technical Details
+- Version: 1.6.1
+- Release Type: beta
+- Build Number: 202511072036
+- Release Date: 2025-11-07T20:36:38.094Z
+
+
+## [1.6.0] - 2025-11-07
+
+### Beta
+- Version 1.6.0 release
+
+### Technical Details
+- Version: 1.6.0
+- Release Type: beta
+- Build Number: 202511070811
+- Release Date: 2025-11-07T08:11:06.315Z
+
+
+## [1.5.16] - 2025-11-07
+
+### Beta
+- Added email provider detection with clickable links in toasts, fixed pass creation for deleted users, improved delete account flow with OTP verification, fixed cancel meeting request function, and updated meeting request labels in speaker view
+
+### Technical Details
+- Version: 1.5.16
+- Release Type: beta
+- Build Number: 202511070644
+- Release Date: 2025-11-07T06:44:23.421Z
+
+
+## [1.5.15] - 2025-11-07
+
+### Beta
+- Fixed blocked users loading issue, improved dark mode contrast, added mute functionality, and fixed duplicate navigation bar
+
+### Technical Details
+- Version: 1.5.15
+- Release Type: beta
+- Build Number: 202511070329
+- Release Date: 2025-11-07T03:29:04.951Z
+
+
+## [1.5.14] - 2025-11-07
+
+### Beta
+- Removed tutorial buttons from explore and networking screens, tutorials now auto-start automatically
+
+### Technical Details
+- Version: 1.5.14
+- Release Type: beta
+- Build Number: 202511070301
+- Release Date: 2025-11-07T03:01:41.537Z
+
+
+## [1.5.13] - 2025-11-07
+
+### Beta
+- Improved toast styling to match theme colors and enhance text contrast
+
+### Technical Details
+- Version: 1.5.13
+- Release Type: beta
+- Build Number: 202511070248
+- Release Date: 2025-11-07T02:48:28.693Z
+
+
+## [1.5.12] - 2025-11-07
+
+### Beta
+- Fixed
+
+### Technical Details
+- Version: 1.5.12
+- Release Type: beta
+- Build Number: 202511070059
+- Release Date: 2025-11-07T00:59:46.094Z
+
+
+## [1.5.11] - 2025-11-06
+
+### Beta
+- Version 1.5.11 release
+
+### Technical Details
+- Version: 1.5.11
+- Release Type: beta
+- Build Number: 202511062244
+- Release Date: 2025-11-06T22:44:45.830Z
+
+
+## [1.5.9] - 2025-11-06
+
+### Beta
+- Version 1.5.9 release
+
+### Technical Details
+- Version: 1.5.9
+- Release Type: beta
+- Build Number: 202511062041
+- Release Date: 2025-11-06T20:41:07.484Z
+
+
+## [1.5.8] - 2025-11-06
+
+### Beta
+- Version 1.5.8 release
+
+### Technical Details
+- Version: 1.5.8
+- Release Type: beta
+- Build Number: 202511061859
+- Release Date: 2025-11-06T18:59:33.008Z
+
+
+## [1.5.7] - 2025-11-06
+
+### Beta
+- Version 1.5.7 release
+
+### Technical Details
+- Version: 1.5.7
+- Release Type: beta
+- Build Number: 202511061751
+- Release Date: 2025-11-06T17:51:10.300Z
+
+
 ## [1.5.6] - 2025-11-05
 
 ### Beta

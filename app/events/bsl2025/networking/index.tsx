@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Animated,
+  InteractionManager,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
@@ -17,13 +18,89 @@ import { useToastHelpers } from '@/contexts/ToastContext';
 import QuickAccessGrid from '@/components/explorer/QuickAccessGrid';
 import LoadingScreen from '@/components/LoadingScreen';
 import { NetworkingStats, StatsState, QuickAccessItem } from '@/types/networking';
+import { CopilotStep, walkthroughable, useCopilot } from 'react-native-copilot';
+import { useTutorialPreferences } from '@/hooks/useTutorialPreferences';
+
+const CopilotView = walkthroughable(View);
+const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
 
 export default function NetworkingView() {
   const { isDark, colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
   const { showSuccess, showError } = useToastHelpers();
+  const { start: startNetworkingTutorial, copilotEvents, handleNth } = useCopilot();
+  const { shouldShowTutorial, markTutorialCompleted, isReady, networkingTutorialCompleted, updateTutorialStep } = useTutorialPreferences();
+  const { isLoggedIn, isLoading: authLoading } = useAuth();
+  const tutorialStartedRef = useRef(false);
   const styles = getStyles(isDark, colors);
+
+  // Reset ref when tutorial is reset (completion status changes from true to false)
+  useEffect(() => {
+    if (!networkingTutorialCompleted) {
+      tutorialStartedRef.current = false;
+    }
+  }, [networkingTutorialCompleted]);
+
+  // Auto-start tutorial for new users - only once, when everything is ready
+  useEffect(() => {
+    // Prevent multiple starts
+    if (tutorialStartedRef.current) return;
+    
+    // Wait for all conditions to be met
+    if (!isReady || !isLoggedIn || authLoading || !shouldShowTutorial('networking')) {
+      return;
+    }
+
+    // Use InteractionManager to ensure UI is ready
+    const interaction = InteractionManager.runAfterInteractions(() => {
+      // Additional delay to ensure all CopilotSteps are registered
+      const timer = setTimeout(() => {
+        if (!tutorialStartedRef.current) {
+          tutorialStartedRef.current = true;
+          try {
+            // Start networking tutorial at order 100 (first networking step)
+            if (handleNth && typeof handleNth === 'function') {
+              handleNth(100);
+            } else {
+              startNetworkingTutorial();
+            }
+          } catch (error) {
+            console.error('Error starting networking tutorial:', error);
+            tutorialStartedRef.current = false;
+          }
+        }
+      }, 2000); // Increased delay for better stability
+      
+      return () => clearTimeout(timer);
+    });
+
+    return () => {
+      interaction.cancel();
+    };
+  }, [isReady, isLoggedIn, authLoading, shouldShowTutorial, startNetworkingTutorial, networkingTutorialCompleted]);
+
+  // Listen for tutorial events
+  useEffect(() => {
+    const handleTutorialStop = () => {
+      markTutorialCompleted('networking');
+    };
+
+    const handleStepChange = (step: any) => {
+      // Track step progress
+      if (step && step.order) {
+        updateTutorialStep('networking', step.order);
+      }
+    };
+
+    copilotEvents.on('stop', handleTutorialStop);
+    copilotEvents.on('stepChange', handleStepChange);
+
+    return () => {
+      copilotEvents.off('stop', handleTutorialStop);
+      copilotEvents.off('stepChange', handleStepChange);
+    };
+  }, [copilotEvents, markTutorialCompleted, updateTutorialStep]);
 
   const [statsState, setStatsState] = useState<StatsState>({
     data: {
@@ -82,12 +159,20 @@ export default function NetworkingView() {
 
   const quickAccessItems: QuickAccessItem[] = [
     {
+      id: 'find-speakers',
+      title: 'Find Speakers',
+      icon: 'search',
+      color: '#FF9800',
+      route: '/events/bsl2025/speakers',
+      subtitle: 'Browse all speakers',
+    },
+    {
       id: 'my-requests',
-      title: 'My Requests',
+      title: 'Your Request',
       icon: 'mail',
       color: '#4CAF50',
       route: '/events/bsl2025/networking/my-requests',
-      subtitle: 'View all your meeting requests',
+      subtitle: 'View sent and incoming requests',
     },
     {
       id: 'my-meetings',
@@ -96,14 +181,6 @@ export default function NetworkingView() {
       color: '#3F51B5',
       route: '/events/bsl2025/networking/my-meetings',
       subtitle: 'Your accepted/created meetings',
-    },
-    {
-      id: 'find-speakers',
-      title: 'Find Speakers',
-      icon: 'search',
-      color: '#FF9800',
-      route: '/events/bsl2025/speakers',
-      subtitle: 'Browse all speakers',
     },
     {
       id: 'my-schedule',
@@ -396,21 +473,25 @@ export default function NetworkingView() {
       </View>
 
       {/* Quick Access Section */}
-      <QuickAccessGrid
-        items={quickAccessItems.map(item => ({
-          id: item.id,
-          title: item.title,
-          subtitle: item.subtitle,
-          icon: item.icon,
-          color: item.color,
-          route: item.route
-        }))}
-        title="Quick Access"
-        showScrollArrows={true}
-        cardWidth={160}
-        cardSpacing={12}
-        onItemPress={handleQuickAccess}
-      />
+      <CopilotStep text="Welcome to the Networking Center! Use the Quick Access cards below to navigate. 'Find Speakers' lets you browse and request meetings. 'My Requests' shows your meeting requests. 'My Schedule' helps you manage your calendar." order={100} name="networkingQuickAccess">
+        <CopilotView>
+          <QuickAccessGrid
+            items={quickAccessItems.map(item => ({
+              id: item.id,
+              title: item.title,
+              subtitle: item.subtitle,
+              icon: item.icon,
+              color: item.color,
+              route: item.route
+            }))}
+            title="Quick Access"
+            showScrollArrows={true}
+            cardWidth={160}
+            cardSpacing={12}
+            onItemPress={handleQuickAccess}
+          />
+        </CopilotView>
+      </CopilotStep>
 
       {/* Recent Activity Section */}
       <View style={styles.section}>

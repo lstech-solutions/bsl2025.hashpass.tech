@@ -1,21 +1,48 @@
+
 import React, { useEffect, useRef, useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, Animated, Easing, Text, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Animated, Easing, Text, Modal, TouchableWithoutFeedback, Dimensions, Platform } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../providers/LanguageProvider';
 import { getAvailableLocales } from '../i18n/i18n';
 import { useTranslation } from '../i18n/i18n';
+import { useRouter, usePathname } from 'expo-router';
 
 const ThemeAndLanguageSwitcher = () => {
   const { toggleTheme, colors, isDark } = useTheme();
   const { locale, setLocale } = useLanguage();
+  const router = useRouter();
+  const pathname = usePathname();
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const loginScaleAnim = useRef(new Animated.Value(1)).current;
   const availableLocales = getAvailableLocales();
   const { t } = useTranslation('profile');
+
+  // Check if we're on the auth page
+  const isOnAuthPage = pathname?.includes('/auth') || pathname === '/(shared)/auth';
+  
+  // Check if mobile view
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const updateDimensions = () => {
+      const { width } = Dimensions.get('window');
+      setIsMobile(width < 768);
+    };
+    
+    updateDimensions();
+    const subscription = Dimensions.addEventListener('change', updateDimensions);
+    
+    return () => {
+      if (subscription) {
+        subscription.remove();
+      }
+    };
+  }, []);
 
   const currentLanguage = availableLocales.find(lang => lang.code === locale) || availableLocales[0];
 
@@ -80,6 +107,26 @@ const ThemeAndLanguageSwitcher = () => {
     }
   };
 
+  const handleLoginPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    Animated.sequence([
+      Animated.timing(loginScaleAnim, {
+        toValue: 0.9,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(loginScaleAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+        easing: Easing.bounce,
+      }),
+    ]).start();
+
+    router.push('/(shared)/auth');
+  };
+
   const rotateInterpolate = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
@@ -90,6 +137,10 @@ const ThemeAndLanguageSwitcher = () => {
       { rotate: rotateInterpolate },
       { scale: scaleAnim },
     ],
+  };
+
+  const loginAnimatedStyle = {
+    transform: [{ scale: loginScaleAnim }],
   };
 
   const menuTranslateY = slideAnim.interpolate({
@@ -103,7 +154,10 @@ const ThemeAndLanguageSwitcher = () => {
   });
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      isOnAuthPage && isMobile && styles.containerMobile
+    ]}>
       <View style={styles.languageContainer}>
         <TouchableOpacity
           style={[styles.button, { backgroundColor: colors.surface }]}
@@ -171,6 +225,34 @@ const ThemeAndLanguageSwitcher = () => {
         </TouchableOpacity>
       </Animated.View>
 
+      {!isOnAuthPage && (
+        <Animated.View style={[styles.button, loginAnimatedStyle, { marginLeft: 10 }]}>
+          <TouchableOpacity
+            style={{
+              width: '100%',
+              height: '100%',
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: isDark ? colors.secondary : colors.primary,
+              borderRadius: 25,
+              shadowColor: isDark ? colors.secondary : colors.primary,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+              elevation: 5,
+            }}
+            onPress={handleLoginPress}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="log-in"
+              size={24}
+              color={isDark ? colors.secondaryContrastText : colors.primaryContrastText}
+            />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
       {showLanguageMenu && (
         <TouchableWithoutFeedback onPress={toggleLanguageMenu}>
           <View style={[
@@ -191,6 +273,10 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 1000,
     alignItems: 'flex-start',
+  },
+  containerMobile: {
+    top: Platform.OS === 'web' ? 10 : 60,
+    right: 10,
   },
   languageContainer: {
     position: 'relative',

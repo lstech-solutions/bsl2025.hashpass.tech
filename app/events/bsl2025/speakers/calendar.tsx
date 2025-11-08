@@ -8,6 +8,7 @@ import { supabase } from '../../../../lib/supabase';
 import EventBanner from '../../../../components/EventBanner';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
 import SpeakerSearchAndSort from '../../../../components/SpeakerSearchAndSort';
+import { sortSpeakersByPriority } from '../../../../lib/speaker-priority';
 import { getSpeakerAvatarUrl } from '../../../../lib/string-utils';
 import LoadingScreen from '../../../../components/LoadingScreen';
 
@@ -65,8 +66,7 @@ export default function SpeakersCalendar() {
         
         const dbPromise = supabase
           .from('bsl_speakers')
-          .select('*')
-          .order('name');
+          .select('*');
 
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Database timeout')), 5000)
@@ -90,7 +90,9 @@ export default function SpeakersCalendar() {
               index === self.findIndex((s: Speaker) => s.id === speaker.id)
             );
             
-            setSpeakers(uniqueSpeakers);
+            // Sort by priority order
+            const sortedSpeakers = sortSpeakersByPriority(uniqueSpeakers);
+            setSpeakers(sortedSpeakers);
             console.log('✅ Loaded speakers from database:', uniqueSpeakers.length, 'unique speakers');
             setLoading(false);
             return;

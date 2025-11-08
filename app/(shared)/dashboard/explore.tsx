@@ -1,8 +1,9 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, NativeSyntheticEvent, NativeScrollEvent, StatusBar, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, NativeSyntheticEvent, NativeScrollEvent, StatusBar, Platform, InteractionManager } from 'react-native';
 import { useScroll } from '../../../contexts/ScrollContext';
 import { useEvent } from '../../../contexts/EventContext';
 import { useTheme } from '../../../hooks/useTheme';
+import { useAuth } from '../../../hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import EventBanner from '../../../components/EventBanner';
@@ -16,6 +17,12 @@ import {
 } from '../../../lib/event-detector';
 import { t } from '@lingui/macro';
 import { useLingui } from '@lingui/react';
+import { CopilotStep, walkthroughable, useCopilot } from 'react-native-copilot';
+import { useTutorialPreferences } from '../../../hooks/useTutorialPreferences';
+
+const CopilotView = walkthroughable(View);
+const CopilotText = walkthroughable(Text);
+const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
 
 export default function ExploreScreen() {
   const { scrollY, headerHeight } = useScroll();
@@ -26,6 +33,105 @@ export default function ExploreScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const styles = getStyles(isDark, colors);
+  const { start: startTutorial, copilotEvents, handleNth, handleStop } = useCopilot();
+  const { shouldShowTutorial, markTutorialCompleted, isReady, mainTutorialCompleted, updateTutorialStep } = useTutorialPreferences();
+  const { isLoggedIn, isLoading: authLoading } = useAuth();
+  const tutorialStartedRef = useRef(false);
+
+  // Reset ref when tutorial is reset (completion status changes from true to false)
+  useEffect(() => {
+    if (!mainTutorialCompleted) {
+      tutorialStartedRef.current = false;
+    }
+  }, [mainTutorialCompleted]);
+
+  // Auto-start tutorial for new users - only once, when everything is ready
+  useEffect(() => {
+    // Prevent multiple starts
+    if (tutorialStartedRef.current) {
+      console.log('Tutorial already started, skipping auto-start');
+      return;
+    }
+    
+    // Wait for all conditions to be met
+    if (!isReady) {
+      console.log('Tutorial auto-start: Waiting for preferences to be ready');
+      return;
+    }
+    
+    if (!isLoggedIn) {
+      console.log('Tutorial auto-start: User not logged in');
+      return;
+    }
+    
+    if (authLoading) {
+      console.log('Tutorial auto-start: Auth still loading');
+      return;
+    }
+    
+    const shouldShow = shouldShowTutorial('main');
+    console.log('Tutorial auto-start check:', {
+      shouldShow,
+      mainTutorialCompleted,
+      isReady,
+      isLoggedIn,
+      authLoading
+    });
+    
+    if (!shouldShow) {
+      console.log('Tutorial auto-start: shouldShowTutorial returned false');
+      return;
+    }
+
+    console.log('Tutorial auto-start: All conditions met, starting tutorial...');
+
+    // Use InteractionManager to ensure UI is ready
+    const interaction = InteractionManager.runAfterInteractions(() => {
+      // Additional delay to ensure all CopilotSteps are registered
+      const timer = setTimeout(() => {
+        if (!tutorialStartedRef.current) {
+          tutorialStartedRef.current = true;
+          try {
+            console.log('Tutorial auto-start: Calling startTutorial()');
+            // Mark tutorial as started in database
+            updateTutorialStep('main', 1).catch(err => console.error('Error updating tutorial step:', err));
+            startTutorial();
+          } catch (error) {
+            console.error('Error starting tutorial:', error);
+            tutorialStartedRef.current = false;
+          }
+        }
+      }, 2000); // Increased delay for better stability
+      
+      return () => clearTimeout(timer);
+    });
+
+    return () => {
+      interaction.cancel();
+    };
+  }, [isReady, isLoggedIn, authLoading, shouldShowTutorial, startTutorial, mainTutorialCompleted, updateTutorialStep]);
+
+  // Listen for tutorial events
+  useEffect(() => {
+    const handleTutorialStop = () => {
+      markTutorialCompleted('main');
+    };
+
+    const handleStepChange = (step: any) => {
+      // Track step progress
+      if (step && step.order) {
+        updateTutorialStep('main', step.order);
+      }
+    };
+
+    copilotEvents.on('stop', handleTutorialStop);
+    copilotEvents.on('stepChange', handleStepChange);
+
+    return () => {
+      copilotEvents.off('stop', handleTutorialStop);
+      copilotEvents.off('stepChange', handleStepChange);
+    };
+  }, [copilotEvents, markTutorialCompleted, updateTutorialStep]);
   // Subscribe to locale changes to trigger re-renders when locale changes
   const { i18n } = useLingui();
   // Use i18n.locale to ensure component subscribes to locale changes
@@ -340,8 +446,6 @@ export default function ExploreScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
- 
-            
             {/* Event Selector - Only show if multiple events available */}
             {showEventSelector && (
               <View style={styles.eventSelectorContainer}>
@@ -359,18 +463,21 @@ export default function ExploreScreen() {
         </View>
 
         {/* User Passes */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-          <Text style={styles.sectionTitle}>{t({ id: 'explore.yourPasses', message: 'Your Passes' })}</Text>
-          <PassesDisplay 
-            mode="dashboard"
-            showTitle={false}
-            showPassComparison={false}
-          />
-        </View>
+        <CopilotStep text="This is where you can view your event passes. Your passes show your ticket type and access level for the event." order={8} name="yourPasses">
+          <CopilotView style={{ paddingHorizontal: 20, paddingTop: 20 }}>
+            <Text style={styles.sectionTitle}>{t({ id: 'explore.yourPasses', message: 'Your Passes' })}</Text>
+            <PassesDisplay 
+              mode="dashboard"
+              showTitle={false}
+              showPassComparison={false}
+            />
+          </CopilotView>
+        </CopilotStep>
 
         {/* Quick Access Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t({ id: 'explore.quickAccess', message: 'Quick Access' })}</Text>
+        <CopilotStep text="Quick Access cards let you quickly navigate to important sections like Speakers, Agenda, Networking Center, and Event Information. Swipe horizontally to see all options." order={9} name="quickAccess">
+          <CopilotView style={styles.section}>
+            <Text style={styles.sectionTitle}>{t({ id: 'explore.quickAccess', message: 'Quick Access' })}</Text>
           <View style={styles.quickAccessContainer}>
             {showLeftArrow && (
               <TouchableOpacity 
@@ -410,8 +517,8 @@ export default function ExploreScreen() {
               </TouchableOpacity>
             )}
           </View>
-        </View>
-
+          </CopilotView>
+        </CopilotStep>
 
         {/* Bottom Spacing handled via contentContainerStyle paddingBottom */}
       </Animated.ScrollView>

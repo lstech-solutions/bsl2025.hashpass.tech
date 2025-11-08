@@ -28,6 +28,9 @@ import { Meeting, TimeSlot, DaySchedule } from '@/types/networking';
 import ScheduleConfirmationModal from '../../../../components/ScheduleConfirmationModal';
 import * as Haptics from 'expo-haptics';
 import { AgendaItem } from '../../../../types/events';
+import { CopilotStep, walkthroughable } from 'react-native-copilot';
+
+const CopilotView = walkthroughable(View);
 
 // Constants
 const WORKING_HOURS = { start: 8, end: 19 }; // 8 AM to 7 PM (covers 08:00–18:30 sessions)
@@ -1189,19 +1192,20 @@ const MySchedule = () => {
         showsVerticalScrollIndicator={true}
       >
         {/* Calendar Week View */}
-        <View style={[
-          styles.calendarContainer,
-          {
-            backgroundColor: colors.background.paper,
-            borderBottomColor: colors.divider,
-          }
-        ]}>
-          <View style={styles.calendarHeader}>
-            <Text style={[styles.calendarTitle, { color: colors.text.primary }]}>
-              Schedule Overview
-            </Text>
-          </View>
-          <View style={styles.calendarWeek}>
+        <CopilotStep text="This is your schedule view. Select a date to see your meetings and time slots. Tap on meetings to confirm or mark as tentative. You can also mark free time slots as interested or blocked." order={103} name="networkingSchedule">
+          <CopilotView style={[
+            styles.calendarContainer,
+            {
+              backgroundColor: colors.background.paper,
+              borderBottomColor: colors.divider,
+            }
+          ]}>
+            <View style={styles.calendarHeader}>
+              <Text style={[styles.calendarTitle, { color: colors.text.primary }]}>
+                Schedule Overview
+              </Text>
+            </View>
+            <View style={styles.calendarWeek}>
             {dayStats.map((dayStat) => {
               const isSelected = isSameDay(dayStat.date, selectedDate);
               const isCurrentDay = isToday(dayStat.date);
@@ -1333,7 +1337,8 @@ const MySchedule = () => {
               <Text style={[styles.legendText, { color: colors.text.secondary }]}>Scheduled Slots</Text>
             </View>
           </View>
-        </View>
+          </CopilotView>
+        </CopilotStep>
 
         {/* Time Slots */}
         <View style={styles.content}>

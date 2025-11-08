@@ -13,6 +13,9 @@ import SpeakerAvatar from '../../../../components/SpeakerAvatar';
 import PassesDisplay from '../../../../components/PassesDisplay';
 import { getSpeakerAvatarUrl, getSpeakerLinkedInUrl, getSpeakerTwitterUrl } from '../../../../lib/string-utils';
 import LoadingScreen from '../../../../components/LoadingScreen';
+import { CopilotStep, walkthroughable } from 'react-native-copilot';
+
+const CopilotView = walkthroughable(View);
 
 interface Speaker {
   id: string;
@@ -58,6 +61,7 @@ export default function SpeakerDetail() {
   const [selectedRequestToCancel, setSelectedRequestToCancel] = useState<any>(null);
   const [showRequestDetailModal, setShowRequestDetailModal] = useState(false);
   const [selectedRequestDetail, setSelectedRequestDetail] = useState<any>(null);
+  const [passRefreshTrigger, setPassRefreshTrigger] = useState(0);
   
   // Debug modal state changes
   useEffect(() => {
@@ -326,9 +330,14 @@ export default function SpeakerDetail() {
       } else {
         console.log('✅ Meeting requests result:', data);
         // Handle both direct array and wrapped response
-        const requests = Array.isArray(data) ? data : (data?.requests || []);
-        console.log('📊 Number of requests found:', requests.length);
-        setMeetingRequests(requests);
+        const allRequests = Array.isArray(data) ? data : (data?.requests || []);
+        console.log('📊 Number of requests found:', allRequests.length);
+        
+        // Filter to show only the current user's requests when viewing a speaker profile
+        // (not when the user is the speaker themselves)
+        const userRequests = allRequests.filter((req: any) => req.requester_id === user.id);
+        console.log('📊 Number of user requests:', userRequests.length);
+        setMeetingRequests(userRequests);
       }
     } catch (error) {
       console.error('❌ Error in loadMeetingRequestStatus:', error);
@@ -431,6 +440,9 @@ export default function SpeakerDetail() {
       // Refresh request limits to update available requests
       console.log('🔄 Refreshing request limits...');
       await loadRequestLimits();
+      
+      // Trigger pass display refresh
+      setPassRefreshTrigger(prev => prev + 1);
       
       console.log('✅ All updates completed successfully');
       
@@ -640,6 +652,9 @@ export default function SpeakerDetail() {
 
       // Reload request limits to update the UI
       await loadRequestLimits();
+      
+      // Trigger pass display refresh
+      setPassRefreshTrigger(prev => prev + 1);
       
     } catch (error) {
       console.error('Error sending meeting request:', error);
@@ -879,12 +894,14 @@ export default function SpeakerDetail() {
         </View>
       )}
 
-        {/* Your Request Status - Show if there's an existing request */}
-        {meetingRequests.length > 0 && (
+        {/* Meeting Requests Status - Show requests sent to this speaker */}
+        {meetingRequests.length > 0 && !isCurrentUserSpeaker && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <MaterialIcons name="assignment" size={24} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Your Meeting Requests ({meetingRequests.length})</Text>
+              <Text style={styles.sectionTitle}>
+                Your Meeting Request{meetingRequests.length > 1 ? 's' : ''} ({meetingRequests.length})
+              </Text>
               <TouchableOpacity 
                 onPress={loadMeetingRequestStatus}
                 disabled={loadingRequestStatus}
@@ -949,7 +966,7 @@ export default function SpeakerDetail() {
                 </View>
                 
                 <View style={styles.simpleRequestActions}>
-                  {request.status === 'pending' && (
+                  {request.status === 'pending' && request.requester_id === user?.id && (
                     <TouchableOpacity
                       style={styles.simpleCancelButton}
                       onPress={(e) => {
@@ -964,13 +981,13 @@ export default function SpeakerDetail() {
                 </View>
               </View>
               
-              {request.message && (
+              {request.message && request.requester_id === user?.id && (
                 <Text style={styles.simpleRequestMessage} numberOfLines={2}>
                   {request.message}
                 </Text>
               )}
               
-              {request.note && (
+              {request.note && request.requester_id === user?.id && (
                 <View style={styles.simpleRequestIntentions}>
                   <Text style={styles.simpleRequestIntentionsLabel}>Intentions:</Text>
                   <Text style={styles.simpleRequestIntentionsText} numberOfLines={1}>
@@ -1012,7 +1029,7 @@ export default function SpeakerDetail() {
                   </Text>
                 </View>
                 
-                {request.message && (
+                {request.message && request.requester_id === user?.id && (
                   <Text style={styles.cancelledRequestMessage} numberOfLines={2}>
                     {request.message}
                   </Text>
@@ -1039,18 +1056,23 @@ export default function SpeakerDetail() {
       )}
 
       {/* Pass Display */}
-      <PassesDisplay
-        mode="speaker"
-        speakerId={speaker.id}
-        showRequestButton={true}
-        onRequestPress={handleRequestMeeting}
-        onPassInfoLoaded={(passInfo) => {
-          console.log('Pass info loaded:', passInfo);
-        }}
-        onRequestLimitsLoaded={(limits) => {
-          console.log('Request limits loaded:', limits);
-        }}
-      />
+      <CopilotStep text="To request a meeting with this speaker, click the 'Request Meeting' button below. You can optionally add a message to increase your chances of approval. Your pass type determines how many requests you can make." order={101} name="networkingRequestMeeting">
+        <CopilotView>
+          <PassesDisplay
+            mode="speaker"
+            speakerId={speaker.id}
+            showRequestButton={true}
+            onRequestPress={handleRequestMeeting}
+            refreshTrigger={passRefreshTrigger}
+            onPassInfoLoaded={(passInfo) => {
+              console.log('Pass info loaded:', passInfo);
+            }}
+            onRequestLimitsLoaded={(limits) => {
+              console.log('Request limits loaded:', limits);
+            }}
+          />
+        </CopilotView>
+      </CopilotStep>
 
       {/* Social Links */}
       {speaker.social && (
@@ -1288,7 +1310,7 @@ export default function SpeakerDetail() {
 
             <View style={styles.cancelModalHeader}>
               <MaterialIcons name="warning" size={28} color={colors.error.main} />
-              <Text style={styles.cancelModalTitle}>Cancel Meeting Request</Text>
+              <Text style={styles.cancelModalTitle}>Cancel Your Meeting Request</Text>
             </View>
             
             <Text style={styles.cancelModalMessage}>
@@ -1338,7 +1360,11 @@ export default function SpeakerDetail() {
             >
               <MaterialIcons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Meeting Request Details</Text>
+            <Text style={styles.modalTitle}>
+              {selectedRequestDetail?.requester_id === user?.id 
+                ? 'Your Meeting Request Details' 
+                : 'Meeting Request Details'}
+            </Text>
             <View style={styles.modalHeaderSpacer} />
           </View>
 
@@ -1374,9 +1400,13 @@ export default function SpeakerDetail() {
                              '#FF9500'
                     }
                   ]}>
-                    {selectedRequestDetail.status === 'approved' ? 'Meeting Request Approved' :
-                     selectedRequestDetail.status === 'declined' ? 'Meeting Request Declined' :
-                     'Meeting Request Pending'}
+                    {selectedRequestDetail.requester_id === user?.id
+                      ? (selectedRequestDetail.status === 'approved' ? 'Your Meeting Request Approved' :
+                         selectedRequestDetail.status === 'declined' ? 'Your Meeting Request Declined' :
+                         'Your Meeting Request Pending')
+                      : (selectedRequestDetail.status === 'approved' ? 'Meeting Request Approved' :
+                         selectedRequestDetail.status === 'declined' ? 'Meeting Request Declined' :
+                         'Meeting Request Pending')}
                   </Text>
                 </View>
               </View>
@@ -1420,16 +1450,16 @@ export default function SpeakerDetail() {
                 </View>
               </View>
 
-              {/* Message */}
-              {selectedRequestDetail.message && (
+              {/* Message - Only show for user's own requests */}
+              {selectedRequestDetail.message && selectedRequestDetail.requester_id === user?.id && (
                 <View style={styles.detailInfoSection}>
                   <Text style={styles.detailSectionTitle}>Your Message</Text>
                   <Text style={styles.detailMessage}>{selectedRequestDetail.message}</Text>
                 </View>
               )}
 
-              {/* Note/Intentions */}
-              {selectedRequestDetail.note && (
+              {/* Note/Intentions - Only show for user's own requests */}
+              {selectedRequestDetail.note && selectedRequestDetail.requester_id === user?.id && (
                 <View style={styles.detailInfoSection}>
                   <Text style={styles.detailSectionTitle}>Meeting Intentions</Text>
                   <View style={styles.detailIntentionsContainer}>
@@ -1474,7 +1504,7 @@ export default function SpeakerDetail() {
               )}
 
               {/* Action Buttons */}
-              {selectedRequestDetail.status === 'pending' && (
+              {selectedRequestDetail.status === 'pending' && selectedRequestDetail.requester_id === user?.id && (
                 <View style={styles.detailActions}>
                   <TouchableOpacity
                     style={styles.detailCancelButton}

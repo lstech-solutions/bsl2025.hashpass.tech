@@ -22,26 +22,270 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202511052256, // Updated to current timestamp
-  releaseDate: '2025-11-05',
+  buildNumber: 202511072207, // Updated to current timestamp
+  releaseDate: '2025-11-07',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
-    'Improved language switching with smooth updates without remounting',
-    'Enhanced I18nProvider to handle locale changes reactively',
-    'Added useLingui hook to explore component for proper translation updates'
+    'Added Privacy/Terms modal component for in-app viewing',
+    'Improved mobile responsiveness for theme/language switcher on auth page'
   ],
   bugfixes: [
-    'Fixed language switching not updating explorer section immediately',
-    'Fixed locale changes requiring page reload to see translations',
-    'Improved translation reactivity without component remounting'
+    'Fixed theme and language switcher overlapping with auth card on mobile views',
+    'Replaced navigation with modal for privacy and terms links on auth screen'
   ],
   breakingChanges: [],
-  notes: 'Version 1.5.6 release'
+  notes: 'Version 1.6.3 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.3': {
+    version: '1.6.3',
+    buildNumber: 202511072207,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.3 release'
+  },
+  '1.6.2': {
+    version: '1.6.2',
+    buildNumber: 202511072038,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.2 release'
+  },
+  '1.6.1': {
+    version: '1.6.1',
+    buildNumber: 202511072036,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.1 release'
+  },
+  '1.6.0': {
+    version: '1.6.0',
+    buildNumber: 202511070811,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.0 release'
+  },
+  '1.5.16': {
+    version: '1.5.16',
+    buildNumber: 202511070644,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Added email provider detection with clickable links in toasts, fixed pass creation for deleted users, improved delete account flow with OTP verification, fixed cancel meeting request function, and updated meeting request labels in speaker view'
+  },
+  '1.5.15': {
+    version: '1.5.15',
+    buildNumber: 202511070329,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Fixed blocked users loading issue, improved dark mode contrast, added mute functionality, and fixed duplicate navigation bar'
+  },
+  '1.5.14': {
+    version: '1.5.14',
+    buildNumber: 202511070301,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Removed tutorial buttons from explore and networking screens, tutorials now auto-start automatically'
+  },
+  '1.5.13': {
+    version: '1.5.13',
+    buildNumber: 202511070249,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Improved toast styling to match theme colors and enhance text contrast'
+  },
+  '1.5.13': {
+    version: '1.5.13',
+    buildNumber: 202511070248,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Improved toast styling to match theme colors and enhance text contrast'
+  },
+  '1.5.12': {
+    version: '1.5.12',
+    buildNumber: 202511070059,
+    releaseDate: '2025-11-07',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Fixed mobile overlap issue and added privacy/terms modal'
+  },
+  '1.5.11': {
+    version: '1.5.11',
+    buildNumber: 202511062244,
+    releaseDate: '2025-11-06',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Improved language switching with smooth updates without remounting',
+      'Enhanced I18nProvider to handle locale changes reactively',
+      'Added useLingui hook to explore component for proper translation updates'
+    ],
+    bugfixes: [
+      'Fixed language switching not updating explorer section immediately',
+      'Fixed locale changes requiring page reload to see translations',
+      'Improved translation reactivity without component remounting'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.5.11 release'
+  },
+  '1.5.9': {
+    version: '1.5.9',
+    buildNumber: 202511062041,
+    releaseDate: '2025-11-06',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Improved language switching with smooth updates without remounting',
+      'Enhanced I18nProvider to handle locale changes reactively',
+      'Added useLingui hook to explore component for proper translation updates'
+    ],
+    bugfixes: [
+      'Fixed language switching not updating explorer section immediately',
+      'Fixed locale changes requiring page reload to see translations',
+      'Improved translation reactivity without component remounting'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.5.9 release'
+  },
+  '1.5.8': {
+    version: '1.5.8',
+    buildNumber: 202511061859,
+    releaseDate: '2025-11-06',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Improved language switching with smooth updates without remounting',
+      'Enhanced I18nProvider to handle locale changes reactively',
+      'Added useLingui hook to explore component for proper translation updates'
+    ],
+    bugfixes: [
+      'Fixed language switching not updating explorer section immediately',
+      'Fixed locale changes requiring page reload to see translations',
+      'Improved translation reactivity without component remounting'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.5.8 release'
+  },
+  '1.5.7': {
+    version: '1.5.7',
+    buildNumber: 202511061751,
+    releaseDate: '2025-11-06',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Improved language switching with smooth updates without remounting',
+      'Enhanced I18nProvider to handle locale changes reactively',
+      'Added useLingui hook to explore component for proper translation updates'
+    ],
+    bugfixes: [
+      'Fixed language switching not updating explorer section immediately',
+      'Fixed locale changes requiring page reload to see translations',
+      'Improved translation reactivity without component remounting'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.5.7 release'
+  },
   '1.5.6': {
     version: '1.5.6',
     buildNumber: 202511052256,

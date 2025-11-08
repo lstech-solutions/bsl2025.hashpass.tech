@@ -137,12 +137,12 @@ export const EVENTS: Record<string, EventConfig> = {
     ],
     quickAccessItems: [
       {
-        id: 'speakers',
-        title: 'Featured Speakers',
-        subtitle: 'Meet the experts',
-        icon: 'people',
-        color: '#007AFF',
-        route: '/events/bsl2025/speakers/calendar'
+        id: 'agenda',
+        title: 'Event Agenda',
+        subtitle: '3 Days Schedule',
+        icon: 'event',
+        color: '#34A853',
+        route: '/events/bsl2025/agenda'
       },
       {
         id: 'networking',
@@ -153,12 +153,12 @@ export const EVENTS: Record<string, EventConfig> = {
         route: '/events/bsl2025/networking'
       },
       {
-        id: 'agenda',
-        title: 'Event Agenda',
-        subtitle: '3 Days Schedule',
-        icon: 'event',
-        color: '#34A853',
-        route: '/events/bsl2025/agenda'
+        id: 'speakers',
+        title: 'Featured Speakers',
+        subtitle: 'Meet the experts',
+        icon: 'people',
+        color: '#007AFF',
+        route: '/events/bsl2025/speakers/calendar'
       },
       {
         id: 'event-info',

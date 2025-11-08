@@ -159,12 +159,20 @@ export default function NetworkingView() {
 
   const quickAccessItems: QuickAccessItem[] = [
     {
+      id: 'find-speakers',
+      title: 'Find Speakers',
+      icon: 'search',
+      color: '#FF9800',
+      route: '/events/bsl2025/speakers',
+      subtitle: 'Browse all speakers',
+    },
+    {
       id: 'my-requests',
-      title: 'My Requests',
+      title: 'Your Request',
       icon: 'mail',
       color: '#4CAF50',
       route: '/events/bsl2025/networking/my-requests',
-      subtitle: 'View all your meeting requests',
+      subtitle: 'View sent and incoming requests',
     },
     {
       id: 'my-meetings',
@@ -173,14 +181,6 @@ export default function NetworkingView() {
       color: '#3F51B5',
       route: '/events/bsl2025/networking/my-meetings',
       subtitle: 'Your accepted/created meetings',
-    },
-    {
-      id: 'find-speakers',
-      title: 'Find Speakers',
-      icon: 'search',
-      color: '#FF9800',
-      route: '/events/bsl2025/speakers',
-      subtitle: 'Browse all speakers',
     },
     {
       id: 'my-schedule',

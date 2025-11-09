@@ -433,10 +433,10 @@ export default function SettingsScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               await resetTutorial('main');
               showSuccess('Tutorial Reset', 'The main screen tutorial will start automatically when you visit the explore screen.');
-              // Navigate after a short delay to ensure state is updated
+              // Navigate after a delay to ensure state is fully updated and preferences reloaded
               setTimeout(() => {
                 router.push('./explore');
-              }, 500);
+              }, 1000);
             },
             showChevron: true,
           })}

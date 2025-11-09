@@ -91,6 +91,11 @@
     "title": "환영합니다",
     "subtitle": "로그인하여 디지털 라이프를 시작하세요.",
     "signInWithGoogle": "Google로 로그인",
+    "emailPlaceholder": "이메일을 입력하세요",
+    "magicLink": "매직 링크",
+    "otpCode": "OTP 코드",
+    "sendMagicLink": "매직 링크 보내기",
+    "sendCode": "코드 보내기",
     "privacy": {
       "text": "로그인함으로써 다음에 동의합니다",
       "terms": "서비스 약관",

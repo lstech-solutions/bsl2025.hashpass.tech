@@ -127,50 +127,90 @@ export function getEmailProviderUrl(email: string): EmailProvider | null {
 }
 
 /**
- * Opens the email provider in a new window/tab (web) or app (mobile)
+ * Opens the email provider inbox (not composer) in a new window/tab (web) or app (mobile)
+ * On web: opens Gmail/Outlook in browser
+ * On mobile: opens the email app inbox using deep links
  */
 export async function openEmailProvider(email: string): Promise<void> {
   const provider = getEmailProviderUrl(email);
   
-  if (!provider) {
-    // Fallback to mailto: if no provider detected
-    if (Platform.OS !== 'web') {
+  if (Platform.OS === 'web') {
+    // Web: always open provider URL in browser (Gmail, Outlook, etc.)
+    if (provider && typeof window !== 'undefined') {
       try {
-        await Linking.openURL(`mailto:${email}`);
+        window.open(provider.url, '_blank', 'noopener,noreferrer');
+        return;
       } catch (error) {
-        console.error('Error opening mailto:', error);
+        console.error('Error opening provider URL:', error);
+      }
+    }
+    
+    // Fallback: try common email providers (Gmail or Outlook)
+    if (typeof window !== 'undefined') {
+      try {
+        // Try Gmail first as it's most common
+        window.open('https://mail.google.com', '_blank', 'noopener,noreferrer');
+      } catch (error) {
+        console.error('Error opening Gmail fallback:', error);
       }
     }
     return;
   }
 
-  if (Platform.OS === 'web') {
-    // Web: open in new tab
-    if (typeof window !== 'undefined') {
-      window.open(provider.url, '_blank', 'noopener,noreferrer');
-    }
-  } else {
-    // Mobile: try deep link first, then fallback to mailto
+  // Mobile: use deep links to open email app inbox (not composer)
+  if (provider?.deepLink) {
     try {
-      if (provider.deepLink) {
-        // Try to open the specific email app
-        const canOpen = await Linking.canOpenURL(provider.deepLink);
-        if (canOpen) {
-          await Linking.openURL(provider.deepLink);
-          return;
-        }
+      const canOpen = await Linking.canOpenURL(provider.deepLink);
+      if (canOpen) {
+        // Deep links open the app inbox, not the composer
+        await Linking.openURL(provider.deepLink);
+        return;
       }
-      // Fallback to mailto: which opens default email app
-      await Linking.openURL(`mailto:${email}`);
     } catch (error) {
-      console.error('Error opening email provider:', error);
-      // Final fallback to mailto
-      try {
-        await Linking.openURL(`mailto:${email}`);
-      } catch (fallbackError) {
-        console.error('Error opening mailto fallback:', fallbackError);
-      }
+      console.warn('Error opening deep link:', error);
     }
   }
+  
+  // For unknown providers on mobile, try common email apps
+  // Try Gmail app first (most common)
+  try {
+    const canOpenGmail = await Linking.canOpenURL('googlegmail://');
+    if (canOpenGmail) {
+      await Linking.openURL('googlegmail://');
+      return;
+    }
+  } catch (error) {
+    // Continue to next option
+  }
+  
+  // Try Outlook app
+  try {
+    const canOpenOutlook = await Linking.canOpenURL('ms-outlook://');
+    if (canOpenOutlook) {
+      await Linking.openURL('ms-outlook://');
+      return;
+    }
+  } catch (error) {
+    // Continue to next option
+  }
+  
+  // Last resort: try iOS Mail app (opens inbox, not composer)
+  if (Platform.OS === 'ios') {
+    try {
+      // message:// opens Mail app, but we want inbox
+      // Unfortunately, iOS doesn't have a direct inbox deep link
+      // So we'll try to open the Mail app
+      const canOpenMail = await Linking.canOpenURL('message://');
+      if (canOpenMail) {
+        await Linking.openURL('message://');
+        return;
+      }
+    } catch (error) {
+      console.error('Error opening iOS Mail app:', error);
+    }
+  }
+  
+  // If nothing works, log a warning (don't open mailto: as it opens composer)
+  console.warn('Could not open email app. Please open your email app manually.');
 }
 

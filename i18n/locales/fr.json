@@ -91,6 +91,11 @@
     "title": "Bienvenue sur",
     "subtitle": "Connectez-vous pour débloquer votre vie numérique.",
     "signInWithGoogle": "Se connecter avec Google",
+    "emailPlaceholder": "Entrez votre email",
+    "magicLink": "Lien Magique",
+    "otpCode": "Code OTP",
+    "sendMagicLink": "Envoyer le Lien Magique",
+    "sendCode": "Envoyer le Code",
     "privacy": {
       "text": "En vous connectant, vous acceptez nos",
       "terms": "Conditions d'utilisation",

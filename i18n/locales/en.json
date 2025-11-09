@@ -91,6 +91,11 @@
     "title": "Welcome to",
     "subtitle": "Sign in to unlock your digital life.",
     "signInWithGoogle": "Sign in with Google",
+    "emailPlaceholder": "Enter your email",
+    "magicLink": "Magic Link",
+    "otpCode": "OTP Code",
+    "sendMagicLink": "Send Magic Link",
+    "sendCode": "Send Code",
     "privacy": {
       "text": "By signing in, you agree to our",
       "terms": "Terms of Service",

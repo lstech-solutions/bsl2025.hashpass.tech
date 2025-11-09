@@ -91,6 +91,11 @@
     "title": "Willkommen bei",
     "subtitle": "Melden Sie sich an, um Ihr digitales Leben freizuschalten.",
     "signInWithGoogle": "Mit Google anmelden",
+    "emailPlaceholder": "Geben Sie Ihre E-Mail ein",
+    "magicLink": "Magic Link",
+    "otpCode": "OTP-Code",
+    "sendMagicLink": "Magic Link senden",
+    "sendCode": "Code senden",
     "privacy": {
       "text": "Durch die Anmeldung stimmen Sie unseren zu",
       "terms": "Nutzungsbedingungen",

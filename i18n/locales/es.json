@@ -91,6 +91,11 @@
     "title": "Bienvenido a",
     "subtitle": "Inicia sesión para desbloquear tu vida digital.",
     "signInWithGoogle": "Iniciar sesión con Google",
+    "emailPlaceholder": "Ingresa tu correo electrónico",
+    "magicLink": "Magic Link",
+    "otpCode": "Código OTP",
+    "sendMagicLink": "Enviar Enlace Mágico",
+    "sendCode": "Enviar Código",
     "privacy": {
       "text": "Al iniciar sesión, aceptas nuestros",
       "terms": "Términos de Servicio",

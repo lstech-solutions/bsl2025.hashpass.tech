@@ -6,6 +6,7 @@ import { useTheme } from '../../../hooks/useTheme';
 import { useAuth } from '../../../hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import EventBanner from '../../../components/EventBanner';
 import PassesDisplay from '../../../components/PassesDisplay';
 import { 
@@ -33,20 +34,36 @@ export default function ExploreScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const styles = getStyles(isDark, colors);
-  const { start: startTutorial, copilotEvents, handleNth, handleStop } = useCopilot();
-  const { shouldShowTutorial, markTutorialCompleted, isReady, mainTutorialCompleted, updateTutorialStep } = useTutorialPreferences();
+  const { start: startTutorial, copilotEvents, handleNth, handleStop, getSteps } = useCopilot();
+  const { shouldShowTutorial, markTutorialCompleted, isReady, mainTutorialCompleted, updateTutorialStep, mainTutorialProgress } = useTutorialPreferences();
   const { isLoggedIn, isLoading: authLoading } = useAuth();
   const tutorialStartedRef = useRef(false);
 
-  // Reset ref when tutorial is reset (completion status changes from true to false)
+  // Reset ref when tutorial is reset (completion status changes or progress is cleared)
   useEffect(() => {
-    if (!mainTutorialCompleted) {
+    if (!mainTutorialCompleted && mainTutorialProgress === null) {
+      console.log('Tutorial reset detected - resetting tutorialStartedRef');
       tutorialStartedRef.current = false;
     }
-  }, [mainTutorialCompleted]);
+  }, [mainTutorialCompleted, mainTutorialProgress]);
+
+  // Also reset ref when screen comes into focus (useful after navigation from settings)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!mainTutorialCompleted && mainTutorialProgress === null && !tutorialStartedRef.current) {
+        console.log('Screen focused with tutorial reset - ready to start tutorial');
+        tutorialStartedRef.current = false;
+      }
+    }, [mainTutorialCompleted, mainTutorialProgress])
+  );
 
   // Auto-start tutorial for new users - only once, when everything is ready
   useEffect(() => {
+    // Check if tutorial was reset - if progress is null and not completed, reset the ref
+    if (!mainTutorialCompleted && mainTutorialProgress === null) {
+      tutorialStartedRef.current = false;
+    }
+    
     // Prevent multiple starts
     if (tutorialStartedRef.current) {
       console.log('Tutorial already started, skipping auto-start');
@@ -75,7 +92,9 @@ export default function ExploreScreen() {
       mainTutorialCompleted,
       isReady,
       isLoggedIn,
-      authLoading
+      authLoading,
+      mainTutorialProgress: mainTutorialProgress?.status,
+      tutorialStartedRef: tutorialStartedRef.current
     });
     
     if (!shouldShow) {
@@ -87,21 +106,61 @@ export default function ExploreScreen() {
 
     // Use InteractionManager to ensure UI is ready
     const interaction = InteractionManager.runAfterInteractions(() => {
-      // Additional delay to ensure all CopilotSteps are registered
+      // Additional delay to ensure all CopilotSteps are registered (especially from _layout.tsx Header)
       const timer = setTimeout(() => {
+        // Double-check the ref hasn't been set by another effect
         if (!tutorialStartedRef.current) {
           tutorialStartedRef.current = true;
           try {
             console.log('Tutorial auto-start: Calling startTutorial()');
-            // Mark tutorial as started in database
-            updateTutorialStep('main', 1).catch(err => console.error('Error updating tutorial step:', err));
-            startTutorial();
+            // Check if startTutorial is a function
+            if (typeof startTutorial !== 'function') {
+              console.error('startTutorial is not a function:', typeof startTutorial, startTutorial);
+              tutorialStartedRef.current = false;
+              return;
+            }
+            
+            // Check if steps are registered
+            let steps: any[] = [];
+            try {
+              if (typeof getSteps === 'function') {
+                steps = getSteps();
+                console.log('Available tutorial steps:', steps.length, steps.map(s => ({ order: s.order, name: s.name })));
+              } else {
+                console.warn('getSteps is not available');
+              }
+            } catch (err) {
+              console.warn('Could not get steps:', err);
+            }
+            
+            // If no steps are registered, wait a bit more and retry
+            // Note: getSteps might not be available in all versions, so we'll try anyway
+            if (steps.length === 0 && typeof getSteps === 'function') {
+              console.warn('No tutorial steps detected via getSteps, but will try to start anyway...');
+              // Don't return - continue to try starting
+            }
+            
+            // Start tutorial first, then update database after it successfully starts
+            const result = startTutorial();
+            console.log('Tutorial start result:', result);
+            
+            // Mark tutorial as started in database after a short delay to ensure tutorial started
+            setTimeout(() => {
+              updateTutorialStep('main', 1).catch(err => console.error('Error updating tutorial step:', err));
+            }, 500);
           } catch (error) {
             console.error('Error starting tutorial:', error);
+            console.error('Error details:', error instanceof Error ? {
+              message: error.message,
+              stack: error.stack,
+              name: error.name
+            } : error);
             tutorialStartedRef.current = false;
           }
+        } else {
+          console.log('Tutorial auto-start: Ref was set to true, skipping start');
         }
-      }, 2000); // Increased delay for better stability
+      }, 4000); // Increased delay to ensure all CopilotSteps are registered (layout + header need time to mount)
       
       return () => clearTimeout(timer);
     });
@@ -109,7 +168,7 @@ export default function ExploreScreen() {
     return () => {
       interaction.cancel();
     };
-  }, [isReady, isLoggedIn, authLoading, shouldShowTutorial, startTutorial, mainTutorialCompleted, updateTutorialStep]);
+  }, [isReady, isLoggedIn, authLoading, shouldShowTutorial, startTutorial, mainTutorialCompleted, updateTutorialStep, mainTutorialProgress]);
 
   // Listen for tutorial events
   useEffect(() => {

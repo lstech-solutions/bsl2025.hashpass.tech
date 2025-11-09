@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from '../../i18n/i18n';
+import { useTranslation, getCurrentLocale } from '../../i18n/i18n';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Platform, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,7 @@ import { isEthereumWalletAvailable, isSolanaWalletAvailable } from '../../lib/wa
 import { useToastHelpers } from '../../contexts/ToastContext';
 import { getEmailProviderUrl, openEmailProvider } from '../../lib/email-provider';
 import PrivacyTermsModal from '../../components/PrivacyTermsModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type AuthMethod = 'magiclink' | 'otp';
 
@@ -32,6 +33,7 @@ export default function AuthScreen() {
   const [solanaAvailable, setSolanaAvailable] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'privacy' | 'terms'>('privacy');
+  const [welcomeEmailSending, setWelcomeEmailSending] = useState<Set<string>>(new Set()); // Track users currently sending welcome email
   const styles = getStyles(isDark, colors);
 
   // Check wallet availability on web
@@ -44,8 +46,10 @@ export default function AuthScreen() {
 
   useEffect(() => {
     const handleAuthChange = async (event: AuthChangeEvent, session: Session | null) => {
+      console.log(`🔐 Auth event: ${event}, user: ${session?.user?.id || 'none'}`);
       if (session?.user) {
         if (event === 'SIGNED_IN') {
+          console.log(`🔐 SIGNED_IN event for user: ${session.user.id}, email: ${session.user.email}`);
           try {
             console.log('🎫 Creating default pass for user:', session.user.id);
             const { data: passId, error } = await supabase
@@ -79,6 +83,127 @@ export default function AuthScreen() {
                 console.warn('⚠️ No pass found - user may need to create one manually');
               }
               router.replace('/(shared)/dashboard/explore');
+            }
+
+            // Send welcome email if user hasn't received it yet (only if email is real, not wallet address)
+            const userEmail = session.user.email;
+            if (userEmail && !userEmail.includes('@wallet.')) {
+              // Prevent duplicate sends: check if we're already sending for this user
+              const userId = session.user.id;
+              if (welcomeEmailSending.has(userId)) {
+                console.log(`⏭️ Welcome email already being sent for user ${userId}, skipping duplicate`);
+                return;
+              }
+              
+              // Mark as sending to prevent duplicates
+              setWelcomeEmailSending(prev => new Set(prev).add(userId));
+              
+              // Reset welcome email flag if user exists but hasn't received email
+              // This ensures existing users who haven't received the email will get it
+              try {
+                // First, reset the flag if needed (for existing users)
+                const { error: resetError } = await supabase.rpc('reset_welcome_email_if_not_sent', {
+                  p_user_id: userId
+                });
+                
+                if (resetError) {
+                  console.warn('⚠️ Error resetting welcome email flag:', resetError);
+                }
+                
+                // Wait a bit to ensure the reset operation completes
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Double-check if email was already sent (after reset)
+                const { data: alreadySentCheck, error: checkError } = await supabase.rpc('has_email_been_sent', {
+                  p_user_id: userId,
+                  p_email_type: 'welcome'
+                } as any);
+                
+                if (checkError) {
+                  console.warn('⚠️ Error checking if email was sent:', checkError);
+                } else if (alreadySentCheck === true) {
+                  console.log(`ℹ️ Welcome email already sent to user ${userId}, skipping`);
+                  setWelcomeEmailSending(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(userId);
+                    return newSet;
+                  });
+                  return;
+                }
+                
+                // Get the current locale from AsyncStorage (user's selected language)
+                // This ensures the email is sent in the language the user has selected
+                let userLocale = 'en';
+                try {
+                  const savedLocale = await AsyncStorage.getItem('user_locale');
+                  if (savedLocale && ['en', 'es', 'ko', 'fr', 'pt', 'de'].includes(savedLocale)) {
+                    userLocale = savedLocale;
+                  } else {
+                    // Fallback to current i18n locale
+                    userLocale = getCurrentLocale() || 'en';
+                  }
+                } catch (error) {
+                  console.warn('⚠️ Could not get locale from AsyncStorage, using current locale:', error);
+                  userLocale = getCurrentLocale() || 'en';
+                }
+                
+                // Also try to get from user metadata as fallback
+                if (!userLocale || userLocale === 'en') {
+                  userLocale = session.user.user_metadata?.locale || userLocale || 'en';
+                }
+                
+                // Update user metadata with current locale if it's different
+                if (session.user.user_metadata?.locale !== userLocale) {
+                  try {
+                    await supabase.auth.updateUser({
+                      data: { locale: userLocale }
+                    });
+                    console.log(`✅ Updated user metadata with locale: ${userLocale}`);
+                  } catch (updateError) {
+                    console.warn('⚠️ Could not update user metadata with locale:', updateError);
+                  }
+                }
+                
+                // Then try to send welcome email - the API will check if it was already sent
+                console.log(`📧 Checking and sending welcome email for user: ${userEmail} with locale: ${userLocale}`);
+                const response = await fetch('/api/auth/send-welcome-email', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    userId: userId,
+                    email: userEmail,
+                    locale: userLocale
+                  }),
+                });
+
+                if (response.ok) {
+                  const result = await response.json();
+                  if (result.success && !result.skipped && !result.alreadySent) {
+                    console.log('✅ Welcome email sent successfully');
+                  } else if (result.skipped) {
+                    console.log('ℹ️ Welcome email skipped (wallet address)');
+                  } else if (result.alreadySent) {
+                    console.log('ℹ️ Welcome email already sent to this user');
+                  } else {
+                    console.log('ℹ️ Welcome email status:', result);
+                  }
+                } else {
+                  const errorText = await response.text();
+                  console.warn('⚠️ Failed to send welcome email:', errorText);
+                }
+              } catch (emailError) {
+                console.error('❌ Error sending welcome email:', emailError);
+                // Don't block user flow if email fails
+              } finally {
+                // Always remove from sending set
+                setWelcomeEmailSending(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(userId);
+                  return newSet;
+                });
+              }
             }
           } catch (error) {
             console.error('❌ Error in pass creation:', error);
@@ -212,14 +337,17 @@ export default function AuthScreen() {
         const emailProvider = getEmailProviderUrl(email.trim());
         const providerName = emailProvider?.name || 'your email';
         
+        // Always show a button to open email app, even if provider is not detected
+        const emailAction = {
+          label: emailProvider ? `Open ${emailProvider.name}` : 'Open Email App',
+          onPress: async () => await openEmailProvider(email.trim()),
+        };
+        
         showSuccess(
           'Magic Link Sent',
           `Please check ${providerName} and click the link to sign in.`,
           10000, // 10 seconds duration
-          emailProvider ? {
-            label: `Open ${emailProvider.name}`,
-            onPress: async () => await openEmailProvider(email.trim()),
-          } : undefined
+          emailAction
         );
       }
       setLoading(false);
@@ -589,7 +717,7 @@ export default function AuthScreen() {
                   />
                   <TextInput
                     style={[styles.emailInput, emailError && styles.emailInputError]}
-                    placeholder="Enter your email"
+                    placeholder={t('emailPlaceholder')}
                     placeholderTextColor={isDark ? '#999' : '#666'}
                     value={email}
                     onChangeText={(text) => {
@@ -650,7 +778,7 @@ export default function AuthScreen() {
                     authMethod === 'magiclink' && styles.methodToggleTextActive,
                     loading && styles.methodToggleTextDisabled
                   ]}>
-                    Magic Link
+                    {t('magicLink')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -687,7 +815,7 @@ export default function AuthScreen() {
                     authMethod === 'otp' && styles.methodToggleTextActive,
                     loading && styles.methodToggleTextDisabled
                   ]}>
-                    OTP Code
+                    {t('otpCode')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -708,7 +836,7 @@ export default function AuthScreen() {
                       color="#FFFFFF" 
                     />
                     <Text style={styles.primaryButtonText}>
-                      {authMethod === 'magiclink' ? 'Send Magic Link' : 'Send Code'}
+                      {authMethod === 'magiclink' ? t('sendMagicLink') : t('sendCode')}
                     </Text>
                   </View>
                 )}

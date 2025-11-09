@@ -82,11 +82,14 @@ npm run seed:bslatam
 ```
 
 Env vars (email via SES / Nodemailer):
-- `NODEMAILER_HOST`
-- `NODEMAILER_PORT`
-- `NODEMAILER_USER`
-- `NODEMAILER_PASS`
-- `NODEMAILER_FROM`
+- `NODEMAILER_HOST` - SMTP server hostname
+- `NODEMAILER_PORT` - SMTP server port (usually 587)
+- `NODEMAILER_USER` - SMTP authentication username
+- `NODEMAILER_PASS` - SMTP authentication password
+- `NODEMAILER_FROM` - Email address to send from (e.g., no-reply@hashpass.tech)
+- `NODEMAILER_FROM_CONTACT` - Support email address shown in email footers (defaults to support@hashpass.tech if not set)
+
+For a complete list of all environment variables, see [docs/environment-variables.md](docs/environment-variables.md).
 
 Deploy:
 ```bash

@@ -444,28 +444,6 @@ export default function HomeScreen() {
           {/* Bottom Bar */}
           <View style={styles.footerBottom}>
             <Text style={styles.footerCopyright}>{t('copyright')}</Text>
-            <View style={styles.footerBottomLinks}>
-              <TouchableOpacity
-                onPress={() => router.push('/(shared)/privacy')}
-                style={styles.footerBottomLink}
-              >
-                <Text style={styles.footerBottomLinkText}>{t('footer.privacy')}</Text>
-              </TouchableOpacity>
-              <Text style={styles.footerSeparator}>•</Text>
-              <TouchableOpacity
-                onPress={() => router.push('/(shared)/terms')}
-                style={styles.footerBottomLink}
-              >
-                <Text style={styles.footerBottomLinkText}>{t('footer.terms')}</Text>
-              </TouchableOpacity>
-              <Text style={styles.footerSeparator}>•</Text>
-              <TouchableOpacity
-                onPress={() => router.push('/(shared)/docs')}
-                style={styles.footerBottomLink}
-              >
-                <Text style={styles.footerBottomLinkText}>{t('footer.docs')}</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </Animated.ScrollView>
@@ -600,37 +578,17 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     lineHeight: isMobile ? 20 : 22,
   },
   footerBottom: {
-    flexDirection: isMobile ? 'column' : 'row',
-    justifyContent: 'space-between',
-    alignItems: isMobile ? 'center' : 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingTop: isMobile ? 20 : 30,
     borderTopWidth: 1,
     borderTopColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-    gap: isMobile ? 12 : 0,
   },
   footerCopyright: {
     fontSize: isMobile ? 12 : 14,
     color: colors.text.secondary,
-    textAlign: isMobile ? 'center' : 'left',
-  },
-  footerBottomLinks: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: isMobile ? 8 : 12,
-    flexWrap: 'wrap',
-    justifyContent: isMobile ? 'center' : 'flex-end',
-  },
-  footerBottomLink: {
-    paddingHorizontal: 4,
-  },
-  footerBottomLinkText: {
-    fontSize: isMobile ? 12 : 14,
-    color: colors.text.secondary,
-  },
-  footerSeparator: {
-    fontSize: isMobile ? 12 : 14,
-    color: colors.text.secondary,
-    opacity: 0.5,
+    textAlign: 'center',
   },
   features: {
     paddingHorizontal: 24,

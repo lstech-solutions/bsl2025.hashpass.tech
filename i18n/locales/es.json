@@ -237,6 +237,86 @@
       "description": "Descubre qué opinan nuestros clientes."
     },
     "copyright": " 2025 HASHPASS™ Todos los derechos reservados.",
+    "footer": {
+      "tagline": "Conectando eventos, ponentes y asistentes en todo el mundo.",
+      "resources": "Recursos",
+      "legal": "Legal",
+      "docs": "Documentación",
+      "guides": "Guías",
+      "support": "Soporte",
+      "privacy": "Política de Privacidad",
+      "terms": "Términos de Servicio",
+      "bsl2025": "BSL 2025"
+    },
+    "docs": {
+      "title": "Documentación",
+      "subtitle": "Guías completas y solución de problemas",
+      "needHelp": "¿Necesitas más ayuda?",
+      "contactSupport": "Contactar Soporte",
+      "viewStorybook": "Ver Documentación Interactiva Completa",
+      "interactiveDocs": {
+        "title": "Documentación Interactiva",
+        "description": "Explora guías paso a paso con ejemplos interactivos"
+      },
+      "gettingStarted": {
+        "title": "Comenzar",
+        "description": "Aprende cómo iniciar sesión y navegar la app",
+        "signIn": {
+          "title": "Iniciar Sesión en Tu Cuenta",
+          "content": "Para comenzar, necesitarás iniciar sesión en la app HashPass. Abre la app, ingresa tu dirección de correo electrónico, revisa tu correo para un código de inicio de sesión de un solo uso, e ingresa el código para acceder a tu cuenta."
+        },
+        "explore": {
+          "title": "Explorar Ponentes y Eventos",
+          "content": "Una vez que hayas iniciado sesión, puedes navegar por los increíbles ponentes y eventos. Navega a la sección Explorar, busca ponentes por categoría o busca nombres específicos, y visualiza perfiles de ponentes, temas y disponibilidad."
+        },
+        "requestMeeting": {
+          "title": "Enviar una Solicitud de Reunión",
+          "content": "¿Listo para conectar con un ponente? Encuentra un ponente con el que te gustaría reunirte, toca su perfil para ver detalles, haz clic en el botón \"Solicitar Reunión\", selecciona tu fecha y hora preferidas, agrega un mensaje (opcional), y envía tu solicitud."
+        },
+        "trackRequests": {
+          "title": "Rastrear Tus Solicitudes",
+          "content": "Mantén un registro de todas tus solicitudes de reunión. Revisa la sección de Notificaciones para actualizaciones, visualiza solicitudes pendientes, aceptadas o rechazadas, y recibe notificaciones cuando los ponentes respondan."
+        }
+      },
+      "troubleshooting": {
+        "title": "Solución de Problemas",
+        "description": "Soluciones a problemas comunes",
+        "loadingIssues": {
+          "title": "¿Tienes Problemas Cargando la App Web?",
+          "content": "Si estás experimentando problemas cargando la app web, recomendamos limpiar la caché de tu navegador o realizar una actualización forzada.",
+          "step1": "Limpiar caché del navegador: Ve a la configuración de tu navegador y limpia imágenes y archivos en caché",
+          "step2": "Actualización forzada: Presiona Ctrl+Shift+R (Windows/Linux) o Cmd+Shift+R (Mac) para recargar la página sin caché"
+        },
+        "loginIssues": {
+          "title": "Problemas de Inicio de Sesión",
+          "content": "Si tienes problemas para iniciar sesión, asegúrate de estar usando la dirección de correo electrónico correcta y revisa tu carpeta de spam para el código de inicio de sesión. Si el código ha expirado, solicita uno nuevo."
+        },
+        "meetingIssues": {
+          "title": "Problemas con Solicitudes de Reunión",
+          "content": "Si tus solicitudes de reunión no se están enviando o recibiendo, verifica tu conexión a internet, asegúrate de haber iniciado sesión, y verifica que el ponente tenga disponibilidad durante tu franja horaria seleccionada."
+        }
+      },
+      "tips": {
+        "title": "Consejos Profesionales",
+        "description": "Mejores prácticas para usar HashPass",
+        "specificRequests": {
+          "title": "Sé Específico en las Solicitudes de Reunión",
+          "content": "Los ponentes aprecian saber de qué te gustaría hablar. Sé específico en el mensaje de tu solicitud de reunión para aumentar las posibilidades de aceptación."
+        },
+        "checkAvailability": {
+          "title": "Verificar Disponibilidad del Ponente",
+          "content": "Antes de enviar solicitudes, verifica el calendario de disponibilidad del ponente para asegurarte de que esté libre durante tu franja horaria preferida."
+        },
+        "respondPromptly": {
+          "title": "Responde Rápidamente",
+          "content": "Cuando un ponente acepta tu solicitud de reunión, responde rápidamente para confirmar tu reunión y mostrar tu compromiso."
+        },
+        "useSearch": {
+          "title": "Usa la Función de Búsqueda",
+          "content": "Usa la función de búsqueda para encontrar ponentes por tema, empresa o nombre. Esto te ayudará a encontrar rápidamente a las personas adecuadas para conectar."
+        }
+      }
+    },
     "cta": {
       "title": "¿Listo para comenzar?",
       "subtitle": "Únete a miles que confían en HASHPASS.",

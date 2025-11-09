@@ -84,7 +84,11 @@ function replaceTemplatePlaceholders(template, translations, assets, locale = 'e
       processedValue = processedValue.replace(/{hashpassUrl}/g, '<a href="https://hashpass.tech" style="color: #007AFF; text-decoration: none;">hashpass.tech</a>');
     }
     if (processedValue.includes('{bslUrl}')) {
-      processedValue = processedValue.replace(/{bslUrl}/g, '<a href="https://bsl2025.hashpass.tech" style="color: #007AFF; text-decoration: none;">BSL 2025</a>');
+      processedValue = processedValue.replace(/{bslUrl}/g, '<a href="https://blockchainsummit.la/" style="color: #007AFF; text-decoration: none;">BSL 2025</a>');
+    }
+    if (processedValue.includes('{supportEmail}')) {
+      const supportEmail = process.env.NODEMAILER_FROM_SUPPORT || 'support@hashpass.tech';
+      processedValue = processedValue.replace(/{supportEmail}/g, `<a href="mailto:${supportEmail}" style="color: #007AFF; text-decoration: underline;">${supportEmail}</a>`);
     }
     
     // Escape special regex characters in placeholder and replace

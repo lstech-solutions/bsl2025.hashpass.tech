@@ -237,6 +237,17 @@
       "description": "고객들의 후기를 확인하세요."
     },
     "copyright": " 2025 HASHPASS™ 무단 복제 금지.",
+    "footer": {
+      "tagline": "전 세계 이벤트, 연사 및 참석자를 연결합니다.",
+      "resources": "리소스",
+      "legal": "법적 고지",
+      "docs": "문서",
+      "guides": "가이드",
+      "support": "지원",
+      "privacy": "개인정보 보호정책",
+      "terms": "서비스 약관",
+      "bsl2025": "BSL 2025"
+    },
     "cta": {
       "title": "지금 시작할까요?",
       "subtitle": "수천 명의 사용자가 HASHPASS를 신뢰합니다.",

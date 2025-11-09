@@ -87,7 +87,7 @@ Env vars (email via SES / Nodemailer):
 - `NODEMAILER_USER` - SMTP authentication username
 - `NODEMAILER_PASS` - SMTP authentication password
 - `NODEMAILER_FROM` - Email address to send from (e.g., no-reply@hashpass.tech)
-- `NODEMAILER_FROM_CONTACT` - Support email address shown in email footers (defaults to support@hashpass.tech if not set)
+- `NODEMAILER_FROM_SUPPORT` - Support email address shown in email footers (defaults to support@hashpass.tech if not set)
 
 For a complete list of all environment variables, see [docs/environment-variables.md](docs/environment-variables.md).
 

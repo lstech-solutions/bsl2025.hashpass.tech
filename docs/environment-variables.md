@@ -21,19 +21,19 @@ NODEMAILER_PASS=your_smtp_password        # SMTP authentication password
 NODEMAILER_FROM=no-reply@hashpass.tech   # Email address to send from
 
 # Optional variables
-NODEMAILER_FROM_CONTACT=support@hashpass.tech  # Support email address shown in email footers
+NODEMAILER_FROM_SUPPORT=support@hashpass.tech  # Support email address shown in email footers
                                                # Defaults to support@hashpass.tech if not set
 ```
 
 ### Email Footer Configuration
 
-The `NODEMAILER_FROM_CONTACT` variable is used to display the support email address in all email footers across all languages. This allows you to:
+The `NODEMAILER_FROM_SUPPORT` variable is used to display the support email address in all email footers across all languages. This allows you to:
 
 - Change the support email in one place (the environment variable)
 - Keep translations clean without hardcoded email addresses
 - Easily switch between different support emails for different environments
 
-If `NODEMAILER_FROM_CONTACT` is not set, the system will default to `support@hashpass.tech`.
+If `NODEMAILER_FROM_SUPPORT` is not set, the system will default to `support@hashpass.tech`.
 
 ## AWS Configuration (if using S3 for email assets)
 
@@ -66,7 +66,7 @@ NODEMAILER_PORT=587
 NODEMAILER_USER=your_username
 NODEMAILER_PASS=your_password
 NODEMAILER_FROM=no-reply@hashpass.tech
-NODEMAILER_FROM_CONTACT=support@hashpass.tech
+NODEMAILER_FROM_SUPPORT=support@hashpass.tech
 
 # AWS (optional)
 AWS_ACCESS_KEY_ID=your_key

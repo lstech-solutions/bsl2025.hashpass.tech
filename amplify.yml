@@ -66,6 +66,16 @@ frontend:
             echo "Created API handler at dist/client/api/bslatam/$base/index.js"
           done
         - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
+        - 'echo "=== Building Storybook static site ==="'
+        - npm run build:storybook || echo "Storybook build failed, continuing..."
+        - |
+          if [ -d storybook-static ]; then
+            mkdir -p dist/client/storybook
+            cp -r storybook-static/* dist/client/storybook/
+            echo "Storybook files copied to dist/client/storybook/"
+          else
+            echo "Storybook static directory not found, skipping..."
+          fi
         - 'echo "=== API files in dist/client/_expo/functions/api/bslatam/ ==="'
         - ls -la dist/client/_expo/functions/api/bslatam/ || echo "No API files found"
         - 'echo "=== Contents of dist/client/ ==="'
@@ -100,6 +110,18 @@ frontend:
         headers:
           - key: Cache-Control
             value: 'public, max-age=31536000, immutable'
+      - pattern: 'storybook/**/*'
+        headers:
+          - key: Cache-Control
+            value: 'public, max-age=31536000, immutable'
+      - pattern: 'storybook/index.html'
+        headers:
+          - key: Cache-Control
+            value: 'no-cache, no-store, must-revalidate'
+          - key: Pragma
+            value: 'no-cache'
+          - key: Expires
+            value: '0'
   cache:
     paths:
       - node_modules/**/*
@@ -135,6 +157,12 @@ redirects:
   - source: '/<*>'
     status: 200
     target: '/index.html'
+  - source: '/storybook'
+    status: 200
+    target: '/storybook/index.html'
+  - source: '/storybook/*'
+    status: 200
+    target: '/storybook/index.html'
 customErrorResponses:
   - errorCode: 404
     responsePagePath: '/index.html'

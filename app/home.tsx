@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation, getCurrentLocale } from '../i18n/i18n';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
@@ -368,7 +368,105 @@ export default function HomeScreen() {
 
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>{t('copyright')}</Text>
+          <View style={styles.footerContent}>
+            {/* Brand Section */}
+            <View style={styles.footerBrand}>
+              <Image
+                source={
+                  isDark
+                    ? require('../assets/logos/hashpass/logo-full-hashpass-white-cyan.svg')
+                    : require('../assets/logos/hashpass/logo-full-hashpass-white.svg')
+                }
+                style={styles.footerLogo}
+                resizeMode="contain"
+              />
+              <Text style={styles.footerBrandTagline}>{t('footer.tagline')}</Text>
+            </View>
+
+            {/* Links Section */}
+            <View style={styles.footerLinks}>
+              <View style={styles.footerLinksColumn}>
+                <Text style={styles.footerLinksTitle}>{t('footer.resources')}</Text>
+                <TouchableOpacity
+                  onPress={() => router.push('/(shared)/docs')}
+                  style={styles.footerLink}
+                >
+                  <Text style={styles.footerLinkText}>{t('footer.docs')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    const storybookUrl = typeof window !== 'undefined' && (process.env.NODE_ENV === 'production' || window.location.hostname !== 'localhost')
+                      ? '/storybook'
+                      : process.env.EXPO_PUBLIC_STORYBOOK_URL || 'http://localhost:6006';
+                    if (typeof window !== 'undefined') {
+                      window.open(storybookUrl, '_blank');
+                    }
+                  }}
+                  style={styles.footerLink}
+                >
+                  <Text style={styles.footerLinkText}>{t('footer.guides')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    const supportEmail = process.env.NODEMAILER_FROM_SUPPORT || 'support@hashpass.tech';
+                    Linking.openURL(`mailto:${supportEmail}`);
+                  }}
+                  style={styles.footerLink}
+                >
+                  <Text style={styles.footerLinkText}>{t('footer.support')}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.footerLinksColumn}>
+                <Text style={styles.footerLinksTitle}>{t('footer.legal')}</Text>
+                <TouchableOpacity
+                  onPress={() => router.push('/(shared)/privacy')}
+                  style={styles.footerLink}
+                >
+                  <Text style={styles.footerLinkText}>{t('footer.privacy')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push('/(shared)/terms')}
+                  style={styles.footerLink}
+                >
+                  <Text style={styles.footerLinkText}>{t('footer.terms')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => Linking.openURL('https://blockchainsummit.la/')}
+                  style={styles.footerLink}
+                >
+                  <Text style={styles.footerLinkText}>{t('footer.bsl2025')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* Bottom Bar */}
+          <View style={styles.footerBottom}>
+            <Text style={styles.footerCopyright}>{t('copyright')}</Text>
+            <View style={styles.footerBottomLinks}>
+              <TouchableOpacity
+                onPress={() => router.push('/(shared)/privacy')}
+                style={styles.footerBottomLink}
+              >
+                <Text style={styles.footerBottomLinkText}>{t('footer.privacy')}</Text>
+              </TouchableOpacity>
+              <Text style={styles.footerSeparator}>•</Text>
+              <TouchableOpacity
+                onPress={() => router.push('/(shared)/terms')}
+                style={styles.footerBottomLink}
+              >
+                <Text style={styles.footerBottomLinkText}>{t('footer.terms')}</Text>
+              </TouchableOpacity>
+              <Text style={styles.footerSeparator}>•</Text>
+              <TouchableOpacity
+                onPress={() => router.push('/(shared)/docs')}
+                style={styles.footerBottomLink}
+              >
+                <Text style={styles.footerBottomLinkText}>{t('footer.docs')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Animated.ScrollView>
     </Animated.View>
@@ -445,17 +543,94 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     marginTop: 10,
   },
   footer: {
-    padding: 20,
     backgroundColor: colors.background.default,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderTopWidth: 1,
+    borderTopColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    paddingTop: isMobile ? 40 : 60,
+    paddingBottom: isMobile ? 30 : 40,
+    paddingHorizontal: isMobile ? 20 : 40,
     position: 'relative',
     bottom: 0,
   },
-  footerText: {
-    fontSize: 14,
+  footerContent: {
+    flexDirection: isMobile ? 'column' : 'row',
+    justifyContent: 'space-between',
+    alignItems: isMobile ? 'flex-start' : 'flex-start',
+    marginBottom: isMobile ? 30 : 40,
+    gap: isMobile ? 30 : 60,
+  },
+  footerBrand: {
+    flex: isMobile ? 1 : 0.4,
+    marginBottom: isMobile ? 0 : 0,
+  },
+  footerLogo: {
+    width: isMobile ? 180 : 220,
+    height: isMobile ? 50 : 60,
+    marginBottom: 12,
+  },
+  footerBrandTagline: {
+    fontSize: isMobile ? 14 : 16,
+    color: colors.text.secondary,
+    lineHeight: isMobile ? 20 : 24,
+    maxWidth: isMobile ? '100%' : 300,
+  },
+  footerLinks: {
+    flex: isMobile ? 1 : 0.6,
+    flexDirection: isMobile ? 'column' : 'row',
+    gap: isMobile ? 30 : 40,
+    justifyContent: isMobile ? 'flex-start' : 'flex-end',
+  },
+  footerLinksColumn: {
+    flex: 1,
+    minWidth: isMobile ? '100%' : 140,
+  },
+  footerLinksTitle: {
+    fontSize: isMobile ? 14 : 16,
+    fontWeight: '700',
     color: colors.text.primary,
-    textAlign: 'center',
+    marginBottom: isMobile ? 12 : 16,
+    letterSpacing: -0.3,
+  },
+  footerLink: {
+    marginBottom: isMobile ? 10 : 12,
+  },
+  footerLinkText: {
+    fontSize: isMobile ? 14 : 15,
+    color: colors.text.secondary,
+    lineHeight: isMobile ? 20 : 22,
+  },
+  footerBottom: {
+    flexDirection: isMobile ? 'column' : 'row',
+    justifyContent: 'space-between',
+    alignItems: isMobile ? 'center' : 'center',
+    paddingTop: isMobile ? 20 : 30,
+    borderTopWidth: 1,
+    borderTopColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    gap: isMobile ? 12 : 0,
+  },
+  footerCopyright: {
+    fontSize: isMobile ? 12 : 14,
+    color: colors.text.secondary,
+    textAlign: isMobile ? 'center' : 'left',
+  },
+  footerBottomLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: isMobile ? 8 : 12,
+    flexWrap: 'wrap',
+    justifyContent: isMobile ? 'center' : 'flex-end',
+  },
+  footerBottomLink: {
+    paddingHorizontal: 4,
+  },
+  footerBottomLinkText: {
+    fontSize: isMobile ? 12 : 14,
+    color: colors.text.secondary,
+  },
+  footerSeparator: {
+    fontSize: isMobile ? 12 : 14,
+    color: colors.text.secondary,
+    opacity: 0.5,
   },
   features: {
     paddingHorizontal: 24,

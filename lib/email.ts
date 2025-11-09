@@ -142,7 +142,7 @@ function replaceTemplatePlaceholders(template: string, translations: any, assets
       processedValue = processedValue.replace(/{bslUrl}/g, '<a href="https://blockchainsummit.la/" style="color: #007AFF; text-decoration: none;">BSL 2025</a>');
     }
     if (processedValue.includes('{supportEmail}')) {
-      const supportEmail = process.env.NODEMAILER_FROM_CONTACT || 'support@hashpass.tech';
+      const supportEmail = process.env.NODEMAILER_FROM_SUPPORT || 'support@hashpass.tech';
       processedValue = processedValue.replace(/{supportEmail}/g, `<a href="mailto:${supportEmail}" style="color: #007AFF; text-decoration: underline;">${supportEmail}</a>`);
     }
     

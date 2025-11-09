@@ -237,6 +237,86 @@
       "description": "See what our customers have to say about us."
     },
     "copyright": " 2025 HASHPASS™ All rights reserved.",
+    "footer": {
+      "tagline": "Connecting events, speakers, and attendees worldwide.",
+      "resources": "Resources",
+      "legal": "Legal",
+      "docs": "Documentation",
+      "guides": "Guides",
+      "support": "Support",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "bsl2025": "BSL 2025"
+    },
+    "docs": {
+      "title": "Documentation",
+      "subtitle": "Complete guides and troubleshooting",
+      "needHelp": "Need more help?",
+      "contactSupport": "Contact Support",
+      "viewStorybook": "View Full Interactive Documentation",
+      "interactiveDocs": {
+        "title": "Interactive Documentation",
+        "description": "Explore step-by-step guides with interactive examples"
+      },
+      "gettingStarted": {
+        "title": "Getting Started",
+        "description": "Learn how to sign in and navigate the app",
+        "signIn": {
+          "title": "Sign In to Your Account",
+          "content": "To get started, you'll need to sign in to the HashPass app. Open the app, enter your email address, check your email for a one-time login code, and enter the code to access your account."
+        },
+        "explore": {
+          "title": "Explore Speakers & Events",
+          "content": "Once you're signed in, you can browse through the amazing speakers and events. Navigate to the Explore section, browse speakers by category or search for specific names, and view speaker profiles, topics, and availability."
+        },
+        "requestMeeting": {
+          "title": "Send a Meeting Request",
+          "content": "Ready to connect with a speaker? Find a speaker you'd like to meet, tap on their profile to view details, click the \"Request Meeting\" button, select your preferred date and time slot, add a message (optional), and submit your request."
+        },
+        "trackRequests": {
+          "title": "Track Your Requests",
+          "content": "Keep track of all your meeting requests. Check the Notifications section for updates, view pending, accepted, or declined requests, and receive notifications when speakers respond."
+        }
+      },
+      "troubleshooting": {
+        "title": "Troubleshooting",
+        "description": "Solutions to common problems",
+        "loadingIssues": {
+          "title": "Having Issues Loading the Web App?",
+          "content": "If you're experiencing problems loading the web app, we recommend clearing your browser cache or performing a hard refresh.",
+          "step1": "Clear browser cache: Go to your browser settings and clear cached images and files",
+          "step2": "Hard refresh: Press Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac) to reload the page without cache"
+        },
+        "loginIssues": {
+          "title": "Login Problems",
+          "content": "If you're having trouble logging in, make sure you're using the correct email address and check your spam folder for the login code. If the code has expired, request a new one."
+        },
+        "meetingIssues": {
+          "title": "Meeting Request Issues",
+          "content": "If your meeting requests aren't being sent or received, check your internet connection, ensure you're signed in, and verify that the speaker has availability during your selected time slot."
+        }
+      },
+      "tips": {
+        "title": "Pro Tips",
+        "description": "Best practices for using HashPass",
+        "specificRequests": {
+          "title": "Be Specific in Meeting Requests",
+          "content": "Speakers appreciate knowing what you'd like to discuss. Be specific in your meeting request message to increase the chances of acceptance."
+        },
+        "checkAvailability": {
+          "title": "Check Speaker Availability",
+          "content": "Before sending requests, check the speaker's availability calendar to ensure they're free during your preferred time slot."
+        },
+        "respondPromptly": {
+          "title": "Respond Promptly",
+          "content": "When a speaker accepts your meeting request, respond promptly to confirm your meeting and show your commitment."
+        },
+        "useSearch": {
+          "title": "Use the Search Function",
+          "content": "Use the search function to find speakers by topic, company, or name. This will help you quickly find the right people to connect with."
+        }
+      }
+    },
     "cta": {
       "title": "Ready to get started?",
       "subtitle": "Join thousands of users who trust HASHPASS with their digital life.",

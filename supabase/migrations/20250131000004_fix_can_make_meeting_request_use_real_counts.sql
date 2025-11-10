@@ -1,4 +1,5 @@
 -- Fix can_make_meeting_request to use real meeting request counts instead of used_meeting_requests
+-- Ensure all return statements use proper type casting
 CREATE OR REPLACE FUNCTION can_make_meeting_request(
     p_user_id UUID,
     p_speaker_id TEXT,
@@ -12,7 +13,6 @@ CREATE OR REPLACE FUNCTION can_make_meeting_request(
 ) AS $$
 DECLARE
     user_pass RECORD;
-    limits RECORD;
     is_blocked BOOLEAN;
     total_requests INTEGER;
     remaining_req INTEGER;
@@ -26,7 +26,12 @@ BEGIN
     ) INTO is_blocked;
     
     IF is_blocked THEN
-        RETURN QUERY SELECT false, 'User is blocked by this speaker', null::pass_type, 0, 0.00;
+        RETURN QUERY SELECT 
+            false::BOOLEAN, 
+            'User is blocked by this speaker'::TEXT, 
+            NULL::pass_type, 
+            0::INTEGER, 
+            0.00::DECIMAL;
         RETURN;
     END IF;
     
@@ -39,7 +44,12 @@ BEGIN
     AND status = 'active';
     
     IF user_pass IS NULL THEN
-        RETURN QUERY SELECT false, 'No active pass found', null::pass_type, 0, 0.00;
+        RETURN QUERY SELECT 
+            false::BOOLEAN, 
+            'No active pass found'::TEXT, 
+            NULL::pass_type, 
+            0::INTEGER, 
+            0.00::DECIMAL;
         RETURN;
     END IF;
     
@@ -54,32 +64,32 @@ BEGIN
     -- Check if user has remaining requests
     IF remaining_req <= 0 THEN
         RETURN QUERY SELECT 
-            false, 
-            'No remaining meeting requests', 
-            user_pass.pass_type, 
-            0, 
-            GREATEST(0, COALESCE(user_pass.max_boost_amount, 0) - COALESCE(user_pass.used_boost_amount, 0));
+            false::BOOLEAN, 
+            'No remaining meeting requests'::TEXT, 
+            user_pass.pass_type::pass_type, 
+            0::INTEGER, 
+            GREATEST(0, COALESCE(user_pass.max_boost_amount, 0) - COALESCE(user_pass.used_boost_amount, 0))::DECIMAL;
         RETURN;
     END IF;
     
     -- Check if user has enough boost amount
     IF p_boost_amount > 0 AND (COALESCE(user_pass.used_boost_amount, 0) + p_boost_amount) > COALESCE(user_pass.max_boost_amount, 0) THEN
         RETURN QUERY SELECT 
-            false, 
-            'Insufficient boost amount', 
-            user_pass.pass_type, 
-            remaining_req, 
-            GREATEST(0, COALESCE(user_pass.max_boost_amount, 0) - COALESCE(user_pass.used_boost_amount, 0));
+            false::BOOLEAN, 
+            'Insufficient boost amount'::TEXT, 
+            user_pass.pass_type::pass_type, 
+            remaining_req::INTEGER, 
+            GREATEST(0, COALESCE(user_pass.max_boost_amount, 0) - COALESCE(user_pass.used_boost_amount, 0))::DECIMAL;
         RETURN;
     END IF;
     
     -- All checks passed
     RETURN QUERY SELECT 
-        true, 
-        'Request allowed', 
-        user_pass.pass_type,
-        remaining_req,
-        GREATEST(0, COALESCE(user_pass.max_boost_amount, 0) - COALESCE(user_pass.used_boost_amount, 0));
+        true::BOOLEAN, 
+        'Request allowed'::TEXT, 
+        user_pass.pass_type::pass_type,
+        remaining_req::INTEGER,
+        GREATEST(0, COALESCE(user_pass.max_boost_amount, 0) - COALESCE(user_pass.used_boost_amount, 0))::DECIMAL;
 END;
 $$ LANGUAGE plpgsql;
 

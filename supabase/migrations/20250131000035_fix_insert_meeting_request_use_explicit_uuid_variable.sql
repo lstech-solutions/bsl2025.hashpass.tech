@@ -1,18 +1,8 @@
--- ============================================================================
--- Function: insert_meeting_request
--- Purpose: Create a new meeting request between a requester and a speaker
--- 
--- Parameters:
---   p_speaker_id (TEXT): The speaker's ID from bsl_speakers table (TEXT)
---   Note: This function converts the TEXT speaker_id to the speaker's user_id (UUID)
---         for insertion into meeting_requests.speaker_id (UUID column)
---
--- Returns: JSON with success status and request_id or error message
--- ============================================================================
-
+-- Use explicitly typed UUID variable instead of subquery in SELECT
+-- This ensures PostgreSQL correctly recognizes the UUID type
 CREATE OR REPLACE FUNCTION insert_meeting_request(
     p_requester_id TEXT,
-    p_speaker_id TEXT,  -- This is the TEXT id from bsl_speakers, NOT the UUID
+    p_speaker_id TEXT,
     p_speaker_name TEXT,
     p_requester_name TEXT,
     p_requester_company TEXT,
@@ -33,8 +23,8 @@ DECLARE
     remaining_requests INTEGER;
     remaining_boost DECIMAL;
     requester_uuid UUID;
-    speaker_uuid UUID;  -- UUID from bsl_speakers.id
-    speaker_user_id UUID;  -- UUID from bsl_speakers.user_id
+    speaker_uuid UUID;
+    speaker_user_id UUID;
 BEGIN
     -- Step 1: Convert requester_id from TEXT to UUID
     BEGIN
@@ -113,17 +103,14 @@ BEGIN
     END IF;
     
     -- Step 9: Convert p_speaker_id (TEXT) to UUID for bsl_speakers.id lookup
-    -- Try to convert directly to UUID first
     BEGIN
         speaker_uuid := p_speaker_id::UUID;
     EXCEPTION
         WHEN OTHERS THEN
-            -- Not a UUID, try mapping table
             SELECT new_id INTO speaker_uuid
             FROM public.bsl_speakers_id_mapping
             WHERE old_id = p_speaker_id;
             
-            -- If still not found, try by name (case-insensitive)
             IF speaker_uuid IS NULL THEN
                 SELECT id INTO speaker_uuid
                 FROM public.bsl_speakers
@@ -157,8 +144,8 @@ BEGIN
         RETURN result;
     END IF;
     
-    -- Step 12: Insert using INSERT...SELECT to force UUID type inference
-    -- Using subquery ensures PostgreSQL correctly infers UUID type for speaker_id
+    -- Step 12: Insert using INSERT...SELECT with explicit UUID variable
+    -- Use the explicitly typed UUID variable instead of subquery
     INSERT INTO public.meeting_requests (
         id, 
         requester_id,
@@ -215,7 +202,6 @@ BEGIN
     
 EXCEPTION
     WHEN OTHERS THEN
-        -- Log the full error for debugging
         RAISE WARNING 'insert_meeting_request error: %', SQLERRM;
         result := json_build_object(
             'success', false, 

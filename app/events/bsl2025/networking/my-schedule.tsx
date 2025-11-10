@@ -249,13 +249,27 @@ const MySchedule = () => {
       }
       try {
         setLoadingMeetings(true);
-        // Note: meeting_requests.speaker_id is UUID (user_id from bsl_speakers), not bsl_speakers.id
-        // So we use user.id directly
+        // meetings.speaker_id is bsl_speakers.id (UUID), not user_id
+        // Get the bsl_speakers.id for the current user if they're a speaker
+        const { data: speakerRows } = await supabase
+          .from('bsl_speakers')
+          .select('id')
+          .eq('user_id', user.id);
+        
+        const speakerIds = speakerRows?.map((r: any) => r.id) || [];
+        
         let query = supabase
           .from('meetings')
           .select('*')
           .order('created_at', { ascending: false });
-        query = query.or(`requester_id.eq.${user.id},speaker_id.eq.${user.id}`);
+        
+        if (speakerIds.length > 0) {
+          // User is a speaker, query by both requester_id and speaker_id (bsl_speakers.id)
+          query = query.or(`requester_id.eq.${user.id},speaker_id.in.(${speakerIds.join(',')})`);
+        } else {
+          // User is not a speaker, only query by requester_id
+          query = query.eq('requester_id', user.id);
+        }
 
         const { data, error } = await query;
         if (error) {
@@ -279,18 +293,29 @@ const MySchedule = () => {
   const refreshMeetings = async () => {
     setRefreshingMeetings(true);
     try {
-      // Re-run the effect's logic quickly
       if (!user) {
         setMeetings([]);
         return;
       }
-      // Note: meeting_requests.speaker_id is UUID (user_id from bsl_speakers), not bsl_speakers.id
-      // So we use user.id directly
+      // meetings.speaker_id is bsl_speakers.id (UUID), not user_id
+      const { data: speakerRows } = await supabase
+        .from('bsl_speakers')
+        .select('id')
+        .eq('user_id', user.id);
+      
+      const speakerIds = speakerRows?.map((r: any) => r.id) || [];
+      
       let query = supabase
         .from('meetings')
         .select('*')
         .order('created_at', { ascending: false });
-      query = query.or(`requester_id.eq.${user.id},speaker_id.eq.${user.id}`);
+      
+      if (speakerIds.length > 0) {
+        query = query.or(`requester_id.eq.${user.id},speaker_id.in.(${speakerIds.join(',')})`);
+      } else {
+        query = query.eq('requester_id', user.id);
+      }
+      
       const { data } = await query;
       setMeetings(data || []);
     } finally {

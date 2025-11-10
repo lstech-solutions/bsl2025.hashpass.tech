@@ -851,6 +851,7 @@ export default function MyRequestsView() {
   const renderRequestCard = (request: MeetingRequest) => {
     const direction = (request as any)._direction || 'sent';
     const isIncoming = direction === 'incoming';
+    const isAccepted = request.status === 'accepted';
     
     // For incoming requests, show requester info; for sent, show speaker info
     const displayName = isIncoming 
@@ -866,10 +867,16 @@ export default function MyRequestsView() {
     return (
       <TouchableOpacity
         key={request.id}
-        style={styles.requestCard}
+        style={[
+          styles.requestCard,
+          isAccepted && styles.requestCardAccepted
+        ]}
         onPress={() => handleRequestPress(request)}
         activeOpacity={0.7}
       >
+        {isAccepted && (
+          <View style={styles.acceptedGradientOverlay} />
+        )}
         <View style={styles.cardHeader}>
           <View style={styles.avatarContainer}>
             <SpeakerAvatar
@@ -883,14 +890,26 @@ export default function MyRequestsView() {
                 <MaterialIcons name="inbox" size={12} color="white" />
               </View>
             )}
+            {isAccepted && (
+              <View style={styles.acceptedCheckBadge}>
+                <MaterialIcons name="check-circle" size={20} color="white" />
+              </View>
+            )}
           </View>
           
           <View style={styles.cardHeaderContent}>
             <View style={styles.nameRow}>
-              <Text style={styles.displayName} numberOfLines={1}>
+              <Text style={[
+                styles.displayName,
+                isAccepted && styles.displayNameAccepted
+              ]} numberOfLines={1}>
                 {displayName}
               </Text>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) }]}>
+              <View style={[
+                styles.statusBadge, 
+                { backgroundColor: getStatusColor(request.status) },
+                isAccepted && styles.statusBadgeAccepted
+              ]}>
                 <MaterialIcons name={getStatusIcon(request.status) as any} size={14} color="white" />
                 <Text style={styles.statusText}>
                   {request.status === 'pending' ? 'PENDING' : request.status.toUpperCase()}
@@ -1961,6 +1980,54 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     shadowOpacity: isDark ? 0.3 : 0.1,
     shadowRadius: 8,
     elevation: 3,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  requestCardAccepted: {
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+    backgroundColor: isDark ? 'rgba(76, 175, 80, 0.1)' : 'rgba(76, 175, 80, 0.05)',
+    shadowColor: '#4CAF50',
+    shadowOpacity: isDark ? 0.4 : 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  acceptedGradientOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: '#4CAF50',
+  },
+  acceptedCheckBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#4CAF50',
+    borderRadius: 14,
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: colors.card?.default || (isDark ? '#1e1e1e' : '#ffffff'),
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  displayNameAccepted: {
+    color: '#4CAF50',
+    fontWeight: '700',
+  },
+  statusBadgeAccepted: {
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 4,
   },
   cardHeader: {
     flexDirection: 'row',

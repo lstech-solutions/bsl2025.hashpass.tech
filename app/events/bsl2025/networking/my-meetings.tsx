@@ -52,11 +52,17 @@ const MeetingsPage = () => {
     loadMeetings();
   }, [user]);
 
-  const getSpeakerUserIds = async () => {
-    // Note: meeting_requests.speaker_id is UUID (user_id from bsl_speakers), not bsl_speakers.id
-    // So we just return the user.id directly
-    if (!user) return '';
-    return user.id;
+  const getSpeakerIds = async () => {
+    // meetings.speaker_id is bsl_speakers.id (UUID), not user_id
+    // We need to get the bsl_speakers.id for the current user if they're a speaker
+    if (!user) return [];
+    
+    const { data: speakerRows } = await supabase
+      .from('bsl_speakers')
+      .select('id')
+      .eq('user_id', user.id);
+    
+    return speakerRows?.map((r: any) => r.id) || [];
   };
 
   const loadMeetings = async () => {
@@ -67,16 +73,20 @@ const MeetingsPage = () => {
     }
     try {
       setLoading(true);
-      const speakerUserId = await getSpeakerUserIds();
+      const speakerIds = await getSpeakerIds();
+      
       let query = supabase
         .from('meetings')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (speakerUserId) {
-        // Note: meeting_requests.speaker_id is UUID (user_id), so we use user.id directly
-        query = query.or(`requester_id.eq.${user.id},speaker_id.eq.${speakerUserId}`);
+      // Query meetings where user is requester OR speaker
+      // meetings.speaker_id is bsl_speakers.id (UUID)
+      if (speakerIds.length > 0) {
+        // User is a speaker, query by both requester_id and speaker_id (bsl_speakers.id)
+        query = query.or(`requester_id.eq.${user.id},speaker_id.in.(${speakerIds.join(',')})`);
       } else {
+        // User is not a speaker, only query by requester_id
         query = query.eq('requester_id', user.id);
       }
 

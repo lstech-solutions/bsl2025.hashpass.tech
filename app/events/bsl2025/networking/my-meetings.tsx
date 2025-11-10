@@ -75,29 +75,49 @@ const MeetingsPage = () => {
       setLoading(true);
       const speakerIds = await getSpeakerIds();
       
-      let query = supabase
-        .from('meetings')
-        .select('*')
-        .order('created_at', { ascending: false });
-
       // Query meetings where user is requester OR speaker
       // meetings.speaker_id is bsl_speakers.id (UUID)
+      let allMeetings: any[] = [];
+      
+      // Always query by requester_id
+      const { data: requesterMeetings, error: requesterError } = await supabase
+        .from('meetings')
+        .select('*')
+        .eq('requester_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (requesterError) {
+        console.error('Error loading requester meetings:', requesterError);
+      } else {
+        allMeetings = requesterMeetings || [];
+      }
+      
+      // If user is a speaker, also query by speaker_id (bsl_speakers.id)
       if (speakerIds.length > 0) {
-        // User is a speaker, query by both requester_id and speaker_id (bsl_speakers.id)
-        query = query.or(`requester_id.eq.${user.id},speaker_id.in.(${speakerIds.join(',')})`);
-      } else {
-        // User is not a speaker, only query by requester_id
-        query = query.eq('requester_id', user.id);
+        const { data: speakerMeetings, error: speakerError } = await supabase
+          .from('meetings')
+          .select('*')
+          .in('speaker_id', speakerIds)
+          .order('created_at', { ascending: false });
+        
+        if (speakerError) {
+          console.error('Error loading speaker meetings:', speakerError);
+        } else {
+          // Combine and deduplicate by meeting id
+          const existingIds = new Set(allMeetings.map(m => m.id));
+          const newMeetings = (speakerMeetings || []).filter(m => !existingIds.has(m.id));
+          allMeetings = [...allMeetings, ...newMeetings];
+        }
       }
-
-      const { data, error } = await query;
-      if (error) {
-        console.error('Error loading meetings:', error);
-        showError('Error', 'Failed to load meetings');
-        setMeetings([]);
-      } else {
-        setMeetings((data as any[]) || []);
-      }
+      
+      // Sort by created_at descending
+      allMeetings.sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+      
+      setMeetings(allMeetings);
     } catch (e) {
       console.error('Error loading meetings:', e);
       showError('Error', 'Failed to load meetings');

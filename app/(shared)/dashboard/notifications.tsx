@@ -6,6 +6,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import UnifiedSearchAndFilter from '../../../components/UnifiedSearchAndFilter';
 import { useScroll } from '../../../contexts/ScrollContext';
+import { supabase } from '../../../lib/supabase';
+import { useAuth } from '../../../hooks/useAuth';
 
 type TabType = 'all' | 'archive';
 
@@ -13,6 +15,7 @@ export default function NotificationsScreen() {
   const { isDark, colors } = useTheme();
   const { headerHeight } = useScroll();
   const { notifications, unreadCount, isLoading, markAsRead, markAsUnread, markAllAsRead, archiveNotification, deleteNotification, refreshNotifications } = useNotifications();
+  const { user } = useAuth();
   const router = useRouter();
   // Calculate nav bar height (StatusBar + header content)
   const navBarHeight = (StatusBar.currentHeight || 0) + 80;
@@ -38,11 +41,65 @@ export default function NotificationsScreen() {
     setRefreshing(false);
   };
 
-  const handleNotificationPress = (notification: any) => {
+  const handleNotificationPress = async (notification: any) => {
     // Navigate based on notification type (without marking as read)
     if (notification.meeting_request_id) {
-      // Navigate to meeting request details
-      router.push(`/events/bsl2025/meeting-request/${notification.meeting_request_id}` as any);
+      try {
+        // Fetch meeting request details to get all necessary data
+        const { data: meetingRequest, error } = await supabase
+          .from('meeting_requests')
+          .select(`
+            id,
+            speaker_id,
+            speaker_name,
+            requester_id,
+            requester_name,
+            requester_company,
+            status,
+            message,
+            meeting_scheduled_at,
+            meeting_location,
+            duration_minutes,
+            note
+          `)
+          .eq('id', notification.meeting_request_id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching meeting request:', error);
+          // Fallback: navigate to my-requests page
+          router.push('/events/bsl2025/networking/my-requests' as any);
+          return;
+        }
+
+        if (meetingRequest) {
+          // Fetch speaker details for image and company
+          // Note: speaker_id in meeting_requests is UUID (user_id from bsl_speakers)
+          const { data: speaker } = await supabase
+            .from('bsl_speakers')
+            .select('imageurl, company, id, user_id')
+            .eq('user_id', meetingRequest.speaker_id)
+            .single();
+
+          // Navigate to meeting detail page with all necessary params
+          // Navigate to my-requests page instead of meeting-detail
+          // This allows users to see the request in context and take actions
+          router.push({
+            pathname: '/events/bsl2025/networking/my-requests' as any,
+            params: {
+              requestId: meetingRequest.id,
+              highlightRequest: 'true'
+            }
+          });
+        } else {
+          // Fallback: navigate to my-requests page
+          router.push('/events/bsl2025/networking/my-requests' as any);
+        }
+      } catch (error) {
+        console.error('Error navigating to meeting detail:', error);
+        // Fallback: navigate to my-requests page
+        router.push('/events/bsl2025/networking/my-requests' as any);
+      }
     } else if (notification.speaker_id) {
       // Navigate to speaker details
       router.push(`/events/bsl2025/speakers/${notification.speaker_id}` as any);

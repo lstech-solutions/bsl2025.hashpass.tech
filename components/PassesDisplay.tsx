@@ -50,6 +50,7 @@ export default function PassesDisplay({
   const { t: translate } = useTranslation('passes');
   const { colors } = useTheme();
   const { user } = useAuth();
+  const router = useRouter();
   const [passInfo, setPassInfo] = useState<PassInfo | null>(null);
   const [requestLimits, setRequestLimits] = useState<PassRequestLimits | null>(null);
   const [loading, setLoading] = useState(true);
@@ -126,6 +127,26 @@ export default function PassesDisplay({
       onRequestLimitsLoaded?.(limits);
     } catch (error) {
       console.error('Error loading request limits:', error);
+      // Set error state using passInfo if available, otherwise use defaults
+      if (passInfo) {
+        setRequestLimits({
+          can_request: false,
+          canSendRequest: false,
+          reason: 'Error checking limits',
+          pass_type: passInfo.pass_type,
+          remaining_requests: passInfo.remaining_requests || 0,
+          remaining_boost: passInfo.remaining_boost || 0,
+        });
+      } else {
+        setRequestLimits({
+          can_request: false,
+          canSendRequest: false,
+          reason: 'Error checking limits',
+          pass_type: null,
+          remaining_requests: 0,
+          remaining_boost: 0,
+        });
+      }
     }
   };
 
@@ -684,12 +705,22 @@ export default function PassesDisplay({
           }}>
             {getPassTypeDisplayName(passInfo.pass_type)}
           </Text>
-          <Text style={{ 
-            fontSize: 14, 
-            color: colors.text.secondary
-          }}>
-            {t({ id: 'passes.passNumber', message: 'Pass #{pass_number}' })}
-          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              router.push('/(shared)/dashboard/pass-details');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={{ 
+              fontSize: 14, 
+              color: colors.primary,
+              textDecorationLine: 'underline'
+            }}>
+              Pass #{passInfo.pass_number && passInfo.pass_number.length > 12 
+                ? `${passInfo.pass_number.slice(0, 6)}...${passInfo.pass_number.slice(-4)}` 
+                : passInfo.pass_number || 'Unknown'}
+            </Text>
+          </TouchableOpacity>
         </View>
         <View style={{
           paddingHorizontal: 12,
@@ -715,7 +746,7 @@ export default function PassesDisplay({
       }}>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text.primary }}>
-            {passInfo.pass_type === 'general' ? '5' : passInfo.pass_type === 'business' ? '20' : '50'}
+            {passInfo.max_requests || 0}
           </Text>
           <Text style={{ fontSize: 12, color: colors.text.secondary, textAlign: 'center' }}>
             {translate('meetingRequests', {})}
@@ -723,10 +754,10 @@ export default function PassesDisplay({
         </View>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text.primary }}>
-            {passInfo.pass_type === 'general' ? '100' : passInfo.pass_type === 'business' ? '300' : '500'}
+            {passInfo.max_boost || 0}
           </Text>
           <Text style={{ fontSize: 12, color: colors.text.secondary, textAlign: 'center' }}>
-            {translate('voiBoost', {})}
+            BOOST
           </Text>
         </View>
       </View>
@@ -943,7 +974,7 @@ export default function PassesDisplay({
             fontSize: 12, 
             color: colors.text.secondary
           }}>
-            {passSystemService.getPassValidationMessage(requestLimits)}
+            {requestLimits.reason || passSystemService.getPassValidationMessage(requestLimits)}
           </Text>
         </View>
       )}

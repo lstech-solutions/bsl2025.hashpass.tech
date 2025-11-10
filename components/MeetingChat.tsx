@@ -36,6 +36,11 @@ export default function MeetingChat({ meetingId, onClose }: MeetingChatProps) {
 
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
+  const [otherParticipant, setOtherParticipant] = useState<{
+    id: string;
+    name: string;
+    avatar?: string;
+  } | null>(null);
 
   useEffect(() => {
     loadMeetingInfo();
@@ -58,20 +63,72 @@ export default function MeetingChat({ meetingId, onClose }: MeetingChatProps) {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .rpc('get_meeting_chat_messages', {
-          p_meeting_id: meetingId,
-          p_user_id: user.id
-        });
+      
+      // Load meeting details
+      const { data: meetingData, error: meetingError } = await supabase
+        .from('meetings')
+        .select('*, speaker_id, requester_id, speaker_name, requester_name')
+        .eq('id', meetingId)
+        .single();
 
-      if (error) {
-        console.error('Error loading meeting info:', error);
+      if (meetingError) {
+        console.error('Error loading meeting:', meetingError);
         showError('Error', 'Failed to load meeting information');
         return;
       }
 
-      if (data && data.success) {
-        setMeeting(data.meeting);
+      if (meetingData) {
+        setMeeting(meetingData);
+        
+        // Determine other participant
+        const isRequester = meetingData.requester_id === user.id;
+        let otherUserId: string | null = null;
+        let otherUserName: string | null = null;
+        
+        if (isRequester) {
+          // User is requester, other is speaker
+          // Get speaker's user_id from bsl_speakers
+          const { data: speakerData } = await supabase
+            .from('bsl_speakers')
+            .select('user_id, name, imageurl')
+            .eq('id', meetingData.speaker_id)
+            .single();
+          
+          if (speakerData?.user_id) {
+            otherUserId = speakerData.user_id;
+            otherUserName = meetingData.speaker_name || speakerData.name;
+            
+            // Try to get speaker's avatar from profile
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('avatar_url, full_name')
+              .eq('id', speakerData.user_id)
+              .single();
+            
+            setOtherParticipant({
+              id: otherUserId,
+              name: otherUserName,
+              avatar: profileData?.avatar_url || speakerData.imageurl || undefined,
+            });
+          }
+        } else {
+          // User is speaker, other is requester
+          otherUserId = meetingData.requester_id;
+          otherUserName = meetingData.requester_name;
+          
+          // Get requester's avatar from profile
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('avatar_url, full_name')
+            .eq('id', meetingData.requester_id)
+            .single();
+          
+          setOtherParticipant({
+            id: otherUserId,
+            name: otherUserName || profileData?.full_name || 'User',
+            avatar: profileData?.avatar_url || undefined,
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading meeting info:', error);
@@ -95,8 +152,11 @@ export default function MeetingChat({ meetingId, onClose }: MeetingChatProps) {
       {/* Real-time Chat Component */}
       <RealtimeChat
         roomName={`meeting_chat_${meetingId}`}
-        username={user?.email || 'user'}
+        username={user?.user_metadata?.full_name || user?.email || 'user'}
         meetingId={meetingId}
+        otherParticipantId={otherParticipant?.id}
+        otherParticipantName={otherParticipant?.name}
+        otherParticipantAvatar={otherParticipant?.avatar}
       />
     </View>
   );

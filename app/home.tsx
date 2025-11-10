@@ -51,9 +51,9 @@ export default function HomeScreen() {
   // Only show if it's a whitelabel event (not main/default branch)
   const shouldShowEventLink = currentEvent && currentEvent.eventType === 'whitelabel' && !isMainBranch;
   // Get event name and URL from event config
-  const eventName = currentEvent?.title || currentEvent?.name || '';
+  const eventName = currentEvent?.title || '';
   // Get website URL from event config (website field is included in EventInfo via configToEventInfo)
-  const eventUrl = (currentEvent as any)?.website || (currentEvent?.id === 'bsl2025' ? 'https://blockchainsummit.la/' : null);
+  const eventUrl = currentEvent?.website || (currentEvent?.id === 'bsl2025' ? 'https://blockchainsummit.la/' : null);
 
   // Animation for the scroll down arrow
   const bounceAnim = useSharedValue(0);
@@ -435,7 +435,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.footerLinksColumn}>
+              <View style={[styles.footerLinksColumn, isMobile && styles.footerLinksColumnMobile]}>
                 <Text style={styles.footerLinksTitle}>{t('footer.legal')}</Text>
                 <TouchableOpacity
                   onPress={() => router.push('/(shared)/privacy')}
@@ -463,7 +463,9 @@ export default function HomeScreen() {
 
           {/* Bottom Bar */}
           <View style={styles.footerBottom}>
-            <Text style={styles.footerCopyright}>{t('copyright')}</Text>
+            <Text style={styles.footerCopyright}>
+              {t('copyright')} • v{require('../package.json').version}
+            </Text>
           </View>
         </View>
       </Animated.ScrollView>
@@ -552,45 +554,58 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   },
   footerContent: {
     flexDirection: isMobile ? 'column' : 'row',
-    justifyContent: 'space-between',
+    justifyContent: isMobile ? 'flex-start' : 'space-between',
     alignItems: isMobile ? 'flex-start' : 'flex-start',
     marginBottom: isMobile ? 30 : 40,
-    gap: isMobile ? 30 : 60,
+    gap: isMobile ? 40 : 60,
+    width: '100%',
   },
   footerBrand: {
-    flex: isMobile ? 1 : 0.4,
-    marginBottom: isMobile ? 0 : 0,
+    flex: isMobile ? 0 : 0.4,
+    width: isMobile ? '100%' : 'auto',
+    marginBottom: isMobile ? 40 : 0,
+    alignItems: isMobile ? 'flex-start' : 'flex-start',
   },
   footerLogo: {
     width: isMobile ? 180 : 220,
     height: isMobile ? 50 : 60,
-    marginBottom: 12,
+    marginBottom: isMobile ? 16 : 12,
   },
   footerBrandTagline: {
     fontSize: isMobile ? 14 : 16,
     color: colors.text.secondary,
     lineHeight: isMobile ? 20 : 24,
     maxWidth: isMobile ? '100%' : 300,
+    textAlign: isMobile ? 'left' : 'left',
+    width: isMobile ? '100%' : 'auto',
   },
   footerLinks: {
-    flex: isMobile ? 1 : 0.6,
+    flex: isMobile ? 0 : 0.6,
     flexDirection: isMobile ? 'column' : 'row',
-    gap: isMobile ? 30 : 40,
+    gap: isMobile ? 109 : 40,
     justifyContent: isMobile ? 'flex-start' : 'flex-end',
+    width: isMobile ? '100%' : 'auto',
+    alignItems: isMobile ? 'flex-start' : 'flex-start',
+    marginTop: isMobile ? 24 : 0,
+    paddingTop: isMobile ? 0 : 0,
   },
   footerLinksColumn: {
-    flex: 1,
+    flex: isMobile ? 0 : 1,
     minWidth: isMobile ? '100%' : 140,
+    width: isMobile ? '100%' : 'auto',
+  },
+  footerLinksColumnMobile: {
+    marginTop: isMobile ? 24 : 0,
   },
   footerLinksTitle: {
     fontSize: isMobile ? 14 : 16,
     fontWeight: '700',
     color: colors.text.primary,
-    marginBottom: isMobile ? 12 : 16,
+    marginBottom: isMobile ? 14 : 16,
     letterSpacing: -0.3,
   },
   footerLink: {
-    marginBottom: isMobile ? 10 : 12,
+    marginBottom: isMobile ? 12 : 12,
   },
   footerLinkText: {
     fontSize: isMobile ? 14 : 15,

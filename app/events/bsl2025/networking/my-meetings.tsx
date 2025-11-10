@@ -53,12 +53,16 @@ const MeetingsPage = () => {
   }, [user]);
 
   const getSpeakerIds = async () => {
-    if (!user) return '';
-    const { data } = await supabase
+    // meetings.speaker_id is bsl_speakers.id (UUID), not user_id
+    // We need to get the bsl_speakers.id for the current user if they're a speaker
+    if (!user) return [];
+    
+    const { data: speakerRows } = await supabase
       .from('bsl_speakers')
       .select('id')
       .eq('user_id', user.id);
-    return data?.map((s: any) => s.id).join(',') || '';
+    
+    return speakerRows?.map((r: any) => r.id) || [];
   };
 
   const loadMeetings = async () => {
@@ -70,25 +74,50 @@ const MeetingsPage = () => {
     try {
       setLoading(true);
       const speakerIds = await getSpeakerIds();
-      let query = supabase
+      
+      // Query meetings where user is requester OR speaker
+      // meetings.speaker_id is bsl_speakers.id (UUID)
+      let allMeetings: any[] = [];
+      
+      // Always query by requester_id
+      const { data: requesterMeetings, error: requesterError } = await supabase
         .from('meetings')
         .select('*')
+        .eq('requester_id', user.id)
         .order('created_at', { ascending: false });
-
-      if (speakerIds) {
-        query = query.or(`requester_id.eq.${user.id},speaker_id.in.(${speakerIds})`);
+      
+      if (requesterError) {
+        console.error('Error loading requester meetings:', requesterError);
       } else {
-        query = query.eq('requester_id', user.id);
+        allMeetings = requesterMeetings || [];
       }
-
-      const { data, error } = await query;
-      if (error) {
-        console.error('Error loading meetings:', error);
-        showError('Error', 'Failed to load meetings');
-        setMeetings([]);
-      } else {
-        setMeetings((data as any[]) || []);
+      
+      // If user is a speaker, also query by speaker_id (bsl_speakers.id)
+      if (speakerIds.length > 0) {
+        const { data: speakerMeetings, error: speakerError } = await supabase
+          .from('meetings')
+          .select('*')
+          .in('speaker_id', speakerIds)
+          .order('created_at', { ascending: false });
+        
+        if (speakerError) {
+          console.error('Error loading speaker meetings:', speakerError);
+        } else {
+          // Combine and deduplicate by meeting id
+          const existingIds = new Set(allMeetings.map(m => m.id));
+          const newMeetings = (speakerMeetings || []).filter(m => !existingIds.has(m.id));
+          allMeetings = [...allMeetings, ...newMeetings];
+        }
       }
+      
+      // Sort by created_at descending
+      allMeetings.sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+      
+      setMeetings(allMeetings);
     } catch (e) {
       console.error('Error loading meetings:', e);
       showError('Error', 'Failed to load meetings');

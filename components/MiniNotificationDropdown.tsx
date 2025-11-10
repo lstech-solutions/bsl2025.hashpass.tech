@@ -4,6 +4,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useRouter } from 'expo-router';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 
 interface MiniNotificationDropdownProps {
   onNotificationPress?: () => void;
@@ -12,6 +14,7 @@ interface MiniNotificationDropdownProps {
 export default function MiniNotificationDropdown({ onNotificationPress }: MiniNotificationDropdownProps) {
   const { colors, isDark } = useTheme();
   const { notifications, unreadCount } = useNotifications();
+  const { user } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const styles = getStyles(isDark, colors);
@@ -21,13 +24,71 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
     .filter(n => !n.is_read && !n.is_archived)
     .slice(0, 5);
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = async (notification: any) => {
     setIsOpen(false);
     if (onNotificationPress) {
       onNotificationPress();
     }
-    // Navigate to notifications screen
-    router.push('/dashboard/notifications');
+    
+    // Navigate based on notification type
+    if (notification.meeting_request_id) {
+      try {
+        // Fetch meeting request details
+        const { data: meetingRequest, error } = await supabase
+          .from('meeting_requests')
+          .select(`
+            id,
+            speaker_id,
+            speaker_name,
+            requester_id,
+            requester_name,
+            requester_company,
+            status,
+            message,
+            meeting_scheduled_at,
+            meeting_location,
+            duration_minutes,
+            note
+          `)
+          .eq('id', notification.meeting_request_id)
+          .single();
+
+        if (error || !meetingRequest) {
+          // Fallback: navigate to my-requests page
+          router.push('/events/bsl2025/networking/my-requests' as any);
+          return;
+        }
+
+        // Fetch speaker details
+        // Note: speaker_id in meeting_requests is UUID (user_id from bsl_speakers)
+        const { data: speaker } = await supabase
+          .from('bsl_speakers')
+          .select('imageurl, company, id, user_id')
+          .eq('user_id', meetingRequest.speaker_id)
+          .single();
+
+        // Navigate to meeting detail page
+        // Navigate to my-requests page instead of meeting-detail
+        // This allows users to see the request in context and take actions
+        router.push({
+          pathname: '/events/bsl2025/networking/my-requests' as any,
+          params: {
+            requestId: meetingRequest.id,
+            highlightRequest: 'true'
+          }
+        });
+      } catch (error) {
+        console.error('Error navigating to meeting detail:', error);
+        // Fallback: navigate to my-requests page
+        router.push('/events/bsl2025/networking/my-requests' as any);
+      }
+    } else if (notification.speaker_id) {
+      // Navigate to speaker details
+      router.push(`/events/bsl2025/speakers/${notification.speaker_id}` as any);
+    } else {
+      // Default: navigate to notifications screen
+      router.push('/dashboard/notifications');
+    }
   };
 
   const formatTimeAgo = (dateString: string) => {

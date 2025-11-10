@@ -435,7 +435,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.footerLinksColumn}>
+              <View style={[styles.footerLinksColumn, isMobile && styles.footerLinksColumnMobile]}>
                 <Text style={styles.footerLinksTitle}>{t('footer.legal')}</Text>
                 <TouchableOpacity
                   onPress={() => router.push('/(shared)/privacy')}

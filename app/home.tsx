@@ -580,10 +580,11 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   footerLinks: {
     flex: isMobile ? 0 : 0.6,
     flexDirection: isMobile ? 'column' : 'row',
-    gap: isMobile ? 24 : 40,
+    gap: isMobile ? 32 : 40,
     justifyContent: isMobile ? 'flex-start' : 'flex-end',
     width: isMobile ? '100%' : 'auto',
     alignItems: isMobile ? 'flex-start' : 'flex-start',
+    marginTop: isMobile ? 0 : 0,
   },
   footerLinksColumn: {
     flex: isMobile ? 0 : 1,

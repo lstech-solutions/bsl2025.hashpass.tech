@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.6.7] - 2025-11-09
+
+### Beta
+- Storybook
+
+### Technical Details
+- Version: 1.6.7
+- Release Type: beta
+- Build Number: 202511092344
+- Release Date: 2025-11-09T23:44:28.244Z
+
+
+## [1.6.6] - 2025-11-09
+
+### Beta
+- Version 1.6.6 release
+
+### Technical Details
+- Version: 1.6.6
+- Release Type: beta
+- Build Number: 202511092132
+- Release Date: 2025-11-09T21:32:54.216Z
+
+
 ## [1.6.5] - 2025-11-08
 
 ### Beta

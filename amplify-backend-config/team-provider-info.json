@@ -1,0 +1,16 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-hashpasstech-dev-96465-authRole",
+      "UnauthRoleArn": "arn:aws:iam::058264267235:role/amplify-hashpasstech-dev-96465-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::058264267235:role/amplify-hashpasstech-dev-96465-authRole",
+      "Region": "us-east-2",
+      "DeploymentBucketName": "amplify-hashpasstech-dev-96465-deployment",
+      "UnauthRoleName": "amplify-hashpasstech-dev-96465-unauthRole",
+      "StackName": "amplify-hashpasstech-dev-96465",
+      "StackId": "arn:aws:cloudformation:us-east-2:058264267235:stack/amplify-hashpasstech-dev-96465/d51095d0-a4c2-11f0-9f9a-02ddcb575bfb",
+      "AmplifyAppId": "d3ja863334bedw"
+    },
+    "categories": {}
+  }
+}

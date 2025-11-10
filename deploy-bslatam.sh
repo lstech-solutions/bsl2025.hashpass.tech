@@ -81,11 +81,12 @@ fi
 echo "Deploying to Amplify hosting..."
 
 # Check if we have an Amplify app configured
-if [ -f "amplify/.config/project-config.json" ] && [ -f "amplify/team-provider-info.json" ]; then
+# Note: Folder renamed from amplify/ to amplify-backend-config/ to prevent auto-init
+if [ -f "amplify-backend-config/.config/project-config.json" ] && [ -f "amplify-backend-config/team-provider-info.json" ]; then
   echo "Amplify project configuration found. Initializing environment if needed..."
   
   # Check if environment is initialized
-  if [ ! -d "amplify/backend" ] || [ ! -f "amplify/backend/amplify-meta.json" ]; then
+  if [ ! -d "amplify-backend-config/backend" ] || [ ! -f "amplify-backend-config/backend/amplify-meta.json" ]; then
     echo "Initializing Amplify environment..."
     amplify init --yes || {
       echo "Failed to initialize Amplify environment. Please run 'amplify init' manually." 1>&2
@@ -124,8 +125,8 @@ if [ -f "amplify/.config/project-config.json" ] && [ -f "amplify/team-provider-i
   }
 else
   echo "Amplify project configuration not found. Please ensure:" 1>&2
-  echo "1. amplify/.config/project-config.json exists" 1>&2
-  echo "2. amplify/team-provider-info.json exists" 1>&2
+  echo "1. amplify-backend-config/.config/project-config.json exists" 1>&2
+  echo "2. amplify-backend-config/team-provider-info.json exists" 1>&2
   echo "3. Run 'amplify init' to initialize the project" 1>&2
   exit 1
 fi

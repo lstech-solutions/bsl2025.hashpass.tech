@@ -32,6 +32,7 @@ export interface TutorialPreferences {
   resetTutorial: (type: TutorialType) => Promise<void>;
   resetAllTutorials: () => Promise<void>;
   shouldShowTutorial: (type: TutorialType) => boolean;
+  reloadPreferences: () => Promise<void>;
 }
 
 export const useTutorialPreferences = (): TutorialPreferences => {
@@ -43,97 +44,97 @@ export const useTutorialPreferences = (): TutorialPreferences => {
   const [isReady, setIsReady] = useState(false);
 
   // Load tutorial preferences from database and fallback to AsyncStorage
-  useEffect(() => {
-    const loadPreferences = async () => {
-      try {
-        if (isLoggedIn && user?.id) {
-          // Load from database
-          const { data: progressData, error } = await supabase
-            .from('user_tutorial_progress')
-            .select('*')
-            .eq('user_id', user.id);
+  const loadPreferences = useCallback(async () => {
+    try {
+      if (isLoggedIn && user?.id) {
+        // Load from database
+        const { data: progressData, error } = await supabase
+          .from('user_tutorial_progress')
+          .select('*')
+          .eq('user_id', user.id);
 
-          if (!error && progressData) {
-            const mainProgress = progressData.find(p => p.tutorial_type === 'main');
-            const networkingProgress = progressData.find(p => p.tutorial_type === 'networking');
+        if (!error && progressData) {
+          const mainProgress = progressData.find(p => p.tutorial_type === 'main');
+          const networkingProgress = progressData.find(p => p.tutorial_type === 'networking');
 
-            if (mainProgress) {
-              const isCompleted = mainProgress.status === 'completed';
-              setMainTutorialCompleted(isCompleted);
-              setMainTutorialProgress({
-                status: mainProgress.status as TutorialStatus,
-                current_step: mainProgress.current_step || 0,
-                total_steps_completed: mainProgress.total_steps_completed || 0,
-                started_at: mainProgress.started_at,
-                completed_at: mainProgress.completed_at,
-                skipped_at: mainProgress.skipped_at,
-              });
-              console.log('Loaded main tutorial progress:', { status: mainProgress.status, isCompleted });
-            } else {
-              // New user - no progress record exists
-              console.log('No main tutorial progress found - new user');
-              setMainTutorialCompleted(false);
-              setMainTutorialProgress(null);
-            }
-
-            if (networkingProgress) {
-              const isCompleted = networkingProgress.status === 'completed';
-              setNetworkingTutorialCompleted(isCompleted);
-              setNetworkingTutorialProgress({
-                status: networkingProgress.status as TutorialStatus,
-                current_step: networkingProgress.current_step || 0,
-                total_steps_completed: networkingProgress.total_steps_completed || 0,
-                started_at: networkingProgress.started_at,
-                completed_at: networkingProgress.completed_at,
-                skipped_at: networkingProgress.skipped_at,
-              });
-              console.log('Loaded networking tutorial progress:', { status: networkingProgress.status, isCompleted });
-            } else {
-              // New user - no progress record exists
-              console.log('No networking tutorial progress found - new user');
-              setNetworkingTutorialCompleted(false);
-              setNetworkingTutorialProgress(null);
-            }
-          } else if (error) {
-            console.error('Error loading tutorial progress:', error);
+          if (mainProgress) {
+            const isCompleted = mainProgress.status === 'completed';
+            setMainTutorialCompleted(isCompleted);
+            setMainTutorialProgress({
+              status: mainProgress.status as TutorialStatus,
+              current_step: mainProgress.current_step || 0,
+              total_steps_completed: mainProgress.total_steps_completed || 0,
+              started_at: mainProgress.started_at,
+              completed_at: mainProgress.completed_at,
+              skipped_at: mainProgress.skipped_at,
+            });
+            console.log('Loaded main tutorial progress:', { status: mainProgress.status, isCompleted });
           } else {
-            // No data returned - new user
-            console.log('No tutorial progress data returned - new user');
+            // New user - no progress record exists
+            console.log('No main tutorial progress found - new user');
             setMainTutorialCompleted(false);
-            setNetworkingTutorialCompleted(false);
             setMainTutorialProgress(null);
+          }
+
+          if (networkingProgress) {
+            const isCompleted = networkingProgress.status === 'completed';
+            setNetworkingTutorialCompleted(isCompleted);
+            setNetworkingTutorialProgress({
+              status: networkingProgress.status as TutorialStatus,
+              current_step: networkingProgress.current_step || 0,
+              total_steps_completed: networkingProgress.total_steps_completed || 0,
+              started_at: networkingProgress.started_at,
+              completed_at: networkingProgress.completed_at,
+              skipped_at: networkingProgress.skipped_at,
+            });
+            console.log('Loaded networking tutorial progress:', { status: networkingProgress.status, isCompleted });
+          } else {
+            // New user - no progress record exists
+            console.log('No networking tutorial progress found - new user');
+            setNetworkingTutorialCompleted(false);
             setNetworkingTutorialProgress(null);
           }
+        } else if (error) {
+          console.error('Error loading tutorial progress:', error);
         } else {
-          // Fallback to AsyncStorage for non-logged-in users
-          const [mainCompleted, networkingCompleted] = await Promise.all([
-            AsyncStorage.getItem(TUTORIAL_STORAGE_KEYS.MAIN_TUTORIAL_COMPLETED),
-            AsyncStorage.getItem(TUTORIAL_STORAGE_KEYS.NETWORKING_TUTORIAL_COMPLETED),
-          ]);
+          // No data returned - new user
+          console.log('No tutorial progress data returned - new user');
+          setMainTutorialCompleted(false);
+          setNetworkingTutorialCompleted(false);
+          setMainTutorialProgress(null);
+          setNetworkingTutorialProgress(null);
+        }
+      } else {
+        // Fallback to AsyncStorage for non-logged-in users
+        const [mainCompleted, networkingCompleted] = await Promise.all([
+          AsyncStorage.getItem(TUTORIAL_STORAGE_KEYS.MAIN_TUTORIAL_COMPLETED),
+          AsyncStorage.getItem(TUTORIAL_STORAGE_KEYS.NETWORKING_TUTORIAL_COMPLETED),
+        ]);
 
-          setMainTutorialCompleted(mainCompleted === 'true');
-          setNetworkingTutorialCompleted(networkingCompleted === 'true');
-        }
-      } catch (error) {
-        console.error('Failed to load tutorial preferences:', error);
-        // Fallback to AsyncStorage on error
-        try {
-          const [mainCompleted, networkingCompleted] = await Promise.all([
-            AsyncStorage.getItem(TUTORIAL_STORAGE_KEYS.MAIN_TUTORIAL_COMPLETED),
-            AsyncStorage.getItem(TUTORIAL_STORAGE_KEYS.NETWORKING_TUTORIAL_COMPLETED),
-          ]);
-          setMainTutorialCompleted(mainCompleted === 'true');
-          setNetworkingTutorialCompleted(networkingCompleted === 'true');
-        } catch (fallbackError) {
-          console.error('Failed to load from AsyncStorage:', fallbackError);
-        }
-      } finally {
-        setIsReady(true);
+        setMainTutorialCompleted(mainCompleted === 'true');
+        setNetworkingTutorialCompleted(networkingCompleted === 'true');
       }
-    };
-
-    loadPreferences();
+    } catch (error) {
+      console.error('Failed to load tutorial preferences:', error);
+      // Fallback to AsyncStorage on error
+      try {
+        const [mainCompleted, networkingCompleted] = await Promise.all([
+          AsyncStorage.getItem(TUTORIAL_STORAGE_KEYS.MAIN_TUTORIAL_COMPLETED),
+          AsyncStorage.getItem(TUTORIAL_STORAGE_KEYS.NETWORKING_TUTORIAL_COMPLETED),
+        ]);
+        setMainTutorialCompleted(mainCompleted === 'true');
+        setNetworkingTutorialCompleted(networkingCompleted === 'true');
+      } catch (fallbackError) {
+        console.error('Failed to load from AsyncStorage:', fallbackError);
+      }
+    } finally {
+      setIsReady(true);
+    }
   }, [user?.id, isLoggedIn]);
+
+  useEffect(() => {
+    loadPreferences();
+  }, [loadPreferences]);
 
   // Update tutorial step progress
   const updateTutorialStep = useCallback(async (type: TutorialType, stepNumber: number) => {
@@ -337,6 +338,7 @@ export const useTutorialPreferences = (): TutorialPreferences => {
       
       await AsyncStorage.removeItem(key);
       
+      // Update state immediately
       if (type === 'main') {
         setMainTutorialCompleted(false);
         setMainTutorialProgress(null);
@@ -344,10 +346,14 @@ export const useTutorialPreferences = (): TutorialPreferences => {
         setNetworkingTutorialCompleted(false);
         setNetworkingTutorialProgress(null);
       }
+      
+      // Reload preferences to ensure consistency
+      console.log('Tutorial reset - reloading preferences');
+      await loadPreferences();
     } catch (error) {
       console.error('Failed to reset tutorial:', error);
     }
-  }, [user?.id]);
+  }, [user?.id, loadPreferences]);
 
   const resetAllTutorials = useCallback(async () => {
     try {
@@ -363,14 +369,24 @@ export const useTutorialPreferences = (): TutorialPreferences => {
         AsyncStorage.removeItem(TUTORIAL_STORAGE_KEYS.NETWORKING_TUTORIAL_COMPLETED),
       ]);
       
+      // Update state immediately
       setMainTutorialCompleted(false);
       setNetworkingTutorialCompleted(false);
       setMainTutorialProgress(null);
       setNetworkingTutorialProgress(null);
+      
+      // Reload preferences to ensure consistency
+      console.log('All tutorials reset - reloading preferences');
+      await loadPreferences();
     } catch (error) {
       console.error('Failed to reset all tutorials:', error);
     }
-  }, [user?.id]);
+  }, [user?.id, loadPreferences]);
+
+  const reloadPreferences = useCallback(async () => {
+    setIsReady(false);
+    await loadPreferences();
+  }, [loadPreferences]);
 
   const shouldShowTutorial = useCallback((type: TutorialType): boolean => {
     if (type === 'main') {
@@ -436,5 +452,6 @@ export const useTutorialPreferences = (): TutorialPreferences => {
     resetTutorial,
     resetAllTutorials,
     shouldShowTutorial,
+    reloadPreferences,
   };
 };

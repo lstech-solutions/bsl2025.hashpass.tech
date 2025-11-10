@@ -91,6 +91,11 @@
     "title": "Bienvenue sur",
     "subtitle": "Connectez-vous pour débloquer votre vie numérique.",
     "signInWithGoogle": "Se connecter avec Google",
+    "emailPlaceholder": "Entrez votre email",
+    "magicLink": "Lien Magique",
+    "otpCode": "Code OTP",
+    "sendMagicLink": "Envoyer le Lien Magique",
+    "sendCode": "Envoyer le Code",
     "privacy": {
       "text": "En vous connectant, vous acceptez nos",
       "terms": "Conditions d'utilisation",
@@ -232,6 +237,17 @@
       "description": "Découvrez ce que nos clients disent de nous."
     },
     "copyright": " 2025 HASHPASS™ Tous droits réservés.",
+    "footer": {
+      "tagline": "Connecter les événements, les conférenciers et les participants dans le monde entier.",
+      "resources": "Ressources",
+      "legal": "Légal",
+      "docs": "Documentation",
+      "guides": "Guides",
+      "support": "Support",
+      "privacy": "Politique de Confidentialité",
+      "terms": "Conditions d'Utilisation",
+      "bsl2025": "BSL 2025"
+    },
     "cta": {
       "title": "Prêt à commencer ?",
       "subtitle": "Rejoignez des milliers d'utilisateurs qui font confiance à HASHPASS pour leur vie numérique.",

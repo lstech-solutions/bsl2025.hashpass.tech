@@ -3,13 +3,17 @@ frontend:
   phases:
     preBuild:
       commands:
+        # Note: amplify/ folder has been permanently renamed to amplify-backend-config/
+        # to prevent Amplify CLI from auto-detecting and initializing it
+        - 'echo "Using amplify-backend-config/ folder (renamed from amplify/ to prevent auto-init)"'
         - nvm install 22.18.0
         - npm install --quiet --global @expo/cli
         - >
           if [ -f yarn.lock ]; then
             yarn install --frozen-lockfile
           elif [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
+            # Install all dependencies including devDependencies (needed for autoprefixer, postcss, etc.)
+            npm ci --include=dev
           else
             npm install
           fi
@@ -37,11 +41,16 @@ frontend:
       commands:
         - rm -rf dist
         - mkdir -p dist/client/_expo/functions/api/bslatam
+        # Increase Node.js memory limit for Metro bundler
+        - export NODE_OPTIONS="--max-old-space-size=4096"
+        # Set production environment for Expo export
+        - export NODE_ENV=production
+        - export EXPO_PUBLIC_ENABLE_STATIC_EXPORT=true
         - 'npm run build:web'
         - cp -r dist/server/* dist/client/
-        - mkdir -p amplify/backend/function/bslApi/src/server/_expo/functions
-        - rm -rf amplify/backend/function/bslApi/src/server/_expo/functions/api || true
-        - cp -r dist/server/_expo/functions/api amplify/backend/function/bslApi/src/server/_expo/functions/
+        - mkdir -p amplify-backend-config/backend/function/bslApi/src/server/_expo/functions
+        - rm -rf amplify-backend-config/backend/function/bslApi/src/server/_expo/functions/api || true
+        - cp -r dist/server/_expo/functions/api amplify-backend-config/backend/function/bslApi/src/server/_expo/functions/
         - mkdir -p dist/client/api/bslatam
         - 'echo "{\"type\": \"module\"}" > dist/client/api/package.json'
         - |
@@ -66,6 +75,16 @@ frontend:
             echo "Created API handler at dist/client/api/bslatam/$base/index.js"
           done
         - 'echo "<!-- Build timestamp: $(date) -->" >> dist/client/index.html'
+        - 'echo "=== Building Storybook static site ==="'
+        - npm run build:storybook || echo "Storybook build failed, continuing..."
+        - |
+          if [ -d storybook-static ]; then
+            mkdir -p dist/client/storybook
+            cp -r storybook-static/* dist/client/storybook/
+            echo "Storybook files copied to dist/client/storybook/"
+          else
+            echo "Storybook static directory not found, skipping..."
+          fi
         - 'echo "=== API files in dist/client/_expo/functions/api/bslatam/ ==="'
         - ls -la dist/client/_expo/functions/api/bslatam/ || echo "No API files found"
         - 'echo "=== Contents of dist/client/ ==="'
@@ -100,6 +119,18 @@ frontend:
         headers:
           - key: Cache-Control
             value: 'public, max-age=31536000, immutable'
+      - pattern: 'storybook/**/*'
+        headers:
+          - key: Cache-Control
+            value: 'public, max-age=31536000, immutable'
+      - pattern: 'storybook/index.html'
+        headers:
+          - key: Cache-Control
+            value: 'no-cache, no-store, must-revalidate'
+          - key: Pragma
+            value: 'no-cache'
+          - key: Expires
+            value: '0'
   cache:
     paths:
       - node_modules/**/*
@@ -135,6 +166,12 @@ redirects:
   - source: '/<*>'
     status: 200
     target: '/index.html'
+  - source: '/storybook'
+    status: 200
+    target: '/storybook/index.html'
+  - source: '/storybook/*'
+    status: 200
+    target: '/storybook/index.html'
 customErrorResponses:
   - errorCode: 404
     responsePagePath: '/index.html'

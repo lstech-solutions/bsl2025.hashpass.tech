@@ -156,10 +156,11 @@ const config: StorybookConfig = {
     };
 
     // Configure public path for subdirectory deployment
-    if (process.env.STORYBOOK_BASE_PATH) {
-      config.output = config.output || {};
-      config.output.publicPath = process.env.STORYBOOK_BASE_PATH;
-    }
+    // Storybook needs publicPath to be relative or absolute path without trailing slash
+    // The base path is handled by the server routing, not webpack publicPath
+    // For subdirectory deployment, we should NOT set publicPath here
+    // Instead, Storybook's build will generate relative paths that work from any subdirectory
+    // Only set publicPath if explicitly needed (usually not for static deployments)
 
     return config;
   },

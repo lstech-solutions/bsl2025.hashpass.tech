@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useEvent } from '../contexts/EventContext';
+import { getCurrentEvent } from '../lib/event-detector';
 import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -36,6 +38,22 @@ export default function HomeScreen() {
   const [userName, setUserName] = useState<string | null>(null);
   const { t } = useTranslation('index');
   const isMobile = useIsMobile();
+  const { event } = useEvent();
+  
+  // Get current event info for dynamic footer
+  const currentEvent = getCurrentEvent();
+  const isMainBranch = typeof process !== 'undefined' && (
+    process.env.AMPLIFY_SHOW_ALL_EVENTS === 'true' ||
+    process.env.NEXT_PUBLIC_SHOW_ALL_EVENTS === 'true'
+  );
+  
+  // Determine if we should show event link in footer
+  // Only show if it's a whitelabel event (not main/default branch)
+  const shouldShowEventLink = currentEvent && currentEvent.eventType === 'whitelabel' && !isMainBranch;
+  // Get event name and URL from event config
+  const eventName = currentEvent?.title || currentEvent?.name || '';
+  // Get website URL from event config (website field is included in EventInfo via configToEventInfo)
+  const eventUrl = (currentEvent as any)?.website || (currentEvent?.id === 'bsl2025' ? 'https://blockchainsummit.la/' : null);
 
   // Animation for the scroll down arrow
   const bounceAnim = useSharedValue(0);
@@ -431,12 +449,14 @@ export default function HomeScreen() {
                 >
                   <Text style={styles.footerLinkText}>{t('footer.terms')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => Linking.openURL('https://blockchainsummit.la/')}
-                  style={styles.footerLink}
-                >
-                  <Text style={styles.footerLinkText}>{t('footer.bsl2025')}</Text>
-                </TouchableOpacity>
+                {shouldShowEventLink && eventUrl && (
+                  <TouchableOpacity
+                    onPress={() => Linking.openURL(eventUrl)}
+                    style={styles.footerLink}
+                  >
+                    <Text style={styles.footerLinkText}>{eventName}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>

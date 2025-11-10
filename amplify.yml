@@ -33,6 +33,9 @@ frontend:
         - 'echo "Building for branch: $AWS_BRANCH"'
         - 'echo "Event ID: $AMPLIFY_EVENT_ID"'
         - 'echo "Show all events: $AMPLIFY_SHOW_ALL_EVENTS"'
+        # Skip Amplify CLI initialization - we're using Amplify only for static hosting
+        - export AMPLIFY_SKIP_BACKEND_BUILD=true
+        - 'echo "Skipping Amplify CLI initialization - static hosting only"'
     build:
       commands:
         - rm -rf dist

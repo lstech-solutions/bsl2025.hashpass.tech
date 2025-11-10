@@ -81,9 +81,9 @@ If you need Amplify CLI functionality:
 
 ## Recommended Fix for This Project
 
-Since this is a static Expo web build, use **Option 1**:
+Since this is a static Expo web build, we use **Option 3** (renaming the folder):
 
-Update `amplify.yml`:
+The solution implemented renames the `amplify/` folder at the start of the build to prevent Amplify CLI from detecting it, then restores it when needed:
 
 ```yaml
 version: 1.0
@@ -91,15 +91,19 @@ frontend:
   phases:
     preBuild:
       commands:
-        - nvm install 22.18.0
-        - npm install --quiet --global @expo/cli
-        # ... existing commands ...
-        - export AMPLIFY_SKIP_BACKEND_BUILD=true
-        - 'echo "Skipping Amplify CLI initialization - static hosting only"'
+        # Temporarily rename amplify/ folder to prevent Amplify CLI auto-initialization
+        - if [ -d amplify ]; then mv amplify amplify-temp-backend; fi
+        - 'echo "Renamed amplify/ folder to prevent auto-initialization"'
+        # ... rest of preBuild commands ...
     build:
       commands:
-        # ... existing build commands ...
+        # Restore amplify/ folder now that we need it for copying files
+        - if [ -d amplify-temp-backend ]; then mv amplify-temp-backend amplify; fi
+        - 'echo "Restored amplify/ folder for build process"'
+        # ... rest of build commands ...
 ```
+
+This prevents Amplify CLI from detecting the folder and attempting auto-initialization, while still allowing us to use the folder structure during the build process.
 
 ## Verification
 

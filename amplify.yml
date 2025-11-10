@@ -3,6 +3,10 @@ frontend:
   phases:
     preBuild:
       commands:
+        # Temporarily rename amplify/ folder to prevent Amplify CLI auto-initialization
+        # We'll restore it later in the build phase when we need it
+        - if [ -d amplify ]; then mv amplify amplify-temp-backend; fi
+        - 'echo "Renamed amplify/ folder to prevent auto-initialization"'
         - nvm install 22.18.0
         - npm install --quiet --global @expo/cli
         - >
@@ -33,11 +37,11 @@ frontend:
         - 'echo "Building for branch: $AWS_BRANCH"'
         - 'echo "Event ID: $AMPLIFY_EVENT_ID"'
         - 'echo "Show all events: $AMPLIFY_SHOW_ALL_EVENTS"'
-        # Skip Amplify CLI initialization - we're using Amplify only for static hosting
-        - export AMPLIFY_SKIP_BACKEND_BUILD=true
-        - 'echo "Skipping Amplify CLI initialization - static hosting only"'
     build:
       commands:
+        # Restore amplify/ folder now that we need it for copying files
+        - if [ -d amplify-temp-backend ]; then mv amplify-temp-backend amplify; fi
+        - 'echo "Restored amplify/ folder for build process"'
         - rm -rf dist
         - mkdir -p dist/client/_expo/functions/api/bslatam
         - 'npm run build:web'

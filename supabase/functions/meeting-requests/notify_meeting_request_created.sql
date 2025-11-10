@@ -17,14 +17,15 @@ DECLARE
     speaker_text_id TEXT;
     speaker_uuid_id UUID;  -- The UUID id from bsl_speakers
 BEGIN
-    -- NEW.speaker_id is UUID (user_id), we need to get the UUID id from bsl_speakers
-    -- First get the speaker's UUID id (not user_id) by looking up user_id
+    -- NEW.speaker_id is UUID (user_id from bsl_speakers)
+    -- We need to get the UUID id (not user_id) from bsl_speakers to pass to can_make_meeting_request
+    -- First get the speaker's UUID id by looking up user_id
     SELECT id INTO speaker_uuid_id
     FROM public.bsl_speakers
     WHERE user_id = NEW.speaker_id
     LIMIT 1;
     
-    -- Convert UUID id to TEXT for functions that expect TEXT
+    -- Convert UUID id to TEXT for functions that expect TEXT speaker_id
     IF speaker_uuid_id IS NOT NULL THEN
         speaker_text_id := speaker_uuid_id::TEXT;
     ELSE
@@ -33,6 +34,7 @@ BEGIN
     END IF;
     
     -- Check if user can make meeting request (pass TEXT speaker_id)
+    -- Note: can_make_meeting_request expects TEXT p_speaker_id (the UUID id from bsl_speakers, as TEXT)
     SELECT * INTO can_request, reason, user_pass_type, remaining_requests, remaining_boost
     FROM can_make_meeting_request(NEW.requester_id, speaker_text_id, COALESCE(NEW.boost_amount, 0));
     

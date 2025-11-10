@@ -143,10 +143,8 @@ BEGIN
     END IF;
     
     -- Step 11: Get speaker's user_id (UUID) for meeting_requests.speaker_id
-    -- meeting_requests.speaker_id must be UUID (user_id from bsl_speakers)
-    SELECT user_id::UUID INTO speaker_user_id
-    FROM public.bsl_speakers
-    WHERE id = speaker_uuid;
+    -- Use subquery to force UUID type inference
+    SELECT (SELECT user_id FROM public.bsl_speakers WHERE id = speaker_uuid)::UUID INTO speaker_user_id;
     
     IF speaker_user_id IS NULL THEN
         result := json_build_object(
@@ -157,12 +155,12 @@ BEGIN
         RETURN result;
     END IF;
     
-    -- Step 12: Insert the meeting request
-    -- CRITICAL: meeting_requests.speaker_id is UUID (user_id), not the speaker's id
+    -- Step 12: Insert using INSERT...SELECT to force UUID type inference
+    -- Using subquery ensures PostgreSQL correctly infers UUID type for speaker_id
     INSERT INTO public.meeting_requests (
         id, 
-        requester_id,           -- UUID
-        speaker_id,             -- UUID (from bsl_speakers.user_id)
+        requester_id,
+        speaker_id,
         speaker_name, 
         requester_name,
         requester_company, 
@@ -177,25 +175,25 @@ BEGIN
         status, 
         created_at, 
         updated_at
-    ) VALUES (
-        new_request_id,                    -- UUID
-        requester_uuid,                    -- UUID
-        speaker_user_id::UUID,             -- UUID (user_id from bsl_speakers) - EXPLICIT CAST
-        p_speaker_name,                     -- TEXT
-        p_requester_name,                   -- TEXT
-        p_requester_company,                -- TEXT
-        p_requester_title,                  -- TEXT
-        p_requester_ticket_type,            -- TEXT
-        p_meeting_type,                     -- TEXT
-        p_message,                          -- TEXT
-        p_note,                             -- TEXT
-        p_boost_amount,                     -- DECIMAL
-        p_duration_minutes,                 -- INTEGER
-        COALESCE(p_expires_at, NOW() + INTERVAL '7 days'),  -- TIMESTAMPTZ
-        'pending',                          -- TEXT
-        NOW(),                              -- TIMESTAMPTZ
-        NOW()                               -- TIMESTAMPTZ
-    );
+    )
+    SELECT 
+        new_request_id,
+        requester_uuid,
+        (SELECT user_id::UUID FROM public.bsl_speakers WHERE id = speaker_uuid),  -- Force UUID via subquery
+        p_speaker_name,
+        p_requester_name,
+        p_requester_company,
+        p_requester_title,
+        p_requester_ticket_type,
+        p_meeting_type,
+        p_message,
+        p_note,
+        p_boost_amount,
+        p_duration_minutes,
+        COALESCE(p_expires_at, NOW() + INTERVAL '7 days'),
+        'pending',
+        NOW(),
+        NOW();
     
     -- Step 13: Update pass usage
     UPDATE public.passes 

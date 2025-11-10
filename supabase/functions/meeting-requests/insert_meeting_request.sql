@@ -193,7 +193,7 @@ BEGIN
     ) VALUES (
         new_request_id,
         requester_uuid,
-        speaker_user_id_uuid,  -- Direct UUID variable - PostgreSQL should recognize the type
+        speaker_user_id_uuid::UUID,  -- EXPLICIT CAST even though variable is already UUID
         p_speaker_name,
         p_requester_name,
         p_requester_company,

@@ -197,7 +197,7 @@ BEGIN
         p_requester_name,
         p_requester_company,
         p_requester_title,
-        p_requester_ticket_type,
+        COALESCE(pass_record.pass_type::text, p_requester_ticket_type), -- Use pass_type from database, fallback to parameter
         p_meeting_type,
         p_message,
         p_note,

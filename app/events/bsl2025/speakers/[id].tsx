@@ -65,6 +65,7 @@ export default function SpeakerDetail() {
   const [showRequestDetailModal, setShowRequestDetailModal] = useState(false);
   const [selectedRequestDetail, setSelectedRequestDetail] = useState<any>(null);
   const [passRefreshTrigger, setPassRefreshTrigger] = useState(0);
+  const [userPassType, setUserPassType] = useState<'general' | 'business' | 'vip'>('general');
   
   // Debug modal state changes
   useEffect(() => {
@@ -530,13 +531,18 @@ export default function SpeakerDetail() {
 
       if (data) {
         setRequestLimits({
-          ticketType: data.pass_type || 'business',
+          ticketType: data.pass_type || 'general',
           totalRequests: data.total_requests || 0,
           remainingRequests: data.remaining_requests || 0,
           canSendRequest: (data.remaining_requests || 0) > 0,
           requestLimit: data.max_requests || 0,
           reason: data.remaining_requests > 0 ? 'Request allowed' : 'No remaining requests',
         });
+        
+        // Update userPassType from the data
+        if (data.pass_type) {
+          setUserPassType(data.pass_type as 'general' | 'business' | 'vip');
+        }
       } else {
         // No pass found or other issue
         setRequestLimits({
@@ -755,7 +761,7 @@ export default function SpeakerDetail() {
         requester_name: user.email || 'Anonymous',
         requester_company: 'Your Company', // Would come from user profile
         requester_title: 'Your Title', // Would come from user profile
-        requester_ticket_type: 'business', // Default to business for now, will be replaced by pass system
+        requester_ticket_type: userPassType, // Use actual pass type from user's pass
         meeting_type: 'networking',
         message: meetingMessage || '', // Allow empty message
         note: getSelectedIntentionsText(),
@@ -1118,6 +1124,9 @@ export default function SpeakerDetail() {
             refreshTrigger={passRefreshTrigger}
             onPassInfoLoaded={(passInfo) => {
               console.log('Pass info loaded:', passInfo);
+              if (passInfo && passInfo.pass_type) {
+                setUserPassType(passInfo.pass_type as 'general' | 'business' | 'vip');
+              }
             }}
             onRequestLimitsLoaded={(limits) => {
               console.log('Request limits loaded:', limits);

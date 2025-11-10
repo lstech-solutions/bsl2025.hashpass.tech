@@ -68,22 +68,13 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
           .single();
 
         // Navigate to meeting detail page
+        // Navigate to my-requests page instead of meeting-detail
+        // This allows users to see the request in context and take actions
         router.push({
-          pathname: '/events/bsl2025/networking/meeting-detail' as any,
+          pathname: '/events/bsl2025/networking/my-requests' as any,
           params: {
-            meetingId: meetingRequest.id,
-            speakerName: meetingRequest.speaker_name || '',
-            speakerImage: speaker?.imageurl || '',
-            speakerCompany: speaker?.company || meetingRequest.requester_company || '',
-            speakerId: speaker?.id || meetingRequest.speaker_id || '',
-            requesterName: meetingRequest.requester_name || '',
-            requesterId: meetingRequest.requester_id || '',
-            status: meetingRequest.status || 'pending',
-            message: meetingRequest.message || meetingRequest.note || '',
-            scheduledAt: meetingRequest.meeting_scheduled_at || '',
-            location: meetingRequest.meeting_location || 'TBD',
-            duration: meetingRequest.duration_minutes?.toString() || '15',
-            isSpeaker: user?.id === meetingRequest.speaker_id ? 'true' : 'false'
+            requestId: meetingRequest.id,
+            highlightRequest: 'true'
           }
         });
       } catch (error) {

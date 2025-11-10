@@ -170,8 +170,8 @@ BEGIN
         RETURN result;
     END IF;
     
-    -- Step 13: Insert using INSERT...SELECT with the pre-fetched UUID variable
-    -- Use a simple SELECT with the variable directly - no CTE, no subquery
+    -- Step 13: Insert using VALUES (not SELECT) with the pre-fetched UUID variable
+    -- VALUES should have better type inference than SELECT
     INSERT INTO public.meeting_requests (
         id, 
         requester_id,
@@ -190,25 +190,25 @@ BEGIN
         status, 
         created_at, 
         updated_at
-    )
-    SELECT 
-        new_request_id::UUID,
-        requester_uuid::UUID,
-        speaker_user_id_uuid::UUID,  -- Use pre-fetched UUID variable directly
-        p_speaker_name::TEXT,
-        p_requester_name::TEXT,
-        p_requester_company::TEXT,
-        p_requester_title::TEXT,
-        p_requester_ticket_type::TEXT,
-        p_meeting_type::TEXT,
-        p_message::TEXT,
-        p_note::TEXT,
-        p_boost_amount::DECIMAL,
-        p_duration_minutes::INTEGER,
-        COALESCE(p_expires_at, NOW() + INTERVAL '7 days')::TIMESTAMPTZ,
-        'pending'::TEXT,
-        NOW()::TIMESTAMPTZ,
-        NOW()::TIMESTAMPTZ;
+    ) VALUES (
+        new_request_id,
+        requester_uuid,
+        speaker_user_id_uuid,  -- Direct UUID variable - PostgreSQL should recognize the type
+        p_speaker_name,
+        p_requester_name,
+        p_requester_company,
+        p_requester_title,
+        p_requester_ticket_type,
+        p_meeting_type,
+        p_message,
+        p_note,
+        p_boost_amount,
+        p_duration_minutes,
+        COALESCE(p_expires_at, NOW() + INTERVAL '7 days'),
+        'pending',
+        NOW(),
+        NOW()
+    );
     
     -- Step 13: Update pass usage
     UPDATE public.passes 

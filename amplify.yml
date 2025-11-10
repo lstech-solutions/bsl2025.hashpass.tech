@@ -40,6 +40,8 @@ frontend:
       commands:
         - rm -rf dist
         - mkdir -p dist/client/_expo/functions/api/bslatam
+        # Increase Node.js memory limit for Metro bundler
+        - export NODE_OPTIONS="--max-old-space-size=4096"
         - 'npm run build:web'
         - cp -r dist/server/* dist/client/
         - mkdir -p amplify-backend-config/backend/function/bslApi/src/server/_expo/functions

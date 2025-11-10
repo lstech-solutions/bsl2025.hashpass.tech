@@ -111,7 +111,7 @@ config.server = {
 config.maxWorkers = 1; // Use single worker to reduce memory
 config.cacheStores = config.cacheStores || [];
 
-// Optimize transformer for memory
+// Optimize transformer for memory and production builds
 config.transformer = {
   ...config.transformer,
   minifierConfig: {
@@ -119,6 +119,22 @@ config.transformer = {
     keep_classnames: false,
     keep_fnames: false,
   },
+  // Increase worker timeout for production builds
+  workerTimeout: 60000,
+  // Enable unstable_allowRequireContext for better module resolution
+  unstable_allowRequireContext: true,
+};
+
+// Add resolver options for better module resolution
+config.resolver = {
+  ...config.resolver,
+  // Increase resolver timeout
+  resolverMainFields: ['react-native', 'browser', 'main'],
+  // Add asset extensions
+  assetExts: [
+    ...(config.resolver?.assetExts || []),
+    'bin', 'txt', 'jpg', 'png', 'json', 'svg', 'gif', 'webp',
+  ],
 };
 
 module.exports = withNativeWind(wrapWithReanimatedMetroConfig(config), {

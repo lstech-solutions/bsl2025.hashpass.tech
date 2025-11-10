@@ -81,9 +81,24 @@ If you need Amplify CLI functionality:
 
 ## Recommended Fix for This Project
 
-Since this is a static Expo web build, we use **Option 3** (renaming the folder):
+Since this is a static Expo web build, we use **Option 3** (permanently renaming the folder):
 
-The solution implemented renames the `amplify/` folder at the start of the build to prevent Amplify CLI from detecting it, then restores it when needed:
+**SOLUTION IMPLEMENTED:** The `amplify/` folder has been **permanently renamed** to `amplify-backend-config/` in the repository. This prevents Amplify CLI from auto-detecting it, as it only looks for folders named exactly `amplify/`.
+
+### Changes Made:
+
+1. **Folder renamed:** `amplify/` → `amplify-backend-config/`
+2. **Updated `amplify.yml`:** All references updated to use `amplify-backend-config/`
+3. **Updated scripts:** `deploy-bslatam.sh` updated with new folder name
+
+### Why This Works:
+
+- Amplify CLI only auto-detects folders named exactly `amplify/`
+- By renaming to `amplify-backend-config/`, Amplify Console will not attempt initialization
+- The folder structure and functionality remain the same, just with a different name
+- This is a permanent solution that doesn't require any build-time renaming
+
+### Current Configuration:
 
 ```yaml
 version: 1.0
@@ -91,19 +106,15 @@ frontend:
   phases:
     preBuild:
       commands:
-        # Temporarily rename amplify/ folder to prevent Amplify CLI auto-initialization
-        - if [ -d amplify ]; then mv amplify amplify-temp-backend; fi
-        - 'echo "Renamed amplify/ folder to prevent auto-initialization"'
+        # Note: amplify/ folder renamed to amplify-backend-config/ to prevent auto-init
+        - 'echo "Using amplify-backend-config/ folder"'
         # ... rest of preBuild commands ...
     build:
       commands:
-        # Restore amplify/ folder now that we need it for copying files
-        - if [ -d amplify-temp-backend ]; then mv amplify-temp-backend amplify; fi
-        - 'echo "Restored amplify/ folder for build process"'
+        # Use amplify-backend-config/ instead of amplify/
+        - mkdir -p amplify-backend-config/backend/function/bslApi/...
         # ... rest of build commands ...
 ```
-
-This prevents Amplify CLI from detecting the folder and attempting auto-initialization, while still allowing us to use the folder structure during the build process.
 
 ## Verification
 

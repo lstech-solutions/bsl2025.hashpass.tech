@@ -1413,7 +1413,7 @@ export default function MyRequestsView() {
       {/* Slot Picker Modal */}
       <Modal
         visible={showSlotPicker}
-        animationType="fade"
+        animationType="slide"
         transparent={true}
         onRequestClose={() => {
           setShowSlotPicker(false);
@@ -1422,7 +1422,7 @@ export default function MyRequestsView() {
       >
         <View style={styles.modalOverlay}>
           <View style={[
-            styles.modalContent,
+            styles.slotPickerModalContent,
             {
               backgroundColor: colors.background?.paper || (isDark ? '#1a1a1a' : '#ffffff'),
               borderColor: colors.divider || (isDark ? '#333333' : '#e0e0e0'),
@@ -1430,45 +1430,68 @@ export default function MyRequestsView() {
           ]}>
             {/* Close X Button */}
             <TouchableOpacity
-              style={styles.closeButton}
+              style={styles.slotPickerCloseButton}
               onPress={() => {
                 setShowSlotPicker(false);
                 setSelectedSlot(null);
               }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <MaterialIcons name="close" size={24} color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')} />
+              <MaterialIcons name="close" size={24} color={colors.text?.primary || (isDark ? '#FFFFFF' : '#000000')} />
             </TouchableOpacity>
             
             {/* Header */}
-            <View style={styles.modalHeader}>
-              <MaterialIcons
-                name="schedule"
-                size={32}
-                color={colors.primary || '#007AFF'}
-              />
-              <Text style={[styles.modalTitle, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000') }]}>
+            <View style={styles.slotPickerHeader}>
+              <View style={[
+                styles.slotPickerIconContainer,
+                { backgroundColor: (colors.primary || '#007AFF') + '15' }
+              ]}>
+                <MaterialIcons
+                  name="schedule"
+                  size={28}
+                  color={colors.primary || '#007AFF'}
+                />
+              </View>
+              <Text style={[styles.slotPickerTitle, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000') }]}>
                 Select Time Slot
+              </Text>
+              <Text style={[styles.slotPickerSubtitle, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
+                Choose an available time slot for the meeting
               </Text>
             </View>
 
-            <Text style={[styles.modalSubtitle, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
-              Choose an available time slot for the meeting
-            </Text>
-
             {loadingSlots ? (
-              <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>Loading available slots...</Text>
+              <View style={styles.slotPickerLoadingContainer}>
+                <MaterialIcons name="hourglass-empty" size={32} color={colors.text?.secondary || (isDark ? '#888888' : '#999999')} />
+                <Text style={[styles.slotPickerLoadingText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
+                  Loading available slots...
+                </Text>
               </View>
             ) : availableSlots.length === 0 ? (
-              <View style={styles.emptySlotsContainer}>
-                <MaterialIcons name="schedule" size={48} color={colors.text?.secondary || (isDark ? '#888888' : '#999999')} />
-                <Text style={styles.emptySlotsText}>No available slots found</Text>
-                <Text style={styles.emptySlotsSubtext}>
+              <View style={styles.slotPickerEmptyContainer}>
+                <View style={[
+                  styles.slotPickerEmptyIconContainer,
+                  { backgroundColor: (colors.text?.secondary || '#999999') + '15' }
+                ]}>
+                  <MaterialIcons 
+                    name="schedule" 
+                    size={48} 
+                    color={colors.text?.secondary || (isDark ? '#888888' : '#999999')} 
+                  />
+                </View>
+                <Text style={[styles.slotPickerEmptyText, { color: colors.text?.primary || (isDark ? '#E0E0E0' : '#333333') }]}>
+                  No available slots found
+                </Text>
+                <Text style={[styles.slotPickerEmptySubtext, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
                   Please mark some time slots as available in your schedule
                 </Text>
               </View>
             ) : (
-              <ScrollView style={styles.slotsList}>
+              <ScrollView 
+                style={styles.slotPickerList}
+                showsVerticalScrollIndicator={true}
+                contentContainerStyle={styles.slotPickerListContent}
+              >
                 {availableSlots.map((slot, index) => {
                   const slotDate = new Date(slot.slot_time);
                   const isSelected = selectedSlot === slot.slot_time;
@@ -1487,25 +1510,64 @@ export default function MyRequestsView() {
                     <TouchableOpacity
                       key={index}
                       style={[
-                        styles.slotItem,
-                        isSelected && styles.slotItemSelected
+                        styles.slotPickerItem,
+                        isSelected && styles.slotPickerItemSelected,
+                        {
+                          backgroundColor: isSelected 
+                            ? (colors.success?.main || '#4CAF50') + '15'
+                            : (colors.background?.default || (isDark ? '#2a2a2a' : '#f8f8f8')),
+                          borderColor: isSelected 
+                            ? (colors.success?.main || '#4CAF50')
+                            : (colors.divider || (isDark ? '#404040' : '#e5e5e5')),
+                        }
                       ]}
                       onPress={() => setSelectedSlot(slot.slot_time)}
+                      activeOpacity={0.7}
                     >
-                      <View style={styles.slotInfo}>
-                        <Text style={[styles.slotDate, isSelected && styles.slotDateSelected]}>
-                          {formattedDate}
-                        </Text>
-                        <Text style={[styles.slotTime, isSelected && styles.slotTimeSelected]}>
-                          {formattedTime}
-                        </Text>
-                        <Text style={[styles.slotDuration, isSelected && styles.slotDurationSelected]}>
-                          {slot.duration_minutes || 15} minutes
-                        </Text>
+                      <View style={styles.slotPickerItemContent}>
+                        <View style={styles.slotPickerItemLeft}>
+                          <View style={[
+                            styles.slotPickerTimeBadge,
+                            isSelected && {
+                              backgroundColor: colors.success?.main || '#4CAF50',
+                            }
+                          ]}>
+                            <MaterialIcons 
+                              name="access-time" 
+                              size={16} 
+                              color={isSelected ? 'white' : (colors.text?.secondary || '#666666')} 
+                            />
+                            <Text style={[
+                              styles.slotPickerTimeText,
+                              isSelected && styles.slotPickerTimeTextSelected
+                            ]}>
+                              {formattedTime}
+                            </Text>
+                          </View>
+                          <View style={styles.slotPickerItemInfo}>
+                            <Text style={[
+                              styles.slotPickerDateText,
+                              isSelected && { color: colors.success?.main || '#4CAF50' }
+                            ]}>
+                              {formattedDate}
+                            </Text>
+                            <Text style={[
+                              styles.slotPickerDurationText,
+                              { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }
+                            ]}>
+                              {slot.duration_minutes || 15} minutes
+                            </Text>
+                          </View>
+                        </View>
+                        {isSelected && (
+                          <View style={[
+                            styles.slotPickerCheckContainer,
+                            { backgroundColor: colors.success?.main || '#4CAF50' }
+                          ]}>
+                            <MaterialIcons name="check" size={20} color="white" />
+                          </View>
+                        )}
                       </View>
-                      {isSelected && (
-                        <MaterialIcons name="check-circle" size={24} color="#4CAF50" />
-                      )}
                     </TouchableOpacity>
                   );
                 })}
@@ -1513,25 +1575,33 @@ export default function MyRequestsView() {
             )}
 
             {selectedSlot && (
-              <View style={styles.modalFooter}>
+              <View style={[
+                styles.slotPickerFooter,
+                { borderTopColor: colors.divider || (isDark ? '#404040' : '#e5e5e5') }
+              ]}>
                 <TouchableOpacity
-                  style={styles.confirmButton}
+                  style={[
+                    styles.slotPickerConfirmButton,
+                    { backgroundColor: colors.success?.main || '#4CAF50' },
+                    loadingSlots && styles.slotPickerConfirmButtonDisabled
+                  ]}
                   onPress={() => {
                     if (selectedRequest && selectedSlot) {
                       handleAcceptRequest(selectedRequest, selectedSlot);
                     }
                   }}
                   disabled={loadingSlots}
+                  activeOpacity={0.8}
                 >
                   {loadingSlots ? (
                     <>
                       <MaterialIcons name="hourglass-empty" size={20} color="white" />
-                      <Text style={styles.confirmButtonText}>Scheduling...</Text>
+                      <Text style={styles.slotPickerConfirmButtonText}>Scheduling...</Text>
                     </>
                   ) : (
                     <>
                       <MaterialIcons name="check-circle" size={20} color="white" />
-                      <Text style={styles.confirmButtonText}>Confirm Selection</Text>
+                      <Text style={styles.slotPickerConfirmButtonText}>Confirm Selection</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -2576,6 +2646,192 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Slot Picker Modal Styles
+  slotPickerModalContent: {
+    width: '90%',
+    maxWidth: 500,
+    maxHeight: '85%',
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  slotPickerCloseButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  slotPickerHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  slotPickerIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  slotPickerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  slotPickerSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  slotPickerLoadingContainer: {
+    padding: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  slotPickerLoadingText: {
+    fontSize: 16,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  slotPickerEmptyContainer: {
+    padding: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  slotPickerEmptyIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  slotPickerEmptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  slotPickerEmptySubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 20,
+  },
+  slotPickerList: {
+    maxHeight: 400,
+    marginHorizontal: -24,
+    paddingHorizontal: 24,
+  },
+  slotPickerListContent: {
+    paddingBottom: 16,
+  },
+  slotPickerItem: {
+    borderRadius: 16,
+    borderWidth: 2,
+    marginBottom: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  slotPickerItemSelected: {
+    shadowColor: '#4CAF50',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  slotPickerItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  slotPickerItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 16,
+  },
+  slotPickerTimeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+  },
+  slotPickerTimeText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000'),
+  },
+  slotPickerTimeTextSelected: {
+    color: 'white',
+  },
+  slotPickerItemInfo: {
+    flex: 1,
+  },
+  slotPickerDateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000'),
+    marginBottom: 4,
+  },
+  slotPickerDurationText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  slotPickerCheckContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  slotPickerFooter: {
+    paddingTop: 20,
+    marginTop: 20,
+    borderTopWidth: 1,
+  },
+  slotPickerConfirmButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
+    gap: 10,
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  slotPickerConfirmButtonDisabled: {
+    opacity: 0.6,
+  },
+  slotPickerConfirmButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   eventDetails: {
     marginBottom: 20,

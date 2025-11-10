@@ -34,6 +34,7 @@ DECLARE
     remaining_boost DECIMAL;
     requester_uuid UUID;
     speaker_uuid UUID;  -- UUID from bsl_speakers.id
+    speaker_user_id_uuid UUID;  -- Explicitly typed UUID variable
 BEGIN
     -- Step 1: Convert requester_id from TEXT to UUID
     BEGIN
@@ -154,8 +155,12 @@ BEGIN
         RETURN result;
     END IF;
     
-    -- Step 11: Validate speaker has user_id
-    IF get_speaker_user_id(speaker_uuid) IS NULL THEN
+    -- Step 11: Get speaker's user_id into explicitly typed UUID variable
+    -- Assign helper function result to variable FIRST, then use variable in VALUES
+    speaker_user_id_uuid := get_speaker_user_id(speaker_uuid);
+    
+    -- Step 12: Validate we got a valid UUID
+    IF speaker_user_id_uuid IS NULL THEN
         result := json_build_object(
             'success', false, 
             'error', 'Speaker not linked to user', 
@@ -164,7 +169,8 @@ BEGIN
         RETURN result;
     END IF;
     
-    -- Step 12: Insert using VALUES with helper function - should have perfect type inference
+    -- Step 13: Insert using VALUES with explicitly typed UUID variable
+    -- The variable is already UUID type, so PostgreSQL should recognize it correctly
     INSERT INTO public.meeting_requests (
         id, 
         requester_id,
@@ -186,7 +192,7 @@ BEGIN
     ) VALUES (
         new_request_id,
         requester_uuid,
-        get_speaker_user_id(speaker_uuid),  -- Helper function returns UUID - perfect type inference
+        speaker_user_id_uuid,  -- Use explicitly typed UUID variable
         p_speaker_name,
         p_requester_name,
         p_requester_company,

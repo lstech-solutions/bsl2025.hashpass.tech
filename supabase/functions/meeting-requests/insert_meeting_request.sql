@@ -35,6 +35,7 @@ DECLARE
     requester_uuid UUID;
     speaker_uuid UUID;  -- UUID from bsl_speakers.id
     speaker_user_id_uuid UUID;  -- Explicitly typed UUID variable
+    actual_ticket_type TEXT;  -- Store the actual pass type from database
 BEGIN
     -- Step 1: Convert requester_id from TEXT to UUID
     BEGIN
@@ -82,7 +83,10 @@ BEGIN
         RETURN result;
     END IF;
     
-    -- Step 5: Count actual meeting requests
+    -- Step 5: Use pass_type from database, fallback to parameter
+    actual_ticket_type := COALESCE(pass_record.pass_type::text, p_requester_ticket_type, 'general');
+    
+    -- Step 6: Count actual meeting requests
     SELECT COUNT(*)
     INTO total_requests
     FROM public.meeting_requests 
@@ -197,7 +201,7 @@ BEGIN
         p_requester_name,
         p_requester_company,
         p_requester_title,
-        COALESCE(pass_record.pass_type::text, p_requester_ticket_type), -- Use pass_type from database, fallback to parameter
+        actual_ticket_type, -- Use pass_type from database
         p_meeting_type,
         p_message,
         p_note,

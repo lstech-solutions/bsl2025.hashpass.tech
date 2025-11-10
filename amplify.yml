@@ -3,10 +3,9 @@ frontend:
   phases:
     preBuild:
       commands:
-        # Temporarily rename amplify/ folder to prevent Amplify CLI auto-initialization
-        # We'll restore it later in the build phase when we need it
-        - if [ -d amplify ]; then mv amplify amplify-temp-backend; fi
-        - 'echo "Renamed amplify/ folder to prevent auto-initialization"'
+        # Note: amplify/ folder has been permanently renamed to amplify-backend-config/
+        # to prevent Amplify CLI from auto-detecting and initializing it
+        - 'echo "Using amplify-backend-config/ folder (renamed from amplify/ to prevent auto-init)"'
         - nvm install 22.18.0
         - npm install --quiet --global @expo/cli
         - >
@@ -39,16 +38,13 @@ frontend:
         - 'echo "Show all events: $AMPLIFY_SHOW_ALL_EVENTS"'
     build:
       commands:
-        # Restore amplify/ folder now that we need it for copying files
-        - if [ -d amplify-temp-backend ]; then mv amplify-temp-backend amplify; fi
-        - 'echo "Restored amplify/ folder for build process"'
         - rm -rf dist
         - mkdir -p dist/client/_expo/functions/api/bslatam
         - 'npm run build:web'
         - cp -r dist/server/* dist/client/
-        - mkdir -p amplify/backend/function/bslApi/src/server/_expo/functions
-        - rm -rf amplify/backend/function/bslApi/src/server/_expo/functions/api || true
-        - cp -r dist/server/_expo/functions/api amplify/backend/function/bslApi/src/server/_expo/functions/
+        - mkdir -p amplify-backend-config/backend/function/bslApi/src/server/_expo/functions
+        - rm -rf amplify-backend-config/backend/function/bslApi/src/server/_expo/functions/api || true
+        - cp -r dist/server/_expo/functions/api amplify-backend-config/backend/function/bslApi/src/server/_expo/functions/
         - mkdir -p dist/client/api/bslatam
         - 'echo "{\"type\": \"module\"}" > dist/client/api/package.json'
         - |

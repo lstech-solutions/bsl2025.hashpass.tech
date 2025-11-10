@@ -293,20 +293,13 @@ const MySchedule = () => {
         setMeetings([]);
         return;
       }
-      const { data: speakerRows } = await supabase
-        .from('bsl_speakers')
-        .select('id')
-        .eq('user_id', user.id);
-      const speakerIds = (speakerRows || []).map((r: any) => r.id).join(',');
+      // Note: meeting_requests.speaker_id is UUID (user_id from bsl_speakers), not bsl_speakers.id
+      // So we use user.id directly
       let query = supabase
         .from('meetings')
         .select('*')
         .order('created_at', { ascending: false });
-      if (speakerIds) {
-        query = query.or(`requester_id.eq.${user.id},speaker_id.in.(${speakerIds})`);
-      } else {
-        query = query.eq('requester_id', user.id);
-      }
+      query = query.or(`requester_id.eq.${user.id},speaker_id.eq.${user.id}`);
       const { data } = await query;
       setMeetings(data || []);
     } finally {

@@ -52,13 +52,11 @@ const MeetingsPage = () => {
     loadMeetings();
   }, [user]);
 
-  const getSpeakerIds = async () => {
+  const getSpeakerUserIds = async () => {
+    // Note: meeting_requests.speaker_id is UUID (user_id from bsl_speakers), not bsl_speakers.id
+    // So we just return the user.id directly
     if (!user) return '';
-    const { data } = await supabase
-      .from('bsl_speakers')
-      .select('id')
-      .eq('user_id', user.id);
-    return data?.map((s: any) => s.id).join(',') || '';
+    return user.id;
   };
 
   const loadMeetings = async () => {
@@ -69,14 +67,15 @@ const MeetingsPage = () => {
     }
     try {
       setLoading(true);
-      const speakerIds = await getSpeakerIds();
+      const speakerUserId = await getSpeakerUserIds();
       let query = supabase
         .from('meetings')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (speakerIds) {
-        query = query.or(`requester_id.eq.${user.id},speaker_id.in.(${speakerIds})`);
+      if (speakerUserId) {
+        // Note: meeting_requests.speaker_id is UUID (user_id), so we use user.id directly
+        query = query.or(`requester_id.eq.${user.id},speaker_id.eq.${speakerUserId}`);
       } else {
         query = query.eq('requester_id', user.id);
       }

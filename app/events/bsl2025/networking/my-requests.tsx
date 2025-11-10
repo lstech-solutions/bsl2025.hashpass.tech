@@ -960,8 +960,8 @@ export default function MyRequestsView() {
             </View>
             {request.boost_amount && request.boost_amount > 0 && (
               <View style={styles.metaItem}>
-                <MaterialIcons name="flash-on" size={16} color="#FFC107" />
-                <Text style={styles.metaText}>{request.boost_amount} boost</Text>
+                <MaterialIcons name="bolt" size={16} color="#FFC107" />
+                <Text style={styles.metaText}>{request.boost_amount} BOOST</Text>
               </View>
             )}
           </View>
@@ -1103,8 +1103,11 @@ export default function MyRequestsView() {
                 </View>
                 {selectedRequest.boost_amount && selectedRequest.boost_amount > 0 && (
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailRowLabel}>Boost:</Text>
-                    <Text style={styles.detailRowValue}>{selectedRequest.boost_amount} points</Text>
+                    <View style={styles.detailRowLabelContainer}>
+                      <MaterialIcons name="bolt" size={16} color="#FFC107" />
+                      <Text style={styles.detailRowLabel}>Boost:</Text>
+                    </View>
+                    <Text style={styles.detailRowValue}>{selectedRequest.boost_amount} BOOST</Text>
                   </View>
                 )}
                 {selectedRequest.expires_at && (

@@ -1,9 +1,12 @@
 import { supabase } from '../lib/supabase';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 
 interface UseRealtimeChatProps {
   roomName: string;
   username: string;
+  userId?: string;
+  otherParticipantId?: string;
 }
 
 export interface ChatMessage {
@@ -12,39 +15,114 @@ export interface ChatMessage {
   user: {
     name: string;
     id: string;
+    avatar?: string;
   };
   createdAt: string;
   messageType?: 'text' | 'system' | 'meeting_update';
 }
 
 const EVENT_MESSAGE_TYPE = 'message';
+const EVENT_PRESENCE_TYPE = 'presence';
+const PRESENCE_INTERVAL = 30000; // 30 seconds
 
-export function useRealtimeChat({ roomName, username }: UseRealtimeChatProps) {
+export function useRealtimeChat({ roomName, username, userId, otherParticipantId }: UseRealtimeChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [channel, setChannel] = useState<ReturnType<typeof supabase.channel> | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [presence, setPresence] = useState<{ [userId: string]: { isOnline: boolean; lastSeen: Date } }>({});
+  const presenceIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     const newChannel = supabase.channel(roomName);
+    channelRef.current = newChannel;
+
+    // Send presence update helper
+    const sendPresenceUpdate = (isOnline: boolean) => {
+      if (!newChannel || !userId) return;
+      
+      newChannel.send({
+        type: 'broadcast',
+        event: EVENT_PRESENCE_TYPE,
+        payload: {
+          userId,
+          username,
+          isOnline,
+          lastSeen: new Date().toISOString(),
+        },
+      });
+    };
 
     newChannel
       .on('broadcast', { event: EVENT_MESSAGE_TYPE }, (payload) => {
         setMessages((current) => [...current, payload.payload as ChatMessage]);
       })
+      .on('broadcast', { event: EVENT_PRESENCE_TYPE }, (payload) => {
+        const presenceData = payload.payload as { userId: string; isOnline: boolean; lastSeen: string };
+        setPresence((current) => ({
+          ...current,
+          [presenceData.userId]: {
+            isOnline: presenceData.isOnline,
+            lastSeen: new Date(presenceData.lastSeen),
+          },
+        }));
+      })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
+          setChannel(newChannel);
+          // Send initial presence
+          if (userId) {
+            sendPresenceUpdate(true);
+            
+            // Set up periodic presence updates
+            presenceIntervalRef.current = setInterval(() => {
+              sendPresenceUpdate(true);
+            }, PRESENCE_INTERVAL);
+          }
         } else {
           setIsConnected(false);
+          if (presenceIntervalRef.current) {
+            clearInterval(presenceIntervalRef.current);
+            presenceIntervalRef.current = null;
+          }
+          // Send offline presence
+          if (userId) {
+            sendPresenceUpdate(false);
+          }
         }
       });
 
-    setChannel(newChannel);
+    // Handle app state changes
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App came to foreground
+        if (userId && newChannel) {
+          sendPresenceUpdate(true);
+        }
+      } else if (nextAppState.match(/inactive|background/)) {
+        // App went to background
+        if (userId && newChannel) {
+          sendPresenceUpdate(false);
+        }
+      }
+      appStateRef.current = nextAppState;
+    });
 
     return () => {
+      subscription.remove();
+      if (presenceIntervalRef.current) {
+        clearInterval(presenceIntervalRef.current);
+        presenceIntervalRef.current = null;
+      }
+      if (userId && newChannel) {
+        sendPresenceUpdate(false);
+      }
       supabase.removeChannel(newChannel);
+      channelRef.current = null;
     };
-  }, [roomName, username, supabase]);
+  }, [roomName, username, userId]);
 
   const sendMessage = useCallback(
     async (content: string, messageType: 'text' | 'system' | 'meeting_update' = 'text') => {
@@ -77,5 +155,5 @@ export function useRealtimeChat({ roomName, username }: UseRealtimeChatProps) {
     setMessages([]);
   }, []);
 
-  return { messages, sendMessage, isConnected, clearMessages };
+  return { messages, sendMessage, isConnected, clearMessages, presence };
 }

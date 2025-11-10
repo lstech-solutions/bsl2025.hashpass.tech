@@ -57,26 +57,36 @@ BEGIN
     
     -- Send notification to requester (only if it doesn't already exist)
     IF existing_notification_id IS NULL THEN
-        PERFORM create_notification(
-            NEW.requester_id,
-            'meeting_request',
-            'Request Sent ✓',
-            'Your meeting request to ' || NEW.speaker_name || ' has been sent successfully.',
-            NEW.id,
-            speaker_text_id,  -- Use TEXT id for notifications
-            false
-        );
+        BEGIN
+            PERFORM create_notification(
+                NEW.requester_id,
+                'meeting_request',
+                'Request Sent ✓',
+                'Your meeting request to ' || NEW.speaker_name || ' has been sent successfully.',
+                NEW.id,
+                speaker_text_id,  -- Use TEXT id for notifications
+                false
+            );
+        EXCEPTION
+            WHEN OTHERS THEN
+                RAISE WARNING 'create_notification error: %', SQLERRM;
+        END;
     END IF;
     
     -- Send prioritized notification to speaker (use TEXT id)
-    PERFORM send_prioritized_notification(
-        speaker_text_id,  -- Use TEXT id
-        NEW.requester_name,
-        NEW.requester_company,
-        NEW.requester_ticket_type,
-        COALESCE(NEW.boost_amount, 0),
-        NEW.id
-    );
+    BEGIN
+        PERFORM send_prioritized_notification(
+            speaker_text_id,  -- Use TEXT id
+            NEW.requester_name,
+            NEW.requester_company,
+            NEW.requester_ticket_type,
+            COALESCE(NEW.boost_amount, 0),
+            NEW.id
+        );
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE WARNING 'send_prioritized_notification error: %', SQLERRM;
+    END;
     
     -- Update request limits (if the function exists)
     BEGIN

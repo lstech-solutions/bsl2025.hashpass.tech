@@ -587,14 +587,8 @@ export default function MyRequestsView() {
   const handleAcceptRequest = async (request: MeetingRequest, slotTime?: string) => {
     if (!user) return;
     
-    // If no slot provided, show slot picker first
-    if (!slotTime) {
-      await loadAvailableSlots(request.speaker_id, request.duration_minutes || 15);
-      return;
-    }
-    
     try {
-      // Get speaker_id for current user
+      // Get speaker_id for current user (bsl_speakers.id expected by RPCs and slots RPC)
       const { data: speakerData } = await supabase
         .from('bsl_speakers')
         .select('id')
@@ -606,10 +600,16 @@ export default function MyRequestsView() {
         return;
       }
 
+      // If no slot provided, show slot picker first using bsl_speakers.id (TEXT)
+      if (!slotTime) {
+        await loadAvailableSlots(speakerData.id, request.duration_minutes || 15);
+        return;
+      }
+      
       const { data, error } = await supabase
         .rpc('accept_meeting_request', {
           p_request_id: request.id,
-          p_speaker_id: request.speaker_id,
+          p_speaker_id: speakerData.id, // Use bsl_speakers.id (TEXT), not user_id
           p_slot_start_time: slotTime,
           p_speaker_response: null
         });

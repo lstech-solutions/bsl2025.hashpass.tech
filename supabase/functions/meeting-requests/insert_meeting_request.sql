@@ -34,6 +34,7 @@ DECLARE
     remaining_boost DECIMAL;
     requester_uuid UUID;
     speaker_uuid UUID;  -- UUID from bsl_speakers.id
+    speaker_user_id_uuid UUID;  -- Get this first, then use in INSERT
 BEGIN
     -- Step 1: Convert requester_id from TEXT to UUID
     BEGIN
@@ -154,12 +155,23 @@ BEGIN
         RETURN result;
     END IF;
     
-    -- Step 12: Insert using INSERT...SELECT with CTE to force UUID type
-    WITH speaker_data AS (
-        SELECT user_id::UUID as speaker_user_uuid
-        FROM public.bsl_speakers
-        WHERE id = speaker_uuid
-    )
+    -- Step 11: Get speaker's user_id FIRST into a properly typed UUID variable
+    SELECT user_id INTO speaker_user_id_uuid
+    FROM public.bsl_speakers
+    WHERE id = speaker_uuid;
+    
+    -- Step 12: Validate we got a valid UUID
+    IF speaker_user_id_uuid IS NULL THEN
+        result := json_build_object(
+            'success', false, 
+            'error', 'Speaker not linked to user', 
+            'message', 'The speaker must be linked to a user account to receive meeting requests'
+        );
+        RETURN result;
+    END IF;
+    
+    -- Step 13: Insert using INSERT...SELECT with the pre-fetched UUID variable
+    -- Use a simple SELECT with the variable directly - no CTE, no subquery
     INSERT INTO public.meeting_requests (
         id, 
         requester_id,
@@ -182,7 +194,7 @@ BEGIN
     SELECT 
         new_request_id::UUID,
         requester_uuid::UUID,
-        speaker_user_uuid::UUID,  -- From CTE, explicitly typed as UUID
+        speaker_user_id_uuid::UUID,  -- Use pre-fetched UUID variable directly
         p_speaker_name::TEXT,
         p_requester_name::TEXT,
         p_requester_company::TEXT,
@@ -196,8 +208,7 @@ BEGIN
         COALESCE(p_expires_at, NOW() + INTERVAL '7 days')::TIMESTAMPTZ,
         'pending'::TEXT,
         NOW()::TIMESTAMPTZ,
-        NOW()::TIMESTAMPTZ
-    FROM speaker_data;
+        NOW()::TIMESTAMPTZ;
     
     -- Step 13: Update pass usage
     UPDATE public.passes 

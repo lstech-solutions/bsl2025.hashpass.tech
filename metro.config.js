@@ -145,6 +145,23 @@ config.resolver = {
   assetExts: allAssetExts,
 };
 
-module.exports = withNativeWind(wrapWithReanimatedMetroConfig(config), {
-  input: './app/global.css',
-});
+// Conditionally apply NativeWind and Reanimated based on environment
+// During production export, these can cause issues with Metro bundler
+const isProductionExport = process.env.NODE_ENV === 'production' || process.env.EXPO_PUBLIC_ENABLE_STATIC_EXPORT === 'true';
+
+let finalConfig = config;
+
+// Only wrap with Reanimated and NativeWind if not doing static export
+if (!isProductionExport) {
+  finalConfig = wrapWithReanimatedMetroConfig(finalConfig);
+  finalConfig = withNativeWind(finalConfig, {
+    input: './app/global.css',
+  });
+} else {
+  // For production export, apply NativeWind but skip Reanimated to avoid issues
+  finalConfig = withNativeWind(finalConfig, {
+    input: './app/global.css',
+  });
+}
+
+module.exports = finalConfig;

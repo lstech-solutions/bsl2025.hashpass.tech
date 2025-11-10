@@ -237,13 +237,27 @@ class PassSystemService {
     boostAmount: number = 0
   ): Promise<PassRequestLimits> {
     try {
-    const { data, error } = await supabase
-      .rpc('can_make_meeting_request', {
-        p_user_id: userId.toString(), // Pass as TEXT string
-        p_speaker_id: speakerId,
-        p_boost_amount: boostAmount
-      })
-      .single();
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(userId)) {
+        console.error('Invalid user ID format:', userId);
+        return {
+          can_request: false,
+          canSendRequest: false,
+          reason: 'Invalid user ID format',
+          pass_type: null,
+          remaining_requests: 0,
+          remaining_boost: 0
+        };
+      }
+
+      const { data, error } = await supabase
+        .rpc('can_make_meeting_request', {
+          p_user_id: userId, // Pass as UUID (Supabase will handle conversion)
+          p_speaker_id: speakerId,
+          p_boost_amount: boostAmount
+        })
+        .single();
 
       if (error) {
         console.error('Error checking meeting request limits:', error);

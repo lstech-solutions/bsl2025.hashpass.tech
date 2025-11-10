@@ -1463,6 +1463,28 @@ export default function SpeakerDetail() {
                 </View>
               </View>
 
+              {/* Speaker Information */}
+              <View style={styles.detailInfoSection}>
+                <Text style={styles.detailSectionTitle}>Speaker</Text>
+                <View style={styles.speakerDetailCard}>
+                  <SpeakerAvatar
+                    name={selectedRequestDetail.speaker_name}
+                    imageUrl={speaker?.image || getSpeakerAvatarUrl(selectedRequestDetail.speaker_name)}
+                    size={60}
+                    showBorder={true}
+                  />
+                  <View style={styles.speakerDetailInfo}>
+                    <Text style={styles.speakerDetailName}>{selectedRequestDetail.speaker_name}</Text>
+                    {speaker?.title && (
+                      <Text style={styles.speakerDetailTitle}>{speaker.title}</Text>
+                    )}
+                    {speaker?.company && (
+                      <Text style={styles.speakerDetailCompany}>{speaker.company}</Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+
               {/* Request Information */}
               <View style={styles.detailInfoSection}>
                 <Text style={styles.detailSectionTitle}>Request Information</Text>
@@ -1470,11 +1492,6 @@ export default function SpeakerDetail() {
                 <View style={styles.detailInfoRow}>
                   <Text style={styles.detailInfoLabel}>Request ID:</Text>
                   <Text style={styles.detailInfoValue}>{selectedRequestDetail.id}</Text>
-                </View>
-                
-                <View style={styles.detailInfoRow}>
-                  <Text style={styles.detailInfoLabel}>Speaker:</Text>
-                  <Text style={styles.detailInfoValue}>{selectedRequestDetail.speaker_name}</Text>
                 </View>
                 
                 <View style={styles.detailInfoRow}>
@@ -2212,6 +2229,34 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontWeight: '600',
     color: colors.text.primary,
     marginBottom: 12,
+  },
+  speakerDetailCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.paper,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  speakerDetailInfo: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  speakerDetailName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  speakerDetailTitle: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 2,
+  },
+  speakerDetailCompany: {
+    fontSize: 14,
+    color: colors.text.secondary,
   },
   detailInfoRow: {
     flexDirection: 'row',

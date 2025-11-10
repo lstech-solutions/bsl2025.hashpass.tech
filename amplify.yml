@@ -12,7 +12,8 @@ frontend:
           if [ -f yarn.lock ]; then
             yarn install --frozen-lockfile
           elif [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
+            # Install all dependencies including devDependencies (needed for autoprefixer, postcss, etc.)
+            npm ci --include=dev
           else
             npm install
           fi

@@ -1,18 +1,9 @@
--- ============================================================================
--- Function: insert_meeting_request
--- Purpose: Create a new meeting request between a requester and a speaker
--- 
--- Parameters:
---   p_speaker_id (TEXT): The speaker's ID from bsl_speakers table (TEXT)
---   Note: This function converts the TEXT speaker_id to the speaker's user_id (UUID)
---         for insertion into meeting_requests.speaker_id (UUID column)
---
--- Returns: JSON with success status and request_id or error message
--- ============================================================================
+-- Fix insert_meeting_request by using INSERT...SELECT with subquery for UUID
+-- This forces PostgreSQL to recognize the UUID type correctly
 
 CREATE OR REPLACE FUNCTION insert_meeting_request(
     p_requester_id TEXT,
-    p_speaker_id TEXT,  -- This is the TEXT id from bsl_speakers, NOT the UUID
+    p_speaker_id TEXT,
     p_speaker_name TEXT,
     p_requester_name TEXT,
     p_requester_company TEXT,
@@ -186,7 +177,7 @@ BEGIN
         updated_at = NOW()
     WHERE id = pass_record.id;
     
-    -- Step 13: Return success
+    -- Step 12: Return success
     result := json_build_object(
         'success', true, 
         'request_id', new_request_id, 

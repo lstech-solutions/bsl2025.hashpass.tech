@@ -105,10 +105,46 @@ class PassSystemService {
       }
       
       // Extract the first (and only) pass from the array
-      const passData = passDataArray && passDataArray.length > 0 ? passDataArray[0] : null;
+      let passData = passDataArray && passDataArray.length > 0 ? passDataArray[0] : null;
       
       if (!passData) {
-        // No pass found, fallback to counts
+        // No active pass found, try to create one automatically
+        console.log('⚠️ No active pass found for user, attempting to create one...');
+        try {
+          const newPassId = await this.createDefaultPass(userId, 'general');
+          if (newPassId) {
+            // Retry getting pass info after creation
+            const { data: newPassDataArray, error: newPassError } = await supabase
+              .from('passes')
+              .select('*')
+              .eq('user_id', userId)
+              .eq('event_id', 'bsl2025')
+              .eq('status', 'active')
+              .order('created_at', { ascending: false })
+              .limit(1);
+            
+            if (!newPassError && newPassDataArray && newPassDataArray.length > 0) {
+              passData = newPassDataArray[0];
+              console.log('✅ Successfully created and retrieved new pass');
+            } else {
+              // Still no pass, fallback to counts
+              console.warn('⚠️ Failed to retrieve newly created pass, falling back to counts');
+              return await this.getUserPassInfoFromCounts(userId);
+            }
+          } else {
+            // Failed to create pass, fallback to counts
+            console.warn('⚠️ Failed to create default pass, falling back to counts');
+            return await this.getUserPassInfoFromCounts(userId);
+          }
+        } catch (createError) {
+          console.error('❌ Error creating default pass:', createError);
+          // Fallback to counts
+          return await this.getUserPassInfoFromCounts(userId);
+        }
+      }
+      
+      // If we still don't have passData at this point, fallback to counts
+      if (!passData) {
         return await this.getUserPassInfoFromCounts(userId);
       }
 

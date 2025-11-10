@@ -1,18 +1,7 @@
--- ============================================================================
--- Function: insert_meeting_request
--- Purpose: Create a new meeting request between a requester and a speaker
--- 
--- Parameters:
---   p_speaker_id (TEXT): The speaker's ID from bsl_speakers table (TEXT)
---   Note: This function converts the TEXT speaker_id to the speaker's user_id (UUID)
---         for insertion into meeting_requests.speaker_id (UUID column)
---
--- Returns: JSON with success status and request_id or error message
--- ============================================================================
-
+-- Final attempt: Use INSERT...SELECT with CTE to force UUID type
 CREATE OR REPLACE FUNCTION insert_meeting_request(
     p_requester_id TEXT,
-    p_speaker_id TEXT,  -- This is the TEXT id from bsl_speakers, NOT the UUID
+    p_speaker_id TEXT,
     p_speaker_name TEXT,
     p_requester_name TEXT,
     p_requester_company TEXT,
@@ -33,7 +22,7 @@ DECLARE
     remaining_requests INTEGER;
     remaining_boost DECIMAL;
     requester_uuid UUID;
-    speaker_uuid UUID;  -- UUID from bsl_speakers.id
+    speaker_uuid UUID;
 BEGIN
     -- Step 1: Convert requester_id from TEXT to UUID
     BEGIN
@@ -112,17 +101,14 @@ BEGIN
     END IF;
     
     -- Step 9: Convert p_speaker_id (TEXT) to UUID for bsl_speakers.id lookup
-    -- Try to convert directly to UUID first
     BEGIN
         speaker_uuid := p_speaker_id::UUID;
     EXCEPTION
         WHEN OTHERS THEN
-            -- Not a UUID, try mapping table
             SELECT new_id INTO speaker_uuid
             FROM public.bsl_speakers_id_mapping
             WHERE old_id = p_speaker_id;
             
-            -- If still not found, try by name (case-insensitive)
             IF speaker_uuid IS NULL THEN
                 SELECT id INTO speaker_uuid
                 FROM public.bsl_speakers
@@ -217,7 +203,6 @@ BEGIN
     
 EXCEPTION
     WHEN OTHERS THEN
-        -- Log the full error for debugging
         RAISE WARNING 'insert_meeting_request error: %', SQLERRM;
         result := json_build_object(
             'success', false, 

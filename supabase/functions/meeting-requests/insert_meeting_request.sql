@@ -34,7 +34,6 @@ DECLARE
     remaining_boost DECIMAL;
     requester_uuid UUID;
     speaker_uuid UUID;  -- UUID from bsl_speakers.id
-    speaker_user_id_uuid UUID;  -- Get this first, then use in INSERT
 BEGIN
     -- Step 1: Convert requester_id from TEXT to UUID
     BEGIN
@@ -155,23 +154,8 @@ BEGIN
         RETURN result;
     END IF;
     
-    -- Step 11: Get speaker's user_id FIRST into a properly typed UUID variable
-    SELECT user_id INTO speaker_user_id_uuid
-    FROM public.bsl_speakers
-    WHERE id = speaker_uuid;
-    
-    -- Step 12: Validate we got a valid UUID
-    IF speaker_user_id_uuid IS NULL THEN
-        result := json_build_object(
-            'success', false, 
-            'error', 'Speaker not linked to user', 
-            'message', 'The speaker must be linked to a user account to receive meeting requests'
-        );
-        RETURN result;
-    END IF;
-    
-    -- Step 13: Insert using VALUES (not SELECT) with the pre-fetched UUID variable
-    -- VALUES should have better type inference than SELECT
+    -- Step 12: Insert using VALUES with subquery directly - bypass variable type issues
+    -- Use subquery to get user_id directly in VALUES clause with explicit UUID cast
     INSERT INTO public.meeting_requests (
         id, 
         requester_id,
@@ -193,7 +177,7 @@ BEGIN
     ) VALUES (
         new_request_id,
         requester_uuid,
-        speaker_user_id_uuid::UUID,  -- EXPLICIT CAST even though variable is already UUID
+        (SELECT user_id::UUID FROM public.bsl_speakers WHERE id = speaker_uuid),  -- Subquery with explicit UUID cast
         p_speaker_name,
         p_requester_name,
         p_requester_company,

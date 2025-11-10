@@ -15,6 +15,12 @@ import { getSpeakerAvatarUrl, getSpeakerLinkedInUrl, getSpeakerTwitterUrl } from
 import LoadingScreen from '../../../../components/LoadingScreen';
 import { CopilotStep, walkthroughable } from 'react-native-copilot';
 
+// Helper function to generate user avatar URL
+const generateUserAvatarUrl = (name: string): string => {
+  const seed = name.toLowerCase().replace(/\s+/g, '-');
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+};
+
 const CopilotView = walkthroughable(View);
 
 interface Speaker {
@@ -419,10 +425,172 @@ export default function SpeakerDetail() {
     setShowCancelModal(true);
   };
 
-  const handleRequestCardPress = (request: any) => {
+  const handleRequestCardPress = async (request: any) => {
     console.log('🔍 Opening request details:', request);
-    setSelectedRequestDetail(request);
+    
+    // If speaker is viewing, fetch requester details
+    if (isCurrentUserSpeaker && request.requester_id !== user?.id) {
+      try {
+        // Fetch requester profile information
+        const requesterIds = [request.requester_id];
+        let profileMap = new Map();
+        
+        try {
+          const { data: userProfiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url, email')
+            .in('id', requesterIds);
+          
+          profileMap = new Map((userProfiles || []).map(p => [p.id, p]));
+        } catch (e) {
+          console.log('Profiles table not found, using requester_name from request');
+        }
+        
+        const profile = profileMap.get(request.requester_id);
+        const requesterName = request.requester_name || 'User';
+        
+        // Enhance request with requester details
+        const enhancedRequest = {
+          ...request,
+          requester_avatar: profile?.avatar_url || generateUserAvatarUrl(requesterName),
+          requester_full_name: profile?.full_name || requesterName,
+          requester_email: profile?.email || request.requester_name || '',
+        };
+        
+        setSelectedRequestDetail(enhancedRequest);
+      } catch (error) {
+        console.error('Error fetching requester details:', error);
+        setSelectedRequestDetail(request);
+      }
+    } else {
+      setSelectedRequestDetail(request);
+    }
+    
     setShowRequestDetailModal(true);
+  };
+  
+  const handleAcceptRequest = async (request: any, slotTime?: string) => {
+    if (!user || !isCurrentUserSpeaker) return;
+    
+    // If no slot provided, show slot picker first (similar to my-requests.tsx)
+    if (!slotTime) {
+      // For now, just accept without slot selection
+      // TODO: Add slot picker UI
+      showInfo('Info', 'Slot selection will be added soon. Accepting request without slot.');
+      return;
+    }
+    
+    try {
+      // Get speaker's bsl_speakers.id (TEXT) for the function
+      const { data: speakerData } = await supabase
+        .from('bsl_speakers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!speakerData) {
+        showError('Error', 'You are not a speaker');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .rpc('accept_meeting_request', {
+          p_request_id: request.id,
+          p_speaker_id: speakerData.id, // Use bsl_speakers.id (TEXT), not user_id
+          p_slot_start_time: slotTime,
+          p_speaker_response: null
+        });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        showSuccess('Request Accepted', 'The meeting request has been accepted');
+        setShowRequestDetailModal(false);
+        await loadMeetingRequestStatus();
+      } else {
+        throw new Error(data?.error || 'Failed to accept request');
+      }
+    } catch (error: any) {
+      console.error('❌ Error accepting request:', error);
+      showError('Accept Failed', error.message || 'Failed to accept meeting request');
+    }
+  };
+
+  const handleDeclineRequest = async (request: any) => {
+    if (!user || !isCurrentUserSpeaker) return;
+    
+    try {
+      // Get speaker's bsl_speakers.id (TEXT) for the function
+      const { data: speakerData } = await supabase
+        .from('bsl_speakers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!speakerData) {
+        showError('Error', 'You are not a speaker');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .rpc('decline_meeting_request', {
+          p_request_id: request.id,
+          p_speaker_id: speakerData.id, // Use bsl_speakers.id (TEXT), not user_id
+          p_speaker_response: null
+        });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        showSuccess('Request Declined', 'The meeting request has been declined');
+        setShowRequestDetailModal(false);
+        await loadMeetingRequestStatus();
+      } else {
+        throw new Error(data?.error || 'Failed to decline request');
+      }
+    } catch (error: any) {
+      console.error('❌ Error declining request:', error);
+      showError('Decline Failed', error.message || 'Failed to decline meeting request');
+    }
+  };
+
+  const handleBlockUser = async (request: any) => {
+    if (!user || !isCurrentUserSpeaker) return;
+    
+    try {
+      // Get speaker's bsl_speakers.id (TEXT) for the function
+      const { data: speakerData } = await supabase
+        .from('bsl_speakers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!speakerData) {
+        showError('Error', 'You are not a speaker');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .rpc('block_user_and_decline_request', {
+          p_request_id: request.id,
+          p_speaker_id: speakerData.id, // Use bsl_speakers.id (TEXT), not user_id
+          p_user_id: request.requester_id,
+          p_reason: 'User has been blocked'
+        });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        showSuccess('User Blocked', 'The user has been blocked and their request declined');
+        setShowRequestDetailModal(false);
+        await loadMeetingRequestStatus();
+      } else {
+        throw new Error(data?.error || 'Failed to block user');
+      }
+    } catch (error: any) {
+      console.error('❌ Error blocking user:', error);
+      showError('Block Failed', error.message || 'Failed to block user');
+    }
   };
 
   const confirmCancelRequest = async () => {
@@ -435,10 +603,11 @@ export default function SpeakerDetail() {
       console.log('🔄 User ID:', user.id);
       
       // Use the new RPC function to cancel the meeting request
+      // Note: Function expects UUID, not string
       const { data: cancelResult, error: cancelError } = await supabase
         .rpc('cancel_meeting_request', {
-          p_request_id: selectedRequestToCancel.id.toString(),
-          p_user_id: user.id.toString()
+          p_request_id: selectedRequestToCancel.id,
+          p_user_id: user.id
         });
 
       console.log('🔄 Cancel response - data:', cancelResult);
@@ -1528,16 +1697,18 @@ export default function SpeakerDetail() {
                 </View>
               </View>
 
-              {/* Message - Only show for user's own requests */}
-              {selectedRequestDetail.message && selectedRequestDetail.requester_id === user?.id && (
+              {/* Message - Show for both requester and speaker */}
+              {selectedRequestDetail.message && (
                 <View style={styles.detailInfoSection}>
-                  <Text style={styles.detailSectionTitle}>Your Message</Text>
+                  <Text style={styles.detailSectionTitle}>
+                    {selectedRequestDetail.requester_id === user?.id ? 'Your Message' : 'Message'}
+                  </Text>
                   <Text style={styles.detailMessage}>{selectedRequestDetail.message}</Text>
                 </View>
               )}
 
-              {/* Note/Intentions - Only show for user's own requests */}
-              {selectedRequestDetail.note && selectedRequestDetail.requester_id === user?.id && (
+              {/* Note/Intentions - Show for both requester and speaker */}
+              {selectedRequestDetail.note && (
                 <View style={styles.detailInfoSection}>
                   <Text style={styles.detailSectionTitle}>Meeting Intentions</Text>
                   <View style={styles.detailIntentionsContainer}>
@@ -1582,19 +1753,51 @@ export default function SpeakerDetail() {
               )}
 
               {/* Action Buttons */}
-              {selectedRequestDetail.status === 'pending' && selectedRequestDetail.requester_id === user?.id && (
-                <View style={styles.detailActions}>
-                  <TouchableOpacity
-                    style={styles.detailCancelButton}
-                    onPress={() => {
-                      setShowRequestDetailModal(false);
-                      handleCancelRequest(selectedRequestDetail);
-                    }}
-                  >
-                    <MaterialIcons name="close" size={20} color="white" />
-                    <Text style={styles.detailCancelButtonText}>Cancel Request</Text>
-                  </TouchableOpacity>
-                </View>
+              {selectedRequestDetail.status === 'pending' && (
+                <>
+                  {selectedRequestDetail.requester_id === user?.id ? (
+                    // Requester view - show cancel button
+                    <View style={styles.detailActions}>
+                      <TouchableOpacity
+                        style={styles.detailCancelButton}
+                        onPress={() => {
+                          setShowRequestDetailModal(false);
+                          handleCancelRequest(selectedRequestDetail);
+                        }}
+                      >
+                        <MaterialIcons name="close" size={20} color="white" />
+                        <Text style={styles.detailCancelButtonText}>Cancel Request</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : isCurrentUserSpeaker ? (
+                    // Speaker view - show accept/decline/block buttons
+                    <View style={styles.detailActions}>
+                      <TouchableOpacity
+                        style={[styles.detailActionButton, styles.detailAcceptButton]}
+                        onPress={() => handleAcceptRequest(selectedRequestDetail)}
+                      >
+                        <MaterialIcons name="check-circle" size={20} color="white" />
+                        <Text style={styles.detailActionButtonText}>Accept</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={[styles.detailActionButton, styles.detailDeclineButton]}
+                        onPress={() => handleDeclineRequest(selectedRequestDetail)}
+                      >
+                        <MaterialIcons name="cancel" size={20} color="white" />
+                        <Text style={styles.detailActionButtonText}>Decline</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={[styles.detailActionButton, styles.detailBlockButton]}
+                        onPress={() => handleBlockUser(selectedRequestDetail)}
+                      >
+                        <MaterialIcons name="block" size={20} color="white" />
+                        <Text style={styles.detailActionButtonText}>Block User</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </>
               )}
             </ScrollView>
           )}
@@ -2316,6 +2519,9 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   detailActions: {
     marginTop: 20,
     marginBottom: 20,
+    gap: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   detailCancelButton: {
     flexDirection: 'row',
@@ -2326,11 +2532,61 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     gap: 8,
+    flex: 1,
   },
   detailCancelButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  detailActionButton: {
+    flex: 1,
+    minWidth: '30%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 6,
+  },
+  detailAcceptButton: {
+    backgroundColor: colors.success?.main || '#4CAF50',
+  },
+  detailDeclineButton: {
+    backgroundColor: colors.error.main,
+  },
+  detailBlockButton: {
+    backgroundColor: colors.warning?.main || '#FF9800',
+  },
+  detailActionButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  nameRowWithBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  ticketBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  vipBadge: {
+    backgroundColor: colors.warning?.main || '#FF9800',
+  },
+  ticketBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   modalCloseButton: {
     padding: 8,

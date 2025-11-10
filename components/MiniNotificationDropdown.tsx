@@ -48,7 +48,7 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
             meeting_scheduled_at,
             meeting_location,
             duration_minutes,
-            notes
+            note
           `)
           .eq('id', notification.meeting_request_id)
           .single();
@@ -79,7 +79,7 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
             requesterName: meetingRequest.requester_name || '',
             requesterId: meetingRequest.requester_id || '',
             status: meetingRequest.status || 'pending',
-            message: meetingRequest.message || meetingRequest.notes || '',
+            message: meetingRequest.message || meetingRequest.note || '',
             scheduledAt: meetingRequest.meeting_scheduled_at || '',
             location: meetingRequest.meeting_location || 'TBD',
             duration: meetingRequest.duration_minutes?.toString() || '15',

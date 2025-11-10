@@ -48,6 +48,18 @@
 ### Issue: Routes returning 404
 **Fix:** Check redirects in amplify.yml match available routes for that branch
 
+### Issue: "User s3 is not authorized to perform s3:GetObject on deployment bucket"
+**Fix:** 
+1. Configure Amplify service role in Amplify Console (App settings → General → Service role)
+2. Remove `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` from Amplify environment variables
+3. See `docs/AMPLIFY-SERVICE-ROLE-CONFIG.md` for detailed instructions
+
+### Issue: "A dynamic import callback was not specified" during environment initialization
+**Fix:**
+1. Add `export AMPLIFY_SKIP_BACKEND_BUILD=true` to `amplify.yml` preBuild phase
+2. This disables Amplify CLI auto-initialization (not needed for static hosting)
+3. See `docs/AMPLIFY-DYNAMIC-IMPORT-ERROR.md` for detailed instructions
+
 ## Quick Reference
 
 | Branch | Domain | Config File | Show All Events |

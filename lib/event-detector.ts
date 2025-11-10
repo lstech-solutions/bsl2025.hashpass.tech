@@ -30,6 +30,8 @@ const configToEventInfo = (config: EventConfig, available: boolean): EventInfo =
   return {
     ...rest,
     available,
+    // Include website in EventInfo for footer links
+    website: config.website,
   };
 };
 

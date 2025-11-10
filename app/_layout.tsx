@@ -70,6 +70,14 @@ function ThemedContent() {
   const isAuthFlow = (segments[0] === '(shared)' && segments[1] === 'auth') || pathname.startsWith('/(shared)/auth');
   const isBSLPublic = pathname.startsWith('/events/bsl2025');
   const isHomePage = pathname === '/home' || pathname === '/' || pathname === '/index';
+  // Public pages that don't require authentication
+  const isPublicPage = 
+    pathname === '/docs' || 
+    pathname === '/(shared)/docs' ||
+    pathname === '/privacy' || 
+    pathname === '/(shared)/privacy' ||
+    pathname === '/terms' || 
+    pathname === '/(shared)/terms';
 
   // Handle loading state and splash screen
   useEffect(() => {
@@ -92,11 +100,11 @@ function ThemedContent() {
   // Handle auth redirection
   useEffect(() => {
     if (isReady && !isLoading) {
-      if (!isLoggedIn && !isAuthFlow && !isBSLPublic && !isHomePage) {
+      if (!isLoggedIn && !isAuthFlow && !isBSLPublic && !isHomePage && !isPublicPage) {
         router.replace('/(shared)/auth' as any);
       }
     }
-  }, [isLoggedIn, isAuthFlow, isBSLPublic, isHomePage, isReady, isLoading, router]);
+  }, [isLoggedIn, isAuthFlow, isBSLPublic, isHomePage, isPublicPage, isReady, isLoading, router]);
 
   // Show loading state
   if (isLoading || !isReady || showSplash) {
@@ -134,6 +142,7 @@ function ThemedContent() {
         <Stack.Screen name="(shared)/auth/callback" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/privacy" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/terms" options={{ headerShown: false }} />
+        <Stack.Screen name="(shared)/docs" options={{ headerShown: false }} />
         <Stack.Screen name="privacy" options={{ headerShown: false }} />
         <Stack.Screen name="terms" options={{ headerShown: false }} />
         <Stack.Screen 

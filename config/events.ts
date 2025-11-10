@@ -8,6 +8,7 @@ export const EVENTS: Record<string, EventConfig> = {
     id: 'bsl2025',
     name: 'BSL 2025',
     domain: 'bsl2025.hashpass.tech',
+    website: 'https://blockchainsummit.la/',
     // UI display fields
     title: 'Blockchain Summit Latam 2025',
     subtitle: 'Universidad EAFIT, Medellín',

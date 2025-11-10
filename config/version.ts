@@ -22,8 +22,8 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202511081641, // Updated to current timestamp
-  releaseDate: '2025-11-08',
+  buildNumber: 202511092344, // Updated to current timestamp
+  releaseDate: '2025-11-09',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
@@ -35,11 +35,45 @@ export const CURRENT_VERSION: VersionInfo = {
     'Replaced navigation with modal for privacy and terms links on auth screen'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.5 release'
+  notes: 'Storybook'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.7': {
+    version: '1.6.7',
+    buildNumber: 202511092344,
+    releaseDate: '2025-11-09',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Storybook'
+  },
+  '1.6.6': {
+    version: '1.6.6',
+    buildNumber: 202511092132,
+    releaseDate: '2025-11-09',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.6 release'
+  },
   '1.6.5': {
     version: '1.6.5',
     buildNumber: 202511081641,

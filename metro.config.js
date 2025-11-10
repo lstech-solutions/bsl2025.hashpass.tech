@@ -16,16 +16,19 @@ const webOnlyPackages = [
   '@adraffy/ens-normalize',
 ];
 
+// Store original resolveRequest if it exists
+const originalResolveRequest = config.resolver?.resolveRequest;
+
 // Add resolver configuration for ethers and related packages
 config.resolver = {
   ...config.resolver,
   extraNodeModules: {
-    ...config.resolver.extraNodeModules,
+    ...config.resolver?.extraNodeModules,
     // Ensure these modules can be resolved on web
     '@adraffy/ens-normalize': require.resolve('@adraffy/ens-normalize'),
   },
   // Add source extensions
-  sourceExts: [...(config.resolver.sourceExts || []), 'mjs', 'cjs'],
+  sourceExts: [...(config.resolver?.sourceExts || []), 'mjs', 'cjs'],
   // Custom resolveRequest to handle problematic imports
   resolveRequest: (context, moduleName, platform) => {
     // Handle qrcode trying to import server module - return empty module
@@ -44,7 +47,10 @@ config.resolver = {
       }
     }
     
-    // Use default resolution for everything else
+    // Use original resolveRequest if it exists, otherwise use default
+    if (originalResolveRequest) {
+      return originalResolveRequest(context, moduleName, platform);
+    }
     return context.resolveRequest(context, moduleName, platform);
   },
 };
@@ -111,7 +117,7 @@ config.server = {
 config.maxWorkers = 1; // Use single worker to reduce memory
 config.cacheStores = config.cacheStores || [];
 
-// Optimize transformer for memory
+// Optimize transformer for memory and production builds
 config.transformer = {
   ...config.transformer,
   minifierConfig: {
@@ -119,6 +125,43 @@ config.transformer = {
     keep_classnames: false,
     keep_fnames: false,
   },
+  // Increase worker timeout for production builds
+  workerTimeout: 60000,
+  // Enable unstable_allowRequireContext for better module resolution
+  unstable_allowRequireContext: true,
 };
 
-module.exports = wrapWithReanimatedMetroConfig(config);
+// Add additional resolver options for better module resolution
+// Merge with existing resolver config to avoid conflicts
+const existingAssetExts = config.resolver?.assetExts || [];
+const newAssetExts = ['bin', 'txt', 'jpg', 'png', 'json', 'svg', 'gif', 'webp'];
+const allAssetExts = [...new Set([...existingAssetExts, ...newAssetExts])];
+
+config.resolver = {
+  ...config.resolver,
+  // Ensure resolverMainFields doesn't conflict with existing config
+  resolverMainFields: config.resolver?.resolverMainFields || ['react-native', 'browser', 'main'],
+  // Merge asset extensions
+  assetExts: allAssetExts,
+};
+
+// Conditionally apply NativeWind and Reanimated based on environment
+// During production export, these can cause issues with Metro bundler
+const isProductionExport = process.env.NODE_ENV === 'production' || process.env.EXPO_PUBLIC_ENABLE_STATIC_EXPORT === 'true';
+
+let finalConfig = config;
+
+// Only wrap with Reanimated and NativeWind if not doing static export
+if (!isProductionExport) {
+  finalConfig = wrapWithReanimatedMetroConfig(finalConfig);
+  finalConfig = withNativeWind(finalConfig, {
+    input: './app/global.css',
+  });
+} else {
+  // For production export, apply NativeWind but skip Reanimated to avoid issues
+  finalConfig = withNativeWind(finalConfig, {
+    input: './app/global.css',
+  });
+}
+
+module.exports = finalConfig;

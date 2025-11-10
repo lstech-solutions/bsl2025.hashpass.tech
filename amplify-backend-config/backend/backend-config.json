@@ -1,0 +1,32 @@
+{
+  // "function": {
+  //   "agendaMonitor": {
+  //     "build": true,
+  //     "dependsOn": [],
+  //     "parameters": {
+  //       "env": "dev",
+  //       "functionName": "agendaMonitor"
+  //     },
+  //     "providerPlugin": "awscloudformation",
+  //     "service": "Lambda"
+  //   }
+  // },
+  "parameters": {
+    "AMPLIFY_function_agendaMonitor_env": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "agendaMonitor"
+        }
+      ]
+    },
+    "AMPLIFY_function_agendaMonitor_functionName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "agendaMonitor"
+        }
+      ]
+    }
+  }
+}

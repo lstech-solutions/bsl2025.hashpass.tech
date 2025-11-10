@@ -68,5 +68,6 @@ export interface EventConfig {
   agenda?: AgendaItem[];
   quickAccessItems?: QuickAccessItem[];
   eventType?: 'hashpass' | 'whitelabel';
+  website?: string; // Event website URL for footer links
 }
 

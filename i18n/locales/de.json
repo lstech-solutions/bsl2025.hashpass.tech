@@ -91,6 +91,11 @@
     "title": "Willkommen bei",
     "subtitle": "Melden Sie sich an, um Ihr digitales Leben freizuschalten.",
     "signInWithGoogle": "Mit Google anmelden",
+    "emailPlaceholder": "Geben Sie Ihre E-Mail ein",
+    "magicLink": "Magic Link",
+    "otpCode": "OTP-Code",
+    "sendMagicLink": "Magic Link senden",
+    "sendCode": "Code senden",
     "privacy": {
       "text": "Durch die Anmeldung stimmen Sie unseren zu",
       "terms": "Nutzungsbedingungen",
@@ -232,6 +237,17 @@
       "description": "Sehen Sie, was unsere Kunden über uns zu sagen haben."
     },
     "copyright": " 2025 HASHPASS™ Alle Rechte vorbehalten.",
+    "footer": {
+      "tagline": "Verbindung von Veranstaltungen, Rednern und Teilnehmern weltweit.",
+      "resources": "Ressourcen",
+      "legal": "Rechtliches",
+      "docs": "Dokumentation",
+      "guides": "Anleitungen",
+      "support": "Support",
+      "privacy": "Datenschutzerklärung",
+      "terms": "Nutzungsbedingungen",
+      "bsl2025": "BSL 2025"
+    },
     "cta": {
       "title": "Bereit loszulegen?",
       "subtitle": "Schließen Sie sich Tausenden von Benutzern an, die HASHPASS mit ihrem digitalen Leben vertrauen.",

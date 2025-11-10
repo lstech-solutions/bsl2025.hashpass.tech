@@ -1,18 +1,9 @@
--- ============================================================================
--- Function: insert_meeting_request
--- Purpose: Create a new meeting request between a requester and a speaker
--- 
--- Parameters:
---   p_speaker_id (TEXT): The speaker's ID from bsl_speakers table (TEXT)
---   Note: This function converts the TEXT speaker_id to the speaker's user_id (UUID)
---         for insertion into meeting_requests.speaker_id (UUID column)
---
--- Returns: JSON with success status and request_id or error message
--- ============================================================================
+-- Fix insert_meeting_request by adding explicit cast in INSERT VALUES
+-- PostgreSQL sometimes needs explicit casts in VALUES clause for type inference
 
 CREATE OR REPLACE FUNCTION insert_meeting_request(
     p_requester_id TEXT,
-    p_speaker_id TEXT,  -- This is the TEXT id from bsl_speakers, NOT the UUID
+    p_speaker_id TEXT,
     p_speaker_name TEXT,
     p_requester_name TEXT,
     p_requester_company TEXT,
@@ -33,7 +24,7 @@ DECLARE
     remaining_requests INTEGER;
     remaining_boost DECIMAL;
     requester_uuid UUID;
-    speaker_user_id UUID;  -- This will be the UUID from bsl_speakers.user_id
+    speaker_user_id UUID;
 BEGIN
     -- Step 1: Convert requester_id from TEXT to UUID
     BEGIN
@@ -137,8 +128,6 @@ BEGIN
     
     -- Step 10: Insert the meeting request
     -- CRITICAL: Use explicit cast in VALUES clause to ensure PostgreSQL recognizes UUID type
-    -- meeting_requests.speaker_id is UUID, so we cast speaker_user_id to UUID in VALUES
-    -- NOT p_speaker_id (TEXT)
     INSERT INTO public.meeting_requests (
         id, 
         requester_id,           -- UUID
@@ -160,7 +149,7 @@ BEGIN
     ) VALUES (
         new_request_id,                    -- UUID
         requester_uuid,                    -- UUID
-        (speaker_user_id::UUID),           -- UUID (EXPLICIT CAST IN VALUES CLAUSE)
+        (speaker_user_id::UUID),           -- UUID (EXPLICIT CAST IN VALUES)
         p_speaker_name,                     -- TEXT
         p_requester_name,                   -- TEXT
         p_requester_company,                -- TEXT
@@ -177,7 +166,7 @@ BEGIN
         NOW()                               -- TIMESTAMPTZ
     );
     
-    -- Step 12: Update pass usage
+    -- Step 11: Update pass usage
     UPDATE public.passes 
     SET 
         used_meeting_requests = COALESCE(used_meeting_requests, 0) + 1,
@@ -185,7 +174,7 @@ BEGIN
         updated_at = NOW()
     WHERE id = pass_record.id;
     
-    -- Step 13: Return success
+    -- Step 12: Return success
     result := json_build_object(
         'success', true, 
         'request_id', new_request_id, 

@@ -1719,7 +1719,7 @@ export default function MyRequestsView() {
       >
         <View style={styles.modalOverlay}>
           <View style={[
-            styles.modalContent,
+            styles.cancelModalContent,
             {
               backgroundColor: colors.background?.paper || (isDark ? '#1e1e1e' : '#ffffff'),
               borderColor: colors.divider || (isDark ? '#333333' : '#e0e0e0'),
@@ -1734,7 +1734,7 @@ export default function MyRequestsView() {
             </TouchableOpacity>
             
             {/* Header */}
-            <View style={styles.modalHeader}>
+            <View style={styles.cancelModalHeader}>
               <View style={[
                 styles.warningIconContainer,
                 {
@@ -1743,18 +1743,18 @@ export default function MyRequestsView() {
               ]}>
                 <MaterialIcons
                   name="warning"
-                  size={32}
+                  size={24}
                   color={colors.warning?.main || '#FF9800'}
                 />
               </View>
-              <Text style={[styles.modalTitle, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000') }]}>
+              <Text style={[styles.cancelModalTitle, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000') }]}>
                 Cancel Meeting Request?
               </Text>
             </View>
 
             {/* Warning Message */}
             <View style={[
-              styles.messageBox,
+              styles.cancelModalWarningBox,
               {
                 backgroundColor: isDark ? 'rgba(255, 152, 0, 0.1)' : 'rgba(255, 152, 0, 0.05)',
                 borderColor: isDark ? 'rgba(255, 152, 0, 0.3)' : 'rgba(255, 152, 0, 0.2)',
@@ -1762,51 +1762,27 @@ export default function MyRequestsView() {
             ]}>
               <MaterialIcons
                 name="info"
-                size={20}
+                size={18}
                 color={colors.warning?.main || '#FF9800'}
               />
-              <Text style={[styles.messageTextConfirmation, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#1a1a1a') }]}>
+              <Text style={[styles.cancelModalWarningText, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#1a1a1a') }]}>
                 Are you sure you want to cancel this meeting request?
               </Text>
             </View>
 
-            {/* Disclaimer */}
-            <View style={styles.detailSection}>
-              <Text style={[styles.detailLabel, { color: colors.text?.primary || (isDark ? '#E0E0E0' : '#333333') }]}>
-                Important Information
-              </Text>
-              <View style={[
-                styles.disclaimerBox,
-                {
-                  backgroundColor: isDark ? 'rgba(255, 152, 0, 0.08)' : 'rgba(255, 152, 0, 0.04)',
-                  borderColor: isDark ? 'rgba(255, 152, 0, 0.25)' : 'rgba(255, 152, 0, 0.15)',
-                }
-              ]}>
-                <MaterialIcons
-                  name="info-outline"
-                  size={18}
-                  color={colors.warning?.main || '#FF9800'}
-                />
-                <View style={styles.disclaimerTextContainer}>
-                  <View style={styles.disclaimerItem}>
-                    <Text style={[styles.disclaimerBullet, { color: colors.warning?.main || '#FF9800' }]}>•</Text>
-                    <Text style={[styles.disclaimerText, { color: colors.text?.primary || (isDark ? '#E0E0E0' : '#1a1a1a') }]}>
-                      Your meeting request limit will be restored
-                    </Text>
-                  </View>
-                  <View style={styles.disclaimerItem}>
-                    <Text style={[styles.disclaimerBullet, { color: colors.error?.main || '#F44336' }]}>•</Text>
-                    <Text style={[styles.disclaimerText, { color: colors.text?.primary || (isDark ? '#E0E0E0' : '#1a1a1a') }]}>
-                      Boost points used for this request will NOT be refunded
-                    </Text>
-                  </View>
-                  <View style={styles.disclaimerItem}>
-                    <Text style={[styles.disclaimerBullet, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>•</Text>
-                    <Text style={[styles.disclaimerText, { color: colors.text?.primary || (isDark ? '#E0E0E0' : '#1a1a1a') }]}>
-                      This action cannot be undone
-                    </Text>
-                  </View>
-                </View>
+            {/* Disclaimer - Compact */}
+            <View style={styles.cancelModalDisclaimer}>
+              <View style={styles.cancelModalDisclaimerItem}>
+                <MaterialIcons name="check-circle" size={14} color={colors.warning?.main || '#FF9800'} />
+                <Text style={[styles.cancelModalDisclaimerText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
+                  Request limit restored
+                </Text>
+              </View>
+              <View style={styles.cancelModalDisclaimerItem}>
+                <MaterialIcons name="close-circle" size={14} color={colors.error?.main || '#F44336'} />
+                <Text style={[styles.cancelModalDisclaimerText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
+                  Boost points not refunded
+                </Text>
               </View>
             </View>
 
@@ -2122,6 +2098,24 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   modalContent: {
     flex: 1,
+  },
+  cancelModalContent: {
+    backgroundColor: colors.background?.paper || (isDark ? '#1e1e1e' : '#ffffff'),
+    borderRadius: 20,
+    padding: 0,
+    width: '100%',
+    maxWidth: 420,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 16,
+    borderWidth: 1,
+    borderColor: colors.divider || (isDark ? '#333333' : '#e0e0e0'),
+    position: 'relative',
   },
   modalContentContainer: {
     padding: 20,
@@ -2619,12 +2613,62 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     gap: 12,
   },
   warningIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+  },
+  cancelModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    paddingTop: 24,
+    paddingBottom: 16,
+    gap: 12,
+  },
+  cancelModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000'),
+    flex: 1,
+    letterSpacing: 0.3,
+  },
+  cancelModalWarningBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    gap: 10,
+  },
+  cancelModalWarningText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  cancelModalDisclaimer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingHorizontal: 4,
+  },
+  cancelModalDisclaimerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    minWidth: '45%',
+  },
+  cancelModalDisclaimerText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
   },
   disclaimerBox: {
     flexDirection: 'row',

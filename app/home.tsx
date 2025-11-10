@@ -555,13 +555,13 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     justifyContent: isMobile ? 'flex-start' : 'space-between',
     alignItems: isMobile ? 'flex-start' : 'flex-start',
     marginBottom: isMobile ? 30 : 40,
-    gap: isMobile ? 32 : 60,
+    gap: isMobile ? 40 : 60,
     width: '100%',
   },
   footerBrand: {
     flex: isMobile ? 0 : 0.4,
     width: isMobile ? '100%' : 'auto',
-    marginBottom: isMobile ? 0 : 0,
+    marginBottom: isMobile ? 32 : 0,
     alignItems: isMobile ? 'flex-start' : 'flex-start',
   },
   footerLogo: {
@@ -594,11 +594,11 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     fontSize: isMobile ? 14 : 16,
     fontWeight: '700',
     color: colors.text.primary,
-    marginBottom: isMobile ? 12 : 16,
+    marginBottom: isMobile ? 14 : 16,
     letterSpacing: -0.3,
   },
   footerLink: {
-    marginBottom: isMobile ? 10 : 12,
+    marginBottom: isMobile ? 12 : 12,
   },
   footerLinkText: {
     fontSize: isMobile ? 14 : 15,

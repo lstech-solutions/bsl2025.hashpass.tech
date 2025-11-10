@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.9] - 2025-11-10
+
+### Beta
+- Version 1.6.9 release
+
+### Technical Details
+- Version: 1.6.9
+- Release Type: beta
+- Build Number: 202511101015
+- Release Date: 2025-11-10T10:15:55.719Z
+
+
 ## [1.6.8] - 2025-11-10
 
 ### Beta

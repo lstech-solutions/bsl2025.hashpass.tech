@@ -32,6 +32,15 @@ import FlipWords from '../components/FlipWords';
 import Newsletter from '../components/Newsletter';
 import EventBannerCarousel from '../components/EventBannerCarousel';
 
+// Import git info to check branch
+let gitInfo: { gitBranch?: string } = {};
+try {
+  gitInfo = require('../config/git-info.json');
+} catch (e) {
+  // Fallback if git-info.json doesn't exist
+  gitInfo = {};
+}
+
 export default function HomeScreen() {
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
@@ -42,18 +51,26 @@ export default function HomeScreen() {
   
   // Get current event info for dynamic footer
   const currentEvent = getCurrentEvent();
-  const isMainBranch = typeof process !== 'undefined' && (
-    process.env.AMPLIFY_SHOW_ALL_EVENTS === 'true' ||
-    process.env.NEXT_PUBLIC_SHOW_ALL_EVENTS === 'true'
+  
+  // Check if we're on main branch (check both git branch and env vars)
+  const gitBranch = gitInfo.gitBranch || process.env.GIT_BRANCH || 'main';
+  const isMainBranch = gitBranch === 'main' || gitBranch === 'master' || (
+    typeof process !== 'undefined' && (
+      process.env.AMPLIFY_SHOW_ALL_EVENTS === 'true' ||
+      process.env.NEXT_PUBLIC_SHOW_ALL_EVENTS === 'true'
+    )
   );
   
-  // Determine if we should show event link in footer
-  // Only show if it's a whitelabel event (not main/default branch)
-  const shouldShowEventLink = currentEvent && currentEvent.eventType === 'whitelabel' && !isMainBranch;
-  // Get event name and URL from event config
-  const eventName = currentEvent?.title || '';
-  // Get website URL from event config (website field is included in EventInfo via configToEventInfo)
-  const eventUrl = currentEvent?.website || (currentEvent?.id === 'bsl2025' ? 'https://blockchainsummit.la/' : null);
+  // Determine footer link behavior based on branch
+  // On main branch: show "HashPass" link to hashpass.tech
+  // On event branches (like bsl2025): show event link
+  const shouldShowFooterLink = true; // Always show a link
+  const footerLinkName = isMainBranch 
+    ? 'HashPass' 
+    : (currentEvent?.title || '');
+  const footerLinkUrl = isMainBranch 
+    ? 'https://hashpass.tech'
+    : (currentEvent?.website || (currentEvent?.id === 'bsl2025' ? 'https://blockchainsummit.la/' : null));
 
   // Animation for the scroll down arrow
   const bounceAnim = useSharedValue(0);
@@ -449,12 +466,12 @@ export default function HomeScreen() {
                 >
                   <Text style={styles.footerLinkText}>{t('footer.terms')}</Text>
                 </TouchableOpacity>
-                {shouldShowEventLink && eventUrl && (
+                {shouldShowFooterLink && footerLinkUrl && footerLinkName && (
                   <TouchableOpacity
-                    onPress={() => Linking.openURL(eventUrl)}
+                    onPress={() => Linking.openURL(footerLinkUrl)}
                     style={styles.footerLink}
                   >
-                    <Text style={styles.footerLinkText}>{eventName}</Text>
+                    <Text style={styles.footerLinkText}>{footerLinkName}</Text>
                   </TouchableOpacity>
                 )}
               </View>

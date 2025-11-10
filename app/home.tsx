@@ -580,7 +580,7 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   footerLinks: {
     flex: isMobile ? 0 : 0.6,
     flexDirection: isMobile ? 'column' : 'row',
-    gap: isMobile ? 32 : 40,
+    gap: isMobile ? 40 : 40,
     justifyContent: isMobile ? 'flex-start' : 'flex-end',
     width: isMobile ? '100%' : 'auto',
     alignItems: isMobile ? 'flex-start' : 'flex-start',
@@ -590,6 +590,9 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     flex: isMobile ? 0 : 1,
     minWidth: isMobile ? '100%' : 140,
     width: isMobile ? '100%' : 'auto',
+  },
+  footerLinksColumnMobile: {
+    marginTop: isMobile ? 16 : 0,
   },
   footerLinksTitle: {
     fontSize: isMobile ? 14 : 16,

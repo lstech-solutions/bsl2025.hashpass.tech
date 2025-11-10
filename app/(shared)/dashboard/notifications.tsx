@@ -58,7 +58,7 @@ export default function NotificationsScreen() {
             status,
             message,
             meeting_scheduled_at,
-            location,
+            meeting_location,
             duration_minutes,
             notes
           `)
@@ -95,7 +95,7 @@ export default function NotificationsScreen() {
               status: meetingRequest.status || 'pending',
               message: meetingRequest.message || meetingRequest.notes || '',
               scheduledAt: meetingRequest.meeting_scheduled_at || '',
-              location: meetingRequest.location || 'TBD',
+              location: meetingRequest.meeting_location || 'TBD',
               duration: meetingRequest.duration_minutes?.toString() || '15',
               isSpeaker: user?.id === meetingRequest.speaker_id ? 'true' : 'false'
             }

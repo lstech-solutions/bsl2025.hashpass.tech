@@ -32,6 +32,9 @@ interface Speaker {
     linkedin?: string;
     twitter?: string;
   };
+  user_id?: string;
+  isActive?: boolean; // Has user_id = active
+  isOnline?: boolean; // User is currently online (last_seen within last 5 minutes)
 }
 
 // UserTicket interface removed - now using pass system
@@ -129,6 +132,36 @@ export default function SpeakerDetail() {
         const { data: dbSpeaker, error: dbError } = await Promise.race([dbPromise, timeoutPromise]) as any;
 
         if (dbSpeaker && !dbError) {
+          // Check if speaker is active (has user_id) using RPC function
+          let isActive = false;
+          let isOnline = false;
+          
+          try {
+            const { data: activeData, error: activeError } = await supabase
+              .rpc('is_speaker_active', { p_speaker_id: dbSpeaker.id });
+            
+            if (!activeError) {
+              isActive = activeData === true;
+            } else {
+              // Fallback: check user_id directly
+              isActive = !!dbSpeaker.user_id;
+            }
+            
+            // Check if speaker is online using RPC function
+            if (isActive) {
+              const { data: onlineData, error: onlineError } = await supabase
+                .rpc('is_speaker_online', { p_speaker_id: dbSpeaker.id });
+              
+              if (!onlineError) {
+                isOnline = onlineData === true;
+              }
+            }
+          } catch (statusCheckError) {
+            console.log('⚠️ Could not check speaker status:', statusCheckError);
+            // Fallback: check user_id directly
+            isActive = !!dbSpeaker.user_id;
+          }
+          
           // Use real data from database
           setSpeaker({
             id: dbSpeaker.id,
@@ -146,9 +179,12 @@ export default function SpeakerDetail() {
               wednesday: { start: '09:00', end: '17:00' },
               thursday: { start: '09:00', end: '17:00' },
               friday: { start: '09:00', end: '17:00' }
-            }
+            },
+            user_id: dbSpeaker.user_id,
+            isActive,
+            isOnline
           });
-          console.log('✅ Loaded speaker from database:', dbSpeaker.name);
+          console.log('✅ Loaded speaker from database:', dbSpeaker.name, { isActive, isOnline });
           setLoading(false);
           return;
         }
@@ -854,7 +890,23 @@ export default function SpeakerDetail() {
             name={speaker.name}
             size={80}
             showBorder={true}
+            isOnline={speaker.isOnline}
           />
+          {/* Floating status badge near avatar */}
+          {speaker.isActive !== undefined && (
+            <View style={styles.floatingStatusBadge}>
+              <View style={[
+                styles.statusIndicator,
+                speaker.isActive ? styles.activeIndicator : styles.inactiveIndicator
+              ]} />
+              <Text style={[
+                styles.statusBadgeText,
+                speaker.isActive ? styles.activeBadgeText : styles.inactiveBadgeText
+              ]}>
+                {speaker.isActive ? (speaker.isOnline ? 'Online' : 'Active') : 'Inactive'}
+              </Text>
+            </View>
+          )}
         </View>
         
         <View style={styles.speakerInfo}>
@@ -1547,6 +1599,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   avatarContainer: {
     marginRight: 16,
+    position: 'relative',
   },
   speakerInfo: {
     flex: 1,
@@ -1557,6 +1610,50 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontWeight: '700',
     color: colors.text.primary,
     marginBottom: 4,
+  },
+  floatingStatusBadge: {
+    position: 'absolute',
+    bottom: -6,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background.paper,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    gap: 6,
+    alignSelf: 'center',
+    minWidth: 70,
+  },
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  activeIndicator: {
+    backgroundColor: '#22c55e',
+  },
+  inactiveIndicator: {
+    backgroundColor: '#9ca3af',
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  activeBadgeText: {
+    color: '#22c55e',
+  },
+  inactiveBadgeText: {
+    color: '#9ca3af',
   },
   speakerTitle: {
     fontSize: 16,

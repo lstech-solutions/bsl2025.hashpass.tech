@@ -50,6 +50,7 @@ export default function PassesDisplay({
   const { t: translate } = useTranslation('passes');
   const { colors } = useTheme();
   const { user } = useAuth();
+  const router = useRouter();
   const [passInfo, setPassInfo] = useState<PassInfo | null>(null);
   const [requestLimits, setRequestLimits] = useState<PassRequestLimits | null>(null);
   const [loading, setLoading] = useState(true);
@@ -704,12 +705,22 @@ export default function PassesDisplay({
           }}>
             {getPassTypeDisplayName(passInfo.pass_type)}
           </Text>
-          <Text style={{ 
-            fontSize: 14, 
-            color: colors.text.secondary
-          }}>
-            Pass #{passInfo.pass_number || 'Unknown'}
-          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              router.push('/(shared)/dashboard/pass-details');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={{ 
+              fontSize: 14, 
+              color: colors.primary,
+              textDecorationLine: 'underline'
+            }}>
+              Pass #{passInfo.pass_number && passInfo.pass_number.length > 12 
+                ? `${passInfo.pass_number.slice(0, 6)}...${passInfo.pass_number.slice(-4)}` 
+                : passInfo.pass_number || 'Unknown'}
+            </Text>
+          </TouchableOpacity>
         </View>
         <View style={{
           paddingHorizontal: 12,

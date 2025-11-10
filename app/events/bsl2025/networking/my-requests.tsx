@@ -255,16 +255,10 @@ export default function MyRequestsView() {
           const request = (payload.new || payload.old) as any;
           if (!request || !request.speaker_id) return;
 
-          // Get current speaker IDs
-          const { data: currentSpeakers } = await supabase
-            .from('bsl_speakers')
-            .select('id')
-            .eq('user_id', user.id);
-
-          const currentSpeakerIds = (currentSpeakers || []).map((s: any) => s.id);
-          
-          if (!currentSpeakerIds.includes(request.speaker_id)) {
-            return; // Not for our speakers
+          // Check if this request is for the current user as a speaker
+          // Note: meeting_requests.speaker_id is UUID (user_id), not bsl_speakers.id
+          if (request.speaker_id !== user.id) {
+            return; // Not for this user as a speaker
           }
 
           console.log('🔄 Real-time update for INCOMING request:', payload.eventType);

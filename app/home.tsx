@@ -463,7 +463,9 @@ export default function HomeScreen() {
 
           {/* Bottom Bar */}
           <View style={styles.footerBottom}>
-            <Text style={styles.footerCopyright}>{t('copyright')}</Text>
+            <Text style={styles.footerCopyright}>
+              {t('copyright')} • v{require('../package.json').version}
+            </Text>
           </View>
         </View>
       </Animated.ScrollView>
@@ -561,7 +563,7 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
   footerBrand: {
     flex: isMobile ? 0 : 0.4,
     width: isMobile ? '100%' : 'auto',
-    marginBottom: isMobile ? 32 : 0,
+    marginBottom: isMobile ? 40 : 0,
     alignItems: isMobile ? 'flex-start' : 'flex-start',
   },
   footerLogo: {
@@ -584,7 +586,8 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     justifyContent: isMobile ? 'flex-start' : 'flex-end',
     width: isMobile ? '100%' : 'auto',
     alignItems: isMobile ? 'flex-start' : 'flex-start',
-    marginTop: isMobile ? 0 : 0,
+    marginTop: isMobile ? 24 : 0,
+    paddingTop: isMobile ? 0 : 0,
   },
   footerLinksColumn: {
     flex: isMobile ? 0 : 1,

@@ -131,11 +131,12 @@ export default function MyRequestsView() {
             }
             
             // Fetch speaker image for the new request
+            // Note: newRequest.speaker_id is UUID (user_id), so we need to find bsl_speakers by user_id
             try {
               const { data: speakerData } = await supabase
                 .from('bsl_speakers')
                 .select('imageurl')
-                .eq('id', newRequest.speaker_id)
+                .eq('user_id', newRequest.speaker_id)
                 .single();
               
               setRequests(prev => {
@@ -420,18 +421,22 @@ export default function MyRequestsView() {
       }
 
       // Fetch INCOMING requests (if user is a speaker)
+      // Note: meeting_requests.speaker_id is UUID (user_id from bsl_speakers), not bsl_speakers.id
+      // So we use user.id directly
       let incomingData: any[] = [];
       try {
+        // Check if user is a speaker
         const { data: speakerRows, error: speakerErr } = await supabase
           .from('bsl_speakers')
-          .select('id')
+          .select('id, user_id')
           .eq('user_id', user.id);
         
         if (!speakerErr && speakerRows && speakerRows.length > 0) {
+          // meeting_requests.speaker_id stores the user_id (UUID), not bsl_speakers.id
           const { data: inc, error: incErr } = await supabase
             .from('meeting_requests')
             .select('*')
-            .in('speaker_id', speakerRows.map((r: any) => r.id))
+            .eq('speaker_id', user.id) // Use user.id directly since speaker_id is UUID (user_id)
             .order('created_at', { ascending: false });
           
           incomingData = inc || [];
@@ -471,6 +476,7 @@ export default function MyRequestsView() {
       }
 
       // Fetch speaker images for sent requests
+      // Note: request.speaker_id is UUID (user_id), so we need to find bsl_speakers by user_id
       let sentWithImages = sentData || [];
       if (sentWithImages.length > 0) {
         sentWithImages = await Promise.all(
@@ -479,7 +485,7 @@ export default function MyRequestsView() {
               const { data: speakerData } = await supabase
                 .from('bsl_speakers')
                 .select('imageurl')
-                .eq('id', request.speaker_id)
+                .eq('user_id', request.speaker_id)
                 .single();
 
               return {

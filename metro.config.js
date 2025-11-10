@@ -16,16 +16,19 @@ const webOnlyPackages = [
   '@adraffy/ens-normalize',
 ];
 
+// Store original resolveRequest if it exists
+const originalResolveRequest = config.resolver?.resolveRequest;
+
 // Add resolver configuration for ethers and related packages
 config.resolver = {
   ...config.resolver,
   extraNodeModules: {
-    ...config.resolver.extraNodeModules,
+    ...config.resolver?.extraNodeModules,
     // Ensure these modules can be resolved on web
     '@adraffy/ens-normalize': require.resolve('@adraffy/ens-normalize'),
   },
   // Add source extensions
-  sourceExts: [...(config.resolver.sourceExts || []), 'mjs', 'cjs'],
+  sourceExts: [...(config.resolver?.sourceExts || []), 'mjs', 'cjs'],
   // Custom resolveRequest to handle problematic imports
   resolveRequest: (context, moduleName, platform) => {
     // Handle qrcode trying to import server module - return empty module
@@ -44,7 +47,10 @@ config.resolver = {
       }
     }
     
-    // Use default resolution for everything else
+    // Use original resolveRequest if it exists, otherwise use default
+    if (originalResolveRequest) {
+      return originalResolveRequest(context, moduleName, platform);
+    }
     return context.resolveRequest(context, moduleName, platform);
   },
 };
@@ -125,16 +131,18 @@ config.transformer = {
   unstable_allowRequireContext: true,
 };
 
-// Add resolver options for better module resolution
+// Add additional resolver options for better module resolution
+// Merge with existing resolver config to avoid conflicts
+const existingAssetExts = config.resolver?.assetExts || [];
+const newAssetExts = ['bin', 'txt', 'jpg', 'png', 'json', 'svg', 'gif', 'webp'];
+const allAssetExts = [...new Set([...existingAssetExts, ...newAssetExts])];
+
 config.resolver = {
   ...config.resolver,
-  // Increase resolver timeout
-  resolverMainFields: ['react-native', 'browser', 'main'],
-  // Add asset extensions
-  assetExts: [
-    ...(config.resolver?.assetExts || []),
-    'bin', 'txt', 'jpg', 'png', 'json', 'svg', 'gif', 'webp',
-  ],
+  // Ensure resolverMainFields doesn't conflict with existing config
+  resolverMainFields: config.resolver?.resolverMainFields || ['react-native', 'browser', 'main'],
+  // Merge asset extensions
+  assetExts: allAssetExts,
 };
 
 module.exports = withNativeWind(wrapWithReanimatedMetroConfig(config), {

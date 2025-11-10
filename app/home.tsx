@@ -51,9 +51,9 @@ export default function HomeScreen() {
   // Only show if it's a whitelabel event (not main/default branch)
   const shouldShowEventLink = currentEvent && currentEvent.eventType === 'whitelabel' && !isMainBranch;
   // Get event name and URL from event config
-  const eventName = currentEvent?.title || currentEvent?.name || '';
+  const eventName = currentEvent?.title || '';
   // Get website URL from event config (website field is included in EventInfo via configToEventInfo)
-  const eventUrl = (currentEvent as any)?.website || (currentEvent?.id === 'bsl2025' ? 'https://blockchainsummit.la/' : null);
+  const eventUrl = currentEvent?.website || (currentEvent?.id === 'bsl2025' ? 'https://blockchainsummit.la/' : null);
 
   // Animation for the scroll down arrow
   const bounceAnim = useSharedValue(0);

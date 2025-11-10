@@ -35,6 +35,7 @@ DECLARE
     requester_uuid UUID;
     speaker_uuid UUID;  -- UUID from bsl_speakers.id
     speaker_user_id UUID;  -- UUID from bsl_speakers.user_id
+    speaker_user_id_validated UUID;  -- Extra validation variable
 BEGIN
     -- Step 1: Convert requester_id from TEXT to UUID
     BEGIN
@@ -142,8 +143,7 @@ BEGIN
         RETURN result;
     END IF;
     
-    -- Step 11: Get speaker's user_id (UUID) for meeting_requests.speaker_id
-    -- CRITICAL: Get it and immediately validate/cast to ensure it's UUID
+    -- Step 11: Get speaker's user_id (UUID) and validate type
     SELECT user_id INTO speaker_user_id
     FROM public.bsl_speakers
     WHERE id = speaker_uuid;
@@ -157,8 +157,20 @@ BEGIN
         RETURN result;
     END IF;
     
-    -- Step 12: Insert using INSERT...SELECT to force UUID type inference
-    -- Using subquery ensures PostgreSQL correctly infers UUID type for speaker_id
+    -- Step 11b: Explicitly validate and cast to UUID to ensure type
+    BEGIN
+        speaker_user_id_validated := speaker_user_id::UUID;
+    EXCEPTION
+        WHEN OTHERS THEN
+            result := json_build_object(
+                'success', false, 
+                'error', 'Invalid speaker user_id type', 
+                'message', 'Speaker user_id is not a valid UUID: ' || SQLERRM
+            );
+            RETURN result;
+    END;
+    
+    -- Step 12: Insert using VALUES with validated UUID
     INSERT INTO public.meeting_requests (
         id, 
         requester_id,
@@ -180,7 +192,7 @@ BEGIN
     ) VALUES (
         new_request_id,
         requester_uuid,
-        speaker_user_id::UUID,  -- EXPLICIT CAST even though it's already UUID
+        speaker_user_id_validated,  -- Use validated UUID variable
         p_speaker_name,
         p_requester_name,
         p_requester_company,

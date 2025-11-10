@@ -1,18 +1,8 @@
--- ============================================================================
--- Function: insert_meeting_request
--- Purpose: Create a new meeting request between a requester and a speaker
--- 
--- Parameters:
---   p_speaker_id (TEXT): The speaker's ID from bsl_speakers table (TEXT)
---   Note: This function converts the TEXT speaker_id to the speaker's user_id (UUID)
---         for insertion into meeting_requests.speaker_id (UUID column)
---
--- Returns: JSON with success status and request_id or error message
--- ============================================================================
-
+-- Fix insert_meeting_request to properly convert TEXT speaker_id to UUID
+-- The function needs to handle both UUID strings and old slug-based IDs
 CREATE OR REPLACE FUNCTION insert_meeting_request(
     p_requester_id TEXT,
-    p_speaker_id TEXT,  -- This is the TEXT id from bsl_speakers, NOT the UUID
+    p_speaker_id TEXT,  -- This could be UUID string or old slug
     p_speaker_name TEXT,
     p_requester_name TEXT,
     p_requester_company TEXT,
@@ -180,7 +170,7 @@ BEGIN
     ) VALUES (
         new_request_id,                    -- UUID
         requester_uuid,                    -- UUID
-        speaker_user_id,                   -- UUID (user_id from bsl_speakers)
+        speaker_user_id,                   -- UUID (user_id from bsl_speakers) - EXPLICIT CAST
         p_speaker_name,                     -- TEXT
         p_requester_name,                   -- TEXT
         p_requester_company,                -- TEXT

@@ -1,18 +1,9 @@
--- ============================================================================
--- Function: insert_meeting_request
--- Purpose: Create a new meeting request between a requester and a speaker
--- 
--- Parameters:
---   p_speaker_id (TEXT): The speaker's ID from bsl_speakers table (TEXT)
---   Note: This function converts the TEXT speaker_id to the speaker's user_id (UUID)
---         for insertion into meeting_requests.speaker_id (UUID column)
---
--- Returns: JSON with success status and request_id or error message
--- ============================================================================
+-- Update insert_meeting_request to accept UUID speaker_id directly
+-- Now that bsl_speakers.id is UUID, we can use it directly
 
 CREATE OR REPLACE FUNCTION insert_meeting_request(
     p_requester_id TEXT,
-    p_speaker_id TEXT,  -- This is the TEXT id from bsl_speakers, NOT the UUID
+    p_speaker_id TEXT,  -- This will be converted to UUID or looked up
     p_speaker_name TEXT,
     p_requester_name TEXT,
     p_requester_company TEXT,
@@ -112,18 +103,19 @@ BEGIN
         RETURN result;
     END IF;
     
-    -- Step 9: Convert p_speaker_id (TEXT) to UUID for bsl_speakers.id lookup
-    -- Try to convert directly to UUID first
+    -- Step 9: Get speaker UUID and user_id
+    -- Try to convert p_speaker_id to UUID first (if it's already a UUID)
+    -- If that fails, look it up in the mapping table or by name
     BEGIN
         speaker_uuid := p_speaker_id::UUID;
     EXCEPTION
         WHEN OTHERS THEN
-            -- Not a UUID, try mapping table
-            SELECT new_id INTO speaker_uuid
+            -- Not a UUID, try to find by mapping or by name
+            SELECT id INTO speaker_uuid
             FROM public.bsl_speakers_id_mapping
             WHERE old_id = p_speaker_id;
             
-            -- If still not found, try by name (case-insensitive)
+            -- If still not found, try to find by name (fallback)
             IF speaker_uuid IS NULL THEN
                 SELECT id INTO speaker_uuid
                 FROM public.bsl_speakers
@@ -143,7 +135,6 @@ BEGIN
     END IF;
     
     -- Step 11: Get speaker's user_id (UUID) for meeting_requests.speaker_id
-    -- meeting_requests.speaker_id must be UUID (user_id from bsl_speakers)
     SELECT user_id INTO speaker_user_id
     FROM public.bsl_speakers
     WHERE id = speaker_uuid;

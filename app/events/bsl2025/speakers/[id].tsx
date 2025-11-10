@@ -94,14 +94,13 @@ export default function SpeakerDetail() {
     }
 
     try {
+      // Use helper function to find speaker by UUID or slug
       const { data: speakerData, error } = await supabase
-        .from('bsl_speakers')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('id', id) // Check if this specific speaker is the current user
+        .rpc('get_speaker_by_id_or_slug', { p_id: id })
         .single();
-
-      if (!error && speakerData) {
+      
+      // Check if this speaker's user_id matches current user
+      if (!error && speakerData && speakerData.user_id === user.id) {
         setIsCurrentUserSpeaker(true);
       } else {
         setIsCurrentUserSpeaker(false);
@@ -117,10 +116,9 @@ export default function SpeakerDetail() {
       // First try to fetch from the database with timeout
       console.log('🔍 Attempting to load speaker from database...');
       
+      // Try to get speaker by UUID or slug using helper function
       const dbPromise = supabase
-        .from('bsl_speakers')
-        .select('*')
-        .eq('id', id)
+        .rpc('get_speaker_by_id_or_slug', { p_id: id })
         .single();
 
       // Add timeout to prevent hanging
@@ -131,14 +129,15 @@ export default function SpeakerDetail() {
       try {
         const { data: dbSpeaker, error: dbError } = await Promise.race([dbPromise, timeoutPromise]) as any;
 
-        if (dbSpeaker && !dbError) {
+        if (dbSpeaker && !dbError && dbSpeaker.id) {
           // Check if speaker is active (has user_id) using RPC function
+          // Pass UUID as TEXT for compatibility
           let isActive = false;
           let isOnline = false;
           
           try {
             const { data: activeData, error: activeError } = await supabase
-              .rpc('is_speaker_active', { p_speaker_id: dbSpeaker.id });
+              .rpc('is_speaker_active', { p_speaker_id: dbSpeaker.id.toString() });
             
             if (!activeError) {
               isActive = activeData === true;
@@ -150,7 +149,7 @@ export default function SpeakerDetail() {
             // Check if speaker is online using RPC function
             if (isActive) {
               const { data: onlineData, error: onlineError } = await supabase
-                .rpc('is_speaker_online', { p_speaker_id: dbSpeaker.id });
+                .rpc('is_speaker_online', { p_speaker_id: dbSpeaker.id.toString() });
               
               if (!onlineError) {
                 isOnline = onlineData === true;
@@ -163,8 +162,9 @@ export default function SpeakerDetail() {
           }
           
           // Use real data from database
+          // Convert UUID to string for compatibility
           setSpeaker({
-            id: dbSpeaker.id,
+            id: dbSpeaker.id.toString(),
             name: dbSpeaker.name,
             title: dbSpeaker.title,
             company: dbSpeaker.company || '',

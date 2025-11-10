@@ -109,6 +109,9 @@ const SPEAKER_PRIORITY_LIST = [
   'Alvaro Castro',
   'Nick Waytula',
   'Wilder Rosero',
+  'Liliana Vásquez',
+  'Daniela Corredor',
+  'Lissa Parra',
 ];
 
 // Speaker titles mapping
@@ -209,6 +212,9 @@ const SPEAKER_TITLES = {
   'Alvaro Castro': 'Socio / Partner en Damma',
   'Nick Waytula': 'Head of Tax | Crypto Tax Calculator',
   'Wilder Rosero': 'Developer TuCOP',
+  'Liliana Vásquez': 'Vicepresidente de Producto Bancolombia',
+  'Daniela Corredor': 'COO de Alastria',
+  'Lissa Parra': 'Asociada Principal | Estudio de Abogados Garrigues Colombia',
 };
 
 function slugifyName(name) {
@@ -403,11 +409,42 @@ async function main() {
       const title = SPEAKER_TITLES[name] || '';
       const company = extractCompanyFromTitle(title) || '';
 
-      // Generate ID from name (use slug as ID)
-      const id = slug;
+      // Generate UUID from slug using deterministic UUID v5 (same method as migration)
+      // This ensures the same slug always generates the same UUID
+      const namespaceUUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+      const { data: uuidResult, error: uuidError } = await supabase
+        .rpc('uuid_generate_v5_rpc', {
+          namespace_uuid: namespaceUUID,
+          name_text: slug
+        });
+      
+      let speakerId;
+      if (uuidError || !uuidResult) {
+        // Fallback: generate UUID v5 in JavaScript using crypto
+        const crypto = await import('node:crypto');
+        const namespaceBytes = Buffer.from(namespaceUUID.replace(/-/g, ''), 'hex');
+        const nameBytes = Buffer.from(slug, 'utf8');
+        const hash = crypto.createHash('sha1');
+        hash.update(Buffer.concat([namespaceBytes, nameBytes]));
+        const hashBytes = hash.digest();
+        // Set version (5) and variant bits
+        hashBytes[6] = (hashBytes[6] & 0x0f) | 0x50;
+        hashBytes[8] = (hashBytes[8] & 0x3f) | 0x80;
+        // Format as UUID string
+        speakerId = [
+          hashBytes.slice(0, 4).toString('hex'),
+          hashBytes.slice(4, 6).toString('hex'),
+          hashBytes.slice(6, 8).toString('hex'),
+          hashBytes.slice(8, 10).toString('hex'),
+          hashBytes.slice(10, 16).toString('hex')
+        ].join('-');
+        console.log(`⚠️  Generated UUID v5 in JS for ${name}`);
+      } else {
+        speakerId = uuidResult;
+      }
 
       const speakerData = {
-        id: id,
+        id: speakerId,  // UUID instead of TEXT slug
         name: name,
         title: title,
         company: company,

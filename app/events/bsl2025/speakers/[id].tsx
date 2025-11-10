@@ -15,6 +15,12 @@ import { getSpeakerAvatarUrl, getSpeakerLinkedInUrl, getSpeakerTwitterUrl } from
 import LoadingScreen from '../../../../components/LoadingScreen';
 import { CopilotStep, walkthroughable } from 'react-native-copilot';
 
+// Helper function to generate user avatar URL
+const generateUserAvatarUrl = (name: string): string => {
+  const seed = name.toLowerCase().replace(/\s+/g, '-');
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+};
+
 const CopilotView = walkthroughable(View);
 
 interface Speaker {
@@ -32,6 +38,9 @@ interface Speaker {
     linkedin?: string;
     twitter?: string;
   };
+  user_id?: string;
+  isActive?: boolean; // Has user_id = active
+  isOnline?: boolean; // User is currently online (last_seen within last 5 minutes)
 }
 
 // UserTicket interface removed - now using pass system
@@ -62,6 +71,7 @@ export default function SpeakerDetail() {
   const [showRequestDetailModal, setShowRequestDetailModal] = useState(false);
   const [selectedRequestDetail, setSelectedRequestDetail] = useState<any>(null);
   const [passRefreshTrigger, setPassRefreshTrigger] = useState(0);
+  const [userPassType, setUserPassType] = useState<'general' | 'business' | 'vip'>('general');
   
   // Debug modal state changes
   useEffect(() => {
@@ -91,14 +101,13 @@ export default function SpeakerDetail() {
     }
 
     try {
+      // Use helper function to find speaker by UUID or slug
       const { data: speakerData, error } = await supabase
-        .from('bsl_speakers')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('id', id) // Check if this specific speaker is the current user
+        .rpc('get_speaker_by_id_or_slug', { p_id: id })
         .single();
-
-      if (!error && speakerData) {
+      
+      // Check if this speaker's user_id matches current user
+      if (!error && speakerData && speakerData.user_id === user.id) {
         setIsCurrentUserSpeaker(true);
       } else {
         setIsCurrentUserSpeaker(false);
@@ -114,10 +123,9 @@ export default function SpeakerDetail() {
       // First try to fetch from the database with timeout
       console.log('🔍 Attempting to load speaker from database...');
       
+      // Try to get speaker by UUID or slug using helper function
       const dbPromise = supabase
-        .from('bsl_speakers')
-        .select('*')
-        .eq('id', id)
+        .rpc('get_speaker_by_id_or_slug', { p_id: id })
         .single();
 
       // Add timeout to prevent hanging
@@ -128,10 +136,42 @@ export default function SpeakerDetail() {
       try {
         const { data: dbSpeaker, error: dbError } = await Promise.race([dbPromise, timeoutPromise]) as any;
 
-        if (dbSpeaker && !dbError) {
+        if (dbSpeaker && !dbError && dbSpeaker.id) {
+          // Check if speaker is active (has user_id) using RPC function
+          // Pass UUID as TEXT for compatibility
+          let isActive = false;
+          let isOnline = false;
+          
+          try {
+            const { data: activeData, error: activeError } = await supabase
+              .rpc('is_speaker_active', { p_speaker_id: dbSpeaker.id.toString() });
+            
+            if (!activeError) {
+              isActive = activeData === true;
+            } else {
+              // Fallback: check user_id directly
+              isActive = !!dbSpeaker.user_id;
+            }
+            
+            // Check if speaker is online using RPC function
+            if (isActive) {
+              const { data: onlineData, error: onlineError } = await supabase
+                .rpc('is_speaker_online', { p_speaker_id: dbSpeaker.id.toString() });
+              
+              if (!onlineError) {
+                isOnline = onlineData === true;
+              }
+            }
+          } catch (statusCheckError) {
+            console.log('⚠️ Could not check speaker status:', statusCheckError);
+            // Fallback: check user_id directly
+            isActive = !!dbSpeaker.user_id;
+          }
+          
           // Use real data from database
+          // Convert UUID to string for compatibility
           setSpeaker({
-            id: dbSpeaker.id,
+            id: dbSpeaker.id.toString(),
             name: dbSpeaker.name,
             title: dbSpeaker.title,
             company: dbSpeaker.company || '',
@@ -146,9 +186,12 @@ export default function SpeakerDetail() {
               wednesday: { start: '09:00', end: '17:00' },
               thursday: { start: '09:00', end: '17:00' },
               friday: { start: '09:00', end: '17:00' }
-            }
+            },
+            user_id: dbSpeaker.user_id,
+            isActive,
+            isOnline
           });
-          console.log('✅ Loaded speaker from database:', dbSpeaker.name);
+          console.log('✅ Loaded speaker from database:', dbSpeaker.name, { isActive, isOnline });
           setLoading(false);
           return;
         }
@@ -382,10 +425,172 @@ export default function SpeakerDetail() {
     setShowCancelModal(true);
   };
 
-  const handleRequestCardPress = (request: any) => {
+  const handleRequestCardPress = async (request: any) => {
     console.log('🔍 Opening request details:', request);
-    setSelectedRequestDetail(request);
+    
+    // If speaker is viewing, fetch requester details
+    if (isCurrentUserSpeaker && request.requester_id !== user?.id) {
+      try {
+        // Fetch requester profile information
+        const requesterIds = [request.requester_id];
+        let profileMap = new Map();
+        
+        try {
+          const { data: userProfiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url, email')
+            .in('id', requesterIds);
+          
+          profileMap = new Map((userProfiles || []).map(p => [p.id, p]));
+        } catch (e) {
+          console.log('Profiles table not found, using requester_name from request');
+        }
+        
+        const profile = profileMap.get(request.requester_id);
+        const requesterName = request.requester_name || 'User';
+        
+        // Enhance request with requester details
+        const enhancedRequest = {
+          ...request,
+          requester_avatar: profile?.avatar_url || generateUserAvatarUrl(requesterName),
+          requester_full_name: profile?.full_name || requesterName,
+          requester_email: profile?.email || request.requester_name || '',
+        };
+        
+        setSelectedRequestDetail(enhancedRequest);
+      } catch (error) {
+        console.error('Error fetching requester details:', error);
+        setSelectedRequestDetail(request);
+      }
+    } else {
+      setSelectedRequestDetail(request);
+    }
+    
     setShowRequestDetailModal(true);
+  };
+  
+  const handleAcceptRequest = async (request: any, slotTime?: string) => {
+    if (!user || !isCurrentUserSpeaker) return;
+    
+    // If no slot provided, show slot picker first (similar to my-requests.tsx)
+    if (!slotTime) {
+      // For now, just accept without slot selection
+      // TODO: Add slot picker UI
+      showInfo('Info', 'Slot selection will be added soon. Accepting request without slot.');
+      return;
+    }
+    
+    try {
+      // Get speaker's bsl_speakers.id (TEXT) for the function
+      const { data: speakerData } = await supabase
+        .from('bsl_speakers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!speakerData) {
+        showError('Error', 'You are not a speaker');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .rpc('accept_meeting_request', {
+          p_request_id: request.id,
+          p_speaker_id: speakerData.id, // Use bsl_speakers.id (TEXT), not user_id
+          p_slot_start_time: slotTime,
+          p_speaker_response: null
+        });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        showSuccess('Request Accepted', 'The meeting request has been accepted');
+        setShowRequestDetailModal(false);
+        await loadMeetingRequestStatus();
+      } else {
+        throw new Error(data?.error || 'Failed to accept request');
+      }
+    } catch (error: any) {
+      console.error('❌ Error accepting request:', error);
+      showError('Accept Failed', error.message || 'Failed to accept meeting request');
+    }
+  };
+
+  const handleDeclineRequest = async (request: any) => {
+    if (!user || !isCurrentUserSpeaker) return;
+    
+    try {
+      // Get speaker's bsl_speakers.id (TEXT) for the function
+      const { data: speakerData } = await supabase
+        .from('bsl_speakers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!speakerData) {
+        showError('Error', 'You are not a speaker');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .rpc('decline_meeting_request', {
+          p_request_id: request.id,
+          p_speaker_id: speakerData.id, // Use bsl_speakers.id (TEXT), not user_id
+          p_speaker_response: null
+        });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        showSuccess('Request Declined', 'The meeting request has been declined');
+        setShowRequestDetailModal(false);
+        await loadMeetingRequestStatus();
+      } else {
+        throw new Error(data?.error || 'Failed to decline request');
+      }
+    } catch (error: any) {
+      console.error('❌ Error declining request:', error);
+      showError('Decline Failed', error.message || 'Failed to decline meeting request');
+    }
+  };
+
+  const handleBlockUser = async (request: any) => {
+    if (!user || !isCurrentUserSpeaker) return;
+    
+    try {
+      // Get speaker's bsl_speakers.id (TEXT) for the function
+      const { data: speakerData } = await supabase
+        .from('bsl_speakers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!speakerData) {
+        showError('Error', 'You are not a speaker');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .rpc('block_user_and_decline_request', {
+          p_request_id: request.id,
+          p_speaker_id: speakerData.id, // Use bsl_speakers.id (TEXT), not user_id
+          p_user_id: request.requester_id,
+          p_reason: 'User has been blocked'
+        });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        showSuccess('User Blocked', 'The user has been blocked and their request declined');
+        setShowRequestDetailModal(false);
+        await loadMeetingRequestStatus();
+      } else {
+        throw new Error(data?.error || 'Failed to block user');
+      }
+    } catch (error: any) {
+      console.error('❌ Error blocking user:', error);
+      showError('Block Failed', error.message || 'Failed to block user');
+    }
   };
 
   const confirmCancelRequest = async () => {
@@ -398,10 +603,11 @@ export default function SpeakerDetail() {
       console.log('🔄 User ID:', user.id);
       
       // Use the new RPC function to cancel the meeting request
+      // Note: Function expects UUID, not string
       const { data: cancelResult, error: cancelError } = await supabase
         .rpc('cancel_meeting_request', {
-          p_request_id: selectedRequestToCancel.id.toString(),
-          p_user_id: user.id.toString()
+          p_request_id: selectedRequestToCancel.id,
+          p_user_id: user.id
         });
 
       console.log('🔄 Cancel response - data:', cancelResult);
@@ -494,13 +700,18 @@ export default function SpeakerDetail() {
 
       if (data) {
         setRequestLimits({
-          ticketType: data.pass_type || 'business',
+          ticketType: data.pass_type || 'general',
           totalRequests: data.total_requests || 0,
           remainingRequests: data.remaining_requests || 0,
           canSendRequest: (data.remaining_requests || 0) > 0,
           requestLimit: data.max_requests || 0,
           reason: data.remaining_requests > 0 ? 'Request allowed' : 'No remaining requests',
         });
+        
+        // Update userPassType from the data
+        if (data.pass_type) {
+          setUserPassType(data.pass_type as 'general' | 'business' | 'vip');
+        }
       } else {
         // No pass found or other issue
         setRequestLimits({
@@ -719,7 +930,7 @@ export default function SpeakerDetail() {
         requester_name: user.email || 'Anonymous',
         requester_company: 'Your Company', // Would come from user profile
         requester_title: 'Your Title', // Would come from user profile
-        requester_ticket_type: 'business', // Default to business for now, will be replaced by pass system
+        requester_ticket_type: userPassType, // Use actual pass type from user's pass
         meeting_type: 'networking',
         message: meetingMessage || '', // Allow empty message
         note: getSelectedIntentionsText(),
@@ -854,7 +1065,23 @@ export default function SpeakerDetail() {
             name={speaker.name}
             size={80}
             showBorder={true}
+            isOnline={speaker.isOnline}
           />
+          {/* Floating status badge near avatar */}
+          {speaker.isActive !== undefined && (
+            <View style={styles.floatingStatusBadge}>
+              <View style={[
+                styles.statusIndicator,
+                speaker.isActive ? styles.activeIndicator : styles.inactiveIndicator
+              ]} />
+              <Text style={[
+                styles.statusBadgeText,
+                speaker.isActive ? styles.activeBadgeText : styles.inactiveBadgeText
+              ]}>
+                {speaker.isActive ? (speaker.isOnline ? 'Online' : 'Active') : 'Inactive'}
+              </Text>
+            </View>
+          )}
         </View>
         
         <View style={styles.speakerInfo}>
@@ -1066,6 +1293,9 @@ export default function SpeakerDetail() {
             refreshTrigger={passRefreshTrigger}
             onPassInfoLoaded={(passInfo) => {
               console.log('Pass info loaded:', passInfo);
+              if (passInfo && passInfo.pass_type) {
+                setUserPassType(passInfo.pass_type as 'general' | 'business' | 'vip');
+              }
             }}
             onRequestLimitsLoaded={(limits) => {
               console.log('Request limits loaded:', limits);
@@ -1309,8 +1539,8 @@ export default function SpeakerDetail() {
             </TouchableOpacity>
 
             <View style={styles.cancelModalHeader}>
-              <MaterialIcons name="warning" size={28} color={colors.error.main} />
-              <Text style={styles.cancelModalTitle}>Cancel Your Meeting Request</Text>
+              <MaterialIcons name="warning" size={24} color={colors.error.main} />
+              <Text style={styles.cancelModalTitle}>Cancel Meeting Request?</Text>
             </View>
             
             <Text style={styles.cancelModalMessage}>
@@ -1411,6 +1641,28 @@ export default function SpeakerDetail() {
                 </View>
               </View>
 
+              {/* Speaker Information */}
+              <View style={styles.detailInfoSection}>
+                <Text style={styles.detailSectionTitle}>Speaker</Text>
+                <View style={styles.speakerDetailCard}>
+                  <SpeakerAvatar
+                    name={selectedRequestDetail.speaker_name}
+                    imageUrl={speaker?.image || getSpeakerAvatarUrl(selectedRequestDetail.speaker_name)}
+                    size={60}
+                    showBorder={true}
+                  />
+                  <View style={styles.speakerDetailInfo}>
+                    <Text style={styles.speakerDetailName}>{selectedRequestDetail.speaker_name}</Text>
+                    {speaker?.title && (
+                      <Text style={styles.speakerDetailTitle}>{speaker.title}</Text>
+                    )}
+                    {speaker?.company && (
+                      <Text style={styles.speakerDetailCompany}>{speaker.company}</Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+
               {/* Request Information */}
               <View style={styles.detailInfoSection}>
                 <Text style={styles.detailSectionTitle}>Request Information</Text>
@@ -1418,11 +1670,6 @@ export default function SpeakerDetail() {
                 <View style={styles.detailInfoRow}>
                   <Text style={styles.detailInfoLabel}>Request ID:</Text>
                   <Text style={styles.detailInfoValue}>{selectedRequestDetail.id}</Text>
-                </View>
-                
-                <View style={styles.detailInfoRow}>
-                  <Text style={styles.detailInfoLabel}>Speaker:</Text>
-                  <Text style={styles.detailInfoValue}>{selectedRequestDetail.speaker_name}</Text>
                 </View>
                 
                 <View style={styles.detailInfoRow}>
@@ -1450,16 +1697,18 @@ export default function SpeakerDetail() {
                 </View>
               </View>
 
-              {/* Message - Only show for user's own requests */}
-              {selectedRequestDetail.message && selectedRequestDetail.requester_id === user?.id && (
+              {/* Message - Show for both requester and speaker */}
+              {selectedRequestDetail.message && (
                 <View style={styles.detailInfoSection}>
-                  <Text style={styles.detailSectionTitle}>Your Message</Text>
+                  <Text style={styles.detailSectionTitle}>
+                    {selectedRequestDetail.requester_id === user?.id ? 'Your Message' : 'Message'}
+                  </Text>
                   <Text style={styles.detailMessage}>{selectedRequestDetail.message}</Text>
                 </View>
               )}
 
-              {/* Note/Intentions - Only show for user's own requests */}
-              {selectedRequestDetail.note && selectedRequestDetail.requester_id === user?.id && (
+              {/* Note/Intentions - Show for both requester and speaker */}
+              {selectedRequestDetail.note && (
                 <View style={styles.detailInfoSection}>
                   <Text style={styles.detailSectionTitle}>Meeting Intentions</Text>
                   <View style={styles.detailIntentionsContainer}>
@@ -1504,19 +1753,51 @@ export default function SpeakerDetail() {
               )}
 
               {/* Action Buttons */}
-              {selectedRequestDetail.status === 'pending' && selectedRequestDetail.requester_id === user?.id && (
-                <View style={styles.detailActions}>
-                  <TouchableOpacity
-                    style={styles.detailCancelButton}
-                    onPress={() => {
-                      setShowRequestDetailModal(false);
-                      handleCancelRequest(selectedRequestDetail);
-                    }}
-                  >
-                    <MaterialIcons name="close" size={20} color="white" />
-                    <Text style={styles.detailCancelButtonText}>Cancel Request</Text>
-                  </TouchableOpacity>
-                </View>
+              {selectedRequestDetail.status === 'pending' && (
+                <>
+                  {selectedRequestDetail.requester_id === user?.id ? (
+                    // Requester view - show cancel button
+                    <View style={styles.detailActions}>
+                      <TouchableOpacity
+                        style={styles.detailCancelButton}
+                        onPress={() => {
+                          setShowRequestDetailModal(false);
+                          handleCancelRequest(selectedRequestDetail);
+                        }}
+                      >
+                        <MaterialIcons name="close" size={20} color="white" />
+                        <Text style={styles.detailCancelButtonText}>Cancel Request</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : isCurrentUserSpeaker ? (
+                    // Speaker view - show accept/decline/block buttons
+                    <View style={styles.detailActions}>
+                      <TouchableOpacity
+                        style={[styles.detailActionButton, styles.detailAcceptButton]}
+                        onPress={() => handleAcceptRequest(selectedRequestDetail)}
+                      >
+                        <MaterialIcons name="check-circle" size={20} color="white" />
+                        <Text style={styles.detailActionButtonText}>Accept</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={[styles.detailActionButton, styles.detailDeclineButton]}
+                        onPress={() => handleDeclineRequest(selectedRequestDetail)}
+                      >
+                        <MaterialIcons name="cancel" size={20} color="white" />
+                        <Text style={styles.detailActionButtonText}>Decline</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={[styles.detailActionButton, styles.detailBlockButton]}
+                        onPress={() => handleBlockUser(selectedRequestDetail)}
+                      >
+                        <MaterialIcons name="block" size={20} color="white" />
+                        <Text style={styles.detailActionButtonText}>Block User</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </>
               )}
             </ScrollView>
           )}
@@ -1547,6 +1828,7 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   avatarContainer: {
     marginRight: 16,
+    position: 'relative',
   },
   speakerInfo: {
     flex: 1,
@@ -1557,6 +1839,50 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontWeight: '700',
     color: colors.text.primary,
     marginBottom: 4,
+  },
+  floatingStatusBadge: {
+    position: 'absolute',
+    bottom: -6,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background.paper,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    gap: 6,
+    alignSelf: 'center',
+    minWidth: 70,
+  },
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  activeIndicator: {
+    backgroundColor: '#22c55e',
+  },
+  inactiveIndicator: {
+    backgroundColor: '#9ca3af',
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  activeBadgeText: {
+    color: '#22c55e',
+  },
+  inactiveBadgeText: {
+    color: '#9ca3af',
   },
   speakerTitle: {
     fontSize: 16,
@@ -2116,6 +2442,34 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: colors.text.primary,
     marginBottom: 12,
   },
+  speakerDetailCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.paper,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  speakerDetailInfo: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  speakerDetailName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  speakerDetailTitle: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 2,
+  },
+  speakerDetailCompany: {
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
   detailInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2165,6 +2519,9 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   detailActions: {
     marginTop: 20,
     marginBottom: 20,
+    gap: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   detailCancelButton: {
     flexDirection: 'row',
@@ -2175,11 +2532,61 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     gap: 8,
+    flex: 1,
   },
   detailCancelButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  detailActionButton: {
+    flex: 1,
+    minWidth: '30%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 6,
+  },
+  detailAcceptButton: {
+    backgroundColor: colors.success?.main || '#4CAF50',
+  },
+  detailDeclineButton: {
+    backgroundColor: colors.error.main,
+  },
+  detailBlockButton: {
+    backgroundColor: colors.warning?.main || '#FF9800',
+  },
+  detailActionButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  nameRowWithBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  ticketBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  vipBadge: {
+    backgroundColor: colors.warning?.main || '#FF9800',
+  },
+  ticketBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   modalCloseButton: {
     padding: 8,
@@ -2320,16 +2727,16 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   cancelModalContent: {
     backgroundColor: colors.background.paper,
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 0,
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 420,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 12,
+      height: 8,
     },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 16,
     borderWidth: 1,
@@ -2338,12 +2745,12 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   cancelModalCloseX: {
     position: 'absolute',
-    top: 16,
-    right: 16,
+    top: 12,
+    right: 12,
     zIndex: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.background.default,
     justifyContent: 'center',
     alignItems: 'center',
@@ -2353,75 +2760,76 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   cancelModalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 32,
+    padding: 20,
     paddingTop: 24,
-    paddingBottom: 20,
+    paddingBottom: 16,
+    gap: 12,
   },
   cancelModalTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.text.primary,
-    marginLeft: 16,
-    letterSpacing: 0.5,
+    flex: 1,
+    letterSpacing: 0.3,
   },
   cancelModalMessage: {
-    fontSize: 17,
+    fontSize: 14,
     color: colors.text.primary,
-    marginBottom: 20,
-    lineHeight: 26,
-    paddingHorizontal: 32,
-    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 20,
+    paddingHorizontal: 20,
+    textAlign: 'left',
     fontWeight: '500',
   },
   cancelModalWarningBox: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: `${colors.error.main}08`,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    marginHorizontal: 32,
-    marginBottom: 32,
-    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: `${colors.error.main}20`,
+    gap: 10,
   },
   cancelModalWarning: {
-    fontSize: 15,
+    fontSize: 13,
     color: colors.error.main,
     fontWeight: '600',
-    marginLeft: 12,
     flex: 1,
-    lineHeight: 22,
+    lineHeight: 18,
   },
   cancelModalConfirmButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    marginHorizontal: 32,
-    marginBottom: 32,
-    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 12,
     backgroundColor: colors.error.main,
     shadowColor: colors.error.main,
     shadowOffset: {
       width: 0,
-      height: 6,
+      height: 4,
     },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   cancelModalConfirmButtonDisabled: {
     backgroundColor: colors.text.secondary,
     shadowOpacity: 0.2,
   },
   cancelModalConfirmText: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
     color: 'white',
     marginLeft: 8,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   // Cancelled Requests History Styles
   cancelledRequestsList: {

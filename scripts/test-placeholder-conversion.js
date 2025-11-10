@@ -71,3 +71,4 @@ templatePlaceholders.forEach(placeholder => {
   console.log(`${placeholder.padEnd(35)} -> ${camelKey.padEnd(30)} ${value ? '✓' : '✗ MISSING'}`);
 });
 
+

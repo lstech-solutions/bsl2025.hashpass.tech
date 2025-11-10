@@ -9,6 +9,7 @@ interface SpeakerAvatarProps {
   size?: number;
   style?: any;
   showBorder?: boolean;
+  isOnline?: boolean;
 }
 
 export default function SpeakerAvatar({ 
@@ -16,7 +17,8 @@ export default function SpeakerAvatar({
   name, 
   size = 50, 
   style, 
-  showBorder = false 
+  showBorder = false,
+  isOnline = false
 }: SpeakerAvatarProps) {
   const { isDark, colors } = useTheme();
   const [imageLoading, setImageLoading] = useState(true);

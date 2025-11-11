@@ -126,7 +126,7 @@ export function useRealtimeMeetingRequests({
                 newStatus,
               });
 
-              // Fetch full request data to ensure we have all fields
+              // Always fetch full request data to ensure we have the latest state
               const fullRequest = await fetchFullRequest(updatedRequest.id);
               
               if (fullRequest) {
@@ -140,7 +140,7 @@ export function useRealtimeMeetingRequests({
                     .single();
                   speakerImage = speakerData?.imageurl || null;
                 } catch (e) {
-                  // Ignore error
+                  console.log('Could not fetch speaker image for update:', e);
                 }
 
                 const enrichedRequest: RequestWithDirection = {
@@ -149,6 +149,7 @@ export function useRealtimeMeetingRequests({
                   speaker_image: speakerImage,
                 };
 
+                console.log('📤 Calling onRequestUpdated for SENT request:', enrichedRequest.id, 'status:', enrichedRequest.status);
                 onRequestUpdated(enrichedRequest, oldStatus);
 
                 // Enhanced haptic feedback for status changes
@@ -169,9 +170,13 @@ export function useRealtimeMeetingRequests({
                   }
                 }
               } else {
-                // Fallback: use payload data
+                // Fallback: use payload data with enrichment
                 console.warn('⚠️ Could not fetch full request, using payload data');
-                onRequestUpdated(updatedRequest as RequestWithDirection, oldStatus);
+                const enrichedRequest: RequestWithDirection = {
+                  ...updatedRequest,
+                  _direction: 'sent',
+                };
+                onRequestUpdated(enrichedRequest, oldStatus);
               }
             } else if (payload.eventType === 'DELETE') {
               const deletedRequest = payload.old as any;
@@ -259,7 +264,7 @@ export function useRealtimeMeetingRequests({
                 newStatus,
               });
 
-              // Fetch full request data
+              // Always fetch full request data to ensure we have the latest state
               const fullRequest = await fetchFullRequest(updatedRequest.id);
 
               if (fullRequest) {
@@ -275,6 +280,7 @@ export function useRealtimeMeetingRequests({
                   requester_email: fullRequest.requester_name || '',
                 };
 
+                console.log('📥 Calling onRequestUpdated for INCOMING request:', enrichedRequest.id, 'status:', enrichedRequest.status);
                 onRequestUpdated(enrichedRequest, oldStatus);
 
                 // Haptic feedback for status changes
@@ -293,9 +299,18 @@ export function useRealtimeMeetingRequests({
                   }
                 }
               } else {
-                // Fallback: use payload data
+                // Fallback: use payload data with enrichment
                 console.warn('⚠️ Could not fetch full request, using payload data');
-                onRequestUpdated(updatedRequest as RequestWithDirection, oldStatus);
+                const requesterName = updatedRequest.requester_name || 'User';
+                const requesterAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(requesterName.toLowerCase().replace(/\s+/g, '-'))}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+                const enrichedRequest: RequestWithDirection = {
+                  ...updatedRequest,
+                  _direction: 'incoming',
+                  requester_avatar: requesterAvatar,
+                  requester_full_name: requesterName,
+                  requester_email: updatedRequest.requester_name || '',
+                };
+                onRequestUpdated(enrichedRequest, oldStatus);
               }
             } else if (payload.eventType === 'DELETE') {
               const deletedRequest = payload.old as any;
@@ -383,7 +398,10 @@ export function useRealtimeMeetingRequests({
                   enrichedRequest.requester_email = fullRequest.requester_name || '';
                 }
 
+                console.log('🔔 Notification triggered request update:', requestId, 'direction:', direction, 'status:', enrichedRequest.status);
                 onRequestUpdated(enrichedRequest);
+              } else {
+                console.warn('⚠️ Could not fetch request from notification:', requestId);
               }
             }
           }
@@ -393,6 +411,8 @@ export function useRealtimeMeetingRequests({
         console.log('📡 Notifications subscription status:', status);
         if (status === 'SUBSCRIBED') {
           console.log('✅ Successfully subscribed to notifications');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('⚠️ Notifications channel error:', status);
         }
       });
 

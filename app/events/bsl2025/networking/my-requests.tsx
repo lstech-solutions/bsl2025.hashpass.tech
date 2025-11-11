@@ -59,6 +59,12 @@ export default function MyRequestsView() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [confirmedMeetingId, setConfirmedMeetingId] = useState<string | null>(null);
+  // Track current slot loading context to reload after acceptance
+  const [currentSlotContext, setCurrentSlotContext] = useState<{
+    speakerId: string;
+    durationMinutes: number;
+    requesterId?: string;
+  } | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showHoldModal, setShowHoldModal] = useState(false);
   const [holdTime, setHoldTime] = useState(1); // Hours
@@ -126,30 +132,30 @@ export default function MyRequestsView() {
     console.log('🔄 Request updated:', updatedRequest.id, 'from', oldStatus, 'to', updatedRequest.status);
     
     setRequests(prev => {
-      const updated = prev.map(req => {
-        if (req.id === updatedRequest.id) {
-          console.log('✅ Updating request in state:', req.id, 'status:', req.status, '->', updatedRequest.status);
-          // Preserve existing fields that might not be in the updated request
-          return {
-            ...updatedRequest,
-            _direction: req._direction || updatedRequest._direction,
-            speaker_image: updatedRequest.speaker_image !== undefined ? updatedRequest.speaker_image : req.speaker_image,
-            requester_avatar: updatedRequest.requester_avatar || req.requester_avatar,
-            requester_full_name: updatedRequest.requester_full_name || req.requester_full_name,
-            requester_email: updatedRequest.requester_email || req.requester_email,
-          };
-        }
-        return req;
-      });
-
-      // Check if request was actually updated
-      const wasUpdated = updated.some(req => req.id === updatedRequest.id && req.status === updatedRequest.status);
-      if (!wasUpdated) {
+      const requestIndex = prev.findIndex(req => req.id === updatedRequest.id);
+      
+      if (requestIndex >= 0) {
+        // Request exists, update it
+        const existingRequest = prev[requestIndex];
+        console.log('✅ Updating existing request in state:', updatedRequest.id, 'status:', existingRequest.status, '->', updatedRequest.status);
+        
+        const updated = [...prev];
+        updated[requestIndex] = {
+          ...updatedRequest,
+          // Preserve direction and enrichment data
+          _direction: existingRequest._direction || updatedRequest._direction,
+          speaker_image: updatedRequest.speaker_image !== undefined ? updatedRequest.speaker_image : existingRequest.speaker_image,
+          requester_avatar: updatedRequest.requester_avatar || existingRequest.requester_avatar,
+          requester_full_name: updatedRequest.requester_full_name || existingRequest.requester_full_name,
+          requester_email: updatedRequest.requester_email || existingRequest.requester_email,
+        };
+        
+        return updated;
+      } else {
+        // Request not found, add it (might be a new request or state was cleared)
         console.warn('⚠️ Request not found in state, adding it:', updatedRequest.id);
-        return [updatedRequest, ...updated];
+        return [updatedRequest, ...prev];
       }
-
-      return updated;
     });
 
     // Show success message if status changed to accepted
@@ -288,29 +294,44 @@ export default function MyRequestsView() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
+      console.log('🔄 Manual refresh triggered');
       await loadMyRequests();
       // Refresh notifications after reloading requests
       refreshNotifications();
+      console.log('✅ Manual refresh completed');
     } catch (error) {
-      console.error('Error refreshing requests:', error);
+      console.error('❌ Error refreshing requests:', error);
       showError('Refresh Error', 'Failed to refresh requests. Please try again.');
     } finally {
       setRefreshing(false);
     }
   };
 
-  // Manual reload handler (for header button)
+  // Manual reload handler (for header button) - Force refresh with haptic feedback
   const handleManualReload = useCallback(async () => {
     try {
+      console.log('🔄 Manual reload triggered');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setRefreshing(true);
+      
+      // Force reload by clearing state first, then loading fresh data
+      setRequests([]);
+      
       await loadMyRequests();
       refreshNotifications();
-      setRefreshing(false);
+      
+      // Additional haptic feedback on success
+      setTimeout(() => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }, 300);
+      
+      console.log('✅ Manual reload completed');
     } catch (error) {
-      console.error('Error in manual reload:', error);
-      setRefreshing(false);
+      console.error('❌ Error in manual reload:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showError('Refresh Error', 'Failed to refresh requests. Please try again.');
+    } finally {
+      setRefreshing(false);
     }
   }, [loadMyRequests, refreshNotifications, showError]);
 
@@ -343,7 +364,12 @@ export default function MyRequestsView() {
 
       if (data?.success) {
         showSuccess('Request Cancelled', 'Your meeting request has been cancelled. Your request limit has been restored, but boost points are not refunded.');
-        await loadMyRequests();
+        
+        // Force reload to ensure UI is updated
+        setTimeout(async () => {
+          await loadMyRequests();
+        }, 500);
+        
         setShowDetailModal(false);
         setSelectedRequest(null);
       } else {
@@ -355,9 +381,19 @@ export default function MyRequestsView() {
     }
   };
 
-  const loadAvailableSlots = async (speakerId: string, durationMinutes: number = 15, requesterId?: string) => {
+  const loadAvailableSlots = async (
+    speakerId: string, 
+    durationMinutes: number = 15, 
+    requesterId?: string,
+    showPicker: boolean = true
+  ) => {
     try {
       setLoadingSlots(true);
+      
+      // Store context for potential reload after acceptance (only if showing picker)
+      if (showPicker) {
+        setCurrentSlotContext({ speakerId, durationMinutes, requesterId });
+      }
       
       // Call without requester_id for now (migration not applied yet)
       // Once migration is applied, this will automatically work with requester conflict checking
@@ -372,25 +408,60 @@ export default function MyRequestsView() {
       // This prevents errors while migration is pending
       if (requesterId) {
         console.log('⚠️ Requester conflict checking will be enabled after migration is applied');
+        // Try to include requester_id if migration is applied
+        try {
+          rpcParams.p_requester_id = requesterId;
+        } catch (e) {
+          // Fallback: if migration not applied, continue without requester_id
+          console.log('⚠️ Migration not applied, skipping requester_id parameter');
+        }
       }
       
       const { data, error } = await supabase
         .rpc('get_speaker_available_slots', rpcParams);
 
       if (error) {
+        // If error is about missing parameter, try without requester_id
+        if (error.code === 'PGRST202' && requesterId) {
+          console.log('⚠️ Migration not applied, retrying without requester_id');
+          const { data: retryData, error: retryError } = await supabase
+            .rpc('get_speaker_available_slots', {
+              p_speaker_id: speakerId,
+              p_date: null,
+              p_duration_minutes: durationMinutes,
+            });
+          
+          if (retryError) {
+            throw retryError;
+          }
+          
+          setAvailableSlots(retryData || []);
+          if (showPicker) {
+            setShowSlotPicker(true);
+          }
+          
+          if (showPicker && (!retryData || retryData.length === 0)) {
+            showError('No Available Slots', 'There are no available time slots. Please try again later.');
+          }
+          return;
+        }
         throw error;
       }
 
       setAvailableSlots(data || []);
-      setShowSlotPicker(true);
+      if (showPicker) {
+        setShowSlotPicker(true);
+      }
       
-      // Show warning if no slots available
-      if (!data || data.length === 0) {
+      // Show warning if no slots available (only if showing picker)
+      if (showPicker && (!data || data.length === 0)) {
         showError('No Available Slots', 'There are no available time slots. Please try again later.');
       }
     } catch (error: any) {
       console.error('❌ Error loading slots:', error);
-      showError('Error', 'Failed to load available slots');
+      if (showPicker) {
+        showError('Error', 'Failed to load available slots');
+      }
     } finally {
       setLoadingSlots(false);
     }
@@ -452,7 +523,27 @@ export default function MyRequestsView() {
         setConfirmedMeetingId(data.meeting_id);
         setShowSlotPicker(false);
         setShowSlotConfirmation(true);
-        await loadMyRequests();
+        
+        // Reload available slots to reflect the newly accepted meeting
+        // This ensures slots are up-to-date if user opens slot picker again
+        if (currentSlotContext) {
+          console.log('🔄 Reloading available slots after acceptance...');
+          setTimeout(async () => {
+            // Reload slots in background without showing picker
+            await loadAvailableSlots(
+              currentSlotContext.speakerId,
+              currentSlotContext.durationMinutes,
+              currentSlotContext.requesterId,
+              false // Don't show picker
+            );
+          }, 500);
+        }
+        
+        // Force reload to ensure UI is updated
+        setTimeout(async () => {
+          await loadMyRequests();
+        }, 500);
+        
         showSuccess('Request Accepted', 'The meeting has been scheduled successfully');
       } else {
         // Fallback for unexpected response format
@@ -492,7 +583,12 @@ export default function MyRequestsView() {
 
       if (data?.success) {
         showSuccess('Request Declined', 'The meeting request has been declined');
-        await loadMyRequests();
+        
+        // Force reload to ensure UI is updated
+        setTimeout(async () => {
+          await loadMyRequests();
+        }, 500);
+        
         setShowDetailModal(false);
       } else {
         throw new Error(data?.error || 'Failed to decline request');
@@ -531,7 +627,12 @@ export default function MyRequestsView() {
 
       if (data?.success) {
         showSuccess('User Blocked', 'The user has been blocked and their request declined');
-        await loadMyRequests();
+        
+        // Force reload to ensure UI is updated
+        setTimeout(async () => {
+          await loadMyRequests();
+        }, 500);
+        
         setShowDetailModal(false);
       } else {
         throw new Error(data?.error || 'Failed to block user');
@@ -1285,6 +1386,8 @@ export default function MyRequestsView() {
         onRequestClose={() => {
           setShowSlotPicker(false);
           setSelectedSlot(null);
+          // Clear slot context when picker is closed
+          setCurrentSlotContext(null);
         }}
       >
         <View style={styles.modalOverlay}>
@@ -1301,6 +1404,8 @@ export default function MyRequestsView() {
               onPress={() => {
                 setShowSlotPicker(false);
                 setSelectedSlot(null);
+                // Clear slot context when picker is closed
+                setCurrentSlotContext(null);
               }}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >

@@ -33,6 +33,7 @@ export const SPEAKER_PRIORITY_ORDER = [
   'Pablo Santos',
   'Ana María Zuluaga',
   'Alireza Siadat',
+  'Rafael Gago',
   'Omar Castelblanco',
   'Pedro Gutiérrez',
   'Nathaly Diniz',
@@ -62,10 +63,10 @@ export const SPEAKER_PRIORITY_ORDER = [
   'Lizeth Jaramillo',
   'Mariangel García',
   'Roberto Darrigrandi',
-  'Arlette Salas',
   'Ed Marquez',
   'Young Cho',
   'Edward Calderón',
+  'Arlette Salas',
   'Paula Bermúdez',
   'Diego Osuna',
   'Gerardo Lagos',
@@ -98,7 +99,6 @@ export const SPEAKER_PRIORITY_ORDER = [
   'Nick Waytula',
   'Sergio Ramírez',
   'Wilder Rosero',
-  'Rodrigo Sainz',
 ];
 
 // Create a map for quick lookup

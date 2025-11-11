@@ -390,16 +390,23 @@ export default function MyRequestsView() {
     try {
       setLoadingSlots(true);
       
+      // Ensure speakerId is a string (UUID as TEXT for the function)
+      const speakerIdString = String(speakerId).trim();
+      if (!speakerIdString || speakerIdString === 'undefined' || speakerIdString === 'null') {
+        console.error('❌ Invalid speaker ID:', speakerId);
+        throw new Error('Invalid speaker ID provided');
+      }
+      
       // Store context for potential reload after acceptance (only if showing picker)
       if (showPicker) {
-        setCurrentSlotContext({ speakerId, durationMinutes, requesterId });
+        setCurrentSlotContext({ speakerId: speakerIdString, durationMinutes, requesterId });
       }
       
       // Call without requester_id for now (migration not applied yet)
       // Once migration is applied, this will automatically work with requester conflict checking
       // TODO: After migration is applied, we can add requester_id parameter
       const rpcParams: any = {
-        p_speaker_id: speakerId,
+        p_speaker_id: speakerIdString,
         p_date: null,
         p_duration_minutes: durationMinutes,
       };
@@ -417,10 +424,18 @@ export default function MyRequestsView() {
         }
       }
       
+      console.log('🔍 Loading available slots with params:', {
+        speakerId,
+        durationMinutes,
+        requesterId,
+        rpcParams
+      });
+
       const { data, error } = await supabase
         .rpc('get_speaker_available_slots', rpcParams);
 
       if (error) {
+        console.error('❌ RPC error loading slots:', error);
         // If error is about missing parameter, try without requester_id
         if (error.code === 'PGRST202' && requesterId) {
           console.log('⚠️ Migration not applied, retrying without requester_id');
@@ -432,20 +447,99 @@ export default function MyRequestsView() {
             });
           
           if (retryError) {
+            console.error('❌ Retry RPC error:', retryError);
             throw retryError;
           }
           
+          console.log('✅ Retry successful, received slots:', retryData?.length || 0);
           setAvailableSlots(retryData || []);
           if (showPicker) {
             setShowSlotPicker(true);
           }
           
           if (showPicker && (!retryData || retryData.length === 0)) {
+            console.warn('⚠️ No slots returned after retry');
             showError('No Available Slots', 'There are no available time slots. Please try again later.');
           }
           return;
         }
         throw error;
+      }
+
+      console.log('✅ RPC successful, received slots:', data?.length || 0, 'slots');
+      if (data && data.length > 0) {
+        console.log('📅 First few slots:', data.slice(0, 3).map(s => ({
+          slot_time: s.slot_time,
+          date: s.date,
+          start_time: s.start_time,
+          is_available: s.is_available
+        })));
+      } else {
+        console.warn('⚠️ Empty slots array returned from RPC');
+        
+        // If requester_id was included and we got empty results, try without it
+        // This handles the case where requester conflicts filter out all slots
+        if (requesterId && rpcParams.p_requester_id) {
+          console.log('🔄 Empty results with requester_id, retrying without requester conflict check...');
+          const { data: retryData, error: retryError } = await supabase
+            .rpc('get_speaker_available_slots', {
+              p_speaker_id: speakerIdString,
+              p_date: null,
+              p_duration_minutes: durationMinutes,
+            });
+          
+          if (!retryError && retryData && retryData.length > 0) {
+            console.log('✅ Found', retryData.length, 'slots without requester conflict check');
+            setAvailableSlots(retryData);
+            if (showPicker) {
+              setShowSlotPicker(true);
+            }
+            return; // Success, exit early
+          } else if (retryError) {
+            console.error('❌ Retry error:', retryError);
+          }
+        }
+        
+        // Check if speaker exists and has agenda status
+        const { data: speakerCheck } = await supabase
+          .from('bsl_speakers')
+          .select('id, user_id')
+          .eq('id', speakerIdString)
+          .single();
+        
+        if (speakerCheck) {
+          console.log('👤 Speaker found with ID:', speakerCheck.id, 'user_id:', speakerCheck.user_id);
+          // Check if speaker has any agenda status entries
+          const { data: agendaCheck } = await supabase
+            .from('user_agenda_status')
+            .select('slot_status, slot_time')
+            .eq('user_id', speakerCheck.user_id)
+            .limit(10);
+          
+          console.log('📋 Speaker agenda status entries:', agendaCheck?.length || 0);
+          if (agendaCheck && agendaCheck.length > 0) {
+            console.log('📋 Sample agenda entries:', agendaCheck.map(a => ({
+              slot_time: a.slot_time,
+              slot_status: a.slot_status,
+              is_future: new Date(a.slot_time) > new Date()
+            })));
+            
+            // Check specifically for available/interested slots
+            const availableSlots = agendaCheck.filter(a => 
+              ['available', 'interested'].includes(a.slot_status) && 
+              new Date(a.slot_time) > new Date()
+            );
+            console.log('✅ Available/interested future slots:', availableSlots.length);
+            
+            if (availableSlots.length > 0 && (!data || data.length === 0)) {
+              console.warn('⚠️ Speaker has available slots but RPC returned empty. Possible requester conflict filtering.');
+            }
+          } else {
+            console.warn('⚠️ Speaker has no agenda status entries');
+          }
+        } else {
+          console.error('❌ Speaker not found with ID:', speakerIdString);
+        }
       }
 
       setAvailableSlots(data || []);
@@ -483,11 +577,15 @@ export default function MyRequestsView() {
         return;
       }
 
+      // Ensure speaker ID is converted to string (UUID as TEXT)
+      const speakerIdString = String(speakerData.id);
+      console.log('🎤 Speaker ID for slot loading:', speakerIdString, 'type:', typeof speakerIdString);
+
       // If no slot provided, show slot picker first using bsl_speakers.id (TEXT)
       // Pass requester_id to check for conflicts with requester's existing meetings
       if (!slotTime) {
         await loadAvailableSlots(
-          speakerData.id, 
+          speakerIdString, 
           request.duration_minutes || 15,
           request.requester_id || undefined
         );
@@ -1583,7 +1681,7 @@ export default function MyRequestsView() {
         </View>
       </Modal>
 
-      {/* Slot Confirmation Modal (Schedule Summary style) */}
+      {/* Modern Success Modal */}
       <Modal
         visible={showSlotConfirmation}
         animationType="fade"
@@ -1597,56 +1695,55 @@ export default function MyRequestsView() {
       >
         <View style={styles.modalOverlay}>
           <View style={[
-            styles.modalContent,
+            styles.successModalContent,
             {
               backgroundColor: colors.background?.paper || (isDark ? '#1a1a1a' : '#ffffff'),
               borderColor: colors.divider || (isDark ? '#333333' : '#e0e0e0'),
             }
           ]}>
-            {/* Close X Button */}
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => {
-                setShowSlotConfirmation(false);
-                setShowDetailModal(false);
-                setSelectedSlot(null);
-                setConfirmedMeetingId(null);
-              }}
-            >
-              <MaterialIcons name="close" size={24} color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')} />
-            </TouchableOpacity>
-            
-            {/* Header */}
-            <View style={styles.modalHeader}>
+            {/* Success Icon */}
+            <View style={[
+              styles.successIconContainer,
+              { backgroundColor: `${colors.success?.main || '#4CAF50'}15` }
+            ]}>
               <MaterialIcons
                 name="check-circle"
-                size={32}
+                size={48}
                 color={colors.success?.main || '#4CAF50'}
               />
-              <Text style={[styles.modalTitle, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000') }]}>
-                Meeting Scheduled
-              </Text>
             </View>
 
-            {/* Meeting Details */}
+            {/* Title */}
+            <Text style={[styles.successModalTitle, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000') }]}>
+              Meeting Scheduled
+            </Text>
+
+            {/* Meeting Summary */}
             {selectedRequest && selectedSlot && (
-              <View style={styles.eventDetails}>
-                <Text style={[styles.eventTitle, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000') }]}>
-                  Meeting with {selectedRequest.requester_name || 'User'}
-                </Text>
-                
-                <View style={styles.eventInfoRow}>
+              <View style={styles.successMeetingSummary}>
+                <View style={styles.successMeetingRow}>
                   <MaterialIcons
-                    name="schedule"
-                    size={18}
+                    name="person"
+                    size={20}
                     color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')}
                   />
-                  <Text style={[styles.eventInfoText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
+                  <Text style={[styles.successMeetingText, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000') }]}>
+                    {selectedRequest.requester_name || 'User'}
+                  </Text>
+                </View>
+
+                <View style={styles.successMeetingRow}>
+                  <MaterialIcons
+                    name="schedule"
+                    size={20}
+                    color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')}
+                  />
+                  <Text style={[styles.successMeetingText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
                     {new Date(selectedSlot).toLocaleDateString('en-US', {
-                      weekday: 'long',
                       month: 'short',
-                      day: 'numeric'
-                    })} at {new Date(selectedSlot).toLocaleTimeString('en-US', {
+                      day: 'numeric',
+                      year: 'numeric'
+                    })} • {new Date(selectedSlot).toLocaleTimeString('en-US', {
                       hour: 'numeric',
                       minute: '2-digit',
                       hour12: true
@@ -1654,100 +1751,74 @@ export default function MyRequestsView() {
                   </Text>
                 </View>
 
-                <View style={styles.eventInfoRow}>
+                <View style={styles.successMeetingRow}>
                   <MaterialIcons
                     name="access-time"
-                    size={18}
+                    size={20}
                     color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')}
                   />
-                  <Text style={[styles.eventInfoText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
+                  <Text style={[styles.successMeetingText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
                     {selectedRequest.duration_minutes || 15} minutes
                   </Text>
                 </View>
-
-                {selectedRequest.meeting_type && (
-                  <View style={styles.eventInfoRow}>
-                    <MaterialIcons
-                      name="category"
-                      size={18}
-                      color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')}
-                    />
-                    <Text style={[styles.eventInfoText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
-                      {selectedRequest.meeting_type.charAt(0).toUpperCase() + selectedRequest.meeting_type.slice(1)} Meeting
-                    </Text>
-                  </View>
-                )}
-
-                {selectedRequest.requester_company && (
-                  <View style={styles.eventInfoRow}>
-                    <MaterialIcons
-                      name="business"
-                      size={18}
-                      color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')}
-                    />
-                    <Text style={[styles.eventInfoText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
-                      {selectedRequest.requester_company}
-                    </Text>
-                  </View>
-                )}
               </View>
             )}
 
-            {/* Message */}
-            <View style={[
-              styles.messageBox,
-              {
-                backgroundColor: `${colors.success?.main || '#4CAF50'}15`,
-                borderColor: colors.success?.main || '#4CAF50',
-              }
-            ]}>
-              <MaterialIcons
-                name="info"
-                size={20}
-                color={colors.success?.main || '#4CAF50'}
-              />
-              <Text style={[
-                styles.messageText,
-                { color: colors.success?.main || '#4CAF50' }
-              ]}>
-                The meeting has been scheduled and added to both your calendars. You can reschedule or manage this meeting in the meeting room.
-              </Text>
-            </View>
+            {/* Subtle Info Message */}
+            <Text style={[styles.successModalMessage, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
+              Added to both calendars
+            </Text>
 
-            {/* Action Buttons */}
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.confirmButton,
-                  {
-                    backgroundColor: colors.primary || '#007AFF',
-                  }
-                ]}
-                onPress={() => {
-                  if (confirmedMeetingId) {
-                    setShowSlotConfirmation(false);
-                    setShowDetailModal(false);
-                    setSelectedSlot(null);
-                    router.push({
-                      pathname: '/events/bsl2025/networking/meeting-detail' as any,
-                      params: {
-                        meetingId: confirmedMeetingId,
-                        speakerName: selectedRequest?.speaker_name || '',
-                        requesterName: selectedRequest?.requester_name || '',
-                        status: 'tentative',
-                        scheduledAt: selectedSlot || '',
-                        duration: selectedRequest?.duration_minutes || 15,
-                        isSpeaker: 'true'
-                      }
-                    });
-                    setConfirmedMeetingId(null);
-                  }
-                }}
-              >
-                <MaterialIcons name="meeting-room" size={20} color="white" />
-                <Text style={styles.confirmButtonText}>Go to Meeting Room</Text>
-              </TouchableOpacity>
-            </View>
+            {/* Action Button */}
+            <TouchableOpacity
+              style={[
+                styles.successActionButton,
+                {
+                  backgroundColor: colors.primary || '#007AFF',
+                }
+              ]}
+              onPress={() => {
+                if (confirmedMeetingId) {
+                  setShowSlotConfirmation(false);
+                  setShowDetailModal(false);
+                  setSelectedSlot(null);
+                  router.push({
+                    pathname: '/events/bsl2025/networking/meeting-detail' as any,
+                    params: {
+                      meetingId: confirmedMeetingId,
+                      speakerName: selectedRequest?.speaker_name || '',
+                      requesterName: selectedRequest?.requester_name || '',
+                      status: 'tentative',
+                      scheduledAt: selectedSlot || '',
+                      duration: selectedRequest?.duration_minutes || 15,
+                      isSpeaker: 'true'
+                    }
+                  });
+                  setConfirmedMeetingId(null);
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.successActionButtonText}>View Meeting</Text>
+            </TouchableOpacity>
+
+            {/* Close Button */}
+            <TouchableOpacity
+              style={styles.successCloseButton}
+              onPress={() => {
+                setShowSlotConfirmation(false);
+                setShowDetailModal(false);
+                setSelectedSlot(null);
+                setConfirmedMeetingId(null);
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialIcons 
+                name="close" 
+                size={20} 
+                color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')} 
+              />
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -2666,6 +2737,86 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Success Modal Styles
+  successModalContent: {
+    width: '90%',
+    maxWidth: 400,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 16,
+    position: 'relative',
+  },
+  successIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  successModalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 24,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  successMeetingSummary: {
+    width: '100%',
+    marginBottom: 20,
+    gap: 12,
+  },
+  successMeetingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  successMeetingText: {
+    fontSize: 15,
+    fontWeight: '500',
+    flex: 1,
+  },
+  successModalMessage: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 24,
+    fontWeight: '500',
+  },
+  successActionButton: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  successActionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  successCloseButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
   },
   // Slot Picker Modal Styles
   slotPickerModalContent: {

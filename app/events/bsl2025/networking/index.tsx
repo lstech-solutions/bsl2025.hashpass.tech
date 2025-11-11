@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Animated,
   InteractionManager,
 } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
+import { useRouter, Stack, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -208,31 +208,8 @@ export default function NetworkingView() {
     },
   ];
 
-  useEffect(() => {
-    if (user) {
-      loadNetworkingStats();
-    }
-  }, [user]);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadNetworkingStats();
-    setRefreshing(false);
-  };
-
-  const handleRetry = () => {
-    loadNetworkingStats();
-  };
-
-  // Auto-rotate tips when closed
-  useEffect(() => {
-    if (!tipsExpanded) {
-      const interval = setInterval(rotateTip, 7000); // Rotate every 7 seconds
-      return () => clearInterval(interval);
-    }
-  }, [tipsExpanded]);
-
-  const loadNetworkingStats = async (retryCount = 0) => {
+  // Define loadNetworkingStats BEFORE it's used in useEffect hooks
+  const loadNetworkingStats = useCallback(async (retryCount = 0, silent = false) => {
     if (!user) {
       console.log('No user found, skipping networking stats load');
       setStatsState(prev => ({ ...prev, loading: false, error: 'No user found' }));
@@ -243,14 +220,17 @@ export default function NetworkingView() {
     const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff, max 5s
 
     try {
-      setStatsState(prev => ({ 
-        ...prev, 
-        loading: true, 
-        error: null,
-        retryCount 
-      }));
+      // Only show loading state on initial load or manual refresh, not on real-time updates
+      if (!silent) {
+        setStatsState(prev => ({ 
+          ...prev, 
+          loading: true, 
+          error: null,
+          retryCount 
+        }));
+      }
 
-      console.log(`🔄 Loading networking stats (attempt ${retryCount + 1}/${maxRetries + 1}) for user:`, user.id);
+      console.log(`🔄 Loading networking stats (attempt ${retryCount + 1}/${maxRetries + 1}) for user:`, user.id, silent ? '(silent update)' : '');
 
       // Use the RPC function for better performance and reliability
       const { data: statsData, error: statsError } = await supabase
@@ -321,13 +301,13 @@ export default function NetworkingView() {
 
       console.log('✅ Networking stats loaded successfully:', newStats);
 
-      setStatsState({
+      setStatsState(prev => ({
         data: newStats,
         loading: false,
         error: null,
         lastUpdated: new Date(),
         retryCount: 0
-      });
+      }));
 
     } catch (error) {
       console.error(`❌ Error loading networking stats (attempt ${retryCount + 1}):`, error);
@@ -351,7 +331,101 @@ export default function NetworkingView() {
         showError('Failed to Load Stats', `Unable to load networking statistics after ${maxRetries + 1} attempts. ${errorMessage}`);
       }
     }
+  }, [user, showError]);
+
+  useEffect(() => {
+    if (user) {
+      loadNetworkingStats();
+    }
+  }, [user, loadNetworkingStats]);
+
+  // Refresh stats when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        console.log('📊 Screen focused, refreshing stats...');
+        loadNetworkingStats(0, true); // Silent update when refocusing
+      }
+    }, [user, loadNetworkingStats])
+  );
+
+  // Real-time subscription for meeting requests to update stats automatically
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('🔄 Setting up real-time stats subscription for user:', user.id);
+
+    // Channel for sent requests (where user is requester)
+    const sentChannel = supabase
+      .channel(`networking_stats_sent_${user.id}_${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'meeting_requests',
+          filter: `requester_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('📊 Stats: SENT request changed:', payload.eventType);
+          // Debounce stats reload to avoid too many calls
+          setTimeout(() => {
+            loadNetworkingStats(0, true); // Silent update (no loading state)
+          }, 500);
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Stats SENT subscription status:', status);
+      });
+
+    // Channel for incoming requests (where user is speaker)
+    const incomingChannel = supabase
+      .channel(`networking_stats_incoming_${user.id}_${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'meeting_requests',
+          filter: `speaker_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('📊 Stats: INCOMING request changed:', payload.eventType);
+          // Debounce stats reload to avoid too many calls
+          setTimeout(() => {
+            loadNetworkingStats(0, true); // Silent update (no loading state)
+          }, 500);
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Stats INCOMING subscription status:', status);
+      });
+
+    // Cleanup
+    return () => {
+      console.log('🧹 Cleaning up stats subscriptions...');
+      supabase.removeChannel(sentChannel);
+      supabase.removeChannel(incomingChannel);
+    };
+  }, [user, loadNetworkingStats]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadNetworkingStats();
+    setRefreshing(false);
   };
+
+  const handleRetry = () => {
+    loadNetworkingStats();
+  };
+
+  // Auto-rotate tips when closed
+  useEffect(() => {
+    if (!tipsExpanded) {
+      const interval = setInterval(rotateTip, 7000); // Rotate every 7 seconds
+      return () => clearInterval(interval);
+    }
+  }, [tipsExpanded]);
 
   const rotateTip = () => {
     if (!tipsExpanded) {

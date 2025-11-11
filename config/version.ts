@@ -22,8 +22,8 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202511102042, // Updated to current timestamp
-  releaseDate: '2025-11-10',
+  buildNumber: 202511110654, // Updated to current timestamp
+  releaseDate: '2025-11-11',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
@@ -35,11 +35,62 @@ export const CURRENT_VERSION: VersionInfo = {
     'Replaced navigation with modal for privacy and terms links on auth screen'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.11 release'
+  notes: 'Version 1.6.14 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.14': {
+    version: '1.6.14',
+    buildNumber: 202511110654,
+    releaseDate: '2025-11-11',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.14 release'
+  },
+  '1.6.13': {
+    version: '1.6.13',
+    buildNumber: 202511110640,
+    releaseDate: '2025-11-11',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.13 release'
+  },
+  '1.6.12': {
+    version: '1.6.12',
+    buildNumber: 202511110614,
+    releaseDate: '2025-11-11',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.12 release'
+  },
   '1.6.11': {
     version: '1.6.11',
     buildNumber: 202511102042,

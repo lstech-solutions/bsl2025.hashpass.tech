@@ -431,30 +431,15 @@ export default function SpeakerDetail() {
     // If speaker is viewing, fetch requester details
     if (isCurrentUserSpeaker && request.requester_id !== user?.id) {
       try {
-        // Fetch requester profile information
-        const requesterIds = [request.requester_id];
-        let profileMap = new Map();
-        
-        try {
-          const { data: userProfiles } = await supabase
-            .from('profiles')
-            .select('id, full_name, avatar_url, email')
-            .in('id', requesterIds);
-          
-          profileMap = new Map((userProfiles || []).map(p => [p.id, p]));
-        } catch (e) {
-          console.log('Profiles table not found, using requester_name from request');
-        }
-        
-        const profile = profileMap.get(request.requester_id);
+        // Note: profiles table doesn't exist, so we use requester_name and generate avatars
         const requesterName = request.requester_name || 'User';
         
         // Enhance request with requester details
         const enhancedRequest = {
           ...request,
-          requester_avatar: profile?.avatar_url || generateUserAvatarUrl(requesterName),
-          requester_full_name: profile?.full_name || requesterName,
-          requester_email: profile?.email || request.requester_name || '',
+          requester_avatar: generateUserAvatarUrl(requesterName),
+          requester_full_name: requesterName,
+          requester_email: request.requester_name || '',
         };
         
         setSelectedRequestDetail(enhancedRequest);
@@ -501,18 +486,33 @@ export default function SpeakerDetail() {
           p_speaker_response: null
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ RPC error:', error);
+        showError('Accept Failed', error.message || 'Failed to accept meeting request');
+        return;
+      }
+
+      // Check if RPC returned success: false (this is not a Supabase error, but a business logic error)
+      if (data && typeof data === 'object' && 'success' in data && !data.success) {
+        const errorMessage = data.error || 'Failed to accept request';
+        console.error('❌ Request acceptance failed:', errorMessage);
+        showError('Slot Conflict', errorMessage);
+        return;
+      }
 
       if (data?.success) {
         showSuccess('Request Accepted', 'The meeting request has been accepted');
         setShowRequestDetailModal(false);
         await loadMeetingRequestStatus();
       } else {
-        throw new Error(data?.error || 'Failed to accept request');
+        // Fallback for unexpected response format
+        console.error('❌ Unexpected response format:', data);
+        showError('Accept Failed', 'Unexpected response from server. Please try again.');
       }
     } catch (error: any) {
       console.error('❌ Error accepting request:', error);
-      showError('Accept Failed', error.message || 'Failed to accept meeting request');
+      const errorMessage = error?.message || error?.error || 'Failed to accept meeting request';
+      showError('Accept Failed', errorMessage);
     }
   };
 

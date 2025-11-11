@@ -78,12 +78,22 @@ export default function RealtimeChat({
 
   // Load other participant avatar
   useEffect(() => {
-    if (otherParticipantAvatar) {
-      setOtherUserAvatar(otherParticipantAvatar);
-    } else if (otherParticipantName) {
-      setOtherUserAvatar(generateUserAvatarUrl(otherParticipantName));
-    }
-  }, [otherParticipantAvatar, otherParticipantName]);
+    const loadOtherAvatar = async () => {
+      if (otherParticipantAvatar) {
+        setOtherUserAvatar(otherParticipantAvatar);
+      } else if (otherParticipantName) {
+        // Generate avatar from name
+        setOtherUserAvatar(generateUserAvatarUrl(otherParticipantName));
+      } else if (otherParticipantId && user) {
+        // Try to get avatar from message user data if available
+        // For now, generate based on ID as fallback
+        const fallbackName = otherParticipantId.substring(0, 8);
+        setOtherUserAvatar(generateUserAvatarUrl(fallbackName));
+      }
+    };
+    
+    loadOtherAvatar();
+  }, [otherParticipantAvatar, otherParticipantName, otherParticipantId, user]);
 
   // Use real-time chat hook with presence tracking
   const { messages: realtimeMessages, sendMessage, isConnected, presence: chatPresence } = useRealtimeChat({
@@ -176,12 +186,21 @@ export default function RealtimeChat({
   };
 
   const renderMessage = (message: ChatMessage, index: number) => {
-    const isOwnMessage = message.user.id === user?.id || message.user.id === user?.email;
+    const isOwnMessage = message.user.id === user?.id || message.user.id === user?.email || message.user.id === username;
     const isSystemMessage = message.messageType === 'system';
+    const isMeetingUpdate = message.messageType === 'meeting_update';
     const messageAvatar = isOwnMessage ? userAvatar : otherUserAvatar;
     const messageName = isOwnMessage 
       ? (user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'You')
       : (otherParticipantName || message.user.name);
+
+    // Different colors for different message types
+    const getMessageBubbleStyle = () => {
+      if (isSystemMessage) return styles.systemMessageBubble;
+      if (isMeetingUpdate) return styles.meetingUpdateBubble;
+      if (isOwnMessage) return styles.ownMessageBubble;
+      return styles.incomingMessageBubble;
+    };
 
     return (
       <View
@@ -189,27 +208,32 @@ export default function RealtimeChat({
         style={[
           styles.messageWrapper,
           isOwnMessage && styles.ownMessageWrapper,
+          !isOwnMessage && !isSystemMessage && styles.incomingMessageWrapper,
         ]}
       >
         {!isSystemMessage && (
           <View style={[
             styles.messageContainer,
-            isOwnMessage && styles.ownMessage,
-            isSystemMessage && styles.systemMessage,
+            isOwnMessage && styles.ownMessageContainer,
+            !isOwnMessage && styles.incomingMessageContainer,
           ]}>
+            {/* Avatar for incoming messages (left side) */}
             {!isOwnMessage && (
               <View style={styles.avatarContainer}>
                 <SpeakerAvatar
                   name={messageName}
                   imageUrl={messageAvatar || undefined}
-                  size={36}
-                  showBorder={false}
+                  size={40}
+                  showBorder={true}
                 />
               </View>
             )}
+            
+            {/* Message content */}
             <View style={[
               styles.messageContent,
               isOwnMessage && styles.ownMessageContent,
+              !isOwnMessage && styles.incomingMessageContent,
             ]}>
               {!isOwnMessage && (
                 <Text style={styles.senderName}>
@@ -218,12 +242,12 @@ export default function RealtimeChat({
               )}
               <View style={[
                 styles.messageBubble,
-                isOwnMessage && styles.ownMessageBubble,
+                getMessageBubbleStyle(),
               ]}>
                 <Text style={[
                   styles.messageText,
-                  isSystemMessage && styles.systemMessageText,
                   isOwnMessage && styles.ownMessageText,
+                  !isOwnMessage && styles.incomingMessageText,
                 ]}>
                   {message.content}
                 </Text>
@@ -231,17 +255,20 @@ export default function RealtimeChat({
               <Text style={[
                 styles.messageTime,
                 isOwnMessage && styles.ownMessageTime,
+                !isOwnMessage && styles.incomingMessageTime,
               ]}>
                 {formatTime(message.createdAt)}
               </Text>
             </View>
+            
+            {/* Avatar for own messages (right side) */}
             {isOwnMessage && (
               <View style={styles.avatarContainer}>
                 <SpeakerAvatar
                   name={messageName}
                   imageUrl={messageAvatar || undefined}
-                  size={36}
-                  showBorder={false}
+                  size={40}
+                  showBorder={true}
                 />
               </View>
             )}
@@ -424,56 +451,88 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     paddingBottom: 8,
   },
   messageWrapper: {
-    marginBottom: 12,
+    marginBottom: 16,
     width: '100%',
   },
   ownMessageWrapper: {
     alignItems: 'flex-end',
+    paddingLeft: 60, // Space for avatar on left
+  },
+  incomingMessageWrapper: {
+    alignItems: 'flex-start',
+    paddingRight: 60, // Space for avatar on right
   },
   messageContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    maxWidth: '80%',
-    gap: 8,
+    maxWidth: '75%',
+    gap: 10,
   },
-  ownMessage: {
+  ownMessageContainer: {
     flexDirection: 'row-reverse',
     alignSelf: 'flex-end',
   },
-  systemMessage: {
-    alignSelf: 'center',
-    maxWidth: '100%',
+  incomingMessageContainer: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
   },
   avatarContainer: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   messageContent: {
     flex: 1,
-    alignItems: 'flex-start',
+    minWidth: 0, // Allow flex shrinking
   },
   ownMessageContent: {
     alignItems: 'flex-end',
   },
+  incomingMessageContent: {
+    alignItems: 'flex-start',
+  },
   senderName: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
-    marginBottom: 4,
-    marginLeft: 4,
+    color: colors.text?.secondary || (isDark ? '#a0a0a0' : '#666666'),
+    marginBottom: 6,
+    marginLeft: 12,
   },
   messageBubble: {
-    backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 18,
-    borderTopLeftRadius: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
     maxWidth: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   ownMessageBubble: {
     backgroundColor: colors.primary || '#007AFF',
-    borderTopLeftRadius: 18,
     borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+    borderBottomLeftRadius: 20,
+  },
+  incomingMessageBubble: {
+    backgroundColor: isDark ? '#2a2a2a' : '#e9ecef',
+    borderTopLeftRadius: 4,
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 20,
+  },
+  systemMessageBubble: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  meetingUpdateBubble: {
+    backgroundColor: isDark ? '#1a3a52' : '#e3f2fd',
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   messageText: {
     fontSize: 15,
@@ -481,17 +540,26 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
   },
   ownMessageText: {
-    color: 'white',
+    color: '#ffffff',
+    fontWeight: '400',
+  },
+  incomingMessageText: {
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#1a1a1a'),
   },
   messageTime: {
     fontSize: 11,
     color: colors.text?.secondary || (isDark ? '#888888' : '#999999'),
     marginTop: 4,
-    marginLeft: 4,
+    marginLeft: 12,
   },
   ownMessageTime: {
     marginLeft: 0,
-    marginRight: 4,
+    marginRight: 12,
+    textAlign: 'right',
+  },
+  incomingMessageTime: {
+    marginLeft: 12,
+    marginRight: 0,
   },
   systemMessageContainer: {
     alignSelf: 'center',

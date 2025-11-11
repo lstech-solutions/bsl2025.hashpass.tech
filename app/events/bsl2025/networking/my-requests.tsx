@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,18 +19,14 @@ import LoadingScreen from '../../../../components/LoadingScreen';
 import { MeetingRequest } from '@/types/networking';
 import * as Haptics from 'expo-haptics';
 
-// Extended type for internal use with direction tracking
-type MeetingRequestWithDirection = MeetingRequest & {
-  _direction?: 'sent' | 'incoming';
+// Extended type for internal use with direction tracking - now imported from hook
+type MeetingRequestWithDirection = RequestWithDirection & {
   requester_id?: string;
-  requester_avatar?: string;
-  requester_full_name?: string;
-  requester_email?: string;
-  speaker_image?: string;
 };
 import { CopilotStep, walkthroughable } from 'react-native-copilot';
 import UnifiedSearchAndFilter from '../../../../components/UnifiedSearchAndFilter';
 import { useNotifications } from '../../../../contexts/NotificationContext';
+import { useRealtimeMeetingRequests, RequestWithDirection } from '../../../../hooks/useRealtimeMeetingRequests';
 
 const CopilotView = walkthroughable(View);
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
@@ -63,6 +59,12 @@ export default function MyRequestsView() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [confirmedMeetingId, setConfirmedMeetingId] = useState<string | null>(null);
+  // Track current slot loading context to reload after acceptance
+  const [currentSlotContext, setCurrentSlotContext] = useState<{
+    speakerId: string;
+    durationMinutes: number;
+    requesterId?: string;
+  } | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showHoldModal, setShowHoldModal] = useState(false);
   const [holdTime, setHoldTime] = useState(1); // Hours
@@ -88,317 +90,107 @@ export default function MyRequestsView() {
     return () => clearTimeout(timeout);
   }, [user]);
 
-  // Real-time subscription for meeting requests
-  useEffect(() => {
-    if (!user) return;
-
-    console.log('🔄 Setting up real-time subscriptions for meeting requests...');
-
-    // Get speaker IDs for this user
-    let speakerIds: string[] = [];
-    supabase
-      .from('bsl_speakers')
-      .select('id')
-      .eq('user_id', user.id)
-      .then(({ data }) => {
-        if (data) {
-          speakerIds = data.map((s: any) => s.id);
+  // Real-time subscription handler callbacks
+  const handleRequestInserted = useCallback((newRequest: MeetingRequestWithDirection) => {
+    console.log('📥 New request inserted:', newRequest.id, 'direction:', newRequest._direction);
+    
+    setRequests(prev => {
+      const exists = prev.some(r => r.id === newRequest.id);
+      if (exists) {
+        console.log('⚠️ Request already exists, skipping:', newRequest.id);
+        return prev;
+      }
+      
+      console.log('✅ Adding new request to state:', newRequest.id, 'direction:', newRequest._direction);
+      
+      // Show notification for incoming requests
+      if (newRequest._direction === 'incoming') {
+        try {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        } catch (e) {
+          console.log('Error with haptic feedback:', e);
         }
-      });
+        
+        // Show toast notification
+        const requesterName = newRequest.requester_full_name || newRequest.requester_name || 'Someone';
+        showSuccess(
+          'New Meeting Request!',
+          `${requesterName} wants to meet with you`
+        );
+        
+        // Refresh notifications
+        refreshNotifications();
+      }
+      
+      // Add to state (prepend so newest appears first)
+      return [newRequest, ...prev];
+    });
+  }, [showSuccess, refreshNotifications]);
 
-    // Subscribe to SENT requests (where user is requester)
-    const sentChannel = supabase
-      .channel('my_requests_sent')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'meeting_requests',
-          filter: `requester_id=eq.${user.id}`,
-        },
-        async (payload) => {
-          console.log('🔄 Real-time update for SENT request:', payload.eventType);
-          
-          if (payload.eventType === 'INSERT') {
-            const newRequest = payload.new as any;
-            
-            // Haptic feedback for new sent request
-            try {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            } catch (e) {
-              console.log('Error with haptic feedback:', e);
-            }
-            
-            // Fetch speaker image for the new request
-            // Note: newRequest.speaker_id is UUID (user_id), so we need to find bsl_speakers by user_id
-            try {
-              const { data: speakerData } = await supabase
-                .from('bsl_speakers')
-                .select('imageurl')
-                .eq('user_id', newRequest.speaker_id)
-                .single();
-              
-              setRequests(prev => {
-                const exists = prev.some(r => r.id === newRequest.id);
-                if (exists) return prev;
-                return [{ ...newRequest, _direction: 'sent', speaker_image: speakerData?.imageurl || null }, ...prev];
-              });
-            } catch (e) {
-              setRequests(prev => {
-                const exists = prev.some(r => r.id === newRequest.id);
-                if (exists) return prev;
-                return [{ ...newRequest, _direction: 'sent' as const }, ...prev];
-              });
-            }
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedRequest = payload.new as any;
-            const oldRequest = payload.old as any;
-            
-            // Enhanced haptic feedback and sound-like patterns for status changes on SENT requests
-            try {
-              if (oldRequest && oldRequest.status !== updatedRequest.status) {
-                // Check if this is a pending request that got accepted or declined
-                const wasPending = oldRequest.status === 'pending' || oldRequest.status === 'requested';
-                
-                if (wasPending && (updatedRequest.status === 'accepted' || updatedRequest.status === 'declined' || updatedRequest.status === 'rejected')) {
-                  // Enhanced feedback for accepted/declined on pending sent requests
-                  if (updatedRequest.status === 'accepted') {
-                    // Success pattern: Multiple haptics to simulate sound + vibration
-                    // This pattern creates a pleasant "ding" effect with vibration
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    setTimeout(async () => {
-                      try {
-                        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        setTimeout(async () => {
-                          try {
-                            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          } catch (e) {
-                            console.log('Error with secondary haptic:', e);
-                          }
-                        }, 50);
-                      } catch (e) {
-                        console.log('Error with haptic sequence:', e);
-                      }
-                    }, 100);
-                    console.log('🎉 Sent request accepted!');
-                  } else if (updatedRequest.status === 'declined' || updatedRequest.status === 'rejected') {
-                    // Error pattern: Stronger haptics for declined - creates a "buzz" effect
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                    setTimeout(async () => {
-                      try {
-                        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                        setTimeout(async () => {
-                          try {
-                            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                          } catch (e) {
-                            console.log('Error with secondary haptic:', e);
-                          }
-                        }, 80);
-                      } catch (e) {
-                        console.log('Error with haptic sequence:', e);
-                      }
-                    }, 100);
-                    console.log('❌ Sent request declined');
-                  }
-                } else {
-                  // Standard haptic feedback for other status changes
-                  if (updatedRequest.status === 'cancelled' || updatedRequest.status === 'expired') {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                  } else if (updatedRequest.status === 'accepted') {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  } else if (updatedRequest.status === 'declined' || updatedRequest.status === 'rejected') {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                  }
-                }
-              }
-            } catch (e) {
-              console.log('Error with haptic feedback:', e);
-            }
-            
-            setRequests(prev =>
-              prev.map(req =>
-                req.id === updatedRequest.id
-                  ? { ...updatedRequest, _direction: req._direction || 'sent' }
-                  : req
-              )
-            );
-          } else if (payload.eventType === 'DELETE') {
-            const deletedRequest = payload.old as any;
-            
-            // Haptic feedback for deleted requests
-            try {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            } catch (e) {
-              console.log('Error with haptic feedback:', e);
-            }
-            
-            setRequests(prev => prev.filter(req => req.id !== deletedRequest.id));
-          }
-        }
-      )
-      .subscribe();
+  const handleRequestUpdated = useCallback((updatedRequest: MeetingRequestWithDirection, oldStatus?: string) => {
+    console.log('🔄 Request updated:', updatedRequest.id, 'from', oldStatus, 'to', updatedRequest.status);
+    
+    setRequests(prev => {
+      const requestIndex = prev.findIndex(req => req.id === updatedRequest.id);
+      
+      if (requestIndex >= 0) {
+        // Request exists, update it
+        const existingRequest = prev[requestIndex];
+        console.log('✅ Updating existing request in state:', updatedRequest.id, 'status:', existingRequest.status, '->', updatedRequest.status);
+        
+        const updated = [...prev];
+        updated[requestIndex] = {
+          ...updatedRequest,
+          // Preserve direction and enrichment data
+          _direction: existingRequest._direction || updatedRequest._direction,
+          speaker_image: updatedRequest.speaker_image !== undefined ? updatedRequest.speaker_image : existingRequest.speaker_image,
+          requester_avatar: updatedRequest.requester_avatar || existingRequest.requester_avatar,
+          requester_full_name: updatedRequest.requester_full_name || existingRequest.requester_full_name,
+          requester_email: updatedRequest.requester_email || existingRequest.requester_email,
+        };
+        
+        return updated;
+      } else {
+        // Request not found, add it (might be a new request or state was cleared)
+        console.warn('⚠️ Request not found in state, adding it:', updatedRequest.id);
+        return [updatedRequest, ...prev];
+      }
+    });
 
-    // Subscribe to INCOMING requests (where user is speaker)
-    // We need to subscribe to all meeting_requests and filter by speaker_id
-    const incomingChannel = supabase
-      .channel('my_requests_incoming')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'meeting_requests',
-        },
-        async (payload) => {
-          // Check if this request is for one of our speakers
-          const request = (payload.new || payload.old) as any;
-          if (!request || !request.speaker_id) return;
+    // Show success message if status changed to accepted
+    if (oldStatus && oldStatus !== updatedRequest.status && updatedRequest.status === 'accepted') {
+      showSuccess('Request Accepted!', 'Your meeting request has been accepted');
+    }
 
-          // Check if this request is for the current user as a speaker
-          // Note: meeting_requests.speaker_id is UUID (user_id), not bsl_speakers.id
-          if (request.speaker_id !== user.id) {
-            return; // Not for this user as a speaker
-          }
+    // Refresh notifications when status changes
+    if (oldStatus && oldStatus !== updatedRequest.status) {
+      refreshNotifications();
+    }
+  }, [showSuccess, refreshNotifications]);
 
-          console.log('🔄 Real-time update for INCOMING request:', payload.eventType);
+  const handleRequestDeleted = useCallback((requestId: string) => {
+    console.log('🗑️ Request deleted:', requestId);
+    setRequests(prev => prev.filter(req => req.id !== requestId));
+  }, []);
 
-          if (payload.eventType === 'INSERT') {
-            const newRequest = payload.new as any;
-            
-            // Play sound and haptic feedback for new incoming request
-            try {
-              // Haptic feedback - use notification style for a pleasant feel
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              
-              // Additional impact feedback for emphasis
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            } catch (e) {
-              console.log('Error with haptic feedback:', e);
-            }
-            
-            // Fetch requester info
-            try {
-              const requesterIds = [newRequest.requester_id];
-              let profileMap = new Map();
-              
-              try {
-                const { data: userProfiles } = await supabase
-                  .from('profiles')
-                  .select('id, full_name, avatar_url, email')
-                  .in('id', requesterIds);
-                
-                profileMap = new Map((userProfiles || []).map(p => [p.id, p]));
-              } catch (e) {
-                console.log('Profiles table not found, using requester_name from request');
-              }
-              
-              const profile = profileMap.get(newRequest.requester_id);
-              const requesterName = newRequest.requester_name || 'User';
-              
-              const enrichedRequest = {
-                ...newRequest,
-                _direction: 'incoming' as const,
-                requester_avatar: profile?.avatar_url || generateUserAvatarUrl(requesterName),
-                requester_full_name: profile?.full_name || requesterName,
-                requester_email: profile?.email || newRequest.requester_name || '',
-              };
+  const handleRealtimeError = useCallback((error: Error) => {
+    console.error('❌ Real-time subscription error:', error);
+    showError('Connection Error', 'Failed to receive real-time updates. Please refresh the page.');
+  }, [showError]);
 
-              setRequests(prev => {
-                const exists = prev.some(r => r.id === newRequest.id);
-                if (exists) return prev;
-                return [enrichedRequest, ...prev];
-              });
-            } catch (e) {
-              setRequests(prev => {
-                const exists = prev.some(r => r.id === newRequest.id);
-                if (exists) return prev;
-                return [{ ...newRequest, _direction: 'incoming' as const }, ...prev];
-              });
-            }
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedRequest = payload.new as any;
-            const oldRequest = payload.old as any;
-            
-            // Haptic feedback for status changes
-            try {
-              if (oldRequest && oldRequest.status !== updatedRequest.status) {
-                // Different haptic based on new status
-                if (updatedRequest.status === 'cancelled' || updatedRequest.status === 'expired') {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                } else if (updatedRequest.status === 'accepted') {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                } else if (updatedRequest.status === 'declined' || updatedRequest.status === 'rejected') {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                }
-              }
-            } catch (e) {
-              console.log('Error with haptic feedback:', e);
-            }
-            
-            setRequests(prev =>
-              prev.map(req =>
-                req.id === updatedRequest.id
-                  ? { ...updatedRequest, _direction: req._direction || 'incoming' }
-                  : req
-              )
-            );
-          } else if (payload.eventType === 'DELETE') {
-            const deletedRequest = payload.old as any;
-            
-            // Haptic feedback for deleted requests
-            try {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            } catch (e) {
-              console.log('Error with haptic feedback:', e);
-            }
-            
-            setRequests(prev => prev.filter(req => req.id !== deletedRequest.id));
-          }
-        }
-      )
-      .subscribe();
+  // Setup real-time subscriptions using the dedicated hook
+  useRealtimeMeetingRequests({
+    userId: user?.id || '',
+    onRequestInserted: handleRequestInserted,
+    onRequestUpdated: handleRequestUpdated,
+    onRequestDeleted: handleRequestDeleted,
+    onError: handleRealtimeError,
+  });
 
-    // Subscribe to notifications to detect new requests
-    const notificationChannel = supabase
-      .channel('my_requests_notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        async (payload) => {
-          const notification = payload.new as any;
-          console.log('🔄 New notification received:', notification.type);
-          
-          // If it's a meeting request notification, refresh requests
-          if (notification.type === 'meeting_request' || 
-              notification.type === 'meeting_accepted' || 
-              notification.type === 'meeting_declined') {
-            console.log('🔄 Meeting-related notification, refreshing requests...');
-            // Small delay to ensure DB has updated
-            setTimeout(() => {
-              loadMyRequests();
-            }, 500);
-          }
-        }
-      )
-      .subscribe();
+  // OLD SUBSCRIPTION CODE REMOVED - Now using useRealtimeMeetingRequests hook above
 
-    return () => {
-      console.log('🔄 Cleaning up real-time subscriptions...');
-      supabase.removeChannel(sentChannel);
-      supabase.removeChannel(incomingChannel);
-      supabase.removeChannel(notificationChannel);
-    };
-  }, [user]);
-
-  const loadMyRequests = async () => {
+  const loadMyRequests = useCallback(async () => {
     if (!user) {
       console.log('No user found, skipping requests load');
       setLoading(false);
@@ -443,30 +235,14 @@ export default function MyRequestsView() {
           
           // Fetch requester info for incoming requests
           if (incomingData.length > 0) {
-            const requesterIds = [...new Set(incomingData.map(r => r.requester_id))];
-            
-            // Try to fetch from profiles table, fallback to auth.users metadata
-            let profileMap = new Map();
-            try {
-              const { data: userProfiles } = await supabase
-                .from('profiles')
-                .select('id, full_name, avatar_url, email')
-                .in('id', requesterIds);
-              
-              profileMap = new Map((userProfiles || []).map(p => [p.id, p]));
-            } catch (e) {
-              // Profiles table might not exist, try auth.users
-              console.log('Profiles table not found, using requester_name from request');
-            }
-            
+            // Note: profiles table doesn't exist, so we use requester_name and generate avatars
             incomingData = incomingData.map(request => {
-              const profile = profileMap.get(request.requester_id);
               const requesterName = request.requester_name || 'User';
               return {
                 ...request,
-                requester_avatar: profile?.avatar_url || generateUserAvatarUrl(requesterName),
-                requester_full_name: profile?.full_name || requesterName,
-                requester_email: profile?.email || request.requester_name || '',
+                requester_avatar: generateUserAvatarUrl(requesterName),
+                requester_full_name: requesterName,
+                requester_email: request.requester_name || '',
               };
             });
           }
@@ -513,13 +289,51 @@ export default function MyRequestsView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, showError]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadMyRequests();
-    setRefreshing(false);
+    try {
+      console.log('🔄 Manual refresh triggered');
+      await loadMyRequests();
+      // Refresh notifications after reloading requests
+      refreshNotifications();
+      console.log('✅ Manual refresh completed');
+    } catch (error) {
+      console.error('❌ Error refreshing requests:', error);
+      showError('Refresh Error', 'Failed to refresh requests. Please try again.');
+    } finally {
+      setRefreshing(false);
+    }
   };
+
+  // Manual reload handler (for header button) - Force refresh with haptic feedback
+  const handleManualReload = useCallback(async () => {
+    try {
+      console.log('🔄 Manual reload triggered');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setRefreshing(true);
+      
+      // Force reload by clearing state first, then loading fresh data
+      setRequests([]);
+      
+      await loadMyRequests();
+      refreshNotifications();
+      
+      // Additional haptic feedback on success
+      setTimeout(() => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }, 300);
+      
+      console.log('✅ Manual reload completed');
+    } catch (error) {
+      console.error('❌ Error in manual reload:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showError('Refresh Error', 'Failed to refresh requests. Please try again.');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadMyRequests, refreshNotifications, showError]);
 
   const handleRequestPress = (request: MeetingRequest) => {
     setSelectedRequest(request);
@@ -550,7 +364,12 @@ export default function MyRequestsView() {
 
       if (data?.success) {
         showSuccess('Request Cancelled', 'Your meeting request has been cancelled. Your request limit has been restored, but boost points are not refunded.');
-        await loadMyRequests();
+        
+        // Force reload to ensure UI is updated
+        setTimeout(async () => {
+          await loadMyRequests();
+        }, 500);
+        
         setShowDetailModal(false);
         setSelectedRequest(null);
       } else {
@@ -562,23 +381,181 @@ export default function MyRequestsView() {
     }
   };
 
-  const loadAvailableSlots = async (speakerId: string, durationMinutes: number = 15) => {
+  const loadAvailableSlots = async (
+    speakerId: string, 
+    durationMinutes: number = 15, 
+    requesterId?: string,
+    showPicker: boolean = true
+  ) => {
     try {
       setLoadingSlots(true);
-      const { data, error } = await supabase
-        .rpc('get_speaker_available_slots', {
-          p_speaker_id: speakerId,
-          p_date: null,
-          p_duration_minutes: durationMinutes
-        });
+      
+      // Ensure speakerId is a string (UUID as TEXT for the function)
+      const speakerIdString = String(speakerId).trim();
+      if (!speakerIdString || speakerIdString === 'undefined' || speakerIdString === 'null') {
+        console.error('❌ Invalid speaker ID:', speakerId);
+        throw new Error('Invalid speaker ID provided');
+      }
+      
+      // Store context for potential reload after acceptance (only if showing picker)
+      if (showPicker) {
+        setCurrentSlotContext({ speakerId: speakerIdString, durationMinutes, requesterId });
+      }
+      
+      // Call without requester_id for now (migration not applied yet)
+      // Once migration is applied, this will automatically work with requester conflict checking
+      // TODO: After migration is applied, we can add requester_id parameter
+      const rpcParams: any = {
+        p_speaker_id: speakerIdString,
+        p_date: null,
+        p_duration_minutes: durationMinutes,
+      };
+      
+      // Note: requesterId parameter is accepted but not used until migration is applied
+      // This prevents errors while migration is pending
+      if (requesterId) {
+        console.log('⚠️ Requester conflict checking will be enabled after migration is applied');
+        // Try to include requester_id if migration is applied
+        try {
+          rpcParams.p_requester_id = requesterId;
+        } catch (e) {
+          // Fallback: if migration not applied, continue without requester_id
+          console.log('⚠️ Migration not applied, skipping requester_id parameter');
+        }
+      }
+      
+      console.log('🔍 Loading available slots with params:', {
+        speakerId,
+        durationMinutes,
+        requesterId,
+        rpcParams
+      });
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .rpc('get_speaker_available_slots', rpcParams);
+
+      if (error) {
+        console.error('❌ RPC error loading slots:', error);
+        // If error is about missing parameter, try without requester_id
+        if (error.code === 'PGRST202' && requesterId) {
+          console.log('⚠️ Migration not applied, retrying without requester_id');
+          const { data: retryData, error: retryError } = await supabase
+            .rpc('get_speaker_available_slots', {
+              p_speaker_id: speakerId,
+              p_date: null,
+              p_duration_minutes: durationMinutes,
+            });
+          
+          if (retryError) {
+            console.error('❌ Retry RPC error:', retryError);
+            throw retryError;
+          }
+          
+          console.log('✅ Retry successful, received slots:', retryData?.length || 0);
+          setAvailableSlots(retryData || []);
+          if (showPicker) {
+            setShowSlotPicker(true);
+          }
+          
+          if (showPicker && (!retryData || retryData.length === 0)) {
+            console.warn('⚠️ No slots returned after retry');
+            showError('No Available Slots', 'There are no available time slots. Please try again later.');
+          }
+          return;
+        }
+        throw error;
+      }
+
+      console.log('✅ RPC successful, received slots:', data?.length || 0, 'slots');
+      if (data && data.length > 0) {
+        console.log('📅 First few slots:', data.slice(0, 3).map(s => ({
+          slot_time: s.slot_time,
+          date: s.date,
+          start_time: s.start_time,
+          is_available: s.is_available
+        })));
+      } else {
+        console.warn('⚠️ Empty slots array returned from RPC');
+        
+        // If requester_id was included and we got empty results, try without it
+        // This handles the case where requester conflicts filter out all slots
+        if (requesterId && rpcParams.p_requester_id) {
+          console.log('🔄 Empty results with requester_id, retrying without requester conflict check...');
+          const { data: retryData, error: retryError } = await supabase
+            .rpc('get_speaker_available_slots', {
+              p_speaker_id: speakerIdString,
+              p_date: null,
+              p_duration_minutes: durationMinutes,
+            });
+          
+          if (!retryError && retryData && retryData.length > 0) {
+            console.log('✅ Found', retryData.length, 'slots without requester conflict check');
+            setAvailableSlots(retryData);
+            if (showPicker) {
+              setShowSlotPicker(true);
+            }
+            return; // Success, exit early
+          } else if (retryError) {
+            console.error('❌ Retry error:', retryError);
+          }
+        }
+        
+        // Check if speaker exists and has agenda status
+        const { data: speakerCheck } = await supabase
+          .from('bsl_speakers')
+          .select('id, user_id')
+          .eq('id', speakerIdString)
+          .single();
+        
+        if (speakerCheck) {
+          console.log('👤 Speaker found with ID:', speakerCheck.id, 'user_id:', speakerCheck.user_id);
+          // Check if speaker has any agenda status entries
+          const { data: agendaCheck } = await supabase
+            .from('user_agenda_status')
+            .select('slot_status, slot_time')
+            .eq('user_id', speakerCheck.user_id)
+            .limit(10);
+          
+          console.log('📋 Speaker agenda status entries:', agendaCheck?.length || 0);
+          if (agendaCheck && agendaCheck.length > 0) {
+            console.log('📋 Sample agenda entries:', agendaCheck.map(a => ({
+              slot_time: a.slot_time,
+              slot_status: a.slot_status,
+              is_future: new Date(a.slot_time) > new Date()
+            })));
+            
+            // Check specifically for available/interested slots
+            const availableSlots = agendaCheck.filter(a => 
+              ['available', 'interested'].includes(a.slot_status) && 
+              new Date(a.slot_time) > new Date()
+            );
+            console.log('✅ Available/interested future slots:', availableSlots.length);
+            
+            if (availableSlots.length > 0 && (!data || data.length === 0)) {
+              console.warn('⚠️ Speaker has available slots but RPC returned empty. Possible requester conflict filtering.');
+            }
+          } else {
+            console.warn('⚠️ Speaker has no agenda status entries');
+          }
+        } else {
+          console.error('❌ Speaker not found with ID:', speakerIdString);
+        }
+      }
 
       setAvailableSlots(data || []);
-      setShowSlotPicker(true);
+      if (showPicker) {
+        setShowSlotPicker(true);
+      }
+      
+      // Show warning if no slots available (only if showing picker)
+      if (showPicker && (!data || data.length === 0)) {
+        showError('No Available Slots', 'There are no available time slots. Please try again later.');
+      }
     } catch (error: any) {
       console.error('❌ Error loading slots:', error);
-      showError('Error', 'Failed to load available slots');
+      if (showPicker) {
+        showError('Error', 'Failed to load available slots');
+      }
     } finally {
       setLoadingSlots(false);
     }
@@ -600,9 +577,18 @@ export default function MyRequestsView() {
         return;
       }
 
+      // Ensure speaker ID is converted to string (UUID as TEXT)
+      const speakerIdString = String(speakerData.id);
+      console.log('🎤 Speaker ID for slot loading:', speakerIdString, 'type:', typeof speakerIdString);
+
       // If no slot provided, show slot picker first using bsl_speakers.id (TEXT)
+      // Pass requester_id to check for conflicts with requester's existing meetings
       if (!slotTime) {
-        await loadAvailableSlots(speakerData.id, request.duration_minutes || 15);
+        await loadAvailableSlots(
+          speakerIdString, 
+          request.duration_minutes || 15,
+          request.requester_id || undefined
+        );
         return;
       }
       
@@ -614,20 +600,58 @@ export default function MyRequestsView() {
           p_speaker_response: null
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ RPC error:', error);
+        showError('Accept Failed', error.message || 'Failed to accept meeting request');
+        return;
+      }
+
+      // Check if RPC returned success: false (this is not a Supabase error, but a business logic error)
+      if (data && typeof data === 'object' && 'success' in data && !data.success) {
+        const errorMessage = data.error || 'Failed to accept request';
+        console.error('❌ Request acceptance failed:', errorMessage);
+        showError('Slot Conflict', errorMessage);
+        // Close slot picker if open
+        setShowSlotPicker(false);
+        return;
+      }
 
       if (data?.success) {
         // Show confirmation modal with meeting details
         setConfirmedMeetingId(data.meeting_id);
         setShowSlotPicker(false);
         setShowSlotConfirmation(true);
-        await loadMyRequests();
+        
+        // Reload available slots to reflect the newly accepted meeting
+        // This ensures slots are up-to-date if user opens slot picker again
+        if (currentSlotContext) {
+          console.log('🔄 Reloading available slots after acceptance...');
+          setTimeout(async () => {
+            // Reload slots in background without showing picker
+            await loadAvailableSlots(
+              currentSlotContext.speakerId,
+              currentSlotContext.durationMinutes,
+              currentSlotContext.requesterId,
+              false // Don't show picker
+            );
+          }, 500);
+        }
+        
+        // Force reload to ensure UI is updated
+        setTimeout(async () => {
+          await loadMyRequests();
+        }, 500);
+        
+        showSuccess('Request Accepted', 'The meeting has been scheduled successfully');
       } else {
-        throw new Error(data?.error || 'Failed to accept request');
+        // Fallback for unexpected response format
+        console.error('❌ Unexpected response format:', data);
+        showError('Accept Failed', 'Unexpected response from server. Please try again.');
       }
     } catch (error: any) {
       console.error('❌ Error accepting request:', error);
-      showError('Accept Failed', error.message || 'Failed to accept meeting request');
+      const errorMessage = error?.message || error?.error || 'Failed to accept meeting request';
+      showError('Accept Failed', errorMessage);
     }
   };
 
@@ -657,7 +681,12 @@ export default function MyRequestsView() {
 
       if (data?.success) {
         showSuccess('Request Declined', 'The meeting request has been declined');
-        await loadMyRequests();
+        
+        // Force reload to ensure UI is updated
+        setTimeout(async () => {
+          await loadMyRequests();
+        }, 500);
+        
         setShowDetailModal(false);
       } else {
         throw new Error(data?.error || 'Failed to decline request');
@@ -696,7 +725,12 @@ export default function MyRequestsView() {
 
       if (data?.success) {
         showSuccess('User Blocked', 'The user has been blocked and their request declined');
-        await loadMyRequests();
+        
+        // Force reload to ensure UI is updated
+        setTimeout(async () => {
+          await loadMyRequests();
+        }, 500);
+        
         setShowDetailModal(false);
       } else {
         throw new Error(data?.error || 'Failed to block user');
@@ -1324,7 +1358,20 @@ export default function MyRequestsView() {
       <Stack.Screen 
         options={{ 
           title: 'Your Request',
-          headerBackTitle: 'Back'
+          headerBackTitle: 'Back',
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={handleManualReload}
+              style={{ marginRight: 16, padding: 8 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialIcons 
+                name="refresh" 
+                size={24} 
+                color={colors.primary || (isDark ? '#ffffff' : '#000000')} 
+              />
+            </TouchableOpacity>
+          ),
         }} 
       />
       
@@ -1437,6 +1484,8 @@ export default function MyRequestsView() {
         onRequestClose={() => {
           setShowSlotPicker(false);
           setSelectedSlot(null);
+          // Clear slot context when picker is closed
+          setCurrentSlotContext(null);
         }}
       >
         <View style={styles.modalOverlay}>
@@ -1453,6 +1502,8 @@ export default function MyRequestsView() {
               onPress={() => {
                 setShowSlotPicker(false);
                 setSelectedSlot(null);
+                // Clear slot context when picker is closed
+                setCurrentSlotContext(null);
               }}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
@@ -1630,7 +1681,7 @@ export default function MyRequestsView() {
         </View>
       </Modal>
 
-      {/* Slot Confirmation Modal (Schedule Summary style) */}
+      {/* Modern Success Modal */}
       <Modal
         visible={showSlotConfirmation}
         animationType="fade"
@@ -1644,56 +1695,55 @@ export default function MyRequestsView() {
       >
         <View style={styles.modalOverlay}>
           <View style={[
-            styles.modalContent,
+            styles.successModalContent,
             {
               backgroundColor: colors.background?.paper || (isDark ? '#1a1a1a' : '#ffffff'),
               borderColor: colors.divider || (isDark ? '#333333' : '#e0e0e0'),
             }
           ]}>
-            {/* Close X Button */}
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => {
-                setShowSlotConfirmation(false);
-                setShowDetailModal(false);
-                setSelectedSlot(null);
-                setConfirmedMeetingId(null);
-              }}
-            >
-              <MaterialIcons name="close" size={24} color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')} />
-            </TouchableOpacity>
-            
-            {/* Header */}
-            <View style={styles.modalHeader}>
+            {/* Success Icon */}
+            <View style={[
+              styles.successIconContainer,
+              { backgroundColor: `${colors.success?.main || '#4CAF50'}15` }
+            ]}>
               <MaterialIcons
                 name="check-circle"
-                size={32}
+                size={48}
                 color={colors.success?.main || '#4CAF50'}
               />
-              <Text style={[styles.modalTitle, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000') }]}>
-                Meeting Scheduled
-              </Text>
             </View>
 
-            {/* Meeting Details */}
+            {/* Title */}
+            <Text style={[styles.successModalTitle, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000') }]}>
+              Meeting Scheduled
+            </Text>
+
+            {/* Meeting Summary */}
             {selectedRequest && selectedSlot && (
-              <View style={styles.eventDetails}>
-                <Text style={[styles.eventTitle, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000') }]}>
-                  Meeting with {selectedRequest.requester_name || 'User'}
-                </Text>
-                
-                <View style={styles.eventInfoRow}>
+              <View style={styles.successMeetingSummary}>
+                <View style={styles.successMeetingRow}>
                   <MaterialIcons
-                    name="schedule"
-                    size={18}
+                    name="person"
+                    size={20}
                     color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')}
                   />
-                  <Text style={[styles.eventInfoText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
+                  <Text style={[styles.successMeetingText, { color: colors.text?.primary || (isDark ? '#FFFFFF' : '#000000') }]}>
+                    {selectedRequest.requester_name || 'User'}
+                  </Text>
+                </View>
+
+                <View style={styles.successMeetingRow}>
+                  <MaterialIcons
+                    name="schedule"
+                    size={20}
+                    color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')}
+                  />
+                  <Text style={[styles.successMeetingText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
                     {new Date(selectedSlot).toLocaleDateString('en-US', {
-                      weekday: 'long',
                       month: 'short',
-                      day: 'numeric'
-                    })} at {new Date(selectedSlot).toLocaleTimeString('en-US', {
+                      day: 'numeric',
+                      year: 'numeric'
+                    })} • {new Date(selectedSlot).toLocaleTimeString('en-US', {
                       hour: 'numeric',
                       minute: '2-digit',
                       hour12: true
@@ -1701,100 +1751,74 @@ export default function MyRequestsView() {
                   </Text>
                 </View>
 
-                <View style={styles.eventInfoRow}>
+                <View style={styles.successMeetingRow}>
                   <MaterialIcons
                     name="access-time"
-                    size={18}
+                    size={20}
                     color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')}
                   />
-                  <Text style={[styles.eventInfoText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
+                  <Text style={[styles.successMeetingText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
                     {selectedRequest.duration_minutes || 15} minutes
                   </Text>
                 </View>
-
-                {selectedRequest.meeting_type && (
-                  <View style={styles.eventInfoRow}>
-                    <MaterialIcons
-                      name="category"
-                      size={18}
-                      color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')}
-                    />
-                    <Text style={[styles.eventInfoText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
-                      {selectedRequest.meeting_type.charAt(0).toUpperCase() + selectedRequest.meeting_type.slice(1)} Meeting
-                    </Text>
-                  </View>
-                )}
-
-                {selectedRequest.requester_company && (
-                  <View style={styles.eventInfoRow}>
-                    <MaterialIcons
-                      name="business"
-                      size={18}
-                      color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')}
-                    />
-                    <Text style={[styles.eventInfoText, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
-                      {selectedRequest.requester_company}
-                    </Text>
-                  </View>
-                )}
               </View>
             )}
 
-            {/* Message */}
-            <View style={[
-              styles.messageBox,
-              {
-                backgroundColor: `${colors.success?.main || '#4CAF50'}15`,
-                borderColor: colors.success?.main || '#4CAF50',
-              }
-            ]}>
-              <MaterialIcons
-                name="info"
-                size={20}
-                color={colors.success?.main || '#4CAF50'}
-              />
-              <Text style={[
-                styles.messageText,
-                { color: colors.success?.main || '#4CAF50' }
-              ]}>
-                The meeting has been scheduled and added to both your calendars. You can reschedule or manage this meeting in the meeting room.
-              </Text>
-            </View>
+            {/* Subtle Info Message */}
+            <Text style={[styles.successModalMessage, { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }]}>
+              Added to both calendars
+            </Text>
 
-            {/* Action Buttons */}
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.confirmButton,
-                  {
-                    backgroundColor: colors.primary || '#007AFF',
-                  }
-                ]}
-                onPress={() => {
-                  if (confirmedMeetingId) {
-                    setShowSlotConfirmation(false);
-                    setShowDetailModal(false);
-                    setSelectedSlot(null);
-                    router.push({
-                      pathname: '/events/bsl2025/networking/meeting-detail' as any,
-                      params: {
-                        meetingId: confirmedMeetingId,
-                        speakerName: selectedRequest?.speaker_name || '',
-                        requesterName: selectedRequest?.requester_name || '',
-                        status: 'tentative',
-                        scheduledAt: selectedSlot || '',
-                        duration: selectedRequest?.duration_minutes || 15,
-                        isSpeaker: 'true'
-                      }
-                    });
-                    setConfirmedMeetingId(null);
-                  }
-                }}
-              >
-                <MaterialIcons name="meeting-room" size={20} color="white" />
-                <Text style={styles.confirmButtonText}>Go to Meeting Room</Text>
-              </TouchableOpacity>
-            </View>
+            {/* Action Button */}
+            <TouchableOpacity
+              style={[
+                styles.successActionButton,
+                {
+                  backgroundColor: colors.primary || '#007AFF',
+                }
+              ]}
+              onPress={() => {
+                if (confirmedMeetingId) {
+                  setShowSlotConfirmation(false);
+                  setShowDetailModal(false);
+                  setSelectedSlot(null);
+                  router.push({
+                    pathname: '/events/bsl2025/networking/meeting-detail' as any,
+                    params: {
+                      meetingId: confirmedMeetingId,
+                      speakerName: selectedRequest?.speaker_name || '',
+                      requesterName: selectedRequest?.requester_name || '',
+                      status: 'tentative',
+                      scheduledAt: selectedSlot || '',
+                      duration: selectedRequest?.duration_minutes || 15,
+                      isSpeaker: 'true'
+                    }
+                  });
+                  setConfirmedMeetingId(null);
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.successActionButtonText}>View Meeting</Text>
+            </TouchableOpacity>
+
+            {/* Close Button */}
+            <TouchableOpacity
+              style={styles.successCloseButton}
+              onPress={() => {
+                setShowSlotConfirmation(false);
+                setShowDetailModal(false);
+                setSelectedSlot(null);
+                setConfirmedMeetingId(null);
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialIcons 
+                name="close" 
+                size={20} 
+                color={colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666')} 
+              />
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -2713,6 +2737,86 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Success Modal Styles
+  successModalContent: {
+    width: '90%',
+    maxWidth: 400,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 16,
+    position: 'relative',
+  },
+  successIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  successModalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 24,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  successMeetingSummary: {
+    width: '100%',
+    marginBottom: 20,
+    gap: 12,
+  },
+  successMeetingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  successMeetingText: {
+    fontSize: 15,
+    fontWeight: '500',
+    flex: 1,
+  },
+  successModalMessage: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 24,
+    fontWeight: '500',
+  },
+  successActionButton: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  successActionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  successCloseButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
   },
   // Slot Picker Modal Styles
   slotPickerModalContent: {

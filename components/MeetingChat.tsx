@@ -13,6 +13,12 @@ import { useToastHelpers } from '../contexts/ToastContext';
 import RealtimeChat from './RealtimeChat';
 import { TouchableOpacity } from 'react-native';
 
+// Helper function to generate user avatar URL
+const generateUserAvatarUrl = (name: string): string => {
+  const seed = name.toLowerCase().replace(/\s+/g, '-');
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+};
+
 interface Meeting {
   id: string;
   speaker_name: string;
@@ -98,17 +104,14 @@ export default function MeetingChat({ meetingId, onClose }: MeetingChatProps) {
             otherUserId = speakerData.user_id;
             otherUserName = meetingData.speaker_name || speakerData.name;
             
-            // Try to get speaker's avatar from profile
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('avatar_url, full_name')
-              .eq('id', speakerData.user_id)
-              .single();
+            // Use speaker's image from bsl_speakers or generate avatar
+            // Note: We can't query auth.users directly, so we use speaker image or generate
+            const avatarUrl = speakerData.imageurl || generateUserAvatarUrl(otherUserName);
             
             setOtherParticipant({
               id: otherUserId,
               name: otherUserName,
-              avatar: profileData?.avatar_url || speakerData.imageurl || undefined,
+              avatar: avatarUrl,
             });
           }
         } else {
@@ -116,17 +119,14 @@ export default function MeetingChat({ meetingId, onClose }: MeetingChatProps) {
           otherUserId = meetingData.requester_id;
           otherUserName = meetingData.requester_name;
           
-          // Get requester's avatar from profile
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('avatar_url, full_name')
-            .eq('id', meetingData.requester_id)
-            .single();
+          // Generate avatar for requester (we can't query auth.users directly from client)
+          // In production, you might want to create an API endpoint to fetch user metadata
+          const avatarUrl = generateUserAvatarUrl(otherUserName || 'User');
           
           setOtherParticipant({
             id: otherUserId,
-            name: otherUserName || profileData?.full_name || 'User',
-            avatar: profileData?.avatar_url || undefined,
+            name: otherUserName || 'User',
+            avatar: avatarUrl,
           });
         }
       }

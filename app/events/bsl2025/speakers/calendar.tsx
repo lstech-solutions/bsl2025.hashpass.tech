@@ -82,7 +82,7 @@ export default function SpeakersCalendar() {
               title: s.title,
               company: s.company || '',
               bio: s.bio || `Experienced professional in ${s.title}.`,
-              image: s.imageurl || null // Don't use fallback URL, let SpeakerAvatar handle it
+              image: s.imageurl || getSpeakerAvatarUrl(s.name) // Use same fallback as detail page
             }));
             
             // Remove duplicates based on ID

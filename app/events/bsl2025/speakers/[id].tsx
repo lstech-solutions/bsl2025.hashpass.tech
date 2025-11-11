@@ -104,7 +104,7 @@ export default function SpeakerDetail() {
       // Use helper function to find speaker by UUID or slug
       const { data: speakerData, error } = await supabase
         .rpc('get_speaker_by_id_or_slug', { p_id: id })
-        .single();
+        .maybeSingle();
       
       // Check if this speaker's user_id matches current user
       if (!error && speakerData && speakerData.user_id === user.id) {
@@ -124,9 +124,10 @@ export default function SpeakerDetail() {
       console.log('🔍 Attempting to load speaker from database...');
       
       // Try to get speaker by UUID or slug using helper function
+      // Use maybeSingle() to handle cases where speaker is not found (returns null instead of error)
       const dbPromise = supabase
         .rpc('get_speaker_by_id_or_slug', { p_id: id })
-        .single();
+        .maybeSingle();
 
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
@@ -136,7 +137,13 @@ export default function SpeakerDetail() {
       try {
         const { data: dbSpeaker, error: dbError } = await Promise.race([dbPromise, timeoutPromise]) as any;
 
-        if (dbSpeaker && !dbError && dbSpeaker.id) {
+        // Handle case where speaker is not found (maybeSingle returns null)
+        if (dbError) {
+          console.log('⚠️ Database error:', dbError);
+          throw dbError;
+        }
+
+        if (dbSpeaker && dbSpeaker.id) {
           // Check if speaker is active (has user_id) using RPC function
           // Pass UUID as TEXT for compatibility
           let isActive = false;

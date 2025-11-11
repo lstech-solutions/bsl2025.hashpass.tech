@@ -365,32 +365,67 @@ class PassSystemService {
     }
   }
 
-  // Get pass type limits
-  getPassTypeLimits(passType: PassType): PassTypeLimits {
+  // Get pass type limits - now dynamically calculated based on total speaker count
+  // General: 25% of total speakers, Business: 63% of total speakers, VIP: 101% of total speakers
+  async getPassTypeLimits(passType: PassType): Promise<PassTypeLimits> {
+    try {
+      // Call the database function to get dynamically calculated limits
+      const { data, error } = await supabase
+        .rpc('get_pass_type_limits', { p_pass_type: passType })
+        .single();
+
+      if (error) {
+        console.error('Error fetching pass type limits from database:', error);
+        // Fallback to default values if database call fails
+        return this.getDefaultPassTypeLimits(passType);
+      }
+
+      if (data) {
+        return {
+          max_requests: data.max_requests || 0,
+          max_boost: data.max_boost || 0,
+          daily_limit: data.daily_limit || 0,
+          weekly_limit: data.weekly_limit || 0,
+          monthly_limit: data.monthly_limit || 0,
+        };
+      }
+
+      // Fallback if no data returned
+      return this.getDefaultPassTypeLimits(passType);
+    } catch (error) {
+      console.error('Error in getPassTypeLimits:', error);
+      return this.getDefaultPassTypeLimits(passType);
+    }
+  }
+
+  // Fallback method with default values (used if database call fails)
+  private getDefaultPassTypeLimits(passType: PassType): PassTypeLimits {
+    // These are fallback values - should not be used in production
+    // The database function should always return the correct dynamic values
     switch (passType) {
       case 'vip':
         return {
-          max_requests: 50,
-          max_boost: 1000,
-          daily_limit: 10,
-          weekly_limit: 30,
-          monthly_limit: 50
+          max_requests: 100,
+          max_boost: 2000,
+          daily_limit: 20,
+          weekly_limit: 50,
+          monthly_limit: 100
         };
       case 'business':
         return {
-          max_requests: 20,
-          max_boost: 500,
-          daily_limit: 5,
-          weekly_limit: 15,
-          monthly_limit: 20
+          max_requests: 60,
+          max_boost: 1200,
+          daily_limit: 15,
+          weekly_limit: 30,
+          monthly_limit: 60
         };
       case 'general':
         return {
-          max_requests: 5,
-          max_boost: 100,
-          daily_limit: 2,
-          weekly_limit: 5,
-          monthly_limit: 5
+          max_requests: 10,
+          max_boost: 200,
+          daily_limit: 5,
+          weekly_limit: 10,
+          monthly_limit: 10
         };
       default:
         return {

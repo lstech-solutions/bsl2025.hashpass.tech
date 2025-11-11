@@ -1,6 +1,23 @@
 {
-  "currentVersion": "1.6.11",
+  "currentVersion": "1.6.12",
   "versions": [
+    {
+      "version": "1.6.12",
+      "buildNumber": 202511110614,
+      "releaseDate": "2025-11-11",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "Added Privacy/Terms modal component for in-app viewing",
+        "Improved mobile responsiveness for theme/language switcher on auth page"
+      ],
+      "bugfixes": [
+        "Fixed theme and language switcher overlapping with auth card on mobile views",
+        "Replaced navigation with modal for privacy and terms links on auth screen"
+      ],
+      "breakingChanges": [],
+      "notes": "Version 1.6.12 release"
+    },
     {
       "version": "1.6.11",
       "buildNumber": 202511102042,

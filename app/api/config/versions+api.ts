@@ -1,6 +1,19 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+// Handle CORS preflight requests
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Cache-Control, Pragma',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+}
+
 export async function GET() {
   try {
     // Read versions.json from config directory
@@ -45,6 +58,10 @@ export async function GET() {
         'X-Version-Source': versionsPath || 'unknown',
         'X-Current-Version': versions.currentVersion || 'unknown',
         'X-Timestamp': Date.now().toString(),
+        // Ensure CORS headers for cross-origin requests (if needed)
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Cache-Control, Pragma',
       },
     });
   } catch (error: any) {

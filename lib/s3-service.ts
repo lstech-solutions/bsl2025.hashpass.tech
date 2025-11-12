@@ -12,7 +12,12 @@ const s3Client = new S3Client({
   } : undefined,
 });
 
-const BUCKET_NAME = (process.env.AWS_S3_BUCKET_NAME || '').trim().replace(/[`'"]/g, '');
+// Email assets bucket - uses EXPO_PUBLIC_AWS_S3_BUCKET_NAME (hashpass-email-assets)
+const EMAIL_BUCKET_NAME = (
+  process.env.EXPO_PUBLIC_AWS_S3_BUCKET_NAME || 
+  process.env.AWS_S3_BUCKET_NAME || 
+  'hashpass-email-assets'
+).trim().replace(/[`'"]/g, '');
 const CDN_URL = (process.env.AWS_S3_CDN_URL || process.env.AWS_S3_BUCKET_URL || '').trim();
 const EMAIL_ASSETS_PREFIX = 'emails/assets/';
 
@@ -31,7 +36,7 @@ export async function uploadToS3(
   options: UploadOptions = {}
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   try {
-    if (!BUCKET_NAME) {
+    if (!EMAIL_BUCKET_NAME) {
       return { success: false, error: 'S3 bucket name not configured' };
     }
 
@@ -44,7 +49,7 @@ export async function uploadToS3(
     
     // Upload to S3
     const command = new PutObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: EMAIL_BUCKET_NAME,
       Key: s3Key,
       Body: fileContent,
       ContentType: contentType,
@@ -61,7 +66,7 @@ export async function uploadToS3(
       url = `${CDN_URL}/${s3Key}`.replace(/\/+/g, '/').replace(':/', '://');
     } else {
       // Use S3 bucket URL directly
-      url = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
+      url = `https://${EMAIL_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
     }
 
     return { success: true, url };
@@ -99,7 +104,7 @@ export function getEmailAssetUrl(assetName: string): string {
   }
   
   // Use S3 bucket URL directly
-  return `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
+  return `https://${EMAIL_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
 }
 
 /**
@@ -107,12 +112,12 @@ export function getEmailAssetUrl(assetName: string): string {
  */
 export async function fileExistsInS3(s3Key: string): Promise<boolean> {
   try {
-    if (!BUCKET_NAME) {
+    if (!EMAIL_BUCKET_NAME) {
       return false;
     }
 
     const command = new HeadObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: EMAIL_BUCKET_NAME,
       Key: s3Key,
     });
 

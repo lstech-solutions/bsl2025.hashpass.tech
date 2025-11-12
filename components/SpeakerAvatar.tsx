@@ -94,6 +94,11 @@ export default function SpeakerAvatar({
     setImageTimeout(false);
     setImageLoaded(false);
     
+    // Debug: Log what URLs are available
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[SpeakerAvatar] ${name} - URLs:`, { localOptimizedUrl, s3Url, imageUrl });
+    }
+    
     if (localOptimizedUrl) {
       // Try local optimized first - set loading state and URL
       setImageLoading(true);
@@ -108,14 +113,18 @@ export default function SpeakerAvatar({
       currentUrlRef.current = s3Url;
     } else {
       // No URLs available - show initials immediately (no loader needed)
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[SpeakerAvatar] ${name} - No URLs available, showing initials`);
+      }
       setCurrentAvatarUrl(null);
       setUrlSource(null);
       currentUrlRef.current = null;
       setImageLoading(false);
       setImageError(true);
       setImageTimeout(true);
+      setImageLoaded(false);
     }
-  }, [localOptimizedUrl, s3Url]); // Only depend on URLs, not currentAvatarUrl
+  }, [localOptimizedUrl, s3Url, name, imageUrl]); // Added name and imageUrl for debugging
   
   const avatarUrl = currentAvatarUrl;
 

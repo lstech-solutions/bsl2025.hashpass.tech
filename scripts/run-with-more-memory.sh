@@ -15,3 +15,4 @@ fi
 # Default Node.js limit is usually around 2GB
 NODE_OPTIONS="--max-old-space-size=8192" node "$SCRIPT_PATH" "$@"
 
+

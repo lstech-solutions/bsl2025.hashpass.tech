@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.6.50] - 2025-11-12
+
+### Bugfixes
+- Fixed OTP verification redirect issue on production
+- Added session verification before navigation after OTP verification
+- Improved redirect timing to ensure session is fully established
+- Added proper loading state management during OTP verification
+
+### Technical Details
+- Version: 1.6.50
+- Release Type: beta
+- Build Number: 202511121501
+- Release Date: 2025-11-12T15:01:00.000Z
+
 ## [1.6.49] - 2025-11-12
 
 ### Beta

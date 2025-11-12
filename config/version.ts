@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511122142, // Updated to current timestamp
+  buildNumber: 202511122157, // Updated to current timestamp
   releaseDate: '2025-11-12',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -34,11 +34,29 @@ export const CURRENT_VERSION: VersionInfo = {
     'Added proper loading state management during OTP verification'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.55 release'
+  notes: 'Version 1.6.56 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.56': {
+    version: '1.6.56',
+    buildNumber: 202511122157,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      // No new features
+    ],
+    bugfixes: [
+      'Fixed OTP verification redirect issue on production',
+      'Added session verification before navigation after OTP verification',
+      'Improved redirect timing to ensure session is fully established',
+      'Added proper loading state management during OTP verification'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.56 release'
+  },
   '1.6.55': {
     version: '1.6.55',
     buildNumber: 202511122142,

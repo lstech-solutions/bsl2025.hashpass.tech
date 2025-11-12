@@ -65,6 +65,34 @@ config.server = {
     
     // Return a new middleware that wraps the original
     return (req, res, next) => {
+      // Intercept /config/versions.json requests
+      if (req.url && req.url === '/config/versions.json') {
+        const configPath = path.join(__dirname, 'config', 'versions.json');
+        if (fs.existsSync(configPath)) {
+          const stat = fs.statSync(configPath);
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+            'Content-Length': stat.size,
+          });
+          return fs.createReadStream(configPath).pipe(res);
+        }
+      }
+      
+      // Intercept /api/config/versions requests (for API route compatibility)
+      if (req.url && req.url === '/api/config/versions') {
+        const configPath = path.join(__dirname, 'config', 'versions.json');
+        if (fs.existsSync(configPath)) {
+          const stat = fs.statSync(configPath);
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+            'Content-Length': stat.size,
+          });
+          return fs.createReadStream(configPath).pipe(res);
+        }
+      }
+      
       // Intercept /assets/ requests BEFORE Metro tries to resolve them
       if (req.url && req.url.startsWith('/assets/')) {
         const contentTypes = {

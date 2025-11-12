@@ -37,13 +37,6 @@ export default function BSL2025Layout() {
         }}
       />
       <Stack.Screen 
-        name="admin" 
-        options={{
-          title: 'Admin Panel',
-          headerBackTitle: 'BSL2025',
-        }}
-      />
-      <Stack.Screen 
         name="my-bookings" 
         options={{
           title: 'My Bookings',

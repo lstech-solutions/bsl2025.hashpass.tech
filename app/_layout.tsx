@@ -169,7 +169,6 @@ function ThemedContent() {
         <Stack.Screen name="events/bsl2025/speakers/calendar" options={{ headerShown: false }} />
         <Stack.Screen name="events/bsl2025/my-bookings" options={{ headerShown: false }} />
         <Stack.Screen name="events/bsl2025/speaker-dashboard" options={{ headerShown: false }} />
-        <Stack.Screen name="events/bsl2025/admin" options={{ headerShown: false }} />
       </Stack>
       <PWAPrompt />
     </>

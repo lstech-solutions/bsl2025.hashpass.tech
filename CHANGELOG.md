@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.45] - 2025-11-12
+
+### Beta
+- Version 1.6.45 release
+
+### Technical Details
+- Version: 1.6.45
+- Release Type: beta
+- Build Number: 202511121456
+- Release Date: 2025-11-12T14:56:02.653Z
+
+
 ## [1.6.44] - 2025-11-12
 
 ### Beta

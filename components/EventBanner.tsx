@@ -47,6 +47,21 @@ export default function EventBanner({
   const [pulseAnim] = useState(new Animated.Value(1));
   const styles = getStyles(isDark, colors, backgroundColor);
 
+  // Check if event has started based on eventStartDate
+  useEffect(() => {
+    const checkEventStatus = () => {
+      const now = new Date().getTime();
+      const eventTime = new Date(eventStartDate).getTime();
+      const hasStarted = now >= eventTime;
+      setIsEventLive(hasStarted);
+    };
+
+    checkEventStatus();
+    // Check every minute
+    const interval = setInterval(checkEventStatus, 60000);
+    return () => clearInterval(interval);
+  }, [eventStartDate]);
+
   // Calculate time left until event
   const calculateTimeLeft = (): TimeLeft => {
     const now = new Date().getTime();
@@ -61,21 +76,20 @@ export default function EventBanner({
         seconds: Math.floor((difference % (1000 * 60)) / 1000)
       };
     } else {
-      setIsEventLive(true);
       return { days: 0, hours: 0, minutes: 0, seconds: 0 };
     }
   };
 
-  // Update countdown every second
+  // Update countdown every second (only if event hasn't started)
   useEffect(() => {
-    if (showCountdown) {
+    if (showCountdown && !isEventLive && !isLive) {
       const timer = setInterval(() => {
         setTimeLeft(calculateTimeLeft());
       }, 1000);
 
       return () => clearInterval(timer);
     }
-  }, [showCountdown, eventStartDate]);
+  }, [showCountdown, eventStartDate, isEventLive, isLive]);
 
   // Live indicator pulse animation
   useEffect(() => {
@@ -122,37 +136,8 @@ export default function EventBanner({
         <Text style={styles.eventDate}>{date}</Text>
       </View>
 
-      {/* Live Indicator */}
-      {showLiveIndicator && (
-        <View style={styles.liveIndicator}>
-          {isLive ? (
-            <>
-              <Animated.View style={[styles.liveDot, { transform: [{ scale: pulseAnim }] }]}>
-                <View style={styles.liveDotInner} />
-              </Animated.View>
-              <Text style={styles.liveText}>LIVE AGENDA</Text>
-              {lastUpdated && (
-                <Text style={styles.lastUpdatedText}>
-                  Last updated: {new Date(lastUpdated).toLocaleTimeString()}
-                </Text>
-              )}
-            </>
-          ) : (
-            <>
-              <MaterialIcons name="lightbulb" size={16} color="#FFFFFF" />
-              <Text style={styles.liveText}>Live agenda available starting Nov 12</Text>
-              {lastUpdated && (
-                <Text style={styles.lastUpdatedText}>
-                  Last updated: {new Date(lastUpdated).toLocaleTimeString()}
-                </Text>
-              )}
-            </>
-          )}
-        </View>
-      )}
-
-      {/* Agenda Tracker - Show when event is live, hide countdown */}
-      {isLive && (
+      {/* Agenda Tracker - Show when event is live */}
+      {(isLive || isEventLive) && (
         <AgendaTracker eventId={eventId} backgroundColor={backgroundColor} />
       )}
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useRouter } from 'expo-router';
@@ -25,10 +25,13 @@ export default function AgendaTracker({
   const router = useRouter();
   const styles = getStyles(isDark, colors, backgroundColor);
   
-  const [currentEvent, setCurrentEvent] = useState<AgendaItem | null>(null);
-  const [nextEvent, setNextEvent] = useState<AgendaItem | null>(null);
+  const [currentEvent, setCurrentEvent] = useState<any | null>(null);
+  const [nextEvent, setNextEvent] = useState<any | null>(null);
   const [timeToNext, setTimeToNext] = useState<TimeLeft>({ hours: 0, minutes: 0, seconds: 0 });
+  const [timeRemaining, setTimeRemaining] = useState<TimeLeft>({ hours: 0, minutes: 0, seconds: 0 });
   const [loading, setLoading] = useState(true);
+  const [sessionProgress, setSessionProgress] = useState(0); // 0-100 percentage
+  const progressAnim = React.useRef(new Animated.Value(0)).current;
 
   // Load agenda and find current/next events
   useEffect(() => {
@@ -156,6 +159,80 @@ export default function AgendaTracker({
     return () => clearInterval(interval);
   }, [eventId]);
 
+  // Calculate time remaining and progress for current event
+  useEffect(() => {
+    if (!currentEvent || !currentEvent.time) {
+      setTimeRemaining({ hours: 0, minutes: 0, seconds: 0 });
+      setSessionProgress(0);
+      return;
+    }
+
+    const updateRemainingTime = () => {
+      const now = new Date();
+      let startTime: Date | null = null;
+      let endTime: Date | null = null;
+      
+      // Try to parse time range format "HH:MM - HH:MM"
+      const timeMatch = currentEvent.time.trim().match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
+      if (timeMatch) {
+        const startHour = parseInt(timeMatch[1], 10);
+        const startMin = parseInt(timeMatch[2], 10);
+        const endHour = parseInt(timeMatch[3], 10);
+        const endMin = parseInt(timeMatch[4], 10);
+        const today = new Date();
+        startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), startHour, startMin);
+        endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), endHour, endMin);
+      } else {
+        // Try ISO format
+        try {
+          startTime = parseEventISO(currentEvent.time);
+          if (!isNaN(startTime.getTime())) {
+            const duration = currentEvent.duration_minutes || 60;
+            endTime = new Date(startTime.getTime() + duration * 60 * 1000);
+          }
+        } catch {
+          endTime = null;
+          startTime = null;
+        }
+      }
+      
+      if (!endTime || !startTime) {
+        setTimeRemaining({ hours: 0, minutes: 0, seconds: 0 });
+        setSessionProgress(0);
+        return;
+      }
+      
+      const totalDuration = endTime.getTime() - startTime.getTime();
+      const elapsed = now.getTime() - startTime.getTime();
+      const remaining = endTime.getTime() - now.getTime();
+      
+      // Calculate progress percentage (0-100)
+      const progress = Math.max(0, Math.min(100, (elapsed / totalDuration) * 100));
+      setSessionProgress(progress);
+      
+      // Animate progress bar
+      Animated.timing(progressAnim, {
+        toValue: progress / 100,
+        duration: 1000,
+        useNativeDriver: false,
+      }).start();
+
+      if (remaining > 0) {
+        setTimeRemaining({
+          hours: Math.floor(remaining / (1000 * 60 * 60)),
+          minutes: Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((remaining % (1000 * 60)) / 1000)
+        });
+      } else {
+        setTimeRemaining({ hours: 0, minutes: 0, seconds: 0 });
+      }
+    };
+
+    updateRemainingTime();
+    const timer = setInterval(updateRemainingTime, 1000);
+    return () => clearInterval(timer);
+  }, [currentEvent, progressAnim]);
+
   // Calculate time to next event
   useEffect(() => {
     if (!nextEvent || !nextEvent.time) {
@@ -216,6 +293,32 @@ export default function AgendaTracker({
     return `${time.minutes}m ${time.seconds}s`;
   };
 
+  const formatTimeShort = (time: TimeLeft): string => {
+    if (time.hours > 0) {
+      return `${time.hours}h ${time.minutes}m`;
+    }
+    if (time.minutes > 0) {
+      return `${time.minutes}m`;
+    }
+    return `${time.seconds}s`;
+  };
+
+  const handleCurrentEventPress = () => {
+    if (currentEvent?.id) {
+      router.push(`/events/bsl2025/agenda?session=${currentEvent.id}&scrollTo=current`);
+    } else {
+      router.push('/events/bsl2025/agenda');
+    }
+  };
+
+  const handleNextEventPress = () => {
+    if (nextEvent?.id) {
+      router.push(`/events/bsl2025/agenda?session=${nextEvent.id}&scrollTo=next`);
+    } else {
+      router.push('/events/bsl2025/agenda');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -226,60 +329,86 @@ export default function AgendaTracker({
 
   return (
     <View style={styles.container}>
-      {/* Current Event */}
-      {currentEvent ? (
-        <View style={styles.currentEventContainer}>
-          <View style={styles.eventIndicator}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveLabel}>NOW</Text>
+      {/* Current Event and Next Session - Same Line */}
+      <View style={styles.sessionRow}>
+        {/* Current Event - Compact Single Line */}
+        {currentEvent ? (
+          <TouchableOpacity 
+            style={styles.currentEventContainer}
+            onPress={handleCurrentEventPress}
+            activeOpacity={0.7}
+          >
+            <View style={styles.eventIndicator}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveLabel}>LIVE</Text>
+            </View>
+            <View style={styles.eventInfoCompact}>
+              {/* Track/Day Name Badge */}
+              {currentEvent.day_name && (
+                <View style={styles.trackBadgeCompact}>
+                  <Text style={styles.trackBadgeTextCompact}>{currentEvent.day_name}</Text>
+                </View>
+              )}
+              {/* Title and Time in one line */}
+              <View style={styles.eventTitleRow}>
+                <Text style={styles.eventTitleCompact} numberOfLines={1}>
+                  {currentEvent.title || 'Current Event'}
+                </Text>
+                {currentEvent.time && (
+                  <Text style={styles.eventTimeCompact}>
+                    {formatTimeRange(currentEvent)}
+                  </Text>
+                )}
+              </View>
+              {/* Progress Bar and Time Remaining in one line */}
+              <View style={styles.progressRowCompact}>
+                <View style={styles.progressBarBackgroundCompact}>
+                  <Animated.View 
+                    style={[
+                      styles.progressBarFillCompact,
+                      {
+                        width: progressAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0%', '100%'],
+                        }),
+                      }
+                    ]}
+                  />
+                </View>
+                <View style={styles.timeRemainingCompact}>
+                  <MaterialIcons name="timer" size={12} color="#FF3B30" />
+                  <Text style={styles.timeRemainingTextCompact}>
+                    {formatTimeShort(timeRemaining)} left
+                  </Text>
+                  <Text style={styles.progressPercentageCompact}>
+                    {Math.round(sessionProgress)}%
+                  </Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.eventInfo}>
-            <Text style={styles.eventTitle} numberOfLines={2}>
-              {currentEvent.title || 'Current Event'}
-            </Text>
-            {currentEvent.time && (
-              <Text style={styles.eventTime}>
-                {formatTimeRange(currentEvent)}
-              </Text>
-            )}
-          </View>
-        </View>
+        </TouchableOpacity>
       ) : (
         <View style={styles.noCurrentEventContainer}>
           <Text style={styles.noEventText}>No event currently happening</Text>
         </View>
       )}
 
-      {/* Next Event */}
-      {nextEvent && (
-        <TouchableOpacity 
-          style={styles.nextEventContainer}
-          onPress={() => router.push('/events/bsl2025/agenda')}
-          activeOpacity={0.7}
-        >
-          <View style={styles.nextEventHeader}>
-            <MaterialIcons name="schedule" size={16} color="#FFFFFF" />
-            <Text style={styles.nextEventLabel}>Next Event</Text>
-          </View>
-          <View style={styles.nextEventContent}>
-            <View style={styles.nextEventInfo}>
-              <Text style={styles.nextEventTitle} numberOfLines={2}>
-                {nextEvent.title || 'Upcoming Event'}
-              </Text>
-              {nextEvent.time && (
-                <Text style={styles.nextEventTime}>
-                  {formatTimeRange(nextEvent)}
-                </Text>
-              )}
+        {/* Next Event - Compact Small Card on Right */}
+        {nextEvent && (
+          <TouchableOpacity 
+            style={styles.nextEventContainerCompact}
+            onPress={handleNextEventPress}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="schedule" size={12} color="#FFFFFF" />
+            <View style={styles.nextEventTextContainer}>
+              <Text style={styles.nextEventLabelCompact}>Next in:</Text>
+              <Text style={styles.timerValueCompact}>{formatTime(timeToNext)}</Text>
             </View>
-            <View style={styles.timerContainer}>
-              <Text style={styles.timerLabel}>Starts in:</Text>
-              <Text style={styles.timerValue}>{formatTime(timeToNext)}</Text>
-            </View>
-          </View>
-          <MaterialIcons name="chevron-right" size={20} color="#FFFFFF" style={styles.chevron} />
-        </TouchableOpacity>
-      )}
+            <MaterialIcons name="chevron-right" size={16} color="#FFFFFF" style={styles.chevronCompact} />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -288,6 +417,11 @@ const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => Sty
   container: {
     width: '100%',
     marginTop: 8,
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 8,
   },
   loadingText: {
     color: '#FFFFFF',
@@ -299,9 +433,81 @@ const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => Sty
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 12,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.3)',
+    flex: 1,
+  },
+  eventInfoCompact: {
+    flex: 1,
+  },
+  trackBadgeCompact: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+  trackBadgeTextCompact: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  eventTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 8,
+  },
+  eventTitleCompact: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    flex: 1,
+  },
+  eventTimeCompact: {
+    color: '#E3F2FD',
+    fontSize: 11,
+  },
+  progressRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  progressBarBackgroundCompact: {
+    flex: 1,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBarFillCompact: {
+    height: '100%',
+    backgroundColor: '#FF3B30',
+    borderRadius: 2,
+  },
+  timeRemainingCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  timeRemainingTextCompact: {
+    color: '#FF3B30',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  progressPercentageCompact: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   eventIndicator: {
     flexDirection: 'row',
@@ -328,15 +534,84 @@ const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => Sty
   eventInfo: {
     flex: 1,
   },
+  trackBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  trackBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   eventTitle: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+  eventMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 4,
   },
   eventTime: {
     color: '#E3F2FD',
     fontSize: 12,
+  },
+  eventLocation: {
+    color: '#BBDEFB',
+    fontSize: 11,
+  },
+  progressBarContainer: {
+    marginTop: 12,
+    width: '100%',
+  },
+  progressBarBackground: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#FF3B30',
+    borderRadius: 3,
+  },
+  progressInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  timeRemainingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 59, 48, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  timeRemainingText: {
+    color: '#FF3B30',
+    fontSize: 11,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  progressPercentage: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   noCurrentEventContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -350,60 +625,36 @@ const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => Sty
     fontSize: 14,
     fontStyle: 'italic',
   },
-  nextEventContainer: {
+  nextEventContainerCompact: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 12,
-    borderRadius: 12,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    gap: 4,
+    minWidth: 100,
   },
-  nextEventHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+  nextEventTextContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 2,
   },
-  nextEventLabel: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 6,
-    letterSpacing: 0.5,
-  },
-  nextEventContent: {
-    flex: 1,
-  },
-  nextEventInfo: {
-    marginBottom: 8,
-  },
-  nextEventTitle: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  nextEventTime: {
+  nextEventLabelCompact: {
     color: '#E3F2FD',
-    fontSize: 12,
+    fontSize: 9,
+    fontWeight: '500',
   },
-  timerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  timerLabel: {
-    color: '#BBDEFB',
-    fontSize: 11,
-    marginRight: 6,
-  },
-  timerValue: {
+  timerValueCompact: {
     color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: 'bold',
+    fontSize: 11,
+    fontWeight: '700',
   },
-  chevron: {
-    marginLeft: 8,
+  chevronCompact: {
+    marginLeft: 4,
   },
 });
 

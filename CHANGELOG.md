@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.51] - 2025-11-12
+
+### Beta
+- Version 1.6.51 release
+
+### Technical Details
+- Version: 1.6.51
+- Release Type: beta
+- Build Number: 202511122033
+- Release Date: 2025-11-12T20:33:43.475Z
+
+
 ## [1.6.50] - 2025-11-12
 
 ### Bugfixes

@@ -194,6 +194,25 @@ export default function AuthScreen() {
                     }).then(res => res.json()).then(result => {
                       if (result.success && !result.skipped && !result.alreadySent) {
                         console.log('✅ Welcome email sent successfully');
+                        
+                        // After welcome email is sent, send onboarding emails
+                        // This includes user onboarding for all users and speaker onboarding if user is a speaker
+                        fetch('/api/auth/send-onboarding-emails', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userId, email: userEmail, locale: userLocale }),
+                        }).then(res => res.json()).then(onboardingResult => {
+                          if (onboardingResult.success) {
+                            if (onboardingResult.results?.userOnboarding?.success && !onboardingResult.results.userOnboarding.alreadySent) {
+                              console.log('✅ User onboarding email sent successfully');
+                            }
+                            if (onboardingResult.results?.speakerOnboarding?.isSpeaker) {
+                              if (onboardingResult.results.speakerOnboarding.success && !onboardingResult.results.speakerOnboarding.alreadySent) {
+                                console.log('✅ Speaker onboarding email sent successfully');
+                              }
+                            }
+                          }
+                        }).catch(err => console.error('❌ Error sending onboarding emails:', err));
                       }
                     }).catch(err => console.error('❌ Error sending welcome email:', err));
                   } catch (emailError) {
@@ -290,7 +309,11 @@ export default function AuthScreen() {
           const data = await response.json();
 
           if (!response.ok) {
-            throw new Error(data.error || 'Failed to send OTP code');
+            // Handle rate limit errors specifically
+            if (response.status === 429 || data.code === 'over_email_send_rate_limit') {
+              throw new Error('Too many emails sent. Please wait a few minutes before requesting another code.');
+            }
+            throw new Error(data.error || data.message || 'Failed to send OTP code');
           }
 
           setOtpSent(true);
@@ -312,34 +335,22 @@ export default function AuthScreen() {
           return;
         } catch (apiError: any) {
           console.error('OTP API error:', apiError);
-          // Fallback to Supabase's method if custom API fails
-          const { error } = await supabase.auth.signInWithOtp({
-            email: email.trim(),
-            options: {
-              shouldCreateUser: true,
-            },
-          });
-
-          if (error) {
-            showError('Authentication Error', error.message);
-            setLoading(false);
-            return;
+          // Don't fallback to Supabase's method as it may send a magic link instead of OTP
+          // Show a clear error message to the user
+          let errorTitle = 'Failed to Send Code';
+          let errorMessage = apiError?.message || 'Failed to send OTP code';
+          
+          // Handle rate limit errors specifically
+          if (errorMessage.includes('rate limit') || 
+              errorMessage.includes('Too many emails') ||
+              apiError?.code === 'over_email_send_rate_limit') {
+            errorTitle = 'Rate Limit Exceeded';
+            errorMessage = 'Too many emails sent. Please wait a few minutes before requesting another code.';
           }
-
-          setOtpSent(true);
           
-          // Get email provider to add a link in the toast
-          const emailProvider = getEmailProviderUrl(email.trim());
-          const providerName = emailProvider?.name || 'your email';
-          
-          showSuccess(
-            'Code Sent',
-            `Please check ${providerName} for the verification code.`,
-            10000, // 10 seconds duration
-            emailProvider ? {
-              label: `Open ${emailProvider.name}`,
-              onPress: async () => await openEmailProvider(email.trim()),
-            } : undefined
+          showError(
+            errorTitle,
+            errorMessage + (errorMessage.includes('rate limit') ? '' : '. Please try again or contact support if the problem persists.')
           );
           setLoading(false);
           return;
@@ -354,7 +365,18 @@ export default function AuthScreen() {
         });
 
         if (error) {
-          showError('Authentication Error', error.message);
+          // Handle rate limit errors specifically
+          let errorTitle = 'Authentication Error';
+          let errorMessage = error.message;
+          
+          if (error.message?.includes('rate limit') || 
+              error.message?.includes('over_email_send_rate_limit') ||
+              error.code === 'over_email_send_rate_limit') {
+            errorTitle = 'Rate Limit Exceeded';
+            errorMessage = 'Too many emails sent. Please wait a few minutes before requesting another magic link.';
+          }
+          
+          showError(errorTitle, errorMessage);
           setLoading(false);
           return;
         }

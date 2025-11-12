@@ -22,40 +22,63 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511120906, // Updated to current timestamp
+  buildNumber: 202511121223, // Updated to current timestamp
   releaseDate: '2025-11-12',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
-    'Added Privacy/Terms modal component for in-app viewing',
-    'Improved mobile responsiveness for theme/language switcher on auth page'
+    'Refactored version system to use version.ts as single source of truth',
+    'Updated versionService to read directly from version.ts instead of versions.json',
+    'Improved version display accuracy in sidebar'
   ],
   bugfixes: [
-    'Fixed theme and language switcher overlapping with auth card on mobile views',
-    'Replaced navigation with modal for privacy and terms links on auth screen'
+    'Fixed sidebar version display showing stale/incorrect data',
+    'Fixed versionService reading from outdated versions.json file',
+    'Ensured version display always shows current version from source of truth'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.36 release'
+  notes: 'Version 1.6.37 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
-  '1.6.36': {
-    version: '1.6.36',
-    buildNumber: 202511120906,
+  '1.6.37': {
+    version: '1.6.37',
+    buildNumber: 202511121223,
     releaseDate: '2025-11-12',
     releaseType: 'beta',
     environment: 'development',
     features: [
-      'Added Privacy/Terms modal component for in-app viewing',
-      'Improved mobile responsiveness for theme/language switcher on auth page'
+      'Refactored version system to use version.ts as single source of truth',
+      'Updated versionService to read directly from version.ts instead of versions.json',
+      'Improved version display accuracy in sidebar'
     ],
     bugfixes: [
-      'Fixed theme and language switcher overlapping with auth card on mobile views',
-      'Replaced navigation with modal for privacy and terms links on auth screen'
+      'Fixed sidebar version display showing stale/incorrect data',
+      'Fixed versionService reading from outdated versions.json file',
+      'Ensured version display always shows current version from source of truth'
     ],
     breakingChanges: [],
-    notes: 'Version 1.6.36 release'
+    notes: 'Version 1.6.37 release'
+  },
+  '1.6.36': {
+    version: '1.6.36',
+    buildNumber: 202511120912,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Refactored version system to use version.ts as single source of truth',
+      'Updated versionService to read directly from version.ts instead of versions.json',
+      'Improved version display accuracy in sidebar'
+    ],
+    bugfixes: [
+      'Fixed sidebar version display showing stale/incorrect data',
+      'Fixed versionService reading from outdated versions.json file',
+      'Ensured version display always shows current version from source of truth'
+    ],
+    breakingChanges: [],
+    notes: 'Fixed version display system and established single source of truth'
   },
   '1.6.35': {
     version: '1.6.35',

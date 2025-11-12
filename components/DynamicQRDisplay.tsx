@@ -329,12 +329,12 @@ export default function DynamicQRDisplay({
             color={isDark ? '#FFFFFF' : '#000000'}
             backgroundColor={isDark ? '#1A1A1A' : '#FFFFFF'}
             logo={logoSource}
-            logoSize={size * 0.18}
+            logoSize={size * 0.2}
             logoBackgroundColor="transparent"
             logoMargin={2}
             logoBorderRadius={8}
-            quietZone={8}
-            ecl="M"
+            quietZone={size * 0.05}
+            ecl="L"
             enableLinearGradient={false}
           />
           

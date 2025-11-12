@@ -128,6 +128,9 @@ export default function WebQRScanner({
 
       // Load html5-qrcode library
       const { Html5Qrcode } = await import('html5-qrcode');
+      
+      // Store Html5Qrcode in a variable accessible in catch block
+      const Html5QrcodeClass = Html5Qrcode;
 
       // Wait for DOM element to be ready and verify it's actually in the DOM
       // Use a retry mechanism with exponential backoff
@@ -178,6 +181,8 @@ export default function WebQRScanner({
       // Clear any existing content
       if (scannerRef.current) {
         scannerRef.current.innerHTML = '';
+      } else {
+        throw new Error('Scanner ref is null');
       }
 
       // Create scanner instance with a unique ID
@@ -198,13 +203,29 @@ export default function WebQRScanner({
         throw new Error('No cameras found');
       }
 
-      // Prefer back camera (environment facing)
+      console.log(`📹 Found ${cameras.length} camera(s):`, cameras.map(c => c.label));
+
+      // Prefer back camera (environment facing), but fallback gracefully
+      let cameraId: string;
       const backCamera = cameras.find(cam => 
         cam.label.toLowerCase().includes('back') ||
         cam.label.toLowerCase().includes('rear') ||
-        cam.label.toLowerCase().includes('environment')
+        cam.label.toLowerCase().includes('environment') ||
+        cam.label.toLowerCase().includes('facing back')
       );
-      const cameraId = backCamera?.id || cameras[0].id;
+      
+      if (backCamera) {
+        cameraId = backCamera.id;
+        console.log('✅ Using back camera:', backCamera.label);
+      } else {
+        // Try to find any camera that's not explicitly front-facing
+        const nonFrontCamera = cameras.find(cam => 
+          !cam.label.toLowerCase().includes('front') &&
+          !cam.label.toLowerCase().includes('user')
+        );
+        cameraId = nonFrontCamera?.id || cameras[0].id;
+        console.log('⚠️ Back camera not found, using:', cameras.find(c => c.id === cameraId)?.label || 'first available');
+      }
 
       // Final check before starting - element must exist and be in DOM
       // Use a more robust check with retries
@@ -250,28 +271,32 @@ export default function WebQRScanner({
       
       console.log(`✅ Element validated: ${finalRect.width}x${finalRect.height}, ready to start scanner`);
 
-      // Start scanning with balanced settings for reliable detection
+      // Start scanning with optimized settings for maximum reliability
+      // Higher FPS and more flexible constraints for better detection
       await html5Qrcode.start(
         cameraId,
         {
-          fps: 15, // Balanced FPS - not too fast, not too slow
+          fps: 30, // Increased FPS for faster detection - matches QR refresh rate better
           qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-            // Balanced scanning area - 75% of the smaller dimension
-            // Ensure minimum size of 250px to meet html5-qrcode requirements (min 50px per dimension)
+            // Larger scanning area - 80% of the smaller dimension for better coverage
             const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const calculatedSize = Math.floor(minEdge * 0.75);
-            const size = Math.max(250, calculatedSize); // Minimum 250px to ensure reliable scanning
+            const calculatedSize = Math.floor(minEdge * 0.8);
+            const size = Math.max(250, calculatedSize); // Minimum 250px
+            console.log(`📐 QR box size: ${size}x${size} (viewport: ${viewfinderWidth}x${viewfinderHeight})`);
             return { width: size, height: size };
           },
           aspectRatio: 1.0,
           videoConstraints: {
-            facingMode: 'environment', // Prefer back camera
-            width: { ideal: 1280 }, // Standard HD resolution
-            height: { ideal: 720 },
+            facingMode: { ideal: 'environment' }, // More flexible constraint
+            // Use min/max instead of ideal for better compatibility
+            width: { min: 640, ideal: 1280, max: 1920 },
+            height: { min: 480, ideal: 720, max: 1080 },
+            // Add advanced constraints for better mobile support
+            advanced: [
+              { facingMode: 'environment' },
+              { facingMode: 'user' }, // Fallback to front camera if back not available
+            ],
           },
-          showTorchButtonIfSupported: false,
-          rememberLastUsedCamera: true,
-          verbose: false, // Reduce console noise
         },
         (decodedText: string, decodedResult: any) => {
           // Success - QR code detected
@@ -313,10 +338,69 @@ export default function WebQRScanner({
       setIsLoading(false);
       console.log('✅ QR Scanner started successfully');
       console.log('📹 Camera:', cameraId);
-      console.log('🔍 Scanning continuously at 15fps with 75% viewport coverage...');
+      console.log('🔍 Scanning continuously at 30fps with 80% viewport coverage...');
+      console.log('💡 Optimized for fast QR detection with flexible camera constraints');
     } catch (err: any) {
       console.error('Error initializing scanner:', err);
-      setError(err.message || 'Failed to start camera');
+      
+      // Handle constraint errors specifically
+      let errorMessage = err.message || 'Failed to start camera';
+      if (err.name === 'OverconstrainedError' || err.message?.includes('constraint')) {
+        errorMessage = 'Camera constraints not supported. Trying with simpler settings...';
+        console.log('⚠️ Constraint error, will retry with simpler settings');
+        
+        // Retry with minimal constraints
+        try {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Ensure scanner element still exists
+          if (!scannerRef.current || !document.body.contains(scannerRef.current)) {
+            throw new Error('Scanner element no longer available');
+          }
+          
+          // Re-import Html5Qrcode for retry
+          const { Html5Qrcode: Html5QrcodeRetry } = await import('html5-qrcode');
+          const simpleCameras = await Html5QrcodeRetry.getCameras();
+          if (simpleCameras.length > 0) {
+            const simpleCameraId = simpleCameras[0].id;
+            const scannerIdSimple = scannerRef.current?.id || `qr-scanner-simple-${Date.now()}`;
+            if (scannerRef.current && !scannerRef.current.id) {
+              scannerRef.current.id = scannerIdSimple;
+            }
+            
+            const html5QrcodeSimple = new Html5QrcodeRetry(scannerIdSimple);
+            scannerInstanceRef.current = html5QrcodeSimple;
+            
+            await html5QrcodeSimple.start(
+              simpleCameraId,
+              {
+                fps: 10, // Lower FPS for compatibility
+                qrbox: { width: 250, height: 250 }, // Fixed size
+                videoConstraints: {
+                  facingMode: 'environment',
+                },
+              },
+              (decodedText: string) => {
+                console.log('✅✅✅ QR Code detected! ✅✅✅');
+                if (decodedText && decodedText.trim().length > 0) {
+                  onScanSuccess(decodedText);
+                }
+              },
+              () => {} // Ignore scan errors
+            );
+            
+            setIsScanning(true);
+            setIsLoading(false);
+            console.log('✅ Scanner started with simplified constraints');
+            return; // Success!
+          }
+        } catch (retryErr: any) {
+          console.error('Retry with simple constraints also failed:', retryErr);
+          errorMessage = 'Camera not available. Please check permissions and try again.';
+        }
+      }
+      
+      setError(errorMessage);
       setIsLoading(false);
       setIsScanning(false);
       if (onError) {

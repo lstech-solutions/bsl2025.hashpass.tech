@@ -612,7 +612,6 @@ export default function QRScanner({
                 style={[StyleSheet.absoluteFillObject, styles.cameraView]}
                 barCodeTypes={qrScannerService.getBarCodeTypes()}
                 type={qrScannerService.getRecommendedCameraType()}
-                ratio="16:9"
                 onMountError={(error) => {
                   console.error('Camera mount error:', error);
                   

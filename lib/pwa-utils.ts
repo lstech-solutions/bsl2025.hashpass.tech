@@ -70,7 +70,7 @@ export const isPWAInstalled = (): boolean => {
     return false;
   }
 
-  // Primary check: standalone mode
+  // Primary check: standalone mode (most reliable)
   if (isStandalone()) {
     return true;
   }
@@ -81,12 +81,48 @@ export const isPWAInstalled = (): boolean => {
     return true;
   }
 
-  // Tertiary check: check display mode
+  // Tertiary check: check display mode media query
   if (window.matchMedia) {
     const displayMode = window.matchMedia('(display-mode: standalone)');
     if (displayMode.matches) {
       return true;
     }
+    
+    // Also check fullscreen mode
+    const fullscreenMode = window.matchMedia('(display-mode: fullscreen)');
+    if (fullscreenMode.matches) {
+      return true;
+    }
+  }
+
+  // Additional check: Check if window is not in a browser tab
+  // When installed, the app runs in its own window context
+  if (window.matchMedia) {
+    const standaloneQuery = window.matchMedia('(display-mode: standalone)');
+    if (standaloneQuery.matches) {
+      return true;
+    }
+  }
+
+  // Check if app was launched from home screen (iOS)
+  // This is detected by checking if the app is not in a browser tab
+  if ((window.navigator as any).standalone !== undefined) {
+    if ((window.navigator as any).standalone === true) {
+      return true;
+    }
+  }
+
+  // Check localStorage for installation flag (set after successful install)
+  // This is a fallback method - if flag exists, app was installed at some point
+  try {
+    const installFlag = localStorage.getItem('pwa-installed');
+    if (installFlag === 'true') {
+      // If flag exists, app is likely installed
+      // Even if not in standalone mode right now, it means user installed it
+      return true;
+    }
+  } catch (e) {
+    // localStorage might not be available
   }
 
   return false;

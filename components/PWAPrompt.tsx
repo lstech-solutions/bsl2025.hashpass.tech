@@ -7,6 +7,7 @@ const PWAPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isStandaloneMode, setIsStandaloneMode] = useState(false);
   const { colorScheme } = useColorScheme();
 
   useEffect(() => {
@@ -14,12 +15,15 @@ const PWAPrompt = () => {
     const checkStatus = () => {
       const status = getInstallationStatus();
       setIsInstalled(status.installed);
+      setIsStandaloneMode(status.isStandaloneMode);
       
       // Show prompt if:
-      // 1. Install prompt is available, OR
-      // 2. App is installed but user wants to reinstall (always allow)
-      // Don't auto-show if already installed, but allow manual trigger
-      if (status.canInstall || status.allowReinstall) {
+      // 1. Not installed and install prompt is available, OR
+      // 2. Installed but not in standalone mode (viewing in browser) - show "Open App"
+      if (!status.installed && status.canInstall) {
+        setShowPrompt(true);
+      } else if (status.installed && !status.isStandaloneMode) {
+        // App is installed but user is viewing in browser - show "Open App"
         setShowPrompt(true);
       }
     };
@@ -53,6 +57,12 @@ const PWAPrompt = () => {
       deferredPrompt.userChoice.then((choiceResult: any) => {
         if (choiceResult.outcome === 'accepted') {
           console.log('✅ User accepted the install prompt');
+          // Set installation flag in localStorage
+          try {
+            localStorage.setItem('pwa-installed', 'true');
+          } catch (e) {
+            // localStorage might not be available
+          }
         }
         setDeferredPrompt(null);
       });
@@ -74,9 +84,32 @@ const PWAPrompt = () => {
     }
   };
 
-  // Don't show if already installed
-  if (isInstalled) {
+  const openApp = () => {
+    // If app is installed, try to open it in standalone mode
+    // This will reload the page, which should open in standalone mode if installed
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Try to open the app URL - this should open in standalone mode if installed
+      window.location.href = window.location.origin + window.location.pathname;
+    }
+  };
+
+  // If installed AND in standalone mode, don't show button (already in app)
+  if (isInstalled && isStandaloneMode) {
     return null;
+  }
+
+  // Show "Open App" if installed but viewing in browser
+  if (isInstalled && !isStandaloneMode) {
+    return (
+      <View style={styles.container}>
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: colorScheme === 'dark' ? '#10B981' : '#059669' }]} 
+          onPress={openApp}
+        >
+          <Text style={[styles.text, { color: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }]}>Open App</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   // Don't show if no install option available

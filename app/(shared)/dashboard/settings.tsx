@@ -15,6 +15,7 @@ import { useTutorialPreferences } from '../../../hooks/useTutorialPreferences';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiClient } from '../../../lib/api-client';
 
 export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
@@ -174,20 +175,11 @@ export default function SettingsScreen() {
       setSendingOtp(true);
       console.log('Sending OTP to:', user.email);
       
-      const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
-      const response = await fetch(`${apiUrl}/api/auth/delete-account-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: user.email }),
-      });
+      const result = await apiClient.post('/auth/delete-account-otp', { email: user.email }, { skipEventSegment: true });
+      console.log('OTP response:', result);
 
-      const data = await response.json();
-      console.log('OTP response:', { ok: response.ok, data });
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send verification code');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send verification code');
       }
 
       setOtpSent(true);
@@ -216,22 +208,13 @@ export default function SettingsScreen() {
     try {
       setVerifyingOtp(true);
       
-      const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
-      const response = await fetch(`${apiUrl}/api/auth/delete-account-otp/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          email: user.email,
-          code: otpCode 
-        }),
-      });
+      const result = await apiClient.post('/auth/delete-account-otp/verify', { 
+        email: user.email,
+        code: otpCode 
+      }, { skipEventSegment: true });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Invalid verification code');
+      if (!result.success) {
+        throw new Error(result.error || 'Invalid verification code');
       }
 
       // OTP verified, proceed with account deletion
@@ -273,17 +256,10 @@ export default function SettingsScreen() {
       // Send confirmation email (don't wait for it, as it's not critical)
       if (userEmail) {
         try {
-          const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
-          await fetch(`${apiUrl}/api/auth/delete-account-email`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-              email: userEmail,
-              userName: userName 
-            }),
-          });
+          await apiClient.post('/auth/delete-account-email', { 
+            email: userEmail,
+            userName: userName 
+          }, { skipEventSegment: true });
           // Don't wait for response or throw errors - email is not critical
         } catch (emailError) {
           console.error('Error sending deletion confirmation email:', emailError);
@@ -655,7 +631,7 @@ export default function SettingsScreen() {
                   Enter the 6-digit verification code sent to:
                 </Text>
                 {user?.email && (
-                  <Text style={[styles.modalMessage, { marginTop: 4, fontWeight: '600', color: colors.primary?.main || '#4f46e5' }]}>
+                  <Text style={[styles.modalMessage, { marginTop: 4, fontWeight: '600', color: colors.primary || '#4f46e5' }]}>
                     {user.email}
                   </Text>
                 )}

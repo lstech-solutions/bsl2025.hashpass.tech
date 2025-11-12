@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { memoryManager } from '../../lib/memory-manager';
 import { throttle } from '../../lib/performance-utils';
 import { clearAuthCache } from '../../lib/version-checker';
+import { apiClient } from '../../lib/api-client';
 
 type AuthMethod = 'magiclink' | 'otp';
 
@@ -142,15 +143,25 @@ export default function AuthScreen() {
                 (async () => {
                   try {
                     // Reset welcome email flag if needed (for existing users)
-                    await supabase.rpc('reset_welcome_email_if_not_sent', {
-                      p_user_id: userId
-                    }).catch(err => console.warn('⚠️ Error resetting welcome email flag:', err));
+                    try {
+                      await supabase.rpc('reset_welcome_email_if_not_sent', {
+                        p_user_id: userId
+                      });
+                    } catch (err) {
+                      console.warn('⚠️ Error resetting welcome email flag:', err);
+                    }
                     
                     // Check if email was already sent
-                    const { data: alreadySentCheck } = await supabase.rpc('has_email_been_sent', {
-                      p_user_id: userId,
-                      p_email_type: 'welcome'
-                    } as any).catch(() => ({ data: false }));
+                    let alreadySentCheck = false;
+                    try {
+                      const { data } = await supabase.rpc('has_email_been_sent', {
+                        p_user_id: userId,
+                        p_email_type: 'welcome'
+                      } as any);
+                      alreadySentCheck = data === true;
+                    } catch {
+                      alreadySentCheck = false;
+                    }
                     
                     if (alreadySentCheck === true) {
                       console.log(`ℹ️ Welcome email already sent to user ${userId}, skipping`);
@@ -187,34 +198,30 @@ export default function AuthScreen() {
                     }
                     
                     // Send welcome email
-                    fetch('/api/auth/send-welcome-email', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ userId, email: userEmail, locale: userLocale }),
-                    }).then(res => res.json()).then(result => {
-                      if (result.success && !result.skipped && !result.alreadySent) {
-                        console.log('✅ Welcome email sent successfully');
-                        
-                        // After welcome email is sent, send onboarding emails
-                        // This includes user onboarding for all users and speaker onboarding if user is a speaker
-                        fetch('/api/auth/send-onboarding-emails', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userId, email: userEmail, locale: userLocale }),
-                        }).then(res => res.json()).then(onboardingResult => {
-                          if (onboardingResult.success) {
-                            if (onboardingResult.results?.userOnboarding?.success && !onboardingResult.results.userOnboarding.alreadySent) {
-                              console.log('✅ User onboarding email sent successfully');
-                            }
-                            if (onboardingResult.results?.speakerOnboarding?.isSpeaker) {
-                              if (onboardingResult.results.speakerOnboarding.success && !onboardingResult.results.speakerOnboarding.alreadySent) {
-                                console.log('✅ Speaker onboarding email sent successfully');
+                    apiClient.post('/auth/send-welcome-email', { userId, email: userEmail, locale: userLocale }, { skipEventSegment: true })
+                      .then(result => {
+                        if (result.success && result.data && !result.data.skipped && !result.data.alreadySent) {
+                          console.log('✅ Welcome email sent successfully');
+                          
+                          // After welcome email is sent, send onboarding emails
+                          // This includes user onboarding for all users and speaker onboarding if user is a speaker
+                          apiClient.post('/auth/send-onboarding-emails', { userId, email: userEmail, locale: userLocale }, { skipEventSegment: true })
+                            .then(onboardingResult => {
+                              if (onboardingResult.success && onboardingResult.data) {
+                                if (onboardingResult.data.results?.userOnboarding?.success && !onboardingResult.data.results.userOnboarding.alreadySent) {
+                                  console.log('✅ User onboarding email sent successfully');
+                                }
+                                if (onboardingResult.data.results?.speakerOnboarding?.isSpeaker) {
+                                  if (onboardingResult.data.results.speakerOnboarding.success && !onboardingResult.data.results.speakerOnboarding.alreadySent) {
+                                    console.log('✅ Speaker onboarding email sent successfully');
+                                  }
+                                }
                               }
-                            }
-                          }
-                        }).catch(err => console.error('❌ Error sending onboarding emails:', err));
-                      }
-                    }).catch(err => console.error('❌ Error sending welcome email:', err));
+                            })
+                            .catch(err => console.error('❌ Error sending onboarding emails:', err));
+                        }
+                      })
+                      .catch(err => console.error('❌ Error sending welcome email:', err));
                   } catch (emailError) {
                     console.error('❌ Error in welcome email flow:', emailError);
                   } finally {
@@ -294,46 +301,16 @@ export default function AuthScreen() {
       if (authMethod === 'otp') {
         // For OTP, use our custom API endpoint that sends the actual code
         try {
-          const apiUrl = Platform.OS === 'web' 
-            ? (typeof window !== 'undefined' ? window.location.origin : '')
-            : '';
-          
-          const response = await fetch(`${apiUrl}/api/auth/otp`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email: email.trim() }),
-          });
+          const result = await apiClient.post('/auth/otp', { email: email.trim() }, { skipEventSegment: true });
 
-          // Check if response is JSON before parsing
-          const contentType = response.headers.get('content-type');
-          let data;
-          
-          if (contentType && contentType.includes('application/json')) {
-            try {
-              data = await response.json();
-            } catch (jsonError: any) {
-              console.error('Error parsing JSON response:', jsonError);
-              throw new Error('Invalid response from server. Please try again.');
-            }
-          } else {
-            // If not JSON, read as text to see what we got
-            const text = await response.text();
-            console.error('Non-JSON response received:', text.substring(0, 200));
-            
-            if (response.status === 404) {
-              throw new Error('API endpoint not found. Please check your connection or contact support.');
-            }
-            throw new Error('Server error. Please try again or contact support.');
-          }
-
-          if (!response.ok) {
+          if (!result.success) {
             // Handle rate limit errors specifically
-            if (response.status === 429 || data?.code === 'over_email_send_rate_limit') {
+            if (result.error?.includes('rate limit') || 
+                result.error?.includes('Too many emails') ||
+                result.error?.includes('over_email_send_rate_limit')) {
               throw new Error('Too many emails sent. Please wait a few minutes before requesting another code.');
             }
-            throw new Error(data?.error || data?.message || `Failed to send OTP code (${response.status})`);
+            throw new Error(result.error || 'Failed to send OTP code');
           }
 
           setOtpSent(true);
@@ -443,39 +420,27 @@ export default function AuthScreen() {
       if (error) {
         // If standard verification fails, try our custom API endpoint
         try {
-          const apiUrl = Platform.OS === 'web' 
-            ? (typeof window !== 'undefined' ? window.location.origin : '')
-            : '';
-          
-          const response = await fetch(`${apiUrl}/api/auth/otp/verify`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-              email: email.trim(), 
-              code: otpCode 
-            }),
-          });
+          const verifyResult = await apiClient.post('/auth/otp/verify', { 
+            email: email.trim(), 
+            code: otpCode 
+          }, { skipEventSegment: true });
 
-          const verifyData = await response.json();
-
-          if (!response.ok) {
-            throw new Error(verifyData.error || 'Verification failed');
+          if (!verifyResult.success) {
+            throw new Error(verifyResult.error || 'Verification failed');
           }
 
-          if (verifyData.token_hash) {
+          if (verifyResult.data?.token_hash) {
             // Verify the token_hash using client-side Supabase
             // Only token_hash and type should be provided (no email)
-            const { data: verifyResult, error: verifyErr } = await supabase.auth.verifyOtp({
-              token_hash: verifyData.token_hash,
+            const { data: verifyResultData, error: verifyErr } = await supabase.auth.verifyOtp({
+              token_hash: verifyResult.data.token_hash,
               type: 'magiclink',
             });
 
             if (verifyErr) {
               // Try with type 'email'
               const { data: emailVerifyResult, error: emailVerifyErr } = await supabase.auth.verifyOtp({
-                token_hash: verifyData.token_hash,
+                token_hash: verifyResult.data.token_hash,
                 type: 'email',
               });
 
@@ -489,7 +454,7 @@ export default function AuthScreen() {
               return;
             }
 
-            if (verifyResult?.session) {
+            if (verifyResultData?.session) {
               showSuccess('Authentication Successful', 'Welcome! You have been signed in.');
               // Navigate immediately, no delay
               router.replace('/(shared)/dashboard/explore');
@@ -562,6 +527,11 @@ export default function AuthScreen() {
       
       if (authData.magicLink || authData.redirectUrl) {
         const linkToUse = authData.magicLink || authData.redirectUrl;
+        
+        if (!linkToUse) {
+          setLoading(false);
+          throw new Error('No authentication link available');
+        }
         
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           try {
@@ -651,6 +621,11 @@ export default function AuthScreen() {
       
       if (authData.magicLink || authData.redirectUrl) {
         const linkToUse = authData.magicLink || authData.redirectUrl;
+        
+        if (!linkToUse) {
+          setLoading(false);
+          throw new Error('No authentication link available');
+        }
         
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           try {

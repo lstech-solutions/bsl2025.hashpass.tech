@@ -9,6 +9,18 @@ import { isAdmin } from '../lib/admin-utils';
 import { cameraPermissionManager } from '../lib/camera-permissions';
 import { supabase } from '../lib/supabase';
 import { PassType } from '../lib/pass-system';
+import { qrScannerService } from '../lib/qr-scanner-service';
+
+// Dynamic import for web fallback
+// Using .web.ts extension ensures Metro only resolves this on web
+let webQRScannerFallback: any = null;
+if (Platform.OS === 'web') {
+  try {
+    webQRScannerFallback = require('../lib/qr-scanner-web-fallback.web').webQRScannerFallback;
+  } catch (e) {
+    // Ignore if not available
+  }
+}
 
 interface AdminQRScannerProps {
   visible: boolean;
@@ -32,6 +44,9 @@ export default function AdminQRScanner({
   const [showDetails, setShowDetails] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [useWebFallback, setUseWebFallback] = useState(false);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const scannerWrapperRef = React.useRef<any>(null);
 
   const styles = getStyles(isDark, colors);
 
@@ -47,10 +62,22 @@ export default function AdminQRScanner({
       setShowDetails(false);
       setCameraReady(false);
       setCameraError(null);
+      setUseWebFallback(false);
+      
+      // On web, enable fallback
+      if (Platform.OS === 'web') {
+        qrScannerService.enableWebFallback();
+      }
     } else if (!visible) {
       // Reset camera state when modal closes
       setCameraReady(false);
       setCameraError(null);
+      
+      // Cleanup web fallback when closing
+      if (useWebFallback) {
+        qrScannerService.stopWebFallback();
+        setUseWebFallback(false);
+      }
     }
   }, [visible, user]);
 
@@ -116,81 +143,82 @@ export default function AdminQRScanner({
     }
   };
 
-  const handleBarCodeScanned = async ({ type, data }: BarCodeScannerResult) => {
-    if (scanned || isProcessing) return;
+  const handleBarCodeScanned = qrScannerService.createScanHandler(
+    {
+      onScan: async ({ type, data }: BarCodeScannerResult) => {
+        if (scanned || isProcessing) return;
 
-    console.log('QR Code scanned:', { type, data });
-    setScanned(true);
-    setIsProcessing(true);
+        console.log('QR Code scanned:', { type, data });
+        setScanned(true);
+        setIsProcessing(true);
 
-    try {
-      let token: string;
-      
-      try {
-        // Try parsing as JSON first
-        const parsed = JSON.parse(data);
-        if (parsed.token) {
-          token = parsed.token;
-        } else if (parsed.type === 'hashpass_qr' && parsed.token) {
-          token = parsed.token;
-        } else {
-          token = data; // Fallback to raw data
+        try {
+          // Use professional QR parser
+          const parsed = qrScannerService.parseQRData(data);
+          
+          if (!parsed.isValid || !parsed.token) {
+            throw new Error('Invalid QR code format');
+          }
+
+          const token = parsed.token;
+
+          console.log('Extracted token:', token);
+
+          // For admin scanning, first check validity without marking as used
+          // Then validate and use to log the scan
+          let result = await qrSystemService.checkQRValidity(token);
+          
+          // If valid, also validate and use to log the admin scan
+          if (result.valid) {
+            const useResult = await qrSystemService.validateAndUseQR(
+              token,
+              user?.id,
+              'admin-scanner'
+            );
+            // Use the useResult which has more details
+            result = useResult;
+          }
+
+          console.log('QR validation result:', result);
+          setScanResult(result);
+
+          // Fetch full QR details for admin view (always fetch, even if invalid)
+          try {
+            const qr = await qrSystemService.getQRByToken(token);
+            setQrDetails(qr);
+            setShowDetails(true);
+          } catch (error) {
+            console.error('Error fetching QR details:', error);
+            // Still show result even if we can't fetch details
+            setShowDetails(true);
+          }
+
+          // Call success callback with result
+          if (onScanSuccess) {
+            onScanSuccess(result);
+          }
+        } catch (error: any) {
+          console.error('Error scanning QR:', error);
+          Alert.alert('Error', error.message || 'Error processing QR code', [
+            { text: 'Try Again', onPress: resetScanner },
+          ]);
+        } finally {
+          setIsProcessing(false);
         }
-      } catch {
-        // If not JSON, check if it's a URL with token parameter
-        if (data.includes('token=')) {
-          const urlParams = new URLSearchParams(data.split('?')[1]);
-          token = urlParams.get('token') || data;
-        } else {
-          // Assume the entire data is the token
-          token = data;
-        }
-      }
-
-      console.log('Extracted token:', token);
-
-      // For admin scanning, first check validity without marking as used
-      // Then validate and use to log the scan
-      let result = await qrSystemService.checkQRValidity(token);
-      
-      // If valid, also validate and use to log the admin scan
-      if (result.valid) {
-        const useResult = await qrSystemService.validateAndUseQR(
-          token,
-          user?.id,
-          'admin-scanner'
-        );
-        // Use the useResult which has more details
-        result = useResult;
-      }
-
-      console.log('QR validation result:', result);
-      setScanResult(result);
-
-      // Fetch full QR details for admin view (always fetch, even if invalid)
-      try {
-        const qr = await qrSystemService.getQRByToken(token);
-        setQrDetails(qr);
-        setShowDetails(true);
-      } catch (error) {
-        console.error('Error fetching QR details:', error);
-        // Still show result even if we can't fetch details
-        setShowDetails(true);
-      }
-
-      // Call success callback with result
-      if (onScanSuccess) {
-        onScanSuccess(result);
-      }
-    } catch (error: any) {
-      console.error('Error scanning QR:', error);
-      Alert.alert('Error', error.message || 'Error processing QR code', [
-        { text: 'Try Again', onPress: resetScanner },
-      ]);
-    } finally {
-      setIsProcessing(false);
+      },
+      onError: (error) => {
+        console.error('QR scan error:', error);
+        Alert.alert('Error', error.message || 'Error processing QR code', [
+          { text: 'Try Again', onPress: resetScanner },
+        ]);
+      },
+    },
+    {
+      qrOnly: true,
+      scanThrottle: 1000,
+      hapticFeedback: true,
     }
-  };
+  );
 
   const resetScanner = () => {
     console.log('Resetting scanner...');

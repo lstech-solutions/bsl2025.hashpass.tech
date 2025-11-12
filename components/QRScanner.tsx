@@ -7,6 +7,18 @@ import { useAuth } from '../hooks/useAuth';
 import { qrSystemService, QRScanResult, QRCode } from '../lib/qr-system';
 import { cameraPermissionManager } from '../lib/camera-permissions';
 import { isAdmin } from '../lib/admin-utils';
+import { qrScannerService } from '../lib/qr-scanner-service';
+
+// Dynamic import for web fallback
+// Using .web.ts extension ensures Metro only resolves this on web
+let webQRScannerFallback: any = null;
+if (Platform.OS === 'web') {
+  try {
+    webQRScannerFallback = require('../lib/qr-scanner-web-fallback.web').webQRScannerFallback;
+  } catch (e) {
+    // Ignore if not available
+  }
+}
 
 interface QRScannerProps {
   visible: boolean;
@@ -34,6 +46,9 @@ export default function QRScanner({
   const [qrDetails, setQrDetails] = useState<QRCode | null>(null);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [useWebFallback, setUseWebFallback] = useState(false);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const scannerWrapperRef = React.useRef<any>(null);
 
   const styles = getStyles(isDark, colors);
 
@@ -45,15 +60,29 @@ export default function QRScanner({
       setIsProcessing(false);
       setQrDetails(null);
       setShowDetails(false);
+      setUseWebFallback(false);
+      
       // Check admin status
       if (user?.id) {
         isAdmin(user.id).then(setIsUserAdmin);
       }
+      
+      // On web, enable fallback
+      if (Platform.OS === 'web') {
+        qrScannerService.enableWebFallback();
+      }
+      
       // Check permission status first
       checkPermissionStatus();
     } else {
       // Reset permission state when modal closes
       setHasPermission(null);
+      
+      // Cleanup web fallback when closing
+      if (useWebFallback) {
+        qrScannerService.stopWebFallback();
+        setUseWebFallback(false);
+      }
     }
   }, [visible, user]);
 
@@ -161,119 +190,202 @@ export default function QRScanner({
     }
   };
 
-  const handleBarCodeScanned = async ({ type, data }: BarCodeScannerResult) => {
-    if (scanned || isProcessing) return;
+  const handleBarCodeScanned = qrScannerService.createScanHandler(
+    {
+      onScan: async ({ type, data }: BarCodeScannerResult) => {
+        if (scanned || isProcessing) return;
 
-    setScanned(true);
-    setIsProcessing(true);
+        setScanned(true);
+        setIsProcessing(true);
 
-    try {
-      // Parse QR data - could be JSON or URL
-      let token: string;
-      
-      try {
-        // Try parsing as JSON first
-        const parsed = JSON.parse(data);
-        if (parsed.token) {
-          token = parsed.token;
-        } else if (parsed.type === 'hashpass_qr' && parsed.token) {
-          token = parsed.token;
-        } else {
-          throw new Error('Invalid QR format');
-        }
-      } catch {
-        // If not JSON, check if it's a URL with token parameter
-        if (data.includes('token=')) {
-          const urlParams = new URLSearchParams(data.split('?')[1]);
-          token = urlParams.get('token') || data;
-        } else {
-          // Assume the entire data is the token
-          token = data;
-        }
-      }
-
-      // Validate and use QR code
-      const result = await qrSystemService.validateAndUseQR(
-        token,
-        user?.id,
-        'mobile-scanner' // Device ID - could be made dynamic
-      );
-
-      setScanResult(result);
-
-      if (result.valid) {
-        // Fetch QR details to show pass information
-        let qr = null;
         try {
-          qr = await qrSystemService.getQRByToken(token);
-          setQrDetails(qr);
+          // Use professional QR parser
+          const parsed = qrScannerService.parseQRData(data);
           
-          // If admin, show detailed view
-          if (isUserAdmin) {
-            setShowDetails(true);
+          if (!parsed.isValid || !parsed.token) {
+            throw new Error('Invalid QR code format');
           }
-        } catch (e) {
-          console.error('Error fetching QR details:', e);
-        }
 
-        if (onScanSuccess) {
-          onScanSuccess(result);
-        } else if (!isUserAdmin) {
-          // Regular user success handling with pass details
-          const passInfo = qr?.display_data;
-          const passNumber = passInfo?.pass_number || 'N/A';
-          const passType = passInfo?.pass_type || 'N/A';
-          
-          Alert.alert(
-            'QR Code Valid ✓',
-            `Pass Number: ${passNumber}\nPass Type: ${passType}\n\n${result.message || 'QR code scanned successfully'}`,
-            [
+          const token = parsed.token;
+
+          // Validate and use QR code
+          const result = await qrSystemService.validateAndUseQR(
+            token,
+            user?.id,
+            Platform.OS === 'web' ? 'web-scanner' : 'mobile-scanner'
+          );
+
+          setScanResult(result);
+
+          if (result.valid) {
+            // Fetch QR details to show pass information
+            let qr = null;
+            try {
+              qr = await qrSystemService.getQRByToken(token);
+              setQrDetails(qr);
+              
+              // If admin, show detailed view
+              if (isUserAdmin) {
+                setShowDetails(true);
+              }
+            } catch (e) {
+              console.error('Error fetching QR details:', e);
+            }
+
+            if (onScanSuccess) {
+              onScanSuccess(result);
+            } else if (!isUserAdmin) {
+              // Regular user success handling with pass details
+              const passInfo = qr?.display_data;
+              const passNumber = passInfo?.pass_number || 'N/A';
+              const passType = passInfo?.pass_type || 'N/A';
+              
+              Alert.alert(
+                'QR Code Valid ✓',
+                `Pass Number: ${passNumber}\nPass Type: ${passType}\n\n${result.message || 'QR code scanned successfully'}`,
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      resetScanner();
+                    },
+                  },
+                ]
+              );
+            }
+          } else {
+            const errorMessage = result.message || 'Invalid QR code';
+            if (onScanError) {
+              onScanError(errorMessage);
+            } else {
+              Alert.alert('QR Code Invalid', errorMessage, [
+                {
+                  text: 'Try Again',
+                  onPress: () => {
+                    resetScanner();
+                  },
+                },
+                {
+                  text: 'Close',
+                  style: 'cancel',
+                  onPress: onClose,
+                },
+              ]);
+            }
+          }
+        } catch (error: any) {
+          console.error('Error scanning QR:', error);
+          const errorMessage = error.message || 'Error processing QR code';
+          if (onScanError) {
+            onScanError(errorMessage);
+          } else {
+            Alert.alert('Error', errorMessage, [
               {
-                text: 'OK',
+                text: 'Try Again',
                 onPress: () => {
                   resetScanner();
                 },
               },
-            ]
-          );
+            ]);
+          }
+        } finally {
+          setIsProcessing(false);
         }
-      } else {
-        const errorMessage = result.message || 'Invalid QR code';
+      },
+      onError: (error) => {
+        console.error('QR scan error:', error);
         if (onScanError) {
-          onScanError(errorMessage);
-        } else {
-          Alert.alert('QR Code Invalid', errorMessage, [
-            {
-              text: 'Try Again',
-              onPress: () => {
-                resetScanner();
-              },
-            },
-            {
-              text: 'Close',
-              style: 'cancel',
-              onPress: onClose,
-            },
-          ]);
+          onScanError(error.message);
         }
+      },
+    },
+    {
+      qrOnly: true,
+      scanThrottle: 1000,
+      hapticFeedback: true,
+    }
+  );
+
+  const initializeWebFallback = async () => {
+    if (Platform.OS !== 'web' || !hasPermission) return;
+    
+    try {
+      // Get scanner wrapper from ref
+      let scannerWrapper: HTMLElement | null = null;
+      
+      if (scannerWrapperRef.current) {
+        // Try to get the underlying DOM element
+        const refElement = scannerWrapperRef.current as any;
+        if (refElement && refElement.setNativeProps === undefined) {
+          // This is a web DOM element
+          scannerWrapper = refElement as HTMLElement;
+        } else if (refElement && refElement._nativeNode) {
+          // React Native Web internal node
+          scannerWrapper = refElement._nativeNode;
+        }
+      }
+      
+      // Fallback: try to find by querySelector
+      if (!scannerWrapper) {
+        scannerWrapper = document.querySelector('[data-testid="scanner-wrapper"]') as HTMLElement ||
+                        document.querySelector('.scanner-wrapper') as HTMLElement;
+      }
+      
+      if (!scannerWrapper) {
+        console.error('Scanner wrapper not found, retrying...');
+        // Retry after a short delay
+        setTimeout(() => initializeWebFallback(), 300);
+        return;
+      }
+
+      // Create video element if it doesn't exist
+      if (!videoRef.current) {
+        const video = document.createElement('video');
+        video.id = 'qr-scanner-video';
+        video.style.width = '100%';
+        video.style.height = '100%';
+        video.style.objectFit = 'cover';
+        video.setAttribute('autoplay', 'true');
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('muted', 'true');
+        videoRef.current = video;
+      }
+
+      // Append video to container if not already there
+      if (scannerWrapper && videoRef.current && !scannerWrapper.contains(videoRef.current)) {
+        scannerWrapper.appendChild(videoRef.current);
+      }
+
+      // Start web fallback scanning
+      const result = await qrScannerService.startWebFallback(
+        videoRef.current,
+        async (scanResult) => {
+          // Convert ZXing result to BarCodeScannerResult format
+          const barCodeResult: BarCodeScannerResult = {
+            type: 'qr' as any,
+            data: scanResult.text,
+          };
+          
+          // Process scan using existing handler
+          if (handleBarCodeScanned) {
+            handleBarCodeScanned(barCodeResult);
+          }
+        },
+        (error) => {
+          console.error('Web fallback scan error:', error);
+          if (onScanError) {
+            onScanError(error.message);
+          }
+        }
+      );
+
+      if (!result.success) {
+        console.error('Failed to start web fallback:', result.error);
+        setUseWebFallback(false);
       }
     } catch (error: any) {
-      console.error('Error scanning QR:', error);
-      const errorMessage = error.message || 'Error processing QR code';
-      if (onScanError) {
-        onScanError(errorMessage);
-      } else {
-        Alert.alert('Error', errorMessage, [
-          {
-            text: 'Try Again',
-            onPress: () => {
-              resetScanner();
-            },
-          },
-        ]);
-      }
-    } finally {
-      setIsProcessing(false);
+      console.error('Error initializing web fallback:', error);
+      setUseWebFallback(false);
     }
   };
 
@@ -283,6 +395,12 @@ export default function QRScanner({
     setScanResult(null);
     setQrDetails(null);
     setShowDetails(false);
+    
+    // Stop web fallback if active
+    if (useWebFallback) {
+      qrScannerService.stopWebFallback();
+      setUseWebFallback(false);
+    }
   };
 
   const handleRevoke = async () => {
@@ -414,40 +532,67 @@ export default function QRScanner({
 
           {/* Scanner View */}
           <View style={styles.scannerWrapper}>
-            <BarCodeScanner
-              onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-              style={StyleSheet.absoluteFillObject}
-              barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
-              onMountError={(error) => {
-                console.error('Camera mount error:', error);
-                // Check if error indicates camera in use
-                const errorMessage = error?.message || '';
-                if (errorMessage.toLowerCase().includes('in use') || 
-                    errorMessage.toLowerCase().includes('busy') ||
-                    errorMessage.toLowerCase().includes('device') ||
-                    errorMessage.toLowerCase().includes('already')) {
-                  Alert.alert(
-                    'Camera In Use',
-                    'Camera is being used by another application. Please close other apps using the camera and try again.',
-                    [
-                      {
-                        text: 'Retry',
-                        onPress: async () => {
-                          setHasPermission(false);
-                          await requestCameraPermission(true);
+            {!useWebFallback ? (
+              <BarCodeScanner
+                onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+                style={StyleSheet.absoluteFillObject}
+                barCodeTypes={qrScannerService.getBarCodeTypes()}
+                type={qrScannerService.getRecommendedCameraType()}
+                onMountError={(error) => {
+                  console.error('Camera mount error:', error);
+                  
+                  // On web, try fallback to ZXing
+                  if (Platform.OS === 'web' && webQRScannerFallback.isAvailable()) {
+                    console.log('Expo barcode scanner failed, trying ZXing fallback...');
+                    setUseWebFallback(true);
+                    // Initialize fallback after state update
+                    setTimeout(() => {
+                      initializeWebFallback();
+                    }, 200);
+                    return;
+                  }
+                  
+                  // Check if error indicates camera in use
+                  const errorMessage = error?.message || '';
+                  if (errorMessage.toLowerCase().includes('in use') || 
+                      errorMessage.toLowerCase().includes('busy') ||
+                      errorMessage.toLowerCase().includes('device') ||
+                      errorMessage.toLowerCase().includes('already')) {
+                    Alert.alert(
+                      'Camera In Use',
+                      'Camera is being used by another application. Please close other apps using the camera and try again.',
+                      [
+                        {
+                          text: 'Retry',
+                          onPress: async () => {
+                            setHasPermission(false);
+                            await requestCameraPermission(true);
+                          },
                         },
-                      },
-                      {
-                        text: 'Close',
-                        style: 'cancel',
-                        onPress: onClose,
-                      },
-                    ]
-                  );
-                  setHasPermission(false);
-                }
-              }}
-            />
+                        {
+                          text: 'Close',
+                          style: 'cancel',
+                          onPress: onClose,
+                        },
+                      ]
+                    );
+                    setHasPermission(false);
+                  }
+                }}
+              />
+            ) : (
+              // Web fallback using ZXing - video element will be injected by initializeWebFallback
+              Platform.OS === 'web' && (
+                <View 
+                  ref={scannerWrapperRef}
+                  style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000' }]}
+                  // @ts-ignore - Web-specific attributes
+                  data-testid="scanner-wrapper"
+                  // @ts-ignore
+                  className="scanner-wrapper"
+                />
+              )
+            )}
 
             {/* Overlay with scanning frame */}
             <View style={styles.overlay}>

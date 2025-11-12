@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image, Platform, Animated as RNAnimated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image, Platform, Animated as RNAnimated, ScrollView } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, interpolate, withSpring, useAnimatedProps } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -389,13 +389,14 @@ function CustomDrawerContent() {
         </View>
       </View>
 
-      {/* Menu Items */}
-      <View style={[styles.menuItems, { 
-        backgroundColor: 'transparent',
-        flex: 1,
-        paddingTop: 24,
-        paddingBottom: 16,
-      }]}>
+      {/* Menu Items - Scrollable on mobile */}
+      <ScrollView
+        style={styles.menuItemsScrollView}
+        contentContainerStyle={styles.menuItemsContent}
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
+        bounces={true}
+      >
         {menuItems.map((item, index) => {
           // Check if current path matches the route (handle both relative and absolute routes)
           const isActive = item.route.startsWith('./') 
@@ -510,7 +511,7 @@ function CustomDrawerContent() {
             </CopilotStep>
           );
         })}
-      </View>
+      </ScrollView>
 
       {/* Quick Settings & Actions */}
       <View style={styles.quickSettingsSection}>
@@ -1144,6 +1145,15 @@ const getStyles = (isDark: boolean, colors: any, isMobile: boolean) => StyleShee
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  menuItemsScrollView: {
+    flex: 1,
+  },
+  menuItemsContent: {
+    paddingTop: 24,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    flexGrow: 1,
   },
   menuItems: {
     flex: 1,

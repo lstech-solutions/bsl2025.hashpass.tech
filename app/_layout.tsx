@@ -138,6 +138,7 @@ function ThemedContent() {
       >
         {/* Always register routes to avoid linking mismatches */}
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/index" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/auth" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/auth/callback" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/privacy" options={{ headerShown: false }} />

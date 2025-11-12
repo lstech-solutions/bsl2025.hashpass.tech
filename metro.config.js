@@ -14,6 +14,8 @@ const webOnlyPackages = [
   'bs58',
   '@noble/ed25519',
   '@adraffy/ens-normalize',
+  '@zxing/browser',
+  '@zxing/library',
 ];
 
 // Store original resolveRequest if it exists
@@ -36,14 +38,26 @@ config.resolver = {
       return { type: 'empty' };
     }
     
-    // On native platforms, block web-only packages
-    // On web, allow them to be resolved normally
+    // Block ZXing library imports on native platforms
     if (platform !== 'web') {
       // Check if this is a web-only package
       for (const pkg of webOnlyPackages) {
         if (moduleName === pkg || moduleName.startsWith(`${pkg}/`)) {
           return { type: 'empty' };
         }
+      }
+      
+      // Block web fallback module on native
+      if (moduleName === './qr-scanner-web-fallback' || 
+          moduleName === '../lib/qr-scanner-web-fallback' ||
+          context.originModulePath?.includes('qr-scanner-web-fallback')) {
+        return { type: 'empty' };
+      }
+      
+      // Block any ZXing internal module resolution
+      if (moduleName.includes('@zxing') || 
+          context.originModulePath?.includes('@zxing')) {
+        return { type: 'empty' };
       }
     }
     

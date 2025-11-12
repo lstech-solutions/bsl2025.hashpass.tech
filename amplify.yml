@@ -154,6 +154,12 @@ redirects:
   - source: '/events/*'
     status: 200
     target: '/index.html'
+  - source: '/auth'
+    status: 200
+    target: '/index.html'
+  - source: '/auth/'
+    status: 200
+    target: '/index.html'
   - source: '/auth/*'
     status: 200
     target: '/index.html'

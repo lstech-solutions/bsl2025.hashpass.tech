@@ -101,12 +101,14 @@ export default function SpeakerAvatar({
     
     if (localOptimizedUrl) {
       // Try local optimized first - set loading state and URL
+      isProcessingRef.current = false; // Reset processing flag before starting new load
       setImageLoading(true);
       setCurrentAvatarUrl(localOptimizedUrl);
       setUrlSource('local');
       currentUrlRef.current = localOptimizedUrl;
     } else if (s3Url) {
       // Fallback to S3 - set loading state and URL
+      isProcessingRef.current = false; // Reset processing flag before starting new load
       setImageLoading(true);
       setCurrentAvatarUrl(s3Url);
       setUrlSource('s3');
@@ -252,9 +254,7 @@ export default function SpeakerAvatar({
 
   // Memoized load handler
   const handleLoad = useCallback(() => {
-    if (isProcessingRef.current) return; // Already processing
-    
-    // Mark as successfully loaded
+    // Mark as successfully loaded - don't block on isProcessingRef
     setImageLoaded(true);
     
     // Only log in development
@@ -285,7 +285,7 @@ export default function SpeakerAvatar({
   // Memoized load start handler
   const handleLoadStart = useCallback(() => {
     // Only reset error if this URL hasn't failed before
-    if (avatarUrl && !failedUrlsRef.current.has(avatarUrl) && !isProcessingRef.current) {
+    if (avatarUrl && !failedUrlsRef.current.has(avatarUrl)) {
       setImageError(false);
       setImageTimeout(false);
       setImageLoading(true);

@@ -161,9 +161,9 @@ export default function AdminQRScanner({
     try {
       setAdminCheckLoading(true);
       console.log('🔐 Checking admin status for user:', user.id);
-      const admin = await isAdmin(user.id);
+    const admin = await isAdmin(user.id);
       console.log('🔐 Admin check result:', admin);
-      setIsUserAdmin(admin);
+    setIsUserAdmin(admin);
     } catch (error) {
       console.error('❌ Error checking admin status:', error);
       setIsUserAdmin(false);
@@ -457,10 +457,10 @@ export default function AdminQRScanner({
       // If valid, also validate and use to log the admin scan
       if (result.valid) {
         const useResult = await qrSystemService.validateAndUseQR(
-          token,
-          user?.id,
-          'admin-scanner'
-        );
+        token,
+        user?.id,
+        'admin-scanner'
+      );
         // Use the useResult which has more details
         result = useResult;
       }
@@ -480,8 +480,8 @@ export default function AdminQRScanner({
       }
 
       // Call success callback with result
-      if (onScanSuccess) {
-        onScanSuccess(result);
+        if (onScanSuccess) {
+          onScanSuccess(result);
       }
     } catch (error: any) {
       console.error('Error scanning QR:', error);
@@ -529,13 +529,13 @@ export default function AdminQRScanner({
           style: 'destructive',
           onPress: async () => {
             try {
-              const success = await qrSystemService.revokeQR(
-                qrDetails.token,
-                user.id,
-                'Revoked by admin via scanner'
-              );
-              if (success) {
-                Alert.alert('Success', 'QR code has been revoked');
+            const success = await qrSystemService.revokeQR(
+              qrDetails.token,
+              user.id,
+              'Revoked by admin via scanner'
+            );
+            if (success) {
+              Alert.alert('Success', 'QR code has been revoked');
                 // Refresh QR details
                 const updatedQr = await qrSystemService.getQRByToken(qrDetails.token);
                 if (updatedQr) {
@@ -547,8 +547,8 @@ export default function AdminQRScanner({
                     message: 'QR code has been revoked'
                   });
                 }
-              } else {
-                Alert.alert('Error', 'Failed to revoke QR code');
+            } else {
+              Alert.alert('Error', 'Failed to revoke QR code');
               }
             } catch (error: any) {
               console.error('Error revoking QR:', error);
@@ -564,9 +564,9 @@ export default function AdminQRScanner({
     if (!scanResult || !qrDetails || !user) return;
 
     try {
-      const success = await qrSystemService.suspendQR(qrDetails.token, user.id);
-      if (success) {
-        Alert.alert('Success', 'QR code has been suspended');
+    const success = await qrSystemService.suspendQR(qrDetails.token, user.id);
+    if (success) {
+      Alert.alert('Success', 'QR code has been suspended');
         // Refresh QR details
         const updatedQr = await qrSystemService.getQRByToken(qrDetails.token);
         if (updatedQr) {
@@ -578,8 +578,8 @@ export default function AdminQRScanner({
             message: 'QR code is suspended'
           });
         }
-      } else {
-        Alert.alert('Error', 'Failed to suspend QR code');
+    } else {
+      Alert.alert('Error', 'Failed to suspend QR code');
       }
     } catch (error: any) {
       console.error('Error suspending QR:', error);
@@ -1002,8 +1002,8 @@ export default function AdminQRScanner({
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <ScannerWrapper>
-        <View style={styles.modalContainer}>
-          <View style={styles.scannerContainer}>
+      <View style={styles.modalContainer}>
+        <View style={styles.scannerContainer}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerContent}>
@@ -1029,10 +1029,10 @@ export default function AdminQRScanner({
                 {hasPermission === true && (
                   <>
                     {!useWebFallback ? (
-                      <BarCodeScanner
+                <BarCodeScanner
                         onBarCodeScanned={scanned || isProcessing ? undefined : handleBarCodeScanned}
                         style={[StyleSheet.absoluteFillObject, styles.cameraView]}
-                        barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
+                  barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
                         type="back"
                       />
                     ) : (
@@ -1078,26 +1078,26 @@ export default function AdminQRScanner({
                 {/* Overlay - only show when camera is ready, pointerEvents none to not block camera */}
                 {cameraReady && hasPermission === true && (
                   <View style={styles.overlay} pointerEvents="none">
-                    <View style={styles.overlayTop} />
-                    <View style={styles.overlayMiddle}>
-                      <View style={styles.overlaySide} />
-                      <View style={styles.scanFrame}>
-                        <View style={[styles.corner, styles.topLeft]} />
-                        <View style={[styles.corner, styles.topRight]} />
-                        <View style={[styles.corner, styles.bottomLeft]} />
-                        <View style={[styles.corner, styles.bottomRight]} />
-                      </View>
-                      <View style={styles.overlaySide} />
+                  <View style={styles.overlayTop} />
+                  <View style={styles.overlayMiddle}>
+                    <View style={styles.overlaySide} />
+                    <View style={styles.scanFrame}>
+                      <View style={[styles.corner, styles.topLeft]} />
+                      <View style={[styles.corner, styles.topRight]} />
+                      <View style={[styles.corner, styles.bottomLeft]} />
+                      <View style={[styles.corner, styles.bottomRight]} />
                     </View>
-                    <View style={styles.overlayBottom}>
-                      {isProcessing && (
-                        <View style={styles.processingContainer}>
-                          <ActivityIndicator size="large" color={colors.primary} />
-                          <Text style={styles.processingText}>Processing...</Text>
-                        </View>
-                      )}
-                    </View>
+                    <View style={styles.overlaySide} />
                   </View>
+                  <View style={styles.overlayBottom}>
+                    {isProcessing && (
+                      <View style={styles.processingContainer}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={styles.processingText}>Processing...</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
                 )}
               </View>
 
@@ -1180,10 +1180,10 @@ export default function AdminQRScanner({
                   
                   {qrDetails.display_data && (
                     <>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Pass Number:</Text>
-                        <Text style={styles.detailValue}>
-                          {qrDetails.display_data.pass_number || 'N/A'}
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Pass Number:</Text>
+                      <Text style={styles.detailValue}>
+                        {qrDetails.display_data.pass_number || 'N/A'}
                         </Text>
                       </View>
                       {qrDetails.display_data.pass_type && (
@@ -1191,8 +1191,8 @@ export default function AdminQRScanner({
                           <Text style={styles.detailLabel}>Pass Type:</Text>
                           <Text style={styles.detailValue}>
                             {qrDetails.display_data.pass_type}
-                          </Text>
-                        </View>
+                      </Text>
+                    </View>
                       )}
                     </>
                   )}
@@ -1292,10 +1292,10 @@ export default function AdminQRScanner({
                   <Text style={styles.sectionSubtitle}>QR Status Actions</Text>
                   
                   {qrDetails.status === 'active' && (
-                    <TouchableOpacity style={[styles.actionButton, styles.suspendButton]} onPress={handleSuspend}>
-                      <MaterialIcons name="pause-circle-outline" size={20} color="#FF9500" />
-                      <Text style={styles.actionButtonText}>Suspend QR</Text>
-                    </TouchableOpacity>
+                  <TouchableOpacity style={[styles.actionButton, styles.suspendButton]} onPress={handleSuspend}>
+                    <MaterialIcons name="pause-circle-outline" size={20} color="#FF9500" />
+                    <Text style={styles.actionButtonText}>Suspend QR</Text>
+                  </TouchableOpacity>
                   )}
                   
                   {qrDetails.status === 'suspended' && (
@@ -1333,10 +1333,10 @@ export default function AdminQRScanner({
                   )}
                   
                   {qrDetails.status !== 'revoked' && (
-                    <TouchableOpacity style={[styles.actionButton, styles.revokeButton]} onPress={handleRevoke}>
+                  <TouchableOpacity style={[styles.actionButton, styles.revokeButton]} onPress={handleRevoke}>
                       <MaterialIcons name="block" size={20} color={colors.error.main} />
                       <Text style={[styles.actionButtonText, { color: colors.error.main }]}>Revoke QR</Text>
-                    </TouchableOpacity>
+                  </TouchableOpacity>
                   )}
                 </View>
               )}
@@ -1352,7 +1352,7 @@ export default function AdminQRScanner({
             </ScrollView>
           )}
         </View>
-        </View>
+      </View>
       </ScannerWrapper>
     </Modal>
   );

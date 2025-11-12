@@ -210,8 +210,8 @@ export default function SettingsScreen() {
       setVerifyingOtp(true);
       
       const result = await apiClient.post('/auth/delete-account-otp/verify', { 
-        email: user.email,
-        code: otpCode 
+          email: user.email,
+          code: otpCode 
       }, { skipEventSegment: true });
 
       if (!result.success) {
@@ -258,8 +258,8 @@ export default function SettingsScreen() {
       if (userEmail) {
         try {
           await apiClient.post('/auth/delete-account-email', { 
-            email: userEmail,
-            userName: userName 
+              email: userEmail,
+              userName: userName 
           }, { skipEventSegment: true });
           // Don't wait for response or throw errors - email is not critical
         } catch (emailError) {

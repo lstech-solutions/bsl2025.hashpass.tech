@@ -28,12 +28,46 @@ export function speakerNameToFilename(name: string): string {
 }
 
 /**
- * Generates avatar URL for a speaker
+ * Generates avatar URL for a speaker with S3 fallback
+ * Note: The database imageurl should contain the S3 URL if available.
+ * This function is used as a fallback when imageurl is not set.
  * @param name - The speaker's name
- * @param baseUrl - The base URL for images (optional)
+ * @param baseUrl - The base URL for images (optional, defaults to blockchainsummit.la)
+ * @param s3Url - S3 URL if already known (optional)
  * @returns Complete avatar URL
  */
-export function getSpeakerAvatarUrl(name: string, baseUrl: string = 'https://blockchainsummit.la/wp-content/uploads/2025/09'): string {
+export function getSpeakerAvatarUrl(
+  name: string, 
+  baseUrl: string = 'https://blockchainsummit.la/wp-content/uploads/2025/09',
+  s3Url?: string
+): string {
+  // If S3 URL is provided, use it as primary
+  if (s3Url) {
+    return s3Url;
+  }
+
+  // Try to get S3 URL from environment/config (server-side only)
+  // On client-side, process.env may not be available, so we'll use the baseUrl fallback
+  if (typeof process !== 'undefined' && process.env) {
+    const s3Bucket = process.env.AWS_S3_BUCKET_NAME || process.env.EXPO_PUBLIC_AWS_S3_BUCKET_NAME || '';
+    const cdnUrl = process.env.AWS_S3_CDN_URL || process.env.AWS_S3_BUCKET_URL || process.env.EXPO_PUBLIC_AWS_S3_CDN_URL || '';
+    const awsRegion = process.env.AWS_REGION || process.env.EXPO_PUBLIC_AWS_REGION || 'us-east-1';
+    
+    if (s3Bucket) {
+      const filename = speakerNameToFilename(name);
+      const s3Key = `speakers/avatars/foto-${filename}.png`;
+      
+      // Use CDN URL if available, otherwise use S3 bucket URL
+      if (cdnUrl && !cdnUrl.startsWith('s3://') && !cdnUrl.startsWith('arn:')) {
+        return `${cdnUrl}/${s3Key}`.replace(/\/+/g, '/').replace(':/', '://');
+      } else if (s3Bucket) {
+        return `https://${s3Bucket}.s3.${awsRegion}.amazonaws.com/${s3Key}`;
+      }
+    }
+  }
+
+  // Fallback to original blockchainsummit.la URL
+  // This will be used if S3 is not configured or on client-side
   const filename = speakerNameToFilename(name);
   return `${baseUrl}/foto-${filename}.png`;
 }

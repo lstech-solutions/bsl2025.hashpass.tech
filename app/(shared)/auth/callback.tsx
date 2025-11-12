@@ -142,8 +142,8 @@ export default function AuthCallback() {
             if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
                 // Navigate after short delay to show error message
-                setTimeout(() => {
-                    router.replace('/');
+            setTimeout(() => {
+                router.replace('/');
                 }, 2000); // Reduced from 5000ms to 2000ms
             }
         } finally {

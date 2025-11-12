@@ -118,8 +118,8 @@ export class EventApiClient {
         // For global endpoints, use just /api without event segment
         baseUrl = '/api';
       } else {
-        // Fallback to event config or constructor default
-        baseUrl = event?.api?.basePath || this.baseURL;
+      // Fallback to event config or constructor default
+      baseUrl = event?.api?.basePath || this.baseURL;
       }
     }
     

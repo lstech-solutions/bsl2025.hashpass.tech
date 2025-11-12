@@ -84,21 +84,21 @@ export default function SpeakerListWithDividers({
 
   const renderItem = React.useCallback(({ item }: { item: typeof flatListData[0] }) => {
     if (item.type === 'header') {
-      return (
-        <View 
+  return (
+          <View 
           key={item.id}
-          style={styles.groupContainer}
-          ref={(ref) => {
+            style={styles.groupContainer}
+            ref={(ref) => {
             if (item.letter) {
               groupRefs.current[item.letter] = ref;
             }
-          }}
-        >
-          <View style={styles.groupHeader}>
+            }}
+          >
+            <View style={styles.groupHeader}>
             <Text style={styles.groupTitle}>{getGroupLabel(item.letter || '')}</Text>
             <Text style={styles.groupSubtitle}>{getGroupSubtitle(item.letter || '')}</Text>
-            <View style={styles.groupDivider} />
-          </View>
+              <View style={styles.groupDivider} />
+            </View>
         </View>
       );
     }
@@ -107,26 +107,26 @@ export default function SpeakerListWithDividers({
     if (!speaker) return null;
 
     return (
-      <TouchableOpacity
-        key={speaker.id}
-        style={styles.speakerCard}
-        onPress={() => onSpeakerPress(speaker)}
-      >
-        <View style={styles.speakerImageContainer}>
-          <SpeakerAvatar
-            imageUrl={speaker.image}
-            name={speaker.name}
-            size={50}
-            showBorder={false}
-          />
-        </View>
-        <View style={styles.speakerInfo}>
-          <Text style={styles.speakerName}>{speaker.name}</Text>
-          <Text style={styles.speakerTitle}>{speaker.title}</Text>
-          <Text style={styles.speakerCompany}>{speaker.company}</Text>
-        </View>
-        <MaterialIcons name="chevron-right" size={20} color="#666" />
-      </TouchableOpacity>
+                <TouchableOpacity
+                  key={speaker.id}
+                  style={styles.speakerCard}
+                  onPress={() => onSpeakerPress(speaker)}
+                >
+                  <View style={styles.speakerImageContainer}>
+                    <SpeakerAvatar
+                      imageUrl={speaker.image}
+                      name={speaker.name}
+                      size={50}
+                      showBorder={false}
+                    />
+                  </View>
+                  <View style={styles.speakerInfo}>
+                    <Text style={styles.speakerName}>{speaker.name}</Text>
+                    <Text style={styles.speakerTitle}>{speaker.title}</Text>
+                    <Text style={styles.speakerCompany}>{speaker.company}</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={20} color="#666" />
+                </TouchableOpacity>
     );
   }, [onSpeakerPress, styles, getGroupLabel, getGroupSubtitle]);
 

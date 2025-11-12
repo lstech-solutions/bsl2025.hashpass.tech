@@ -241,7 +241,7 @@ export default function QRScanner({
       
       if (!parsed.isValid || !parsed.token) {
         throw new Error('Invalid QR code format');
-      }
+        }
 
       const token = parsed.token;
 
@@ -607,13 +607,13 @@ export default function QRScanner({
             className="scanner-wrapper"
           >
             {!useWebFallback ? (
-              <BarCodeScanner
-                onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+            <BarCodeScanner
+              onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
                 style={[StyleSheet.absoluteFillObject, styles.cameraView]}
                 barCodeTypes={qrScannerService.getBarCodeTypes()}
                 type={qrScannerService.getRecommendedCameraType()}
-                onMountError={(error) => {
-                  console.error('Camera mount error:', error);
+              onMountError={(error) => {
+                console.error('Camera mount error:', error);
                   
                   // On web, try fallback to ZXing
                   if (Platform.OS === 'web' && webQRScannerFallback.isAvailable()) {
@@ -626,34 +626,34 @@ export default function QRScanner({
                     return;
                   }
                   
-                  // Check if error indicates camera in use
-                  const errorMessage = error?.message || '';
-                  if (errorMessage.toLowerCase().includes('in use') || 
-                      errorMessage.toLowerCase().includes('busy') ||
-                      errorMessage.toLowerCase().includes('device') ||
-                      errorMessage.toLowerCase().includes('already')) {
-                    Alert.alert(
-                      'Camera In Use',
-                      'Camera is being used by another application. Please close other apps using the camera and try again.',
-                      [
-                        {
-                          text: 'Retry',
-                          onPress: async () => {
-                            setHasPermission(false);
-                            await requestCameraPermission(true);
-                          },
+                // Check if error indicates camera in use
+                const errorMessage = error?.message || '';
+                if (errorMessage.toLowerCase().includes('in use') || 
+                    errorMessage.toLowerCase().includes('busy') ||
+                    errorMessage.toLowerCase().includes('device') ||
+                    errorMessage.toLowerCase().includes('already')) {
+                  Alert.alert(
+                    'Camera In Use',
+                    'Camera is being used by another application. Please close other apps using the camera and try again.',
+                    [
+                      {
+                        text: 'Retry',
+                        onPress: async () => {
+                          setHasPermission(false);
+                          await requestCameraPermission(true);
                         },
-                        {
-                          text: 'Close',
-                          style: 'cancel',
-                          onPress: onClose,
-                        },
-                      ]
-                    );
-                    setHasPermission(false);
-                  }
-                }}
-              />
+                      },
+                      {
+                        text: 'Close',
+                        style: 'cancel',
+                        onPress: onClose,
+                      },
+                    ]
+                  );
+                  setHasPermission(false);
+                }
+              }}
+            />
             ) : (
               // Web fallback - ZXing will create video element inside wrapper
               Platform.OS === 'web' && null

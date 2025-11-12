@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = supabaseServer();
+    const supabase = supabaseServer;
     const results: {
       userOnboarding?: { success: boolean; alreadySent?: boolean; error?: string };
       speakerOnboarding?: { success: boolean; alreadySent?: boolean; error?: string; isSpeaker?: boolean };

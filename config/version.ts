@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511121704, // Updated to current timestamp
+  buildNumber: 202511121745, // Updated to current timestamp
   releaseDate: '2025-11-12',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -37,11 +37,30 @@ export const CURRENT_VERSION: VersionInfo = {
     'Ensured version display always shows current version from source of truth'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.46 release'
+  notes: 'Version 1.6.47 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.47': {
+    version: '1.6.47',
+    buildNumber: 202511121745,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Refactored version system to use version.ts as single source of truth',
+      'Updated versionService to read directly from version.ts instead of versions.json',
+      'Improved version display accuracy in sidebar'
+    ],
+    bugfixes: [
+      'Fixed sidebar version display showing stale/incorrect data',
+      'Fixed versionService reading from outdated versions.json file',
+      'Ensured version display always shows current version from source of truth'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.47 release'
+  },
   '1.6.46': {
     version: '1.6.46',
     buildNumber: 202511121704,

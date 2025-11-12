@@ -44,8 +44,84 @@ export async function POST(request: Request) {
       );
     }
 
-    // Send welcome email
+    // Check if welcome email has already been sent (with message_id) - database-level check
+    const supabase = supabaseServer;
+    let alreadySent = false;
+    try {
+      const { data: emailCheck } = await supabase.rpc('has_email_been_sent', {
+        p_user_id: userId,
+        p_email_type: 'welcome'
+      } as any);
+      alreadySent = emailCheck === true;
+      
+      if (alreadySent) {
+        console.log(`ℹ️ Welcome email already sent to user ${userId} (${email}), skipping`);
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            message: 'Welcome email already sent',
+            alreadySent: true
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    } catch (err) {
+      console.warn('⚠️ Error checking welcome email status:', err);
+      // Continue to try sending if check fails
+    }
+
+    // Reset any tracking record without message_id (from trigger or previous failed attempts)
+    // This cleans up records that were created but emails weren't actually sent
+    try {
+      await supabase.rpc('reset_welcome_email_if_not_sent', {
+        p_user_id: userId
+      });
+      console.log(`✅ Reset welcome email tracking for user ${userId} (cleaned up records without message_id)`);
+    } catch (err) {
+      console.warn('⚠️ Error resetting welcome email flag:', err);
+      // Continue even if reset fails
+    }
+
+    // Double-check after reset (in case another request sent it in the meantime)
+    try {
+      const { data: doubleCheck } = await supabase.rpc('has_email_been_sent', {
+        p_user_id: userId,
+        p_email_type: 'welcome'
+      } as any);
+      if (doubleCheck === true) {
+        console.log(`ℹ️ Welcome email already sent to user ${userId} (${email}) after reset, skipping`);
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            message: 'Welcome email already sent',
+            alreadySent: true
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    } catch (err) {
+      console.warn('⚠️ Error in double-check:', err);
+    }
+
+    // Send welcome email (this will mark it as sent with message_id)
     const result = await sendWelcomeEmailToNewUser(userId, email, locale);
+    
+    // Verify message_id was saved
+    if (result.success && result.messageId) {
+      try {
+        const { data: verifyCheck } = await supabase.rpc('has_email_been_sent', {
+          p_user_id: userId,
+          p_email_type: 'welcome'
+        } as any);
+        if (verifyCheck === true) {
+          console.log(`✅ Verified: Welcome email marked as sent with messageId: ${result.messageId}`);
+        } else {
+          console.error(`❌ WARNING: Email sent but message_id not saved! messageId: ${result.messageId}`);
+        }
+      } catch (err) {
+        console.warn('⚠️ Error verifying message_id was saved:', err);
+      }
+    }
 
     if (result.success) {
       return new Response(

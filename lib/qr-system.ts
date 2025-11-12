@@ -419,19 +419,35 @@ class QRSystemService {
    * This creates a standard format that can be used for QR generation libraries
    */
   generateQRPayload(token: string, baseUrl?: string): string {
-    // For now, return the token as JSON
-    // In production, you might want to encode it differently or include base URL
+    // Validate token exists
+    if (!token || typeof token !== 'string' || token.trim().length === 0) {
+      console.error('❌ generateQRPayload: Invalid token provided:', token);
+      throw new Error('Invalid token provided for QR generation');
+    }
+
+    // Ensure token is trimmed
+    const cleanToken = token.trim();
+    
+    // Create payload with token - this is what gets encoded in the QR code
     const payload = {
       type: 'hashpass_qr',
-      token: token,
+      token: cleanToken,
       timestamp: Date.now(),
     };
 
+    // If baseUrl is provided, use URL format
     if (baseUrl) {
-      return `${baseUrl}/qr/verify?token=${token}`;
+      const url = `${baseUrl}/qr/verify?token=${encodeURIComponent(cleanToken)}`;
+      console.log('📦 Generated QR payload (URL format):', url.substring(0, 100));
+      return url;
     }
 
-    return JSON.stringify(payload);
+    // Default: JSON format (most reliable for scanning)
+    const jsonPayload = JSON.stringify(payload);
+    console.log('📦 Generated QR payload (JSON format):', jsonPayload);
+    console.log('✅ Token included in payload:', cleanToken);
+    
+    return jsonPayload;
   }
 
   /**

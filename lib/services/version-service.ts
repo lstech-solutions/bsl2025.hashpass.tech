@@ -1,39 +1,35 @@
-import rawVersionsData from '../../config/versions.json';
+import { CURRENT_VERSION, VERSION_HISTORY, VersionInfo } from '../../config/version';
+import packageJson from '../../package.json';
 import gitInfo from '../../config/git-info.json';
 
-// Type assertion to ensure the imported data matches our interface
-const versionsData = rawVersionsData as VersionsData;
-
-export interface VersionInfo {
-  version: string;
-  buildNumber: number;
-  releaseDate: string;
-  releaseType: 'stable' | 'beta' | 'rc' | 'alpha';
-  environment: 'development' | 'staging' | 'production';
-  features: string[];
-  bugfixes: string[];
-  breakingChanges: string[];
-  notes: string;
-}
-
-interface VersionsData {
-  currentVersion: string;
-  versions: VersionInfo[];
-}
+// Re-export VersionInfo for backward compatibility
+export type { VersionInfo };
 
 class VersionService {
-  private versionsData: VersionsData;
   private versionsMap: Map<string, VersionInfo>;
 
   constructor() {
-    this.versionsData = versionsData;
+    // Build map from VERSION_HISTORY (source of truth: version.ts)
     this.versionsMap = new Map(
-      this.versionsData.versions.map(version => [version.version, version])
+      Object.entries(VERSION_HISTORY).map(([version, info]) => [version, info])
     );
   }
 
   public getCurrentVersion(): VersionInfo {
-    return this.getVersionInfo(this.versionsData.currentVersion) || this.versionsData.versions[0];
+    // Get current version from package.json (single source of truth)
+    const currentVersion = packageJson.version;
+    
+    // Try to get from VERSION_HISTORY first
+    const historyVersion = this.versionsMap.get(currentVersion);
+    if (historyVersion) {
+      return historyVersion;
+    }
+    
+    // Fallback to CURRENT_VERSION with updated version number
+    return {
+      ...CURRENT_VERSION,
+      version: currentVersion,
+    };
   }
 
   public getVersionInfo(version: string): VersionInfo | undefined {
@@ -41,9 +37,18 @@ class VersionService {
   }
 
   public getVersionHistory(): VersionInfo[] {
-    return [...this.versionsData.versions].sort((a, b) => 
-      new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
-    );
+    // Get all versions from VERSION_HISTORY (source of truth: version.ts)
+    const versions = Array.from(this.versionsMap.values());
+    
+    // Sort by version number (newest first)
+    return versions.sort((a, b) => {
+      const aParts = a.version.split('.').map(Number);
+      const bParts = b.version.split('.').map(Number);
+      for (let i = 0; i < 3; i++) {
+        if (bParts[i] !== aParts[i]) return bParts[i] - aParts[i];
+      }
+      return 0;
+    });
   }
 
   public getVersionBadgeInfo(releaseType: VersionInfo['releaseType']): { text: string; color: string } {

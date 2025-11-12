@@ -21,25 +21,167 @@ export interface VersionHistory {
 
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
-  version: packageJson.version,
-  buildNumber: 202511120601, // Updated to current timestamp
+  version: packageJson.version, // Single source of truth: package.json
+  buildNumber: 202511121223, // Updated to current timestamp
   releaseDate: '2025-11-12',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
-    'Added Privacy/Terms modal component for in-app viewing',
-    'Improved mobile responsiveness for theme/language switcher on auth page'
+    'Refactored version system to use version.ts as single source of truth',
+    'Updated versionService to read directly from version.ts instead of versions.json',
+    'Improved version display accuracy in sidebar'
   ],
   bugfixes: [
-    'Fixed theme and language switcher overlapping with auth card on mobile views',
-    'Replaced navigation with modal for privacy and terms links on auth screen'
+    'Fixed sidebar version display showing stale/incorrect data',
+    'Fixed versionService reading from outdated versions.json file',
+    'Ensured version display always shows current version from source of truth'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.29 release'
+  notes: 'Version 1.6.37 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.37': {
+    version: '1.6.37',
+    buildNumber: 202511121223,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Refactored version system to use version.ts as single source of truth',
+      'Updated versionService to read directly from version.ts instead of versions.json',
+      'Improved version display accuracy in sidebar'
+    ],
+    bugfixes: [
+      'Fixed sidebar version display showing stale/incorrect data',
+      'Fixed versionService reading from outdated versions.json file',
+      'Ensured version display always shows current version from source of truth'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.37 release'
+  },
+  '1.6.36': {
+    version: '1.6.36',
+    buildNumber: 202511120912,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Refactored version system to use version.ts as single source of truth',
+      'Updated versionService to read directly from version.ts instead of versions.json',
+      'Improved version display accuracy in sidebar'
+    ],
+    bugfixes: [
+      'Fixed sidebar version display showing stale/incorrect data',
+      'Fixed versionService reading from outdated versions.json file',
+      'Ensured version display always shows current version from source of truth'
+    ],
+    breakingChanges: [],
+    notes: 'Fixed version display system and established single source of truth'
+  },
+  '1.6.35': {
+    version: '1.6.35',
+    buildNumber: 202511120857,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.35 release'
+  },
+  '1.6.34': {
+    version: '1.6.34',
+    buildNumber: 202511120834,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.34 release'
+  },
+  '1.6.33': {
+    version: '1.6.33',
+    buildNumber: 202511120823,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.33 release'
+  },
+  '1.6.32': {
+    version: '1.6.32',
+    buildNumber: 202511120758,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.32 release'
+  },
+  '1.6.31': {
+    version: '1.6.31',
+    buildNumber: 202511120733,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.31 release'
+  },
+  '1.6.30': {
+    version: '1.6.30',
+    buildNumber: 202511120648,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.30 release'
+  },
   '1.6.29': {
     version: '1.6.29',
     buildNumber: 202511120601,

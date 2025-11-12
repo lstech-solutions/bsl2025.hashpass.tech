@@ -15,7 +15,13 @@ import { cameraPermissionManager } from './camera-permissions';
 // Dynamic import for web scanners to avoid bundling on native
 let webQRScannerFallback: any = null; // ZXing (primary)
 let html5QRScanner: any = null; // html5-qrcode (fallback)
-let WebQRScanResult: any = null;
+
+// Type definition for web QR scan results
+interface WebQRScanResult {
+  text: string;
+  format: string;
+  timestamp: number;
+}
 
 // Only import web scanners on web platform
 // Using .web.ts extension ensures Metro only resolves this on web
@@ -24,7 +30,6 @@ if (Platform.OS === 'web') {
     // Primary: @zxing/browser (most robust)
     const webFallbackModule = require('./qr-scanner-web-fallback.web');
     webQRScannerFallback = webFallbackModule.webQRScannerFallback;
-    WebQRScanResult = webFallbackModule.WebQRScanResult;
   } catch (e) {
     console.warn('ZXing web scanner not available:', e);
   }
@@ -73,11 +78,12 @@ class QRScannerService {
     if (Platform.OS === 'web') {
       // On web, check both expo-barcode-scanner and ZXing fallback
       return (
-        (BarCodeScanner.isAvailableAsync !== undefined) ||
+        (typeof BarCodeScanner !== 'undefined') ||
         (webQRScannerFallback && webQRScannerFallback.isAvailable())
       );
     }
-    return BarCodeScanner.isAvailableAsync !== undefined;
+    // On native platforms, BarCodeScanner should always be available if imported
+    return typeof BarCodeScanner !== 'undefined';
   }
 
   /**

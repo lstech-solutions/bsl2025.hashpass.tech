@@ -17,6 +17,7 @@ import PrivacyTermsModal from '../../components/PrivacyTermsModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { memoryManager } from '../../lib/memory-manager';
 import { throttle } from '../../lib/performance-utils';
+import { clearAuthCache } from '../../lib/version-checker';
 
 type AuthMethod = 'magiclink' | 'otp';
 
@@ -44,11 +45,16 @@ export default function AuthScreen() {
   const processedUsersRef = useRef<Set<string>>(new Set());
   const subscriptionIdRef = useRef<string | null>(null);
 
-  // Check wallet availability on web
+  // Check wallet availability on web and clear auth cache on mount
   useEffect(() => {
     if (Platform.OS === 'web') {
       setEthereumAvailable(isEthereumWalletAvailable());
       setSolanaAvailable(isSolanaWalletAvailable());
+      
+      // Clear auth cache on mount to prevent stale auth state
+      clearAuthCache().catch((error) => {
+        console.warn('Failed to clear auth cache:', error);
+      });
     }
   }, []);
 
@@ -1050,9 +1056,13 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: isDark ? '#fff' : '#121212',
     marginBottom: 0,
     textAlign: 'center',
-    textShadowColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    ...(Platform.OS === 'web' ? {
+      textShadow: isDark ? '0 2px 4px rgba(0, 0, 0, 0.2)' : '0 2px 4px rgba(255, 255, 255, 0.2)',
+    } : {
+      textShadowColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
+    }),
   },
   logoContainer: {
     alignItems: 'center',
@@ -1152,11 +1162,15 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    shadowColor: colors.primary || '#7A5ECC',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 8px rgba(122, 94, 204, 0.3)',
+    } : {
+      shadowColor: colors.primary || '#7A5ECC',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    }),
   },
   primaryButtonDisabled: {
     opacity: 0.5,
@@ -1244,11 +1258,15 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
+    }),
   },
   googleButton: {
     backgroundColor: '#DB4437',

@@ -1,7 +1,7 @@
 // Version-aware Service Worker for HashPass
 // Automatically clears cache when version changes
 
-const APP_VERSION = '1.6.28'; // This will be updated during build
+const APP_VERSION = '1.6.29'; // This will be updated during build
 const CACHE_NAME = `hashpass-v${APP_VERSION}`;
 const VERSION_CHECK_URL = '/api/config/versions';
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
@@ -122,7 +122,16 @@ function checkForVersionUpdate() {
   versionCheckInProgress = true;
   lastVersionCheck = now;
   
-  fetch(VERSION_CHECK_URL, { cache: 'no-store' })
+  // Add timestamp to prevent caching
+  const timestamp = Date.now();
+  fetch(`${VERSION_CHECK_URL}?t=${timestamp}`, { 
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    }
+  })
     .then((response) => {
       if (!response.ok) {
         throw new Error('Failed to fetch version');
@@ -204,11 +213,9 @@ self.addEventListener('activate', (event) => {
           })
         );
       }),
-      // Check for version updates (with delay to prevent loops)
-      new Promise((resolve) => {
-        setTimeout(() => {
-          checkForVersionUpdate().then(() => resolve()).catch(() => resolve());
-        }, 3000); // Wait 3 seconds before checking to prevent loops
+      // Check for version updates immediately (no delay for first check)
+      checkForVersionUpdate().catch((err) => {
+        console.warn('[SW] Initial version check failed:', err);
       })
     ]).then(() => {
       return self.clients.claim();

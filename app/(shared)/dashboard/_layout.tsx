@@ -203,6 +203,12 @@ function CustomDrawerContent() {
   };
 
   const handleNavigation = (route: typeof menuItems[number]['route']) => {
+    // Safety check: ensure route is defined
+    if (!route || typeof route !== 'string') {
+      console.warn('Invalid route provided to handleNavigation:', route);
+      return;
+    }
+
     // Close the drawer
     navigation.dispatch(DrawerActions.closeDrawer());
 
@@ -398,6 +404,12 @@ function CustomDrawerContent() {
         bounces={true}
       >
         {menuItems.map((item, index) => {
+          // Safety check: ensure route exists
+          if (!item.route || typeof item.route !== 'string') {
+            console.warn('Menu item has invalid route:', item);
+            return null;
+          }
+
           // Check if current path matches the route (handle both relative and absolute routes)
           const isActive = item.route.startsWith('./') 
             ? pathname === item.route 

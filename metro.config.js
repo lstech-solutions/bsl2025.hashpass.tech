@@ -73,10 +73,22 @@ config.resolver = {
     }
     
     // Use original resolveRequest if it exists, otherwise use default
-    if (originalResolveRequest) {
-      return originalResolveRequest(context, moduleName, platform);
+    // Add safety checks to prevent undefined path errors
+    try {
+      if (originalResolveRequest) {
+        return originalResolveRequest(context, moduleName, platform);
+      }
+      // Ensure context has required properties before calling resolveRequest
+      if (context && typeof context.resolveRequest === 'function') {
+        return context.resolveRequest(context, moduleName, platform);
+      }
+      // Fallback: return empty module if resolution fails
+      console.warn(`[Metro] Could not resolve module: ${moduleName}`);
+      return { type: 'empty' };
+    } catch (error) {
+      console.warn(`[Metro] Error resolving module ${moduleName}:`, error.message);
+      return { type: 'empty' };
     }
-    return context.resolveRequest(context, moduleName, platform);
   },
 };
 

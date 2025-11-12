@@ -107,12 +107,27 @@ if ('serviceWorker' in navigator) {
                         }
                     });
                     
-                    // Check version on page load
-                    setTimeout(() => {
-                        if (reg.active) {
-                            reg.active.postMessage({ type: 'CHECK_VERSION' });
+                    // Check version immediately on page load (no delay)
+                    if (reg.active) {
+                        reg.active.postMessage({ type: 'CHECK_VERSION' });
+                    }
+                    
+                    // Also check version via API directly (client-side check)
+                    fetch('/api/config/versions?t=' + Date.now(), {
+                        cache: 'no-store',
+                        headers: {
+                            'Cache-Control': 'no-store, no-cache, must-revalidate',
                         }
-                    }, 3000);
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const latestVersion = data?.currentVersion;
+                        if (latestVersion) {
+                            console.log('📦 Current app version check:', latestVersion);
+                            // Version mismatch will be handled by service worker
+                        }
+                    })
+                    .catch(err => console.warn('Version check failed:', err));
                 })
                 .catch(error => {
                     console.error('❌ Service Worker registration failed:', error);

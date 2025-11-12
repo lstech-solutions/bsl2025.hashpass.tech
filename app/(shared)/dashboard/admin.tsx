@@ -54,7 +54,7 @@ interface MeetingRequest {
 
 export default function AdminPanel() {
   const { colors, isDark } = useTheme();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('passes');
   const [isUserAdmin, setIsUserAdmin] = useState(false);
@@ -81,9 +81,24 @@ export default function AdminPanel() {
 
   const styles = getStyles(isDark, colors);
 
+  // Wait for auth to finish loading before checking admin access
   useEffect(() => {
+    // Don't check admin access while auth is still loading
+    if (authLoading) {
+      console.log('Auth still loading, waiting...');
+      return;
+    }
+
+    // If auth finished loading and no user, redirect
+    if (!user) {
+      console.log('No user found after auth load, redirecting...');
+      router.replace('/(shared)/dashboard/explore');
+      return;
+    }
+
+    // Now check admin access
     checkAdminAccess();
-  }, [user]);
+  }, [user, authLoading]);
 
   useEffect(() => {
     if (isUserAdmin) {
@@ -93,21 +108,35 @@ export default function AdminPanel() {
 
   const checkAdminAccess = async () => {
     if (!user) {
+      console.log('checkAdminAccess: No user, redirecting...');
       router.replace('/(shared)/dashboard/explore');
       return;
     }
 
-    const admin = await isAdmin(user.id);
-    if (!admin) {
-      Alert.alert('Access Denied', 'You do not have admin privileges.');
-      router.replace('/(shared)/dashboard/explore');
-      return;
-    }
+    console.log('Checking admin access for user:', user.id);
+    setLoading(true);
+    
+    try {
+      const admin = await isAdmin(user.id);
+      console.log('Admin check result:', admin);
+      
+      if (!admin) {
+        console.log('User is not admin, redirecting...');
+        Alert.alert('Access Denied', 'You do not have admin privileges.');
+        router.replace('/(shared)/dashboard/explore');
+        return;
+      }
 
-    setIsUserAdmin(true);
-    const role = await getUserAdminRole(user.id);
-    setAdminRole(role);
-    setLoading(false);
+      console.log('User is admin, setting up admin panel...');
+      setIsUserAdmin(true);
+      const role = await getUserAdminRole(user.id);
+      setAdminRole(role);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error checking admin access:', error);
+      Alert.alert('Error', 'Failed to verify admin access. Please try again.');
+      router.replace('/(shared)/dashboard/explore');
+    }
   };
 
   const loadInitialData = async () => {
@@ -254,12 +283,9 @@ export default function AdminPanel() {
   };
 
   const handleQRScanSuccess = (result: QRScanResult) => {
-    setShowQRScanner(false);
-    Alert.alert(
-      result.valid ? 'Valid QR Code' : 'Invalid QR Code',
-      result.message,
-      [{ text: 'OK' }]
-    );
+    // Don't close scanner - keep it open to show details
+    // The scanner component will handle showing the details
+    console.log('QR Scan Success:', result);
   };
 
   const handleCreateMatch = async () => {

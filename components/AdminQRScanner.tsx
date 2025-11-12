@@ -7,6 +7,8 @@ import { useAuth } from '../hooks/useAuth';
 import { qrSystemService, QRScanResult, QRCode } from '../lib/qr-system';
 import { isAdmin } from '../lib/admin-utils';
 import { cameraPermissionManager } from '../lib/camera-permissions';
+import { supabase } from '../lib/supabase';
+import { PassType } from '../lib/pass-system';
 
 interface AdminQRScannerProps {
   visible: boolean;
@@ -28,6 +30,8 @@ export default function AdminQRScanner({
   const [qrDetails, setQrDetails] = useState<QRCode | null>(null);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const styles = getStyles(isDark, colors);
 
@@ -35,20 +39,39 @@ export default function AdminQRScanner({
     if (visible && user) {
       checkAdminStatus();
       checkPermissionStatus();
+      // Reset scanner state when modal opens
       setScanned(false);
+      setIsProcessing(false);
       setScanResult(null);
       setQrDetails(null);
       setShowDetails(false);
+      setCameraReady(false);
+      setCameraError(null);
+    } else if (!visible) {
+      // Reset camera state when modal closes
+      setCameraReady(false);
+      setCameraError(null);
     }
   }, [visible, user]);
 
   const checkPermissionStatus = async () => {
     try {
-      const result = await cameraPermissionManager.getPermissionStatus();
-      setHasPermission(result.status === 'granted');
+      console.log('Checking camera permission status...');
+      const result = await cameraPermissionManager.getPermissionStatus(true); // Force refresh
+      console.log('Permission status:', result);
+      const granted = result.status === 'granted';
+      setHasPermission(granted);
       
-      // If not granted and can ask, request it
-      if (result.status !== 'granted' && result.canAskAgain) {
+      // If permission is granted, set camera ready after a very short delay
+      if (granted) {
+        console.log('Camera permission already granted');
+        // Give camera minimal time to initialize, then show it
+        setTimeout(() => {
+          console.log('Setting camera as ready after permission check');
+          setCameraReady(true);
+        }, 500); // Reduced to 500ms
+      } else if (result.canAskAgain) {
+        console.log('Permission not granted, requesting...');
         requestCameraPermission();
       }
     } catch (error) {
@@ -66,15 +89,25 @@ export default function AdminQRScanner({
 
   const requestCameraPermission = async () => {
     try {
+      console.log('Requesting camera permission...');
       // Use permission manager for better handling
-      const result = await cameraPermissionManager.requestWithFallback();
+      const result = await cameraPermissionManager.requestWithFallback(true); // Force fresh
+      console.log('Permission request result:', result);
       
       if (result.status === 'granted') {
+        console.log('Camera permission granted!');
         setHasPermission(true);
+        // Set camera ready after permission is granted
+        setTimeout(() => {
+          console.log('Setting camera as ready after permission grant');
+          setCameraReady(true);
+        }, 500); // Reduced to 500ms
       } else if (result.status === 'blocked' || (result.status === 'denied' && !result.canAskAgain)) {
         // Permission is blocked - show settings option
+        console.log('Camera permission blocked');
         setHasPermission(false);
       } else {
+        console.log('Camera permission denied');
         setHasPermission(false);
       }
     } catch (error) {
@@ -86,6 +119,7 @@ export default function AdminQRScanner({
   const handleBarCodeScanned = async ({ type, data }: BarCodeScannerResult) => {
     if (scanned || isProcessing) return;
 
+    console.log('QR Code scanned:', { type, data });
     setScanned(true);
     setIsProcessing(true);
 
@@ -93,37 +127,60 @@ export default function AdminQRScanner({
       let token: string;
       
       try {
+        // Try parsing as JSON first
         const parsed = JSON.parse(data);
-        token = parsed.token || parsed.type === 'hashpass_qr' ? parsed.token : data;
+        if (parsed.token) {
+          token = parsed.token;
+        } else if (parsed.type === 'hashpass_qr' && parsed.token) {
+          token = parsed.token;
+        } else {
+          token = data; // Fallback to raw data
+        }
       } catch {
+        // If not JSON, check if it's a URL with token parameter
         if (data.includes('token=')) {
           const urlParams = new URLSearchParams(data.split('?')[1]);
           token = urlParams.get('token') || data;
         } else {
+          // Assume the entire data is the token
           token = data;
         }
       }
 
-      // Validate QR code
-      const result = await qrSystemService.validateAndUseQR(
-        token,
-        user?.id,
-        'admin-scanner'
-      );
+      console.log('Extracted token:', token);
 
+      // For admin scanning, first check validity without marking as used
+      // Then validate and use to log the scan
+      let result = await qrSystemService.checkQRValidity(token);
+      
+      // If valid, also validate and use to log the admin scan
+      if (result.valid) {
+        const useResult = await qrSystemService.validateAndUseQR(
+          token,
+          user?.id,
+          'admin-scanner'
+        );
+        // Use the useResult which has more details
+        result = useResult;
+      }
+
+      console.log('QR validation result:', result);
       setScanResult(result);
 
-      // Fetch full QR details for admin view
-      if (result.valid) {
+      // Fetch full QR details for admin view (always fetch, even if invalid)
+      try {
         const qr = await qrSystemService.getQRByToken(token);
         setQrDetails(qr);
         setShowDetails(true);
+      } catch (error) {
+        console.error('Error fetching QR details:', error);
+        // Still show result even if we can't fetch details
+        setShowDetails(true);
       }
 
-      if (result.valid) {
-        if (onScanSuccess) {
-          onScanSuccess(result);
-        }
+      // Call success callback with result
+      if (onScanSuccess) {
+        onScanSuccess(result);
       }
     } catch (error: any) {
       console.error('Error scanning QR:', error);
@@ -136,6 +193,7 @@ export default function AdminQRScanner({
   };
 
   const resetScanner = () => {
+    console.log('Resetting scanner...');
     setScanned(false);
     setIsProcessing(false);
     setScanResult(null);
@@ -155,16 +213,31 @@ export default function AdminQRScanner({
           text: 'Revoke',
           style: 'destructive',
           onPress: async () => {
-            const success = await qrSystemService.revokeQR(
-              qrDetails.token,
-              user.id,
-              'Revoked by admin via scanner'
-            );
-            if (success) {
-              Alert.alert('Success', 'QR code has been revoked');
-              resetScanner();
-            } else {
-              Alert.alert('Error', 'Failed to revoke QR code');
+            try {
+              const success = await qrSystemService.revokeQR(
+                qrDetails.token,
+                user.id,
+                'Revoked by admin via scanner'
+              );
+              if (success) {
+                Alert.alert('Success', 'QR code has been revoked');
+                // Refresh QR details
+                const updatedQr = await qrSystemService.getQRByToken(qrDetails.token);
+                if (updatedQr) {
+                  setQrDetails(updatedQr);
+                  setScanResult({
+                    ...scanResult,
+                    valid: false,
+                    status: 'revoked',
+                    message: 'QR code has been revoked'
+                  });
+                }
+              } else {
+                Alert.alert('Error', 'Failed to revoke QR code');
+              }
+            } catch (error: any) {
+              console.error('Error revoking QR:', error);
+              Alert.alert('Error', error.message || 'Failed to revoke QR code');
             }
           },
         },
@@ -175,12 +248,27 @@ export default function AdminQRScanner({
   const handleSuspend = async () => {
     if (!scanResult || !qrDetails || !user) return;
 
-    const success = await qrSystemService.suspendQR(qrDetails.token, user.id);
-    if (success) {
-      Alert.alert('Success', 'QR code has been suspended');
-      resetScanner();
-    } else {
-      Alert.alert('Error', 'Failed to suspend QR code');
+    try {
+      const success = await qrSystemService.suspendQR(qrDetails.token, user.id);
+      if (success) {
+        Alert.alert('Success', 'QR code has been suspended');
+        // Refresh QR details
+        const updatedQr = await qrSystemService.getQRByToken(qrDetails.token);
+        if (updatedQr) {
+          setQrDetails(updatedQr);
+          setScanResult({
+            ...scanResult,
+            valid: false,
+            status: 'suspended',
+            message: 'QR code is suspended'
+          });
+        }
+      } else {
+        Alert.alert('Error', 'Failed to suspend QR code');
+      }
+    } catch (error: any) {
+      console.error('Error suspending QR:', error);
+      Alert.alert('Error', error.message || 'Failed to suspend QR code');
     }
   };
 
@@ -285,34 +373,110 @@ export default function AdminQRScanner({
             <>
               {/* Scanner View */}
               <View style={styles.scannerWrapper}>
-                <BarCodeScanner
-                  onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-                  style={StyleSheet.absoluteFillObject}
-                  barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
-                />
-
-                {/* Overlay */}
-                <View style={styles.overlay}>
-                  <View style={styles.overlayTop} />
-                  <View style={styles.overlayMiddle}>
-                    <View style={styles.overlaySide} />
-                    <View style={styles.scanFrame}>
-                      <View style={[styles.corner, styles.topLeft]} />
-                      <View style={[styles.corner, styles.topRight]} />
-                      <View style={[styles.corner, styles.bottomLeft]} />
-                      <View style={[styles.corner, styles.bottomRight]} />
-                    </View>
-                    <View style={styles.overlaySide} />
-                  </View>
-                  <View style={styles.overlayBottom}>
-                    {isProcessing && (
-                      <View style={styles.processingContainer}>
+                {hasPermission === true && (
+                  <>
+                    <BarCodeScanner
+                      onBarCodeScanned={scanned || isProcessing ? undefined : handleBarCodeScanned}
+                      style={StyleSheet.absoluteFillObject}
+                      barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
+                      type="back"
+                      onMountError={(error) => {
+                        console.error('Camera mount error:', error);
+                        const errorMessage = error?.message || String(error);
+                        setCameraError(errorMessage);
+                        setCameraReady(false);
+                        Alert.alert(
+                          'Camera Error',
+                          `Failed to start camera: ${errorMessage}\n\nPlease try:\n1. Close other apps using the camera\n2. Restart the app\n3. Check camera permissions`,
+                          [
+                            {
+                              text: 'Retry',
+                              onPress: () => {
+                                setCameraError(null);
+                                setCameraReady(false);
+                                // Force re-render by resetting permission
+                                setHasPermission(null);
+                                setTimeout(() => {
+                                  checkPermissionStatus();
+                                }, 500);
+                              },
+                            },
+                            {
+                              text: 'Close',
+                              style: 'cancel',
+                              onPress: onClose,
+                            },
+                          ]
+                        );
+                      }}
+                      onCameraReady={() => {
+                        console.log('Camera is ready!');
+                        setCameraReady(true);
+                        setCameraError(null);
+                      }}
+                      // Note: onCameraReady may not fire on all platforms
+                      // We use timeout fallback in checkPermissionStatus
+                    />
+                    {/* Only show loading overlay briefly, then hide it to show camera */}
+                    {!cameraReady && !cameraError && hasPermission === true && (
+                      <View style={styles.cameraLoadingOverlay} pointerEvents="none">
                         <ActivityIndicator size="large" color={colors.primary} />
-                        <Text style={styles.processingText}>Processing...</Text>
+                        <Text style={styles.cameraLoadingText}>Starting camera...</Text>
                       </View>
                     )}
+                    {cameraError && (
+                      <View style={styles.cameraErrorOverlay}>
+                        <Ionicons name="camera-outline" size={64} color={colors.error} />
+                        <Text style={styles.cameraErrorText}>Camera Error</Text>
+                        <Text style={styles.cameraErrorDetails}>{cameraError}</Text>
+                        <TouchableOpacity
+                          style={styles.retryButton}
+                          onPress={() => {
+                            setCameraError(null);
+                            setCameraReady(false);
+                            setHasPermission(null);
+                            setTimeout(() => {
+                              checkPermissionStatus();
+                            }, 500);
+                          }}
+                        >
+                          <Text style={styles.retryButtonText}>Retry</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </>
+                )}
+                {hasPermission === false && (
+                  <View style={styles.scannerPlaceholder}>
+                    <Ionicons name="camera-outline" size={64} color={colors.text.secondary} />
+                    <Text style={styles.placeholderText}>Camera permission required</Text>
                   </View>
-                </View>
+                )}
+
+                {/* Overlay - only show when camera is ready to avoid blocking */}
+                {cameraReady && hasPermission === true && (
+                  <View style={styles.overlay} pointerEvents="none">
+                    <View style={styles.overlayTop} />
+                    <View style={styles.overlayMiddle}>
+                      <View style={styles.overlaySide} />
+                      <View style={styles.scanFrame}>
+                        <View style={[styles.corner, styles.topLeft]} />
+                        <View style={[styles.corner, styles.topRight]} />
+                        <View style={[styles.corner, styles.bottomLeft]} />
+                        <View style={[styles.corner, styles.bottomRight]} />
+                      </View>
+                      <View style={styles.overlaySide} />
+                    </View>
+                    <View style={styles.overlayBottom}>
+                      {isProcessing && (
+                        <View style={styles.processingContainer}>
+                          <ActivityIndicator size="large" color={colors.primary} />
+                          <Text style={styles.processingText}>Processing...</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
               </View>
 
               {/* Instructions */}
@@ -320,10 +484,16 @@ export default function AdminQRScanner({
                 <Text style={styles.instructionText}>
                   Position the QR code within the frame to scan
                 </Text>
-                {scanned && !isProcessing && (
+                {scanned && !isProcessing && !showDetails && (
                   <TouchableOpacity style={styles.resetButton} onPress={resetScanner}>
                     <Text style={styles.resetButtonText}>Scan Again</Text>
                   </TouchableOpacity>
+                )}
+                {isProcessing && (
+                  <View style={styles.processingContainer}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={styles.processingText}>Processing QR code...</Text>
+                  </View>
                 )}
               </View>
             </>
@@ -387,30 +557,165 @@ export default function AdminQRScanner({
                   )}
                   
                   {qrDetails.display_data && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Pass Number:</Text>
-                      <Text style={styles.detailValue}>
-                        {qrDetails.display_data.pass_number || 'N/A'}
-                      </Text>
-                    </View>
+                    <>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Pass Number:</Text>
+                        <Text style={styles.detailValue}>
+                          {qrDetails.display_data.pass_number || 'N/A'}
+                        </Text>
+                      </View>
+                      {qrDetails.display_data.pass_type && (
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Pass Type:</Text>
+                          <Text style={styles.detailValue}>
+                            {qrDetails.display_data.pass_type}
+                          </Text>
+                        </View>
+                      )}
+                    </>
                   )}
                 </View>
               )}
 
+              {scanResult && !scanResult.valid && (
+                <View style={styles.detailsSection}>
+                  <Text style={styles.sectionTitle}>Validation Error</Text>
+                  <Text style={[styles.detailValue, { color: colors.error }]}>
+                    {scanResult.message}
+                  </Text>
+                </View>
+              )}
+
               {/* Admin Actions */}
-              {scanResult?.valid && qrDetails && qrDetails.status === 'active' && (
+              {qrDetails && (
                 <View style={styles.actionsSection}>
                   <Text style={styles.sectionTitle}>Admin Actions</Text>
                   
-                  <TouchableOpacity style={[styles.actionButton, styles.suspendButton]} onPress={handleSuspend}>
-                    <MaterialIcons name="pause-circle-outline" size={20} color="#FF9500" />
-                    <Text style={styles.actionButtonText}>Suspend QR</Text>
-                  </TouchableOpacity>
+                  {/* Pass Upgrade Action */}
+                  {qrDetails.pass_id && qrDetails.display_data?.pass_type && (
+                    <View style={styles.passUpgradeSection}>
+                      <Text style={styles.sectionSubtitle}>Upgrade Pass</Text>
+                      <Text style={styles.detailValue}>
+                        Current: {qrDetails.display_data.pass_type.toUpperCase()}
+                      </Text>
+                      <View style={styles.upgradeButtons}>
+                        {(['general', 'business', 'vip'] as PassType[]).map((type) => {
+                          if (type === qrDetails.display_data?.pass_type) return null;
+                          return (
+                            <TouchableOpacity
+                              key={type}
+                              style={[styles.upgradeButton, { borderColor: colors.primary }]}
+                              onPress={async () => {
+                                if (!qrDetails.pass_id || !user) return;
+                                Alert.alert(
+                                  'Upgrade Pass',
+                                  `Upgrade pass to ${type.toUpperCase()}?`,
+                                  [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    {
+                                      text: 'Upgrade',
+                                      onPress: async () => {
+                                        try {
+                                          // Get pass type limits
+                                          const { data: limits, error: limitsError } = await supabase
+                                            .rpc('get_pass_type_limits', { p_pass_type: type });
+                                          
+                                          if (limitsError) throw limitsError;
+                                          
+                                          // Update pass
+                                          const { error: updateError } = await supabase
+                                            .from('passes')
+                                            .update({
+                                              pass_type: type,
+                                              max_meeting_requests: limits?.max_requests || 10,
+                                              max_boost_amount: limits?.max_boost || 200.00,
+                                              updated_at: new Date().toISOString()
+                                            })
+                                            .eq('id', qrDetails.pass_id);
+                                          
+                                          if (updateError) throw updateError;
+                                          
+                                          Alert.alert('Success', `Pass upgraded to ${type.toUpperCase()}`);
+                                          
+                                          // Refresh QR details
+                                          const updatedQr = await qrSystemService.getQRByToken(qrDetails.token);
+                                          if (updatedQr) {
+                                            setQrDetails(updatedQr);
+                                            // Update display data
+                                            if (updatedQr.display_data) {
+                                              updatedQr.display_data.pass_type = type;
+                                            }
+                                          }
+                                        } catch (error: any) {
+                                          console.error('Error upgrading pass:', error);
+                                          Alert.alert('Error', error.message || 'Failed to upgrade pass');
+                                        }
+                                      }
+                                    }
+                                  ]
+                                );
+                              }}
+                            >
+                              <Text style={[styles.upgradeButtonText, { color: colors.primary }]}>
+                                Upgrade to {type.toUpperCase()}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
                   
-                  <TouchableOpacity style={[styles.actionButton, styles.revokeButton]} onPress={handleRevoke}>
-                    <MaterialIcons name="block" size={20} color={colors.error} />
-                    <Text style={[styles.actionButtonText, { color: colors.error }]}>Revoke QR</Text>
-                  </TouchableOpacity>
+                  {/* QR Status Actions */}
+                  <Text style={styles.sectionSubtitle}>QR Status Actions</Text>
+                  
+                  {qrDetails.status === 'active' && (
+                    <TouchableOpacity style={[styles.actionButton, styles.suspendButton]} onPress={handleSuspend}>
+                      <MaterialIcons name="pause-circle-outline" size={20} color="#FF9500" />
+                      <Text style={styles.actionButtonText}>Suspend QR</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {qrDetails.status === 'suspended' && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, { borderColor: colors.success, borderWidth: 1 }]} 
+                      onPress={async () => {
+                        if (!qrDetails || !user) return;
+                        try {
+                          const success = await qrSystemService.reactivateQR(qrDetails.token, user.id);
+                          if (success) {
+                            Alert.alert('Success', 'QR code has been reactivated');
+                            // Refresh QR details
+                            const updatedQr = await qrSystemService.getQRByToken(qrDetails.token);
+                            if (updatedQr) {
+                              setQrDetails(updatedQr);
+                              setScanResult({
+                                ...scanResult!,
+                                valid: updatedQr.status === 'active',
+                                status: updatedQr.status === 'active' ? 'valid' : 'suspended',
+                                message: updatedQr.status === 'active' ? 'QR code is valid' : 'QR code is suspended'
+                              });
+                            }
+                          } else {
+                            Alert.alert('Error', 'Failed to reactivate QR code');
+                          }
+                        } catch (error: any) {
+                          console.error('Error reactivating QR:', error);
+                          Alert.alert('Error', error.message || 'Failed to reactivate QR code');
+                        }
+                      }}
+                    >
+                      <MaterialIcons name="play-circle-outline" size={20} color={colors.success} />
+                      <Text style={[styles.actionButtonText, { color: colors.success }]}>Reactivate QR</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {qrDetails.status !== 'revoked' && (
+                    <TouchableOpacity style={[styles.actionButton, styles.revokeButton]} onPress={handleRevoke}>
+                      <MaterialIcons name="block" size={20} color={colors.error} />
+                      <Text style={[styles.actionButtonText, { color: colors.error }]}>Revoke QR</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
 
@@ -490,6 +795,9 @@ const getStyles = (isDark: boolean, colors: any) =>
     scannerWrapper: {
       flex: 1,
       position: 'relative',
+      width: '100%',
+      height: '100%',
+      overflow: 'hidden',
     },
     overlay: {
       ...StyleSheet.absoluteFillObject,
@@ -711,6 +1019,94 @@ const getStyles = (isDark: boolean, colors: any) =>
     closeButtonFull: {
       backgroundColor: colors.background.secondary,
       flex: 1,
+    },
+    scannerPlaceholder: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    placeholderText: {
+      marginTop: 16,
+      fontSize: 16,
+      color: colors.text.secondary,
+      textAlign: 'center',
+    },
+    sectionSubtitle: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.text.secondary,
+      marginTop: 8,
+      marginBottom: 8,
+    },
+    passUpgradeSection: {
+      marginBottom: 16,
+      padding: 12,
+      backgroundColor: colors.background.secondary,
+      borderRadius: 8,
+    },
+    upgradeButtons: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 8,
+    },
+    upgradeButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 6,
+      borderWidth: 1,
+      backgroundColor: colors.background.paper,
+    },
+    upgradeButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    cameraLoadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 10,
+    },
+    cameraLoadingText: {
+      marginTop: 16,
+      fontSize: 16,
+      color: '#FFFFFF',
+      textAlign: 'center',
+    },
+    cameraErrorOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.9)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+      zIndex: 10,
+    },
+    cameraErrorText: {
+      marginTop: 16,
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.error,
+      textAlign: 'center',
+    },
+    cameraErrorDetails: {
+      marginTop: 8,
+      fontSize: 14,
+      color: colors.text.secondary,
+      textAlign: 'center',
+      marginBottom: 24,
+    },
+    retryButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    retryButtonText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '600',
     },
   });
 

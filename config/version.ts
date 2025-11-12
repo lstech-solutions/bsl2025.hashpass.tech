@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version,
-  buildNumber: 202511120438, // Updated to current timestamp
+  buildNumber: 202511120452, // Updated to current timestamp
   releaseDate: '2025-11-12',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -40,6 +40,23 @@ export const CURRENT_VERSION: VersionInfo = {
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.25': {
+    version: '1.6.25',
+    buildNumber: 202511120452,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.25 release'
+  },
   '1.6.25': {
     version: '1.6.25',
     buildNumber: 202511120438,

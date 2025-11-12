@@ -41,12 +41,17 @@ frontend:
       commands:
         - rm -rf dist
         - mkdir -p dist/client/_expo/functions/api/bslatam
-        # Increase Node.js memory limit for Metro bundler
-        - export NODE_OPTIONS="--max-old-space-size=4096"
+        # Increase Node.js memory limit for webpack bundler (expo export uses webpack)
+        - export NODE_OPTIONS="--max-old-space-size=6144"
         # Set production environment for Expo export
         - export NODE_ENV=production
         - export EXPO_PUBLIC_ENABLE_STATIC_EXPORT=true
-        - 'npm run build:web'
+        # Set webpack memory optimizations
+        - export WEBPACK_MEMORY_LIMIT=6144
+        # Reduce webpack optimization passes to save memory
+        - export WEBPACK_OPTIMIZE_MINIMIZE=true
+        # Run build (Amplify has built-in 60min timeout)
+        - npm run build:web
         - cp -r dist/server/* dist/client/
         - mkdir -p amplify-backend-config/backend/function/bslApi/src/server/_expo/functions
         - rm -rf amplify-backend-config/backend/function/bslApi/src/server/_expo/functions/api || true

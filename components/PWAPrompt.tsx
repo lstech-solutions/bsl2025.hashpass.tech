@@ -41,24 +41,24 @@ const PWAPrompt = () => {
     };
 
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       
       // Also check periodically in case status changes
       const interval = setInterval(checkStatus, 2000);
-      
-      return () => {
-        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         clearInterval(interval);
-      };
+    };
     }
   }, []);
 
   const installPWA = () => {
     if (deferredPrompt) {
       // Use browser's install prompt if available
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult: any) => {
-        if (choiceResult.outcome === 'accepted') {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult: any) => {
+      if (choiceResult.outcome === 'accepted') {
           console.log('✅ User accepted the install prompt');
           // Set installation flag in localStorage
           try {
@@ -66,16 +66,16 @@ const PWAPrompt = () => {
           } catch (e) {
             // localStorage might not be available
           }
-        }
-        setDeferredPrompt(null);
-      });
+      }
+      setDeferredPrompt(null);
+    });
     } else {
       // Fallback: Show manual installation instructions
       // For iOS Safari
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         const isAndroid = /Android/.test(navigator.userAgent);
-        
+
         if (isIOS) {
           alert('To install: Tap the Share button, then "Add to Home Screen"');
         } else if (isAndroid) {

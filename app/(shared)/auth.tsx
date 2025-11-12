@@ -39,7 +39,7 @@ export default function AuthScreen() {
   const [modalType, setModalType] = useState<'privacy' | 'terms'>('privacy');
   const [welcomeEmailSending, setWelcomeEmailSending] = useState<Set<string>>(new Set()); // Track users currently sending welcome email
   const styles = getStyles(isDark, colors);
-  
+
   // Processing guards to prevent duplicate processing
   const isProcessingRef = useRef(false);
   const hasNavigatedRef = useRef(false);
@@ -96,14 +96,14 @@ export default function AuthScreen() {
               // Continue to dashboard even if pass creation fails
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
-                router.replace('/(shared)/dashboard/explore');
+              router.replace('/(shared)/dashboard/explore');
               }
             } else if (passId) {
               console.log('✅ Default pass created successfully:', passId);
               // Navigate immediately, don't wait
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
-                router.replace('/(shared)/dashboard/explore');
+              router.replace('/(shared)/dashboard/explore');
               }
             } else {
               console.warn('⚠️ Pass creation returned null - pass may already exist or creation failed silently');
@@ -124,7 +124,7 @@ export default function AuthScreen() {
               }
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
-                router.replace('/(shared)/dashboard/explore');
+              router.replace('/(shared)/dashboard/explore');
               }
             }
 
@@ -136,72 +136,72 @@ export default function AuthScreen() {
               if (welcomeEmailSending.has(userId)) {
                 console.log(`⏭️ Welcome email already being sent for user ${userId}, skipping duplicate`);
               } else {
-                // Mark as sending to prevent duplicates
-                setWelcomeEmailSending(prev => new Set(prev).add(userId));
-                
+              // Mark as sending to prevent duplicates
+              setWelcomeEmailSending(prev => new Set(prev).add(userId));
+              
                 // Send email in background - don't await, let it run async
                 (async () => {
-                  try {
+              try {
                     // Reset welcome email flag if needed (for existing users)
                     try {
                       await supabase.rpc('reset_welcome_email_if_not_sent', {
-                        p_user_id: userId
-                      });
+                  p_user_id: userId
+                });
                     } catch (err) {
                       console.warn('⚠️ Error resetting welcome email flag:', err);
-                    }
-                    
+                }
+                
                     // Check if email was already sent
                     let alreadySentCheck = false;
                     try {
                       const { data } = await supabase.rpc('has_email_been_sent', {
-                        p_user_id: userId,
-                        p_email_type: 'welcome'
-                      } as any);
+                  p_user_id: userId,
+                  p_email_type: 'welcome'
+                } as any);
                       alreadySentCheck = data === true;
                     } catch {
                       alreadySentCheck = false;
                     }
-                    
+                
                     if (alreadySentCheck === true) {
-                      console.log(`ℹ️ Welcome email already sent to user ${userId}, skipping`);
-                      setWelcomeEmailSending(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(userId);
-                        return newSet;
-                      });
-                      return;
-                    }
-                    
+                  console.log(`ℹ️ Welcome email already sent to user ${userId}, skipping`);
+                  setWelcomeEmailSending(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(userId);
+                    return newSet;
+                  });
+                  return;
+                }
+                
                     // Get locale
-                    let userLocale = 'en';
-                    try {
-                      const savedLocale = await AsyncStorage.getItem('user_locale');
-                      if (savedLocale && ['en', 'es', 'ko', 'fr', 'pt', 'de'].includes(savedLocale)) {
-                        userLocale = savedLocale;
-                      } else {
-                        userLocale = getCurrentLocale() || 'en';
-                      }
+                let userLocale = 'en';
+                try {
+                  const savedLocale = await AsyncStorage.getItem('user_locale');
+                  if (savedLocale && ['en', 'es', 'ko', 'fr', 'pt', 'de'].includes(savedLocale)) {
+                    userLocale = savedLocale;
+                  } else {
+                    userLocale = getCurrentLocale() || 'en';
+                  }
                     } catch {
-                      userLocale = getCurrentLocale() || 'en';
-                    }
-                    
-                    if (!userLocale || userLocale === 'en') {
-                      userLocale = session.user.user_metadata?.locale || userLocale || 'en';
-                    }
-                    
+                  userLocale = getCurrentLocale() || 'en';
+                }
+                
+                if (!userLocale || userLocale === 'en') {
+                  userLocale = session.user.user_metadata?.locale || userLocale || 'en';
+                }
+                
                     // Update locale if needed (non-blocking)
-                    if (session.user.user_metadata?.locale !== userLocale) {
+                if (session.user.user_metadata?.locale !== userLocale) {
                       supabase.auth.updateUser({
-                        data: { locale: userLocale }
+                      data: { locale: userLocale }
                       }).catch(err => console.warn('⚠️ Could not update user metadata with locale:', err));
-                    }
-                    
+                }
+                
                     // Send welcome email
                     apiClient.post('/auth/send-welcome-email', { userId, email: userEmail, locale: userLocale }, { skipEventSegment: true })
                       .then(result => {
                         if (result.success && result.data && !result.data.skipped && !result.data.alreadySent) {
-                          console.log('✅ Welcome email sent successfully');
+                    console.log('✅ Welcome email sent successfully');
                           
                           // After welcome email is sent, send onboarding emails
                           // This includes user onboarding for all users and speaker onboarding if user is a speaker
@@ -229,14 +229,14 @@ export default function AuthScreen() {
                         }
                       })
                       .catch(err => console.error('❌ Error sending welcome email:', err));
-                  } catch (emailError) {
+              } catch (emailError) {
                     console.error('❌ Error in welcome email flow:', emailError);
-                  } finally {
-                    setWelcomeEmailSending(prev => {
-                      const newSet = new Set(prev);
-                      newSet.delete(userId);
-                      return newSet;
-                    });
+              } finally {
+                setWelcomeEmailSending(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(userId);
+                  return newSet;
+                });
                   }
                 })();
               }
@@ -246,7 +246,7 @@ export default function AuthScreen() {
             // Continue to dashboard even if pass creation fails
             if (!hasNavigatedRef.current) {
               hasNavigatedRef.current = true;
-              router.replace('/(shared)/dashboard/explore');
+            router.replace('/(shared)/dashboard/explore');
             }
           } finally {
             isProcessingRef.current = false;
@@ -254,9 +254,9 @@ export default function AuthScreen() {
         } else {
           if (!hasNavigatedRef.current) {
             hasNavigatedRef.current = true;
-            router.replace('/(shared)/dashboard/explore');
-          }
+          router.replace('/(shared)/dashboard/explore');
         }
+      }
       }
     }, 300); // Throttle to max once per 300ms for faster auth processing
 
@@ -428,8 +428,8 @@ export default function AuthScreen() {
         // If standard verification fails, try our custom API endpoint
         try {
           const verifyResult = await apiClient.post('/auth/otp/verify', { 
-            email: email.trim(), 
-            code: otpCode 
+              email: email.trim(), 
+              code: otpCode 
           }, { skipEventSegment: true });
 
           if (!verifyResult.success) {
@@ -1083,9 +1083,9 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     ...(Platform.OS === 'web' ? {
       textShadow: isDark ? '0 2px 4px rgba(0, 0, 0, 0.2)' : '0 2px 4px rgba(255, 255, 255, 0.2)',
     } : {
-      textShadowColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)',
-      textShadowOffset: { width: 0, height: 2 },
-      textShadowRadius: 4,
+    textShadowColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
     }),
   },
   logoContainer: {
@@ -1189,11 +1189,11 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     ...(Platform.OS === 'web' ? {
       boxShadow: '0 4px 8px rgba(122, 94, 204, 0.3)',
     } : {
-      shadowColor: colors.primary || '#7A5ECC',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 4,
+    shadowColor: colors.primary || '#7A5ECC',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
     }),
   },
   primaryButtonDisabled: {
@@ -1285,11 +1285,11 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     ...(Platform.OS === 'web' ? {
       boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
     } : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
     }),
   },
   googleButton: {

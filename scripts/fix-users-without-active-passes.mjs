@@ -38,11 +38,11 @@ async function fixUsersWithoutActivePasses() {
   try {
     // Get all users from auth.users
     const { data: allUsersData, error: allUsersError } = await supabase.auth.admin.listUsers();
-    
-    if (allUsersError) {
-      console.error('❌ Error fetching users:', allUsersError);
-      return;
-    }
+      
+      if (allUsersError) {
+        console.error('❌ Error fetching users:', allUsersError);
+        return;
+      }
 
     if (!allUsersData || !allUsersData.users || allUsersData.users.length === 0) {
       console.log('✅ No users found in the system.');
@@ -52,7 +52,7 @@ async function fixUsersWithoutActivePasses() {
     console.log(`📊 Total users found: ${allUsersData.users.length}\n`);
     console.log('🔍 Checking each user for active passes...\n');
 
-    const usersToFix = [];
+      const usersToFix = [];
     let usersWithActivePasses = 0;
     let usersWithNoPasses = 0;
     let usersWithOnlyInactivePasses = 0;
@@ -64,16 +64,16 @@ async function fixUsersWithoutActivePasses() {
         continue;
       }
 
-      const { data: passes, error: passesError } = await supabase
-        .from('passes')
+        const { data: passes, error: passesError } = await supabase
+          .from('passes')
         .select('status, pass_type, created_at')
-        .eq('user_id', user.id)
-        .eq('event_id', 'bsl2025');
+          .eq('user_id', user.id)
+          .eq('event_id', 'bsl2025');
 
-      if (passesError) {
+        if (passesError) {
         console.error(`❌ Error fetching passes for ${user.email}:`, passesError.message);
-        continue;
-      }
+          continue;
+        }
 
       const activePasses = passes?.filter(p => p.status === 'active') || [];
       const inactivePasses = passes?.filter(p => ['cancelled', 'expired', 'used', 'suspended'].includes(p.status)) || [];
@@ -96,14 +96,14 @@ async function fixUsersWithoutActivePasses() {
         });
       } else if (inactivePasses.length > 0) {
         usersWithOnlyInactivePasses++;
-        usersToFix.push({
-          id: user.id,
-          email: user.email,
+          usersToFix.push({
+            id: user.id,
+            email: user.email,
           reason: 'only_inactive_passes',
-          inactive_passes: inactivePasses.length
-        });
+            inactive_passes: inactivePasses.length
+          });
+        }
       }
-    }
 
     console.log(`📊 Summary of check:`);
     console.log(`   ✅ Users with active passes: ${usersWithActivePasses}`);
@@ -111,44 +111,44 @@ async function fixUsersWithoutActivePasses() {
     console.log(`   ⚠️  Users with only inactive passes: ${usersWithOnlyInactivePasses}`);
     console.log(`   📋 Total users needing fixes: ${usersToFix.length}\n`);
 
-    if (usersToFix.length === 0) {
+      if (usersToFix.length === 0) {
       console.log('✅ All users have active passes!');
-      return;
-    }
+        return;
+      }
 
     console.log(`📋 Users that need active passes:\n`);
-    for (const user of usersToFix) {
+      for (const user of usersToFix) {
       const reasonText = user.reason === 'no_passes' 
         ? 'no passes' 
         : `${user.inactive_passes} inactive pass(es)`;
       console.log(`   - ${user.email} (${reasonText})`);
-    }
+      }
 
-    console.log('\n🔧 Creating active passes for these users...\n');
+      console.log('\n🔧 Creating active passes for these users...\n');
 
-    let successCount = 0;
-    let errorCount = 0;
+      let successCount = 0;
+      let errorCount = 0;
 
-    for (const user of usersToFix) {
-      try {
-        const { data, error } = await supabase.rpc('create_default_pass', {
-          p_user_id: user.id,
-          p_pass_type: 'general'
-        });
+      for (const user of usersToFix) {
+        try {
+          const { data, error } = await supabase.rpc('create_default_pass', {
+            p_user_id: user.id,
+            p_pass_type: 'general'
+          });
 
-        if (error) {
-          console.error(`❌ Error creating pass for ${user.email}:`, error.message);
-          errorCount++;
-        } else {
+          if (error) {
+            console.error(`❌ Error creating pass for ${user.email}:`, error.message);
+            errorCount++;
+          } else {
           const passId = data || 'unknown';
           console.log(`✅ Created active pass for ${user.email} (pass ID: ${passId})`);
-          successCount++;
+            successCount++;
+          }
+        } catch (err) {
+          console.error(`❌ Exception creating pass for ${user.email}:`, err.message);
+          errorCount++;
         }
-      } catch (err) {
-        console.error(`❌ Exception creating pass for ${user.email}:`, err.message);
-        errorCount++;
       }
-    }
 
     console.log(`\n✅ Final Summary:`);
     console.log(`   ✅ Successfully created: ${successCount}`);

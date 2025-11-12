@@ -45,25 +45,48 @@ export default function WebQRScanner({
 
   const checkCameraPermission = useCallback(async (): Promise<boolean> => {
     try {
+      // Check if we're in a secure context (HTTPS or localhost)
+      if (typeof window === 'undefined' || !window.isSecureContext) {
+        setError('Camera requires HTTPS. Please use a secure connection.');
+        return false;
+      }
+
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setError('Camera API not available. Please use HTTPS or localhost.');
         return false;
       }
 
-      // Try to access camera
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Try to access camera with proper constraints
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: {
+          facingMode: 'environment', // Prefer back camera
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        }
+      });
+      
       // Stop immediately - we just wanted to check permission
+      // html5-qrcode will request its own stream
       stream.getTracks().forEach(track => track.stop());
+      console.log('✅ Camera permission granted');
       return true;
     } catch (err: any) {
+      console.error('❌ Camera permission error:', err);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setError('Camera permission denied. Please allow camera access.');
+        setError('Camera permission denied. Please allow camera access in your browser settings or PWA permissions.');
+        setHasPermission(false);
         return false;
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
         setError('No camera found. Please connect a camera device.');
+        setHasPermission(false);
+        return false;
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        setError('Camera is in use by another application. Please close other apps using the camera.');
+        setHasPermission(false);
         return false;
       } else {
-        setError(`Camera error: ${err.message || 'Unknown error'}`);
+        setError(`Camera error: ${err.message || 'Unknown error'}. Please ensure you're using HTTPS.`);
+        setHasPermission(false);
         return false;
       }
     }

@@ -19,6 +19,7 @@ export default function Root({ children, metadata }: { children: ReactNode, meta
         <meta name="author" content="HashPass" />
         <meta name="publisher" content="HashPass" />
         <meta name="robots" content="index, follow" />
+        <meta name="camera" content="required" />
         <meta property="og:title" content={metadata?.title || "HashPass - YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS"} />
         <meta property="og:description" content={metadata?.description || "YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS"} />
         <meta property="og:type" content="website" />

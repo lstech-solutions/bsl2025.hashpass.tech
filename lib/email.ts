@@ -14,28 +14,45 @@ export type EmailType = 'welcome' | 'userOnboarding' | 'speakerOnboarding';
 
 // Helper function to detect user locale from user metadata or default to 'en'
 export async function detectUserLocale(userId?: string, userMetadata?: any): Promise<string> {
-  // Try to get locale from user metadata
+  // Try to get locale from user metadata first (if passed directly)
   if (userMetadata?.locale && SUPPORTED_LOCALES.includes(userMetadata.locale)) {
+    console.log(`[detectUserLocale] Using locale from userMetadata: ${userMetadata.locale}`);
     return userMetadata.locale;
   }
   
-  // Try to get locale from user preferences if userId is provided
+  // Try to get locale from database if userId is provided
   if (userId) {
     try {
-      const { createClient } = require('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-      );
+      // Use supabaseServer which has service_role permissions
+      const { data: userData, error } = await supabaseServer.auth.admin.getUserById(userId);
       
-      // Check if there's a user_preferences table or similar
-      // For now, we'll use metadata
-    } catch (error) {
-      // Ignore errors and fall back to default
+      if (!error && userData?.user) {
+        const user = userData.user;
+        
+        // Check raw_user_meta_data first (most up-to-date)
+        const metaLocale = user.raw_user_meta_data?.locale || user.user_metadata?.locale;
+        if (metaLocale && SUPPORTED_LOCALES.includes(metaLocale)) {
+          console.log(`[detectUserLocale] Found locale from user metadata: ${metaLocale}`);
+          return metaLocale;
+        }
+        
+        // Check app_metadata as fallback
+        const appLocale = user.app_metadata?.locale;
+        if (appLocale && SUPPORTED_LOCALES.includes(appLocale)) {
+          console.log(`[detectUserLocale] Found locale from app_metadata: ${appLocale}`);
+          return appLocale;
+        }
+      } else if (error) {
+        console.warn(`[detectUserLocale] Error fetching user ${userId}:`, error.message);
+      }
+    } catch (error: any) {
+      console.warn(`[detectUserLocale] Error detecting locale for user ${userId}:`, error?.message || error);
+      // Fall through to default
     }
   }
   
   // Default to English
+  console.log(`[detectUserLocale] No locale found, defaulting to: ${DEFAULT_LOCALE}`);
   return DEFAULT_LOCALE;
 }
 
@@ -314,8 +331,19 @@ export async function sendWelcomeEmailToNewUser(
     // Detect locale if not provided
     let userLocale = locale;
     if (!userLocale) {
+      console.log(`[sendWelcomeEmailToNewUser] No locale provided, detecting for user ${userId}`);
       userLocale = await detectUserLocale(userId);
+    } else {
+      console.log(`[sendWelcomeEmailToNewUser] Using provided locale: ${userLocale} for user ${userId}`);
     }
+    
+    // Validate locale is supported
+    if (!SUPPORTED_LOCALES.includes(userLocale)) {
+      console.warn(`[sendWelcomeEmailToNewUser] Invalid locale ${userLocale}, defaulting to ${DEFAULT_LOCALE}`);
+      userLocale = DEFAULT_LOCALE;
+    }
+    
+    console.log(`[sendWelcomeEmailToNewUser] Sending welcome email to ${email} with locale: ${userLocale}`);
     
     // Send welcome email (it will check if already sent internally)
     const result = await sendWelcomeEmail(email, userLocale, userId);
@@ -668,8 +696,16 @@ export async function sendWelcomeEmail(
     const fs = require('fs');
     const path = require('path');
     
+    // Validate and normalize locale
+    const normalizedLocale = SUPPORTED_LOCALES.includes(locale) ? locale : DEFAULT_LOCALE;
+    if (normalizedLocale !== locale) {
+      console.warn(`[sendWelcomeEmail] Invalid locale '${locale}', using '${normalizedLocale}' instead`);
+    }
+    
+    console.log(`[sendWelcomeEmail] Preparing welcome email for ${email} with locale: ${normalizedLocale}`);
+    
     // Get translations for the locale
-    const translations = getEmailContent('welcome', locale);
+    const translations = getEmailContent('welcome', normalizedLocale);
     const subject = translations.subject;
     
     let htmlContent: string;
@@ -715,10 +751,12 @@ export async function sendWelcomeEmail(
       }
       
       // Video URLs - Mux player, thumbnail, GIF preview, and poster (kept for video link)
-      // Select video ID based on locale: Spanish uses different video, others use default
-      const muxVideoId = locale === 'es' 
+      // Select video ID based on normalized locale: Spanish uses different video, others use default
+      const muxVideoId = normalizedLocale === 'es' 
         ? 'cHHvJcBJEdt8YnWTbo7cFUxNYOMrwIt02EB7vL02ixmd4'  // Spanish version
         : 'iesctpn00OXTQrYmY02J8JvjNmbNoDDKjzm7qr76lCKEI'; // Default for other languages
+      
+      console.log(`[sendWelcomeEmail] Using video ID ${muxVideoId} for locale ${normalizedLocale}`);
       
       // Generate GIF from Mux video (animated preview of first 3 seconds)
       const videoGifUrl = `https://image.mux.com/${muxVideoId}/animated.gif?width=600&fps=15&start=0&end=3`;
@@ -726,7 +764,7 @@ export async function sendWelcomeEmail(
       const videoPosterUrl = `https://image.mux.com/${muxVideoId}/thumbnail.jpg?width=600&height=1067&time=11`;
       
       // Add poster image to Mux player URL
-      const videoTitle = locale === 'es' 
+      const videoTitle = normalizedLocale === 'es' 
         ? 'BSL_2025_Bienvenido_ES'
         : 'BSL_2025_Welcome';
       const videoUrl = `https://player.mux.com/${muxVideoId}?metadata-video-title=${encodeURIComponent(videoTitle)}&video-title=${encodeURIComponent(videoTitle)}&poster=${encodeURIComponent(videoPosterUrl)}`;
@@ -742,8 +780,8 @@ export async function sendWelcomeEmail(
         appUrl: 'https://bsl2025.hashpass.tech'
       };
       
-      // Replace placeholders with translations and assets
-      htmlContent = replaceTemplatePlaceholders(htmlContent, translations, assets, locale);
+      // Replace placeholders with translations and assets (use normalized locale)
+      htmlContent = replaceTemplatePlaceholders(htmlContent, translations, assets, normalizedLocale);
       
       // Debug: Check if any placeholders remain (only in development)
       if (process.env.NODE_ENV !== 'production') {
@@ -781,7 +819,7 @@ export async function sendWelcomeEmail(
     
     // Mark email as sent if we have a user ID (this creates the flag in DB with message_id)
     if (user_id) {
-      const markResult = await markEmailAsSent(user_id, 'welcome', locale, info.messageId);
+      const markResult = await markEmailAsSent(user_id, 'welcome', normalizedLocale, info.messageId);
       if (markResult.success) {
         console.log(`✅ Welcome email marked as sent in DB for user ${user_id} (${email}) with messageId: ${info.messageId}`);
       } else {

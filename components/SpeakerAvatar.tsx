@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, Animated } from 'react-native';
 import { getSpeakerAvatarUrl } from '../lib/string-utils';
 
 interface SpeakerAvatarProps {
@@ -8,6 +8,7 @@ interface SpeakerAvatarProps {
   size?: number;
   style?: any;
   showBorder?: boolean;
+  isOnline?: boolean; // Accept but don't use (for compatibility)
 }
 
 export default function SpeakerAvatar({ 
@@ -15,7 +16,8 @@ export default function SpeakerAvatar({
   imageUrl,
   size = 50, 
   style, 
-  showBorder = false
+  showBorder = false,
+  isOnline // Accept but don't use
 }: SpeakerAvatarProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
@@ -23,6 +25,8 @@ export default function SpeakerAvatar({
   // Track failed URLs to prevent infinite retry loops
   const failedUrlsRef = useRef<Set<string>>(new Set());
   const currentUrlRef = useRef<string | null>(null);
+  // Animated value for smooth fade-in
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // Memoize computed values to prevent infinite loops in useEffect
   const { initialAvatarUrl, isS3Url } = useMemo(() => {
@@ -51,21 +55,29 @@ export default function SpeakerAvatar({
       
       // Check if this URL has already failed - if so, skip loading
       if (failedUrlsRef.current.has(initialAvatarUrl)) {
-        console.warn(`[SpeakerAvatar] Skipping already-failed URL for ${name}:`, initialAvatarUrl);
+        // Only log in development
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`[SpeakerAvatar] Skipping already-failed URL for ${name}:`, initialAvatarUrl);
+        }
         setImageError(true);
         setImageLoading(false);
         setImageTimeout(false);
         return;
       }
       
-      console.log(`[SpeakerAvatar] Loading S3 image for ${name}:`, {
-        url: initialAvatarUrl,
-        isS3Url: isS3Url,
-        hasImageUrl: !!imageUrl,
-      });
+      // Only log in development to reduce console noise
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[SpeakerAvatar] Loading S3 image for ${name}:`, {
+          url: initialAvatarUrl,
+          isS3Url: isS3Url,
+          hasImageUrl: !!imageUrl,
+        });
+      }
       setImageError(false);
       setImageLoading(true);
       setImageTimeout(false);
+      // Reset fade animation when URL changes
+      fadeAnim.setValue(0);
       
       // Reduced timeout since images are now optimized (~70KB instead of 1.3MB)
       const timeoutDuration = 10000; // Increased to 10 seconds to account for S3 policy propagation
@@ -99,18 +111,6 @@ export default function SpeakerAvatar({
   // Image is hidden initially (opacity 0) and fades in when loaded to prevent flicker
   const showImage = avatarUrl && !imageError && !imageTimeout;
   const showPlaceholder = !avatarUrl || imageError || imageTimeout;
-  
-  // Debug: Log what URL we're trying to load
-  useEffect(() => {
-    if (avatarUrl) {
-      console.log(`[SpeakerAvatar] Attempting to load avatar:`, {
-        name,
-        imageUrl: imageUrl || 'none (generated)',
-        finalUrl: avatarUrl,
-        isS3Url,
-      });
-    }
-  }, [avatarUrl, name, imageUrl, isS3Url]);
 
   return (
     <View style={[styles.container, style]}>
@@ -123,15 +123,17 @@ export default function SpeakerAvatar({
       </View>
       {/* Image (rendered on top if available and no error) */}
       {showImage && (
-        <Image
-          source={{ uri: avatarUrl }}
+        <Animated.View
           style={[
-            styles.image,
-            // Hide image until loaded to prevent flicker between initials and image
-            { opacity: imageLoading ? 0 : 1 }
+            styles.imageContainer,
+            { opacity: fadeAnim }
           ]}
-          resizeMode="cover"
-          pointerEvents="auto"
+        >
+          <Image
+            source={{ uri: avatarUrl }}
+            style={styles.image}
+            resizeMode="cover"
+            pointerEvents="auto"
           onError={(error) => {
             const errorMessage = error.nativeEvent?.error || error.message || 'Unknown error';
             const statusCode = error.nativeEvent?.statusCode || error.statusCode || 'unknown';
@@ -150,10 +152,19 @@ export default function SpeakerAvatar({
             setImageLoading(false);
           }}
           onLoad={() => {
-            console.log(`[SpeakerAvatar] Image loaded successfully for ${name}:`, avatarUrl);
+            // Only log in development
+            if (process.env.NODE_ENV !== 'production') {
+              console.log(`[SpeakerAvatar] Image loaded successfully for ${name}:`, avatarUrl);
+            }
             setImageLoading(false);
             setImageTimeout(false);
             setImageError(false);
+            // Fade in the image smoothly
+            Animated.timing(fadeAnim, {
+              toValue: 1,
+              duration: 200,
+              useNativeDriver: true,
+            }).start();
           }}
           onLoadEnd={() => {
             setImageLoading(false);
@@ -165,8 +176,11 @@ export default function SpeakerAvatar({
               setImageError(false);
             }
             setImageLoading(true);
+            // Reset fade animation when starting to load
+            fadeAnim.setValue(0);
           }}
         />
+        </Animated.View>
       )}
     </View>
   );
@@ -180,19 +194,24 @@ const getStyles = (size: number, showBorder: boolean) => StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
+  imageContainer: {
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+  },
   image: {
     width: size,
     height: size,
     borderRadius: size / 2,
     borderWidth: showBorder ? 2 : 0,
     borderColor: showBorder ? '#007AFF' : 'transparent',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
     backgroundColor: 'transparent',
-    zIndex: 1,
   },
   placeholderContainer: {
     width: size,

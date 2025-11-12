@@ -31,6 +31,7 @@ export default function AgendaTracker({
   const [timeRemaining, setTimeRemaining] = useState<TimeLeft>({ hours: 0, minutes: 0, seconds: 0 });
   const [loading, setLoading] = useState(true);
   const [sessionProgress, setSessionProgress] = useState(0); // 0-100 percentage
+  const [agendaLoaded, setAgendaLoaded] = useState(false); // Track if agenda has been loaded at least once
   const progressAnim = React.useRef(new Animated.Value(0)).current;
 
   // Load agenda and find current/next events
@@ -58,6 +59,7 @@ export default function AgendaTracker({
 
         if (agendaData.length === 0) {
           setLoading(false);
+          setAgendaLoaded(true);
           return;
         }
 
@@ -146,8 +148,10 @@ export default function AgendaTracker({
 
         setCurrentEvent(current || null);
         setNextEvent(upcoming || null);
+        setAgendaLoaded(true);
       } catch (error) {
         console.error('Error loading agenda:', error);
+        setAgendaLoaded(true);
       } finally {
         setLoading(false);
       }
@@ -327,6 +331,21 @@ export default function AgendaTracker({
     );
   }
 
+  // Check if all events have finished (no current event and no next event, and agenda has been loaded)
+  const allEventsFinished = !currentEvent && !nextEvent && !loading && agendaLoaded;
+
+  // Show thank you message if all events are finished
+  if (allEventsFinished) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.thankYouContainer}>
+          <MaterialIcons name="celebration" size={32} color="#FFFFFF" />
+          <Text style={styles.thankYouText}>Thanks and see you next time!</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Current Event and Next Session - Same Line */}
@@ -349,18 +368,17 @@ export default function AgendaTracker({
                   <Text style={styles.trackBadgeTextCompact}>{currentEvent.day_name}</Text>
                 </View>
               )}
-              {/* Title and Time in one line */}
-              <View style={styles.eventTitleRow}>
-                <Text style={styles.eventTitleCompact} numberOfLines={1}>
-                  {currentEvent.title || 'Current Event'}
+              {/* Title on its own line */}
+              <Text style={styles.eventTitleCompact} numberOfLines={1}>
+                {currentEvent.title || 'Current Event'}
+              </Text>
+              {/* Time on separate line */}
+              {currentEvent.time && (
+                <Text style={styles.eventTimeCompact}>
+                  {formatTimeRange(currentEvent)}
                 </Text>
-                {currentEvent.time && (
-                  <Text style={styles.eventTimeCompact}>
-                    {formatTimeRange(currentEvent)}
-                  </Text>
-                )}
-              </View>
-              {/* Progress Bar and Time Remaining in one line */}
+              )}
+              {/* Progress Bar with percentage overlay */}
               <View style={styles.progressRowCompact}>
                 <View style={styles.progressBarBackgroundCompact}>
                   <Animated.View 
@@ -374,17 +392,20 @@ export default function AgendaTracker({
                       }
                     ]}
                   />
+                  {/* Percentage overlay on progress bar */}
+                  <View style={styles.progressPercentageOverlay}>
+                    <Text style={styles.progressPercentageText}>
+                      {Math.round(sessionProgress)}%
+                    </Text>
+                  </View>
                 </View>
                 <View style={styles.timeRemainingCompact}>
                   <MaterialIcons name="timer" size={12} color="#FF3B30" />
                   <Text style={styles.timeRemainingTextCompact}>
                     {formatTimeShort(timeRemaining)} left
                   </Text>
-                  <Text style={styles.progressPercentageCompact}>
-                    {Math.round(sessionProgress)}%
-                  </Text>
+                </View>
               </View>
-            </View>
           </View>
         </TouchableOpacity>
       ) : (
@@ -457,21 +478,16 @@ const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => Sty
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  eventTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    gap: 8,
-  },
   eventTitleCompact: {
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
-    flex: 1,
+    marginBottom: 4,
   },
   eventTimeCompact: {
     color: '#E3F2FD',
-    fontSize: 11,
+    fontSize: 9,
+    marginBottom: 6,
   },
   progressRowCompact: {
     flexDirection: 'row',
@@ -480,15 +496,34 @@ const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => Sty
   },
   progressBarBackgroundCompact: {
     flex: 1,
-    height: 4,
+    height: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 2,
+    borderRadius: 3,
     overflow: 'hidden',
+    position: 'relative',
   },
   progressBarFillCompact: {
     height: '100%',
     backgroundColor: '#FF3B30',
-    borderRadius: 2,
+    borderRadius: 3,
+  },
+  progressPercentageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none',
+  },
+  progressPercentageText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   timeRemainingCompact: {
     flexDirection: 'row',
@@ -655,6 +690,21 @@ const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => Sty
   },
   chevronCompact: {
     marginLeft: 4,
+  },
+  thankYouContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  thankYouText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 

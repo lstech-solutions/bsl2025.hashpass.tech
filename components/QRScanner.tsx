@@ -357,71 +357,94 @@ export default function QRScanner({
     if (Platform.OS !== 'web' || !hasPermission) return;
     
     try {
-      // Wait a bit for DOM to be ready
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for DOM and ref to be ready - try multiple times with better logging
+      let wrapper: HTMLElement | null = null;
+      let attempts = 0;
+      const maxAttempts = 15;
       
-      // Get scanner wrapper from ref
-      let scannerWrapper: HTMLElement | null = null;
-      
-      if (scannerWrapperRef.current) {
-        // Try to get the underlying DOM element
-        const refElement = scannerWrapperRef.current as any;
-        if (refElement && refElement.setNativeProps === undefined) {
-          // This is a web DOM element
-          scannerWrapper = refElement as HTMLElement;
-        } else if (refElement && refElement._nativeNode) {
-          // React Native Web internal node
-          scannerWrapper = refElement._nativeNode;
-        } else if (refElement && typeof refElement === 'object') {
-          // Try to find the actual DOM node
-          const node = refElement.querySelector?.('div') || refElement;
-          if (node && node.nodeType === 1) {
-            scannerWrapper = node as HTMLElement;
+      while (!wrapper && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        attempts++;
+        
+        console.log(`🔍 Attempt ${attempts}/${maxAttempts} to find scanner wrapper...`);
+        
+        // Try to get wrapper from ref
+        if (scannerWrapperRef.current) {
+          const refElement = scannerWrapperRef.current as any;
+          console.log('📦 Ref element type:', typeof refElement, 'has _nativeNode:', !!refElement?._nativeNode);
+          
+          // React Native Web exposes DOM via _nativeNode
+          if (refElement?._nativeNode) {
+            wrapper = refElement._nativeNode;
+            console.log('✅ Found wrapper via _nativeNode');
+            break;
           }
+          
+          // Or it might be the element directly
+          if (refElement?.nodeType === 1) {
+            wrapper = refElement;
+            console.log('✅ Found wrapper directly');
+            break;
+          }
+          
+          // Or find div inside
+          if (typeof refElement === 'object' && refElement.querySelector) {
+            const div = refElement.querySelector('div');
+            if (div && div.nodeType === 1) {
+              wrapper = div;
+              console.log('✅ Found wrapper via querySelector on ref');
+              break;
+            }
+          }
+        } else {
+          console.log('⚠️ scannerWrapperRef.current is null');
+        }
+        
+        // Fallback: try querySelector
+        wrapper = document.querySelector('[data-testid="scanner-wrapper"]') as HTMLElement ||
+                 document.querySelector('.scanner-wrapper') as HTMLElement ||
+                 document.getElementById('scanner-wrapper');
+        
+        if (wrapper) {
+          console.log('✅ Found wrapper via querySelector');
+          break;
+        } else {
+          console.log('⚠️ querySelector found nothing');
         }
       }
       
-      // Fallback: try to find by querySelector
-      if (!scannerWrapper) {
-        scannerWrapper = document.querySelector('[data-testid="scanner-wrapper"]') as HTMLElement ||
-                        document.querySelector('.scanner-wrapper') as HTMLElement ||
-                        document.querySelector('[data-scanner-id]') as HTMLElement;
-      }
-      
-      if (!scannerWrapper) {
-        console.error('Scanner wrapper not found, retrying...');
-        // Retry after a short delay
-        setTimeout(() => initializeWebFallback(), 300);
+      if (!wrapper) {
+        console.error('❌ Scanner wrapper not found after', maxAttempts, 'attempts');
+        console.error('Available elements:', {
+          byDataTestId: document.querySelector('[data-testid="scanner-wrapper"]'),
+          byClass: document.querySelector('.scanner-wrapper'),
+          byId: document.getElementById('scanner-wrapper'),
+          refCurrent: scannerWrapperRef.current
+        });
+        if (onScanError) {
+          onScanError('Failed to initialize camera - wrapper not found');
+        }
         return;
       }
 
-      // Ensure wrapper has proper dimensions and ID
-      if (!scannerWrapper.id) {
-        scannerWrapper.id = `qr-scanner-container-${Date.now()}`;
+      // Ensure wrapper has ID and attributes
+      if (!wrapper.id) {
+        wrapper.id = 'scanner-wrapper';
       }
-      scannerWrapper.setAttribute('data-scanner-id', scannerWrapper.id);
-      scannerWrapper.setAttribute('data-testid', 'scanner-wrapper');
-      scannerWrapper.className = 'scanner-wrapper';
+      wrapper.setAttribute('data-testid', 'scanner-wrapper');
+      wrapper.className = 'scanner-wrapper';
       
-      // Ensure wrapper has dimensions
-      const rect = scannerWrapper.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) {
-        console.warn('Scanner wrapper has no dimensions, waiting...');
-        setTimeout(() => initializeWebFallback(), 200);
-        return;
-      }
+      console.log('✅ Found scanner wrapper:', wrapper.id, wrapper.tagName);
 
-      // Start web fallback scanning (html5-qrcode will handle video element creation)
+      // Start scanner - ZXing will create video element automatically
       const result = await qrScannerService.startWebFallback(
-        scannerWrapper.id, // Pass element ID
+        wrapper.id,
         async (scanResult) => {
-          // Convert to BarCodeScannerResult format
           const barCodeResult: BarCodeScannerResult = {
             type: 'qr' as any,
             data: scanResult.text,
           };
           
-          // Process scan using existing handler
           if (handleBarCodeScanned) {
             handleBarCodeScanned(barCodeResult);
           }
@@ -574,8 +597,15 @@ export default function QRScanner({
             </TouchableOpacity>
           </View>
 
-          {/* Scanner View */}
-          <View style={styles.scannerWrapper} ref={scannerWrapperRef}>
+          {/* Scanner View - Always render wrapper for web fallback */}
+          <View 
+            style={styles.scannerWrapper} 
+            ref={scannerWrapperRef}
+            // @ts-ignore - Web-specific attributes
+            data-testid="scanner-wrapper"
+            // @ts-ignore
+            className="scanner-wrapper"
+          >
             {!useWebFallback ? (
               <BarCodeScanner
                 onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
@@ -626,19 +656,8 @@ export default function QRScanner({
                 }}
               />
             ) : (
-              // Web fallback using html5-qrcode or ZXing
-              Platform.OS === 'web' && (
-                <View 
-                  ref={scannerWrapperRef}
-                  style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000' }]}
-                  // @ts-ignore - Web-specific attributes
-                  data-testid="scanner-wrapper"
-                  // @ts-ignore
-                  className="scanner-wrapper"
-                  // @ts-ignore
-                  id={`qr-scanner-wrapper-${Date.now()}`}
-                />
-              )
+              // Web fallback - ZXing will create video element inside wrapper
+              Platform.OS === 'web' && null
             )}
 
             {/* Overlay with scanning frame - pointerEvents none to not block camera */}

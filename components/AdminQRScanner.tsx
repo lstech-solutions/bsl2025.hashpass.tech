@@ -223,63 +223,92 @@ export default function AdminQRScanner({
     if (Platform.OS !== 'web' || !hasPermission) return;
     
     try {
-      // Wait a bit for DOM to be ready
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for DOM and ref to be ready - try multiple times with better logging
+      let wrapper: HTMLElement | null = null;
+      let attempts = 0;
+      const maxAttempts = 15;
       
-      // Get scanner wrapper from ref
-      let scannerWrapper: HTMLElement | null = null;
-      
-      if (scannerWrapperRef.current) {
-        const refElement = scannerWrapperRef.current as any;
-        if (refElement && refElement.setNativeProps === undefined) {
-          scannerWrapper = refElement as HTMLElement;
-        } else if (refElement && refElement._nativeNode) {
-          scannerWrapper = refElement._nativeNode;
-        } else if (refElement && typeof refElement === 'object') {
-          const node = refElement.querySelector?.('div') || refElement;
-          if (node && node.nodeType === 1) {
-            scannerWrapper = node as HTMLElement;
+      while (!wrapper && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        attempts++;
+        
+        console.log(`🔍 Attempt ${attempts}/${maxAttempts} to find scanner wrapper...`);
+        
+        // Try to get wrapper from ref
+        if (scannerWrapperRef.current) {
+          const refElement = scannerWrapperRef.current as any;
+          console.log('📦 Ref element type:', typeof refElement, 'has _nativeNode:', !!refElement?._nativeNode);
+          
+          // React Native Web exposes DOM via _nativeNode
+          if (refElement?._nativeNode) {
+            wrapper = refElement._nativeNode;
+            console.log('✅ Found wrapper via _nativeNode');
+            break;
           }
+          
+          // Or it might be the element directly
+          if (refElement?.nodeType === 1) {
+            wrapper = refElement;
+            console.log('✅ Found wrapper directly');
+            break;
+          }
+          
+          // Or find div inside
+          if (typeof refElement === 'object' && refElement.querySelector) {
+            const div = refElement.querySelector('div');
+            if (div && div.nodeType === 1) {
+              wrapper = div;
+              console.log('✅ Found wrapper via querySelector on ref');
+              break;
+            }
+          }
+        } else {
+          console.log('⚠️ scannerWrapperRef.current is null');
+        }
+        
+        // Fallback: try querySelector
+        wrapper = document.querySelector('[data-testid="scanner-wrapper"]') as HTMLElement ||
+                 document.querySelector('.scanner-wrapper') as HTMLElement ||
+                 document.getElementById('scanner-wrapper');
+        
+        if (wrapper) {
+          console.log('✅ Found wrapper via querySelector');
+          break;
+        } else {
+          console.log('⚠️ querySelector found nothing');
         }
       }
       
-      if (!scannerWrapper) {
-        scannerWrapper = document.querySelector('[data-testid="scanner-wrapper"]') as HTMLElement ||
-                        document.querySelector('.scanner-wrapper') as HTMLElement ||
-                        document.querySelector('[data-scanner-id]') as HTMLElement;
-      }
-      
-      if (!scannerWrapper) {
-        console.error('Scanner wrapper not found, retrying...');
-        setTimeout(() => initializeWebFallback(), 300);
+      if (!wrapper) {
+        console.error('❌ Scanner wrapper not found after', maxAttempts, 'attempts');
+        console.error('Available elements:', {
+          byDataTestId: document.querySelector('[data-testid="scanner-wrapper"]'),
+          byClass: document.querySelector('.scanner-wrapper'),
+          byId: document.getElementById('scanner-wrapper'),
+          refCurrent: scannerWrapperRef.current
+        });
+        setCameraError('Failed to initialize camera - wrapper not found');
         return;
       }
 
-      // Ensure wrapper has proper dimensions and ID
-      if (!scannerWrapper.id) {
-        scannerWrapper.id = `admin-qr-scanner-container-${Date.now()}`;
+      // Ensure wrapper has ID and attributes
+      if (!wrapper.id) {
+        wrapper.id = 'scanner-wrapper';
       }
-      scannerWrapper.setAttribute('data-scanner-id', scannerWrapper.id);
-      scannerWrapper.setAttribute('data-testid', 'scanner-wrapper');
-      scannerWrapper.className = 'scanner-wrapper';
+      wrapper.setAttribute('data-testid', 'scanner-wrapper');
+      wrapper.className = 'scanner-wrapper';
       
-      // Ensure wrapper has dimensions
-      const rect = scannerWrapper.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) {
-        console.warn('Scanner wrapper has no dimensions, waiting...');
-        setTimeout(() => initializeWebFallback(), 200);
-        return;
-      }
+      console.log('✅ Found scanner wrapper:', wrapper.id, wrapper.tagName);
 
-      // Start web fallback scanning
-      console.log('🎥 Starting web fallback scanner on element:', scannerWrapper.id);
+      // Start scanner - ZXing will create video element automatically
       const result = await qrScannerService.startWebFallback(
-        scannerWrapper.id,
+        wrapper.id,
         async (scanResult) => {
-          console.log('📷 QR code scanned via web fallback:', scanResult.text);
           const barCodeResult: BarCodeScannerResult = {
             type: 'qr' as any,
             data: scanResult.text,
+            bounds: { origin: { x: 0, y: 0 }, size: { width: 0, height: 0 } },
+            cornerPoints: [],
           };
           
           if (handleBarCodeScanned) {
@@ -287,7 +316,7 @@ export default function AdminQRScanner({
           }
         },
         (error) => {
-          console.error('❌ Web fallback scan error:', error);
+          console.error('Web fallback scan error:', error);
           setCameraError(error.message || 'Camera scan error');
         }
       );
@@ -310,21 +339,79 @@ export default function AdminQRScanner({
           }
         };
         
-        // Force a small delay to ensure video element is rendered
+        // Force a small delay to ensure video element is rendered and visible
+        // Use wrapper ID to find it again (wrapper variable is out of scope)
+        const wrapperId = wrapper.id;
         setTimeout(() => {
+          // Find wrapper again by ID
+          const wrapperEl = document.getElementById(wrapperId) ||
+                           document.querySelector(`[data-testid="scanner-wrapper"]`) as HTMLElement;
+          
+          if (!wrapperEl) {
+            console.warn('⚠️ Wrapper not found in setTimeout');
+            return;
+          }
+          
           // Check if video element exists
-          const videoElement = scannerWrapper.querySelector('video');
-          if (videoElement) {
-            console.log('✅ Video element found and should be visible');
-            // Ensure video is visible
-            videoElement.style.display = 'block';
-            videoElement.style.width = '100%';
-            videoElement.style.height = '100%';
-            videoElement.style.objectFit = 'cover';
+          const videoEl = wrapperEl.querySelector('video') as HTMLVideoElement;
+          if (videoEl) {
+            console.log('✅ Video element found, ensuring visibility...');
+            // Ensure video is visible and properly styled
+            videoEl.style.display = 'block';
+            videoEl.style.visibility = 'visible';
+            videoEl.style.opacity = '1';
+            videoEl.style.width = '100%';
+            videoEl.style.height = '100%';
+            videoEl.style.objectFit = 'cover';
+            videoEl.style.position = 'absolute';
+            videoEl.style.top = '0';
+            videoEl.style.left = '0';
+            videoEl.style.zIndex = '1';
+            videoEl.style.backgroundColor = '#000';
+            
+            // Ensure the wrapper doesn't cover the video
+            if (wrapperEl.style) {
+              wrapperEl.style.backgroundColor = 'transparent';
+              wrapperEl.style.position = 'relative';
+              wrapperEl.style.overflow = 'hidden';
+            }
+            
+            // Check video status
+            const hasStream = videoEl.srcObject !== null;
+            const isPlaying = !videoEl.paused && !videoEl.ended && videoEl.readyState > 2;
+            console.log('📹 Video status check:', {
+              hasStream,
+              isPlaying,
+              paused: videoEl.paused,
+              readyState: videoEl.readyState,
+              videoWidth: videoEl.videoWidth,
+              videoHeight: videoEl.videoHeight,
+              offsetWidth: videoEl.offsetWidth,
+              offsetHeight: videoEl.offsetHeight,
+              visible: videoEl.offsetWidth > 0 && videoEl.offsetHeight > 0
+            });
+            
+            // If video has stream but isn't playing, try to play it
+            if (hasStream && !isPlaying) {
+              console.log('⚠️ Video has stream but not playing, attempting to play...');
+              videoEl.play().catch(err => {
+                console.error('Error playing video:', err);
+              });
+            }
+            
+            // Force video to be visible by checking computed styles
+            const computedStyle = window.getComputedStyle(videoEl);
+            console.log('📐 Computed styles:', {
+              display: computedStyle.display,
+              visibility: computedStyle.visibility,
+              opacity: computedStyle.opacity,
+              zIndex: computedStyle.zIndex,
+              position: computedStyle.position
+            });
           } else {
             console.warn('⚠️ Video element not found after initialization');
           }
-        }, 200);
+        }, 500);
       } else {
         console.error('❌ Failed to start web fallback:', result.error);
         setUseWebFallback(false);
@@ -540,7 +627,7 @@ export default function AdminQRScanner({
       <Modal visible={visible} animationType="slide" transparent>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Ionicons name="shield-outline" size={64} color={colors.error} />
+            <Ionicons name="shield-outline" size={64} color={typeof colors.error === 'string' ? colors.error : colors.error.main} />
             <Text style={styles.errorTitle}>Admin Access Required</Text>
             <Text style={styles.errorText}>
               You need admin privileges to use the admin QR scanner.
@@ -575,7 +662,7 @@ export default function AdminQRScanner({
       <Modal visible={visible} animationType="slide" transparent>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Ionicons name="camera-outline" size={64} color={colors.error} />
+            <Ionicons name="camera-outline" size={64} color={colors.error.main} />
             <Text style={styles.errorTitle}>Camera Permission Required</Text>
             <Text style={styles.errorText}>
               {Platform.OS === 'web' 
@@ -694,8 +781,15 @@ export default function AdminQRScanner({
 
           {!showDetails ? (
             <>
-              {/* Scanner View */}
-              <View style={styles.scannerWrapper} ref={!useWebFallback ? scannerWrapperRef : undefined}>
+              {/* Scanner View - Always render wrapper for web fallback */}
+              <View 
+                style={styles.scannerWrapper} 
+                ref={scannerWrapperRef}
+                // @ts-ignore - Web-specific attributes
+                data-testid="scanner-wrapper"
+                // @ts-ignore
+                className="scanner-wrapper"
+              >
                 {hasPermission === true && (
                   <>
                     {!useWebFallback ? (
@@ -704,82 +798,10 @@ export default function AdminQRScanner({
                         style={[StyleSheet.absoluteFillObject, styles.cameraView]}
                         barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
                         type="back"
-                        ratio="16:9"
-                        onMountError={(error) => {
-                        console.error('Camera mount error:', error);
-                        const errorMessage = error?.message || String(error);
-                        setCameraError(errorMessage);
-                        setCameraReady(false);
-                        Alert.alert(
-                          'Camera Error',
-                          `Failed to start camera: ${errorMessage}\n\nPlease try:\n1. Close other apps using the camera\n2. Restart the app\n3. Check camera permissions`,
-                          [
-                            {
-                              text: 'Retry',
-                              onPress: () => {
-                                setCameraError(null);
-                                setCameraReady(false);
-                                // Force re-render by resetting permission
-                                setHasPermission(null);
-                                setTimeout(() => {
-                                  checkPermissionStatus();
-                                }, 500);
-                              },
-                            },
-                            {
-                              text: 'Close',
-                              style: 'cancel',
-                              onPress: onClose,
-                            },
-                          ]
-                        );
-                      }}
-                      onCameraReady={() => {
-                        console.log('Camera is ready!');
-                        setCameraReady(true);
-                        setCameraError(null);
-                      }}
-                      // Note: onCameraReady may not fire on all platforms
-                      // We use timeout fallback in checkPermissionStatus
-                    />
+                      />
                     ) : (
-                      // Web fallback using html5-qrcode or ZXing
-                      Platform.OS === 'web' && (
-                        <View 
-                          ref={(ref) => {
-                            scannerWrapperRef.current = ref;
-                            // When ref is set, ensure cleanup happens on unmount
-                            if (ref && typeof window !== 'undefined') {
-                              // Store original parent for cleanup
-                              const originalParent = ref;
-                              // Override removeChild to suppress errors
-                              if (originalParent && typeof originalParent.removeChild === 'function') {
-                                const originalRemoveChild = originalParent.removeChild.bind(originalParent);
-                                (originalParent as any).removeChild = function(child: any) {
-                                  try {
-                                    return originalRemoveChild(child);
-                                  } catch (e: any) {
-                                    // Suppress removeChild errors - they're harmless
-                                    if (e.message?.includes('not a child') || 
-                                        e.message?.includes('removeChild')) {
-                                      console.debug('Suppressed removeChild error:', e.message);
-                                      return child;
-                                    }
-                                    throw e;
-                                  }
-                                };
-                              }
-                            }
-                          }}
-                          style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000', minHeight: 400 }]}
-                          // @ts-ignore - Web-specific attributes
-                          data-testid="scanner-wrapper"
-                          // @ts-ignore
-                          className="scanner-wrapper"
-                          // @ts-ignore
-                          id={`admin-qr-scanner-wrapper-${Date.now()}`}
-                        />
-                      )
+                      // Web fallback - ZXing will create video element inside wrapper
+                      Platform.OS === 'web' && null
                     )}
                     {/* Only show loading overlay briefly, then hide it to show camera */}
                     {!cameraReady && !cameraError && hasPermission === true && (
@@ -790,7 +812,7 @@ export default function AdminQRScanner({
                     )}
                     {cameraError && (
                       <View style={styles.cameraErrorOverlay}>
-                        <Ionicons name="camera-outline" size={64} color={colors.error} />
+                        <Ionicons name="camera-outline" size={64} color={colors.error.main} />
                         <Text style={styles.cameraErrorText}>Camera Error</Text>
                         <Text style={styles.cameraErrorDetails}>{cameraError}</Text>
                         <TouchableOpacity
@@ -810,12 +832,12 @@ export default function AdminQRScanner({
                     )}
                   </>
                 )}
-                {hasPermission === false && (
+                {hasPermission !== null && !hasPermission ? (
                   <View style={styles.scannerPlaceholder}>
                     <Ionicons name="camera-outline" size={64} color={colors.text.secondary} />
                     <Text style={styles.placeholderText}>Camera permission required</Text>
                   </View>
-                )}
+                ) : null}
 
                 {/* Overlay - only show when camera is ready, pointerEvents none to not block camera */}
                 {cameraReady && hasPermission === true && (
@@ -868,7 +890,7 @@ export default function AdminQRScanner({
                 <Ionicons 
                   name={scanResult?.valid ? "checkmark-circle" : "close-circle"} 
                   size={48} 
-                  color={scanResult?.valid ? colors.success : colors.error} 
+                  color={scanResult?.valid ? colors.success.main : colors.error.main} 
                 />
                 <Text style={styles.detailsTitle}>
                   {scanResult?.valid ? 'Valid QR Code' : 'Invalid QR Code'}
@@ -944,7 +966,7 @@ export default function AdminQRScanner({
               {scanResult && !scanResult.valid && (
                 <View style={styles.detailsSection}>
                   <Text style={styles.sectionTitle}>Validation Error</Text>
-                  <Text style={[styles.detailValue, { color: colors.error }]}>
+                  <Text style={[styles.detailValue, { color: typeof colors.error === 'string' ? colors.error : colors.error.main }]}>
                     {scanResult.message}
                   </Text>
                 </View>
@@ -1042,7 +1064,7 @@ export default function AdminQRScanner({
                   
                   {qrDetails.status === 'suspended' && (
                     <TouchableOpacity 
-                      style={[styles.actionButton, { borderColor: colors.success, borderWidth: 1 }]} 
+                      style={[styles.actionButton, { borderColor: typeof colors.success === 'string' ? colors.success : colors.success.main, borderWidth: 1 }]} 
                       onPress={async () => {
                         if (!qrDetails || !user) return;
                         try {
@@ -1069,15 +1091,15 @@ export default function AdminQRScanner({
                         }
                       }}
                     >
-                      <MaterialIcons name="play-circle-outline" size={20} color={colors.success} />
-                      <Text style={[styles.actionButtonText, { color: colors.success }]}>Reactivate QR</Text>
+                      <MaterialIcons name="play-circle-outline" size={20} color={typeof colors.success === 'string' ? colors.success : colors.success.main} />
+                      <Text style={[styles.actionButtonText, { color: typeof colors.success === 'string' ? colors.success : colors.success.main }]}>Reactivate QR</Text>
                     </TouchableOpacity>
                   )}
                   
                   {qrDetails.status !== 'revoked' && (
                     <TouchableOpacity style={[styles.actionButton, styles.revokeButton]} onPress={handleRevoke}>
-                      <MaterialIcons name="block" size={20} color={colors.error} />
-                      <Text style={[styles.actionButtonText, { color: colors.error }]}>Revoke QR</Text>
+                      <MaterialIcons name="block" size={20} color={colors.error.main} />
+                      <Text style={[styles.actionButtonText, { color: colors.error.main }]}>Revoke QR</Text>
                     </TouchableOpacity>
                   )}
                 </View>

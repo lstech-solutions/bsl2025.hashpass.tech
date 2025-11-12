@@ -17,6 +17,7 @@ import { StatusBar } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import "./global.css";
 import PWAPrompt from '../components/PWAPrompt';
+import VersionUpdateNotification from '../components/VersionUpdateNotification';
 import * as SplashScreen from 'expo-splash-screen';
 import { I18nProvider } from '../providers/I18nProvider';
 import { CopilotProvider } from 'react-native-copilot';
@@ -67,6 +68,7 @@ function ThemedContent() {
   const { isLoggedIn, isLoading } = useAuth();
   const [isReady, setIsReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [versionUpdate, setVersionUpdate] = useState<{ currentVersion: string; latestVersion: string } | null>(null);
 
   // Check version on first load (web only)
   useEffect(() => {
@@ -75,6 +77,23 @@ function ThemedContent() {
       checkVersionOnStart().catch((error) => {
         console.error('Version check failed:', error);
       });
+
+      // Listen for version update messages from service worker
+      const handleServiceWorkerMessage = (event: MessageEvent) => {
+        if (event.data && event.data.type === 'VERSION_UPDATE_AVAILABLE') {
+          console.log('📦 Version update available:', event.data);
+          setVersionUpdate({
+            currentVersion: event.data.currentVersion,
+            latestVersion: event.data.latestVersion,
+          });
+        }
+      };
+
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+
+      return () => {
+        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      };
     }
   }, []);
 
@@ -184,6 +203,13 @@ function ThemedContent() {
         <Stack.Screen name="events/bsl2025/speaker-dashboard" options={{ headerShown: false }} />
       </Stack>
       <PWAPrompt />
+      {versionUpdate && (
+        <VersionUpdateNotification
+          currentVersion={versionUpdate.currentVersion}
+          latestVersion={versionUpdate.latestVersion}
+          onUpdateComplete={() => setVersionUpdate(null)}
+        />
+      )}
     </>
   );
 }

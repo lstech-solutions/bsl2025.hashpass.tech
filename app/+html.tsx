@@ -93,17 +93,15 @@ if ('serviceWorker' in navigator) {
                     
                     // Listen for messages from service worker
                     navigator.serviceWorker.addEventListener('message', (event) => {
-                        if (event.data && event.data.type === 'VERSION_UPDATE') {
-                            console.log('ℹ️ Version update detected:', event.data);
-                            if (event.data.action === 'reload') {
-                                console.log('🔄 Reloading page due to version update...');
-                                // Reload after a short delay to allow message to be processed
-                                setTimeout(() => {
-                                    window.location.reload();
-                                }, 500);
-                            } else {
-                                console.log('ℹ️ Version update available. Manual refresh recommended.');
-                            }
+                        if (event.data && event.data.type === 'VERSION_UPDATE_AVAILABLE') {
+                            console.log('ℹ️ Version update available:', event.data);
+                            // Dispatch custom event for React components to listen to
+                            window.dispatchEvent(new CustomEvent('versionUpdateAvailable', {
+                                detail: {
+                                    currentVersion: event.data.currentVersion,
+                                    latestVersion: event.data.latestVersion
+                                }
+                            }));
                         }
                     });
                     

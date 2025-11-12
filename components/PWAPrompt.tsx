@@ -74,13 +74,17 @@ const PWAPrompt = () => {
     }
   };
 
-  // Don't show if no install option available and not installed
-  if (!showPrompt && !isInstalled && !deferredPrompt) {
+  // Don't show if already installed
+  if (isInstalled) {
     return null;
   }
 
-  // Show reinstall option even if already installed
-  const buttonText = isInstalled ? 'Reinstall HashPass' : 'Install HashPass';
+  // Don't show if no install option available
+  if (!showPrompt && !deferredPrompt) {
+    return null;
+  }
+
+  const buttonText = 'Install HashPass';
 
   return (
     <View style={styles.container}>

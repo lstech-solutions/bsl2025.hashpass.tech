@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import { memoryManager } from '../lib/memory-manager';
 
 interface UseRealtimeChatProps {
   roomName: string;
@@ -37,6 +38,17 @@ export function useRealtimeChat({ roomName, username, userId, otherParticipantId
   useEffect(() => {
     const newChannel = supabase.channel(roomName);
     channelRef.current = newChannel;
+    
+    // Register with memory manager for cleanup
+    if (userId) {
+      const subscriptionId = `chat-${roomName}-${userId}`;
+      memoryManager.registerSubscription(subscriptionId, () => {
+        if (channelRef.current) {
+          supabase.removeChannel(channelRef.current);
+          channelRef.current = null;
+        }
+      });
+    }
 
     // Send presence update helper
     const sendPresenceUpdate = (isOnline: boolean) => {
@@ -121,6 +133,11 @@ export function useRealtimeChat({ roomName, username, userId, otherParticipantId
       }
       supabase.removeChannel(newChannel);
       channelRef.current = null;
+      
+      // Unregister from memory manager
+      if (userId) {
+        memoryManager.unregisterSubscription(`chat-${roomName}-${userId}`);
+      }
     };
   }, [roomName, username, userId]);
 

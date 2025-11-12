@@ -11,7 +11,8 @@ module.exports = {
 		'**/sw.js' // Don't cache the service worker itself
 	],
 	swDest: 'dist/sw.js',
-	maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+	maximumFileSizeToCacheInBytes: 2 * 1024 * 1024, // 2MB - reduced to prevent memory issues
+	maximumEntries: 50, // Limit cache entries to prevent memory bloat
 	ignoreURLParametersMatching: [
 		/^utm_/,
 		/^fbclid$/

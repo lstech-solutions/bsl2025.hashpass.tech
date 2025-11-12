@@ -159,6 +159,10 @@ config.server = {
 config.maxWorkers = 1; // Use single worker to reduce memory
 config.cacheStores = config.cacheStores || [];
 
+// Limit cache size to prevent memory issues
+config.cacheVersion = '1.0';
+config.resetCache = false;
+
 // Optimize transformer for memory and production builds
 config.transformer = {
   ...config.transformer,

@@ -26,7 +26,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Configuration
-const BUCKET_NAME = process.env.AWS_S3_BUCKET || process.env.AWS_S3_BUCKET_NAME || 'hashpass-assets';
+// Speaker avatars bucket - uses EXPO_PUBLIC_AWS_S3_BUCKET (hashpass-assets)
+const BUCKET_NAME = process.env.EXPO_PUBLIC_AWS_S3_BUCKET || process.env.AWS_S3_BUCKET || process.env.AWS_S3_BUCKET_NAME || 'hashpass-assets';
 const AWS_REGION = process.env.AWS_REGION || 'us-east-2';
 const SPEAKER_AVATARS_PREFIX = 'speakers/avatars/';
 const TARGET_DIMENSIONS = parseInt(process.argv.find(arg => arg.startsWith('--dimensions='))?.split('=')[1] || '200');

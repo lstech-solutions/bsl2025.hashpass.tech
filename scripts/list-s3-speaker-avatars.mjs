@@ -5,7 +5,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET || process.env.AWS_S3_BUCKET_NAME || 'hashpass-assets';
+// Speaker avatars bucket - uses EXPO_PUBLIC_AWS_S3_BUCKET (hashpass-assets)
+const BUCKET_NAME = process.env.EXPO_PUBLIC_AWS_S3_BUCKET || process.env.AWS_S3_BUCKET || process.env.AWS_S3_BUCKET_NAME || 'hashpass-assets';
 const REGION = process.env.AWS_REGION || 'us-east-2';
 
 const s3Client = new S3Client({

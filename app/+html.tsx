@@ -32,6 +32,22 @@ export default function Root({ children, metadata }: { children: ReactNode, meta
         <meta name="theme-color" content="#000000" />
         <link rel="manifest" href="/manifest.json" />
 
+        {/* Inject API base URL for inline scripts */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Set API base URL for version check (used by inline service worker script)
+              // Defaults to hashpass.co/api for production (cross-origin)
+              // Can be overridden via environment variable EXPO_PUBLIC_API_BASE_URL
+              window.__API_BASE_URL__ = ${JSON.stringify(
+                typeof process !== 'undefined' && process.env.EXPO_PUBLIC_API_BASE_URL
+                  ? process.env.EXPO_PUBLIC_API_BASE_URL
+                  : 'https://hashpass.co/api'
+              )};
+            `,
+          }}
+        />
+
         {/* Bootstrap the service worker. */}
         <script dangerouslySetInnerHTML={{ __html: sw }} />
 
@@ -114,26 +130,68 @@ if ('serviceWorker' in navigator) {
                     // Also check version via API directly (client-side check)
                     // Note: Using fetch directly here because this inline script runs before React/imports are available
                     // The API client is used in lib/version-checker.ts for other version checks
-                    fetch('/api/config/versions?t=' + Date.now(), {
-                        cache: 'no-store',
-                        headers: {
-                            'Cache-Control': 'no-store, no-cache, must-revalidate',
+                    // Detect API base URL: use hashpass.co/api for production, or relative /api for same-origin
+                    var apiBaseUrl = '/api';
+                    try {
+                        // Check if EXPO_PUBLIC_API_BASE_URL is set in window or meta tag
+                        if (typeof window !== 'undefined') {
+                            // Try to get from window (set during build)
+                            if (window.__API_BASE_URL__) {
+                                apiBaseUrl = window.__API_BASE_URL__;
+                            } else {
+                                // Check meta tag
+                                var metaTag = document.querySelector('meta[name="api-base-url"]');
+                                if (metaTag && metaTag.getAttribute('content')) {
+                                    apiBaseUrl = metaTag.getAttribute('content');
+                                } else {
+                                    // Default to hashpass.co/api for production (cross-origin)
+                                    // This handles the case where app is on bsl2025.hashpass.tech but API is on hashpass.co
+                                    apiBaseUrl = 'https://hashpass.co/api';
+                                }
+                            }
                         }
+                    } catch (e) {
+                        // Fallback to hashpass.co/api if detection fails
+                        apiBaseUrl = 'https://hashpass.co/api';
+                    }
+                    
+                    // Remove trailing slash and build version check URL
+                    apiBaseUrl = apiBaseUrl.replace(/\/$/, '');
+                    const versionCheckUrl = apiBaseUrl + '/config/versions?t=' + Date.now() + '&_nocache=' + Math.random();
+                    
+                    // Determine if this is a cross-origin request
+                    const isCrossOrigin = apiBaseUrl.startsWith('http') && !apiBaseUrl.includes(window.location.hostname);
+                    
+                    fetch(versionCheckUrl, {
+                        method: 'GET',
+                        cache: 'no-store',
+                        credentials: isCrossOrigin ? 'omit' : 'same-origin',
+                        headers: {
+                            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                            'Pragma': 'no-cache',
+                            'Expires': '0',
+                        },
+                        // Use cors mode for cross-origin requests (hashpass.co), same-origin for relative paths
+                        mode: isCrossOrigin ? 'cors' : 'same-origin',
                     })
                     .then(response => {
                         if (!response.ok) {
-                            console.warn('Version check API returned:', response.status, response.statusText);
+                            console.warn('[VersionCheck] API returned:', response.status, response.statusText);
                             return null;
                         }
                         return response.json();
                     })
                     .then(data => {
                         if (data?.currentVersion) {
-                            console.log('📦 Current app version check:', data.currentVersion);
+                            console.log('📦 [VersionCheck] Current app version:', data.currentVersion);
                             // Version mismatch will be handled by service worker
+                        } else {
+                            console.warn('[VersionCheck] No version data in response');
                         }
                     })
-                    .catch(err => console.warn('Version check failed:', err));
+                    .catch(err => {
+                        console.warn('[VersionCheck] Failed:', err.message || err);
+                    });
                 })
                 .catch(error => {
                     console.error('❌ Service Worker registration failed:', error);

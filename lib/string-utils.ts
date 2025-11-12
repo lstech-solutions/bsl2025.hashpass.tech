@@ -57,11 +57,11 @@ export function getSpeakerAvatarUrl(
   let awsRegion = defaultAwsRegion;
 
   // Check environment variables (server-side or build-time)
-  // Also check for AWS_S3_BUCKET (not just AWS_S3_BUCKET_NAME)
+  // Speaker avatars use EXPO_PUBLIC_AWS_S3_BUCKET (hashpass-assets)
   if (typeof process !== 'undefined' && process.env) {
-    s3Bucket = process.env.AWS_S3_BUCKET || 
+    s3Bucket = process.env.EXPO_PUBLIC_AWS_S3_BUCKET || 
+               process.env.AWS_S3_BUCKET || 
                process.env.AWS_S3_BUCKET_NAME || 
-               process.env.EXPO_PUBLIC_AWS_S3_BUCKET || 
                process.env.EXPO_PUBLIC_AWS_S3_BUCKET_NAME || 
                '';
     cdnUrl = process.env.AWS_S3_CDN_URL || 
@@ -79,9 +79,9 @@ export function getSpeakerAvatarUrl(
   if (Constants?.expoConfig?.extra) {
     const extra = Constants.expoConfig.extra as any;
     if (!s3Bucket) {
-      s3Bucket = extra.AWS_S3_BUCKET || 
+      s3Bucket = extra.EXPO_PUBLIC_AWS_S3_BUCKET || 
+                 extra.AWS_S3_BUCKET || 
                  extra.AWS_S3_BUCKET_NAME || 
-                 extra.EXPO_PUBLIC_AWS_S3_BUCKET || 
                  extra.EXPO_PUBLIC_AWS_S3_BUCKET_NAME || 
                  '';
     }

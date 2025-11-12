@@ -36,7 +36,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 // S3 client - use hashpass-assets bucket
-const BUCKET_NAME = process.env.AWS_S3_BUCKET || process.env.AWS_S3_BUCKET_NAME || 'hashpass-assets';
+// Speaker avatars bucket - uses EXPO_PUBLIC_AWS_S3_BUCKET (hashpass-assets)
+const BUCKET_NAME = process.env.EXPO_PUBLIC_AWS_S3_BUCKET || process.env.AWS_S3_BUCKET || process.env.AWS_S3_BUCKET_NAME || 'hashpass-assets';
 const CDN_URL = (process.env.AWS_S3_CDN_URL || process.env.AWS_S3_BUCKET_URL || '').trim();
 const SPEAKER_AVATARS_PREFIX = 'speakers/avatars/';
 

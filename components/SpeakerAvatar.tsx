@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { getSpeakerAvatarUrl } from '../lib/string-utils';
 
@@ -20,6 +20,9 @@ export default function SpeakerAvatar({
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageTimeout, setImageTimeout] = useState(false);
+  // Track failed URLs to prevent infinite retry loops
+  const failedUrlsRef = useRef<Set<string>>(new Set());
+  const currentUrlRef = useRef<string | null>(null);
 
   // Memoize computed values to prevent infinite loops in useEffect
   const { initialAvatarUrl, isS3Url } = useMemo(() => {
@@ -44,6 +47,17 @@ export default function SpeakerAvatar({
   // Reset error state when imageUrl or name changes
   useEffect(() => {
     if (initialAvatarUrl) {
+      currentUrlRef.current = initialAvatarUrl;
+      
+      // Check if this URL has already failed - if so, skip loading
+      if (failedUrlsRef.current.has(initialAvatarUrl)) {
+        console.warn(`[SpeakerAvatar] Skipping already-failed URL for ${name}:`, initialAvatarUrl);
+        setImageError(true);
+        setImageLoading(false);
+        setImageTimeout(false);
+        return;
+      }
+      
       console.log(`[SpeakerAvatar] Loading S3 image for ${name}:`, {
         url: initialAvatarUrl,
         isS3Url: isS3Url,
@@ -57,6 +71,8 @@ export default function SpeakerAvatar({
       const timeoutDuration = 10000; // Increased to 10 seconds to account for S3 policy propagation
       const timeoutId = setTimeout(() => {
         console.warn(`[SpeakerAvatar] Image load timeout (${timeoutDuration}ms) for ${name}:`, initialAvatarUrl);
+        // Mark URL as failed to prevent retries
+        failedUrlsRef.current.add(initialAvatarUrl);
         setImageTimeout(true);
         setImageLoading(false);
         // Don't try fallback - just show initials if S3 fails
@@ -125,6 +141,10 @@ export default function SpeakerAvatar({
               statusCode: statusCode,
               isS3Url: isS3Url,
             });
+            // Mark URL as failed to prevent infinite retry loops
+            if (avatarUrl) {
+              failedUrlsRef.current.add(avatarUrl);
+            }
             // No fallback - just show initials if S3 fails
             setImageError(true);
             setImageLoading(false);
@@ -139,8 +159,11 @@ export default function SpeakerAvatar({
             setImageLoading(false);
           }}
           onLoadStart={() => {
-            // Reset error when starting to load
-            setImageError(false);
+            // Only reset error if this URL hasn't failed before
+            // This prevents infinite retry loops for missing images
+            if (avatarUrl && !failedUrlsRef.current.has(avatarUrl)) {
+              setImageError(false);
+            }
             setImageLoading(true);
           }}
         />

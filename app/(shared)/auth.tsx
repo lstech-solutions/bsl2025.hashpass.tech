@@ -453,7 +453,9 @@ export default function AuthScreen() {
           type: 'magiclink',
         });
 
-        if (verifyErr) {
+        let session = verifyResultData?.session;
+
+        if (verifyErr || !session) {
           // Try with type 'email'
           const { data: emailVerifyResult, error: emailVerifyErr } = await supabase.auth.verifyOtp({
             token_hash: verifyResult.data.token_hash,
@@ -464,25 +466,38 @@ export default function AuthScreen() {
             throw new Error(emailVerifyErr?.message || 'Verification failed');
           }
 
-          showSuccess('Authentication Successful', 'Welcome! You have been signed in.');
-          // Navigate immediately, no delay
-          router.replace('/(shared)/dashboard/explore');
-          return;
+          session = emailVerifyResult.session;
         }
 
-        if (verifyResultData?.session) {
+        if (session) {
+          // Wait a brief moment to ensure session is fully established
+          // This helps prevent race conditions on production
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Double-check session is still valid
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          if (!currentSession) {
+            throw new Error('Session not established');
+          }
+
+          setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in.');
-          // Navigate immediately, no delay
-          router.replace('/(shared)/dashboard/explore');
+          
+          // Use a small delay to ensure toast is visible and session is stable
+          setTimeout(() => {
+            router.replace('/(shared)/dashboard/explore');
+          }, 300);
           return;
+        } else {
+          throw new Error('No session created after verification');
         }
       } else {
         throw new Error('No token_hash received from verification');
       }
     } catch (error: any) {
       console.error('OTP verification error:', error);
-      showError('Verification Failed', error.message || 'Invalid code. Please try again.');
       setLoading(false);
+      showError('Verification Failed', error.message || 'Invalid code. Please try again.');
     }
   };
 

@@ -153,39 +153,37 @@ export default function WebQRScanner({
     setError(null);
 
     try {
-      // Check permissions first - use query API if available (less intrusive)
-      let hasPerm = false;
+      // Check permissions first - but don't block initialization
+      // Let html5-qrcode handle the actual permission request
+      let permissionState: 'granted' | 'prompt' | 'denied' | 'unknown' = 'unknown';
       
       if (navigator.permissions && navigator.permissions.query) {
         try {
           const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
-          hasPerm = permissionStatus.state === 'granted';
-          setHasPermission(hasPerm);
+          permissionState = permissionStatus.state as 'granted' | 'prompt' | 'denied';
+          setHasPermission(permissionStatus.state === 'granted');
           console.log('📷 Camera permission status (query):', permissionStatus.state);
           
-          // If not granted but can prompt, don't request here - let html5-qrcode handle it
-          // html5-qrcode will request permission when it starts
-          if (!hasPerm && permissionStatus.state !== 'prompt') {
-            // Permission denied or blocked
-            setIsLoading(false);
-            setError('Camera permission denied. Please allow camera access in browser settings.');
-            setHasPermission(false);
-            return;
+          // If permission is denied/blocked, show error but still try to initialize
+          // html5-qrcode might be able to request permission even if query says denied
+          if (permissionStatus.state === 'denied') {
+            console.warn('⚠️ Camera permission denied, but will attempt to request via html5-qrcode');
+            // Don't return - let html5-qrcode try to request permission
           }
-        } catch (permErr) {
-          // Permissions API not available or not supported, fall back to direct check
+        } catch (permErr: any) {
+          // Permissions API not available or not supported (common in PWAs)
           console.log('⚠️ Permissions API not available, html5-qrcode will request permission');
-          // Don't check here - let html5-qrcode request permission when it starts
-          hasPerm = true; // Assume we can try (html5-qrcode will handle the actual request)
+          permissionState = 'unknown';
+          // Don't set hasPermission to false - let html5-qrcode try
         }
       } else {
-        // Permissions API not available, let html5-qrcode handle permission request
+        // Permissions API not available (common in PWAs), let html5-qrcode handle it
         console.log('⚠️ Permissions API not available, html5-qrcode will request permission');
-        hasPerm = true; // Assume we can try (html5-qrcode will handle the actual request)
+        permissionState = 'unknown';
       }
 
-      // Don't return early - let html5-qrcode handle permission request
-      // It will show proper error messages if permission is denied
+      // Always proceed with initialization - html5-qrcode will handle permission request
+      // Don't return early - let html5-qrcode show proper error messages if permission is denied
 
       // Load html5-qrcode library
       const { Html5Qrcode } = await import('html5-qrcode');
@@ -417,16 +415,33 @@ export default function WebQRScanner({
             errorMessage.includes('QR code parse error, error =') ||
             errorMessage.includes('QR code not found');
           
-          // Check for permission errors
-          if (errorMessage.includes('Permission') || errorMessage.includes('NotAllowedError') || errorMessage.includes('PermissionDeniedError')) {
+          // Check for permission errors - these are critical
+          if (errorMessage.includes('Permission') || 
+              errorMessage.includes('NotAllowedError') || 
+              errorMessage.includes('PermissionDeniedError') ||
+              errorMessage.includes('permission denied') ||
+              errorMessage.includes('Permission denied')) {
             console.error('❌ Camera permission error:', errorMessage);
-            setError('Camera permission denied. Please allow camera access.');
+            setError('Camera permission denied. Click "Grant Permission" button to allow camera access.');
             setHasPermission(false);
             setIsLoading(false);
             setIsScanning(false);
             if (onError) {
-              onError(new Error(errorMessage));
+              onError(new Error('Camera permission denied: ' + errorMessage));
             }
+            return;
+          }
+          
+          // Check for camera not available errors
+          if (errorMessage.includes('No camera') || 
+              errorMessage.includes('camera not available') ||
+              errorMessage.includes('NotFoundError') ||
+              errorMessage.includes('DevicesNotFoundError')) {
+            console.error('❌ Camera not available:', errorMessage);
+            setError('Camera not available. Please ensure a camera is connected and not in use by another app.');
+            setHasPermission(false);
+            setIsLoading(false);
+            setIsScanning(false);
             return;
           }
           
@@ -518,15 +533,58 @@ export default function WebQRScanner({
     setIsLoading(true);
     
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Check secure context first
+      if (typeof window === 'undefined' || !window.isSecureContext) {
+        setError('Camera requires HTTPS. Please use a secure connection.');
+        setIsLoading(false);
+        setHasPermission(false);
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('Camera API not available. Please use HTTPS or localhost.');
+        setIsLoading(false);
+        setHasPermission(false);
+        return;
+      }
+
+      // Request permission with proper constraints
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        }
+      });
+      
+      // Stop stream immediately - html5-qrcode will request its own
       stream.getTracks().forEach(track => track.stop());
+      
+      console.log('✅ Camera permission granted via manual request');
       setHasPermission(true);
       setIsLoading(false);
+      
       // Initialize scanner after permission granted
-      setTimeout(() => initializeScanner(), 100);
+      setTimeout(() => {
+        initializeScanner();
+      }, 200);
     } catch (err: any) {
-      setError('Permission denied. Please allow camera access in your browser settings.');
+      console.error('❌ Permission request error:', err);
+      
+      let errorMsg = 'Permission denied. ';
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMsg += 'Please allow camera access in your browser settings or PWA permissions.';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMsg = 'No camera found. Please connect a camera device.';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorMsg = 'Camera is in use by another application. Please close other apps using the camera.';
+      } else {
+        errorMsg += `Error: ${err.message || 'Unknown error'}`;
+      }
+      
+      setError(errorMsg);
       setIsLoading(false);
+      setHasPermission(false);
     }
   }, [initializeScanner]);
 

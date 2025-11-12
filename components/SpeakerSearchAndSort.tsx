@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
@@ -43,8 +43,8 @@ export default function SpeakerSearchAndSort({
     { key: 'title', label: 'Title (A-Z)', icon: 'work' },
   ];
 
-  // Helper functions
-  const filterSpeakers = (speakers: Speaker[], query: string): Speaker[] => {
+  // Memoized helper functions to prevent unnecessary recalculations
+  const filterSpeakers = useCallback((speakers: Speaker[], query: string): Speaker[] => {
     if (!query.trim()) return speakers;
     
     const lowercaseQuery = query.toLowerCase();
@@ -54,9 +54,9 @@ export default function SpeakerSearchAndSort({
       speaker.company.toLowerCase().includes(lowercaseQuery) ||
       (speaker.bio && speaker.bio.toLowerCase().includes(lowercaseQuery))
     );
-  };
+  }, []);
 
-  const sortSpeakers = (speakers: Speaker[], sortBy: SortOption, searchQuery: string): Speaker[] => {
+  const sortSpeakers = useCallback((speakers: Speaker[], sortBy: SortOption, searchQuery: string): Speaker[] => {
     // If no search query, use priority order
     if (!searchQuery.trim() && sortBy === 'name') {
       return sortSpeakersByPriority(speakers);
@@ -84,7 +84,7 @@ export default function SpeakerSearchAndSort({
       
       return aValue.localeCompare(bValue);
     });
-  };
+  }, []);
 
   // Group speakers by first letter for alphabetical dividers
   const groupSpeakersByLetter = (speakers: Speaker[], sortBy: SortOption, searchQuery: string): { [key: string]: Speaker[] } => {
@@ -124,46 +124,37 @@ export default function SpeakerSearchAndSort({
     return option ? option.label : 'Sort by...';
   };
 
-  // Initialize with all speakers (only when speakers array changes, not on search/sort)
+  // Memoize filtered and sorted speakers to prevent unnecessary recalculations
+  const filteredSpeakers = useMemo(() => {
+    return filterSpeakers(speakers, searchQuery);
+  }, [speakers, searchQuery, filterSpeakers]);
+
+  const sortedSpeakers = useMemo(() => {
+    return sortSpeakers(filteredSpeakers, sortBy, searchQuery);
+  }, [filteredSpeakers, sortBy, searchQuery, sortSpeakers]);
+
+  const groupedSpeakers = useMemo(() => {
+    return groupSpeakersByLetter(filteredSpeakers, sortBy, searchQuery);
+  }, [filteredSpeakers, sortBy, searchQuery, groupSpeakersByLetter]);
+
+  // Update parent components when values change
   useEffect(() => {
     if (speakers.length > 0 && onGroupedSpeakers && onFilteredSpeakers) {
-      const filtered = filterSpeakers(speakers, '');
-      // Always use priority order on initial load (when searchQuery is empty and sortBy is 'name')
-      const sorted = sortSpeakersByPriority(filtered);
-      const grouped = groupSpeakersByLetter(filtered, 'name', '');
-      onGroupedSpeakers(grouped);
-      onFilteredSpeakers(sorted);
+      onGroupedSpeakers(groupedSpeakers);
+      onFilteredSpeakers(sortedSpeakers);
     }
-  }, [speakers]); // Only depend on speakers, not searchQuery or sortBy
+  }, [speakers, groupedSpeakers, sortedSpeakers, onGroupedSpeakers, onFilteredSpeakers]);
 
-  const handleSearchChange = (query: string) => {
+  const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
     if (onSearchChange) onSearchChange(query);
-    
-    // Filter and sort speakers
-    const filtered = filterSpeakers(speakers, query);
-    const sorted = sortSpeakers(filtered, sortBy, query);
-    if (onFilteredSpeakers) onFilteredSpeakers(sorted);
-    
-    // Group speakers for alphabetical dividers
-    const grouped = groupSpeakersByLetter(filtered, sortBy, query);
-    if (onGroupedSpeakers) onGroupedSpeakers(grouped);
-  };
+  }, [onSearchChange]);
 
-  const handleSortChange = (newSortBy: SortOption) => {
+  const handleSortChange = useCallback((newSortBy: SortOption) => {
     setSortBy(newSortBy);
     if (onSortChange) onSortChange(newSortBy);
     setShowFiltersDropdown(false);
-    
-    // Filter and sort speakers
-    const filtered = filterSpeakers(speakers, searchQuery);
-    const sorted = sortSpeakers(filtered, newSortBy, searchQuery);
-    if (onFilteredSpeakers) onFilteredSpeakers(sorted);
-    
-    // Group speakers for alphabetical dividers
-    const grouped = groupSpeakersByLetter(filtered, newSortBy, searchQuery);
-    if (onGroupedSpeakers) onGroupedSpeakers(grouped);
-  };
+  }, [onSortChange]);
 
   return (
     <View style={styles.container}>

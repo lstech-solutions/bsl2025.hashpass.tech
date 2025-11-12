@@ -20,6 +20,8 @@ interface Speaker {
   company: string | null;
   bio?: string;
   image?: string;
+  user_id?: string;
+  isActive?: boolean; // Has user_id = active speaker
 }
 
 interface AgendaItem {
@@ -82,7 +84,9 @@ export default function SpeakersCalendar() {
               title: s.title || null,
               company: s.company || null,
               bio: s.bio || (s.title ? `Experienced professional in ${s.title}.` : undefined),
-              image: s.imageurl || getSpeakerAvatarUrl(s.name) // Use same fallback as detail page
+              image: s.imageurl || getSpeakerAvatarUrl(s.name), // Use same fallback as detail page
+              user_id: s.user_id || undefined,
+              isActive: !!s.user_id // Active if has user_id
             }));
             
             // Remove duplicates based on ID
@@ -179,9 +183,22 @@ export default function SpeakersCalendar() {
             size={50}
             showBorder={false}
           />
+          {/* Active speaker badge */}
+          {speaker.isActive && (
+            <View style={styles.activeBadge}>
+              <View style={styles.activeIndicator} />
+            </View>
+          )}
         </View>
         <View style={styles.speakerInfo}>
-          <Text style={styles.speakerName}>{speaker.name}</Text>
+          <View style={styles.speakerNameRow}>
+            <Text style={styles.speakerName}>{speaker.name}</Text>
+            {speaker.isActive && (
+              <View style={styles.activeLabel}>
+                <Text style={styles.activeLabelText}>Active</Text>
+              </View>
+            )}
+          </View>
           {speaker.title && <Text style={styles.speakerTitle}>{speaker.title}</Text>}
           {speaker.company && <Text style={styles.speakerCompany}>{speaker.company}</Text>}
         </View>
@@ -370,17 +387,55 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,
+    position: 'relative',
+  },
+  activeBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.background.paper,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.background.paper,
+  },
+  activeIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#34A853',
   },
   speakerInfo: {
     flex: 1,
     justifyContent: 'center',
   },
+  speakerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 8,
+  },
   speakerName: {
     fontSize: 17,
     fontWeight: '700',
     color: colors.text.primary,
-    marginBottom: 4,
     letterSpacing: 0.2,
+    flex: 1,
+  },
+  activeLabel: {
+    backgroundColor: '#34A853',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  activeLabelText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   speakerTitle: {
     fontSize: 14,

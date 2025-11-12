@@ -12,7 +12,6 @@ module.exports = {
 	],
 	swDest: 'dist/sw.js',
 	maximumFileSizeToCacheInBytes: 2 * 1024 * 1024, // 2MB - reduced to prevent memory issues
-	maximumEntries: 50, // Limit cache entries to prevent memory bloat
 	ignoreURLParametersMatching: [
 		/^utm_/,
 		/^fbclid$/
@@ -28,7 +27,18 @@ module.exports = {
 				networkTimeoutSeconds: 3,
 				cacheableResponse: {
 					statuses: [0, 200]
-				}
+				},
+				// Limit cache entries to prevent memory bloat
+				plugins: [
+					{
+						cacheKeyWillBeUsed: async ({ request }) => {
+							return request.url;
+						},
+						cacheWillUpdate: async ({ response }) => {
+							return response && response.status === 200 ? response : null;
+						}
+					}
+				]
 			}
 		},
 		{
@@ -39,7 +49,16 @@ module.exports = {
 				networkTimeoutSeconds: 1,
 				cacheableResponse: {
 					statuses: [0, 200]
-				}
+				},
+				// Don't cache version checks - always fetch fresh
+				plugins: [
+					{
+						cacheWillUpdate: async () => {
+							// Never cache version checks
+							return null;
+						}
+					}
+				]
 			}
 		}
 	]

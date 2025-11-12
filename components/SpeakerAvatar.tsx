@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Image, Animated } from 'react-native';
-import { getSpeakerAvatarUrl } from '../lib/string-utils';
+import { getSpeakerAvatarUrl, getLocalOptimizedAvatarUrl } from '../lib/string-utils';
 
 interface SpeakerAvatarProps {
   name?: string;
@@ -28,36 +28,61 @@ export default function SpeakerAvatar({
   // Animated value for smooth fade-in
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Memoize computed values to prevent infinite loops in useEffect
-  const { initialAvatarUrl, isS3Url } = useMemo(() => {
-    // Generate initial avatar URL - prefer provided imageUrl, otherwise generate from name
-    // getSpeakerAvatarUrl always generates S3 URL now (no blockchainsummit.la fallback)
-    const initial = imageUrl || (name ? getSpeakerAvatarUrl(name) : null);
+  // Track which URL we're currently trying (local optimized, S3, or null)
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
+  const [urlSource, setUrlSource] = useState<'local' | 's3' | null>(null);
+  
+  // Memoize computed values to determine avatar URL priority
+  const { localOptimizedUrl, s3Url } = useMemo(() => {
+    // Priority 1: Check for local optimized avatar in public folder
+    const localUrl = name ? getLocalOptimizedAvatarUrl(name) : null;
     
-    // Check if initial URL is S3
-    // S3 URLs can be in format: https://bucket.s3.region.amazonaws.com/path or https://bucket.s3.amazonaws.com/path
-    const isS3 = initial ? (
-      initial.includes('s3.amazonaws.com') || 
-      initial.includes('hashpass-assets.s3') ||
-      (initial.includes('s3.') && initial.includes('amazonaws.com'))
-    ) : false;
+    // Priority 2: Use provided imageUrl or generate S3 URL
+    const s3 = imageUrl || (name ? getSpeakerAvatarUrl(name) : null);
     
-    return { initialAvatarUrl: initial, isS3Url: isS3 };
+    return { localOptimizedUrl: localUrl, s3Url: s3 };
   }, [imageUrl, name]);
   
-  // Use initial URL only - no fallback to blockchainsummit.la
-  const avatarUrl = initialAvatarUrl;
-
-  // Reset error state when imageUrl or name changes
+  // Determine which URL to use (prioritize local optimized)
   useEffect(() => {
-    if (initialAvatarUrl) {
-      currentUrlRef.current = initialAvatarUrl;
+    if (localOptimizedUrl) {
+      // Try local optimized first
+      setCurrentAvatarUrl(localOptimizedUrl);
+      setUrlSource('local');
+    } else if (s3Url) {
+      // Fallback to S3
+      setCurrentAvatarUrl(s3Url);
+      setUrlSource('s3');
+    } else {
+      setCurrentAvatarUrl(null);
+      setUrlSource(null);
+    }
+  }, [localOptimizedUrl, s3Url]);
+  
+  const avatarUrl = currentAvatarUrl;
+  const isS3Url = urlSource === 's3';
+
+  // Reset error state when avatarUrl changes
+  useEffect(() => {
+    if (avatarUrl) {
+      currentUrlRef.current = avatarUrl;
       
-      // Check if this URL has already failed - if so, skip loading
-      if (failedUrlsRef.current.has(initialAvatarUrl)) {
-        // Only log in development
+      // Check if this URL has already failed - if so, try fallback
+      if (failedUrlsRef.current.has(avatarUrl)) {
+        // If local optimized failed, try S3
+        if (urlSource === 'local' && s3Url && s3Url !== avatarUrl) {
+          // Only log in development
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`[SpeakerAvatar] Local optimized failed for ${name}, trying S3:`, s3Url);
+          }
+          setCurrentAvatarUrl(s3Url);
+          setUrlSource('s3');
+          return;
+        }
+        
+        // If S3 also failed or no fallback, show initials
         if (process.env.NODE_ENV !== 'production') {
-          console.warn(`[SpeakerAvatar] Skipping already-failed URL for ${name}:`, initialAvatarUrl);
+          console.warn(`[SpeakerAvatar] All URLs failed for ${name}, showing initials`);
         }
         setImageError(true);
         setImageLoading(false);
@@ -67,9 +92,9 @@ export default function SpeakerAvatar({
       
       // Only log in development to reduce console noise
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`[SpeakerAvatar] Loading S3 image for ${name}:`, {
-          url: initialAvatarUrl,
-          isS3Url: isS3Url,
+        console.log(`[SpeakerAvatar] Loading ${urlSource} image for ${name}:`, {
+          url: avatarUrl,
+          source: urlSource,
           hasImageUrl: !!imageUrl,
         });
       }
@@ -79,15 +104,28 @@ export default function SpeakerAvatar({
       // Reset fade animation when URL changes
       fadeAnim.setValue(0);
       
-      // Reduced timeout since images are now optimized (~70KB instead of 1.3MB)
-      const timeoutDuration = 10000; // Increased to 10 seconds to account for S3 policy propagation
+      // Shorter timeout for local optimized (should be instant), longer for S3
+      const timeoutDuration = urlSource === 'local' ? 3000 : 10000;
       const timeoutId = setTimeout(() => {
-        console.warn(`[SpeakerAvatar] Image load timeout (${timeoutDuration}ms) for ${name}:`, initialAvatarUrl);
-        // Mark URL as failed to prevent retries
-        failedUrlsRef.current.add(initialAvatarUrl);
-        setImageTimeout(true);
-        setImageLoading(false);
-        // Don't try fallback - just show initials if S3 fails
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`[SpeakerAvatar] Image load timeout (${timeoutDuration}ms) for ${name}:`, avatarUrl);
+        }
+        // Mark URL as failed
+        failedUrlsRef.current.add(avatarUrl);
+        
+        // If local optimized failed, try S3 fallback
+        if (urlSource === 'local' && s3Url && s3Url !== avatarUrl) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`[SpeakerAvatar] Local optimized timeout, falling back to S3 for ${name}`);
+          }
+          setCurrentAvatarUrl(s3Url);
+          setUrlSource('s3');
+          // Don't set error yet - try S3 first
+        } else {
+          // S3 also failed or no fallback - show initials
+          setImageTimeout(true);
+          setImageLoading(false);
+        }
       }, timeoutDuration);
 
       return () => clearTimeout(timeoutId);
@@ -95,7 +133,7 @@ export default function SpeakerAvatar({
       setImageError(true);
       setImageLoading(false);
     }
-  }, [imageUrl, name, initialAvatarUrl, isS3Url]); // Removed fallbackBlockchainUrl
+  }, [avatarUrl, urlSource, name, imageUrl, s3Url]);
 
   // Helper to get initials (always two letters or '??')
   const getInitials = (n?: string) => {
@@ -137,19 +175,34 @@ export default function SpeakerAvatar({
           onError={(error) => {
             const errorMessage = error.nativeEvent?.error || error.message || 'Unknown error';
             const statusCode = error.nativeEvent?.statusCode || error.statusCode || 'unknown';
-            console.error(`[SpeakerAvatar] S3 image load error for ${name}:`, {
-              url: avatarUrl,
-              error: errorMessage,
-              statusCode: statusCode,
-              isS3Url: isS3Url,
-            });
-            // Mark URL as failed to prevent infinite retry loops
+            
+            if (process.env.NODE_ENV !== 'production') {
+              console.error(`[SpeakerAvatar] ${urlSource} image load error for ${name}:`, {
+                url: avatarUrl,
+                error: errorMessage,
+                statusCode: statusCode,
+                source: urlSource,
+              });
+            }
+            
+            // Mark URL as failed
             if (avatarUrl) {
               failedUrlsRef.current.add(avatarUrl);
             }
-            // No fallback - just show initials if S3 fails
-            setImageError(true);
-            setImageLoading(false);
+            
+            // If local optimized failed, try S3 fallback
+            if (urlSource === 'local' && s3Url && s3Url !== avatarUrl) {
+              if (process.env.NODE_ENV !== 'production') {
+                console.log(`[SpeakerAvatar] Local optimized failed, falling back to S3 for ${name}`);
+              }
+              setCurrentAvatarUrl(s3Url);
+              setUrlSource('s3');
+              // Don't set error yet - try S3 first
+            } else {
+              // S3 also failed or no fallback - show initials
+              setImageError(true);
+              setImageLoading(false);
+            }
           }}
           onLoad={() => {
             // Only log in development

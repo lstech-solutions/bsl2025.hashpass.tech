@@ -228,10 +228,21 @@ class QRScannerService {
     isValid: boolean;
     raw: string;
   } {
+    if (!data || typeof data !== 'string') {
+      console.warn('⚠️ parseQRData: Invalid input data');
+      return { isValid: false, raw: data || '' };
+    }
+
+    const trimmed = data.trim();
+    console.log('🔍 Parsing QR data:', trimmed.substring(0, 100));
+
     try {
-      // Try parsing as JSON first
-      const parsed = JSON.parse(data);
+      // Try parsing as JSON first (most common format)
+      const parsed = JSON.parse(trimmed);
+      console.log('📦 Parsed as JSON:', parsed);
+      
       if (parsed.token) {
+        console.log('✅ Found token in JSON:', parsed.token);
         return {
           token: parsed.token,
           type: parsed.type || 'hashpass_qr',
@@ -239,7 +250,10 @@ class QRScannerService {
           raw: data,
         };
       }
+      
+      // Check if it's a hashpass_qr format
       if (parsed.type === 'hashpass_qr' && parsed.token) {
+        console.log('✅ Found hashpass_qr token:', parsed.token);
         return {
           token: parsed.token,
           type: parsed.type,
@@ -247,13 +261,19 @@ class QRScannerService {
           raw: data,
         };
       }
-    } catch {
-      // Not JSON, try URL parsing
-      if (data.includes('token=')) {
+      
+      console.warn('⚠️ JSON parsed but no token found:', parsed);
+    } catch (jsonError) {
+      // Not JSON, try other formats
+      console.log('📝 Not JSON, trying other formats...');
+      
+      // Try URL parsing
+      if (trimmed.includes('token=')) {
         try {
-          const url = new URL(data);
+          const url = new URL(trimmed);
           const token = url.searchParams.get('token');
           if (token) {
+            console.log('✅ Found token in URL:', token);
             return {
               token,
               type: 'hashpass_qr',
@@ -261,20 +281,35 @@ class QRScannerService {
               raw: data,
             };
           }
-        } catch {
-          // Invalid URL
+        } catch (urlError) {
+          // Invalid URL, continue to next check
+          console.log('⚠️ URL parsing failed:', urlError);
         }
       }
 
-      // Assume raw token
-      if (data.length > 10) {
+      // Check if it looks like a raw token (starts with QR-)
+      if (trimmed.startsWith('QR-')) {
+        console.log('✅ Detected raw QR token format');
         return {
-          token: data,
+          token: trimmed,
           type: 'hashpass_qr',
           isValid: true,
           raw: data,
         };
       }
+
+      // Assume any string longer than 10 chars is a token
+      if (trimmed.length > 10) {
+        console.log('✅ Treating as raw token (length > 10)');
+        return {
+          token: trimmed,
+          type: 'hashpass_qr',
+          isValid: true,
+          raw: data,
+        };
+      }
+      
+      console.warn('⚠️ Could not parse QR data, length:', trimmed.length);
     }
 
     return {
@@ -531,4 +566,5 @@ export const qrScannerService = new QRScannerService();
 
 // Export types
 export type { BarCodeScannerResult };
+
 

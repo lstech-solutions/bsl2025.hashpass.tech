@@ -379,12 +379,18 @@ ${bugfixesStr}
     notes: '${(releaseNotes || `Version ${newVersion} release`).replace(/'/g, "\\'")}'
   },`;
 
-    // Insert the new version entry at the beginning of VERSION_HISTORY
-    const historyRegex = /(export const VERSION_HISTORY: VersionHistory = {)/;
-    if (historyRegex.test(content)) {
-      content = content.replace(historyRegex, `$1\n${newVersionEntry}`);
-      fs.writeFileSync(versionTsPath, content, 'utf8');
-      console.log(`✅ Added ${newVersion} to version history`);
+    // Check if version already exists in VERSION_HISTORY to avoid duplicates
+    const versionExistsRegex = new RegExp(`'${newVersion.replace(/\./g, '\\.')}':\\s*\\{`);
+    if (versionExistsRegex.test(content)) {
+      console.log(`ℹ️ Version ${newVersion} already exists in VERSION_HISTORY, skipping duplicate entry`);
+    } else {
+      // Insert the new version entry at the beginning of VERSION_HISTORY
+      const historyRegex = /(export const VERSION_HISTORY: VersionHistory = {)/;
+      if (historyRegex.test(content)) {
+        content = content.replace(historyRegex, `$1\n${newVersionEntry}`);
+        fs.writeFileSync(versionTsPath, content, 'utf8');
+        console.log(`✅ Added ${newVersion} to version history`);
+      }
     }
   }
 } catch (error) {
@@ -392,47 +398,164 @@ ${bugfixesStr}
   allUpdated = false;
 }
 
-// Update config/versions.json (used by sidebar version display)
+// Generate config/versions.json from version.ts
+// SINGLE SOURCE OF TRUTH: version.ts is the master file
+// versions.json is auto-generated from version.ts and should never be edited manually
+// This ensures consistency and prevents version mismatches
 try {
   const versionsJsonPath = path.join(projectRoot, 'config/versions.json');
   const versionTsPath = path.join(projectRoot, 'config/version.ts');
   
-  if (fs.existsSync(versionsJsonPath) && fs.existsSync(versionTsPath)) {
-    const versionsData = JSON.parse(fs.readFileSync(versionsJsonPath, 'utf8'));
+  if (fs.existsSync(versionTsPath)) {
     const versionTsContent = fs.readFileSync(versionTsPath, 'utf8');
     
-    // Extract features and bugfixes from CURRENT_VERSION
-    const { features, bugfixes, breakingChanges } = extractFeaturesAndBugfixes(versionTsContent);
+    // Extract all versions from VERSION_HISTORY in version.ts
+    const versionHistoryRegex = /export const VERSION_HISTORY: VersionHistory = \{([\s\S]*?)\};/;
+    const historyMatch = versionTsContent.match(versionHistoryRegex);
     
-    // Update currentVersion
-    versionsData.currentVersion = newVersion;
-    
-    // Check if version already exists in versions array
-    const versionExists = versionsData.versions.some(v => v.version === newVersion);
-    
-    if (!versionExists) {
-      // Add new version entry at the beginning of versions array
-      const newVersionEntry = {
-        version: newVersion,
-        buildNumber: buildNumber,
-        releaseDate: releaseDate,
-        releaseType: releaseType,
-        environment: 'development',
-        features: features.length > 0 ? features : [],
-        bugfixes: bugfixes.length > 0 ? bugfixes : [],
-        breakingChanges: breakingChanges.length > 0 ? breakingChanges : [],
-        notes: releaseNotes || `Version ${newVersion} release`
+    if (historyMatch) {
+      const historyContent = historyMatch[1];
+      
+      // Extract CURRENT_VERSION to get current version
+      const currentVersionMatch = versionTsContent.match(/version:\s*packageJson\.version/);
+      const currentVersionFromPackage = getCurrentVersion(); // Use package.json as source
+      
+      // Parse all version entries from VERSION_HISTORY
+      // Use a simpler, more reliable approach: find all version entries
+      const versions = [];
+      const entries = [];
+      
+      // Find all version entries using a pattern that matches the structure
+      // Pattern: 'version': { ... } where ... can contain nested objects
+      const versionEntryPattern = /'(\d+\.\d+\.\d+)':\s*\{/g;
+      const versionMatches = [];
+      let match;
+      
+      while ((match = versionEntryPattern.exec(historyContent)) !== null) {
+        versionMatches.push({
+          version: match[1],
+          startIndex: match.index
+        });
+      }
+      
+      // Extract content for each version entry
+      for (let i = 0; i < versionMatches.length; i++) {
+        const startIndex = versionMatches[i].startIndex;
+        const endIndex = i < versionMatches.length - 1 
+          ? versionMatches[i + 1].startIndex 
+          : historyContent.length;
+        
+        // Find the matching closing brace for this entry
+        let braceCount = 0;
+        let entryEnd = startIndex;
+        for (let j = startIndex; j < endIndex; j++) {
+          if (historyContent[j] === '{') braceCount++;
+          if (historyContent[j] === '}') {
+            braceCount--;
+            if (braceCount === 0) {
+              entryEnd = j + 1;
+              break;
+            }
+          }
+        }
+        
+        entries.push({
+          version: versionMatches[i].version,
+          content: historyContent.substring(startIndex, entryEnd)
+        });
+      }
+      
+      // Parse each entry
+      for (const entry of entries) {
+        const entryContent = entry.content;
+        
+        // Extract fields from the entry
+        const buildNumberMatch = entryContent.match(/buildNumber:\s*(\d+)/);
+        const releaseDateMatch = entryContent.match(/releaseDate:\s*'([^']+)'/);
+        const releaseTypeMatch = entryContent.match(/releaseType:\s*'([^']+)'/);
+        const notesMatch = entryContent.match(/notes:\s*'([^']+)'/);
+        
+        // Extract arrays - handle multiline arrays
+        const featuresMatch = entryContent.match(/features:\s*\[([\s\S]*?)\]/);
+        const bugfixesMatch = entryContent.match(/bugfixes:\s*\[([\s\S]*?)\]/);
+        const breakingMatch = entryContent.match(/breakingChanges:\s*\[([\s\S]*?)\]/);
+        
+        const extractArrayItems = (match) => {
+          if (!match) return [];
+          const content = match[1].trim();
+          if (!content || content.includes('// No')) return [];
+          // Split by comma or newline, handle quoted strings
+          return content
+            .split(/[,\n]/)
+            .map(item => {
+              item = item.trim();
+              // Remove comments
+              if (item.includes('//')) {
+                item = item.substring(0, item.indexOf('//')).trim();
+              }
+              // Extract quoted string
+              const quotedMatch = item.match(/'([^']*(?:\\'[^']*)*)'/);
+              if (quotedMatch) {
+                return quotedMatch[1].replace(/\\'/g, "'");
+              }
+              return null;
+            })
+            .filter(item => item && item.length > 0);
+        };
+        
+        versions.push({
+          version: entry.version,
+          buildNumber: buildNumberMatch ? parseInt(buildNumberMatch[1]) : 0,
+          releaseDate: releaseDateMatch ? releaseDateMatch[1] : releaseDate,
+          releaseType: releaseTypeMatch ? releaseTypeMatch[1] : releaseType,
+          environment: 'development',
+          features: extractArrayItems(featuresMatch),
+          bugfixes: extractArrayItems(bugfixesMatch),
+          breakingChanges: extractArrayItems(breakingMatch),
+          notes: notesMatch ? notesMatch[1].replace(/\\'/g, "'") : `Version ${entry.version} release`
+        });
+      }
+      
+      // Remove duplicates (keep first occurrence)
+      const seenVersions = new Set();
+      const uniqueVersions = versions.filter(v => {
+        if (seenVersions.has(v.version)) {
+          console.warn(`⚠️ Removing duplicate version entry: ${v.version}`);
+          return false;
+        }
+        seenVersions.add(v.version);
+        return true;
+      });
+      
+      // Sort versions by version number (newest first)
+      uniqueVersions.sort((a, b) => {
+        const aParts = a.version.split('.').map(Number);
+        const bParts = b.version.split('.').map(Number);
+        for (let i = 0; i < 3; i++) {
+          if (bParts[i] !== aParts[i]) return bParts[i] - aParts[i];
+        }
+        return 0;
+      });
+      
+      // Create versions.json structure from version.ts
+      const versionsData = {
+        _comment: "⚠️ AUTO-GENERATED FILE - DO NOT EDIT MANUALLY ⚠️",
+        _source: "This file is automatically generated from config/version.ts",
+        _instructions: "To update versions, edit config/version.ts and run: npm run version:bump",
+        currentVersion: currentVersionFromPackage,
+        versions: uniqueVersions
       };
       
-      versionsData.versions.unshift(newVersionEntry);
+      // Write generated JSON file
+      fs.writeFileSync(versionsJsonPath, JSON.stringify(versionsData, null, 2) + '\n', 'utf8');
+      console.log(`✅ Generated config/versions.json from version.ts (source of truth)`);
+      console.log(`✅ Updated config/versions.json: currentVersion = ${currentVersionFromPackage}`);
+    } else {
+      console.warn('⚠️ Could not parse VERSION_HISTORY from version.ts');
     }
-    
-    // Write updated JSON back to file
-    fs.writeFileSync(versionsJsonPath, JSON.stringify(versionsData, null, 2) + '\n', 'utf8');
-    console.log(`✅ Updated config/versions.json: currentVersion = ${newVersion}`);
   }
 } catch (error) {
-  console.error('❌ Error updating config/versions.json:', error.message);
+  console.error('❌ Error generating config/versions.json from version.ts:', error.message);
   allUpdated = false;
 }
 

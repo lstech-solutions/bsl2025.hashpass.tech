@@ -7,8 +7,23 @@ import nodemailer from 'nodemailer';
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { email } = body;
+    // Handle JSON parsing errors
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError: any) {
+      console.error('Error parsing request body:', parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          code: 'invalid_json',
+          message: 'Please ensure the request body contains valid JSON with an email field.'
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { email } = body || {};
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return new Response(
@@ -24,10 +39,40 @@ export async function POST(request: Request) {
     });
 
     if (linkError || !linkData) {
-      console.error('Error generating OTP link:', linkError);
+      console.error('Error generating OTP link:', JSON.stringify(linkError, null, 2));
+      
+      // Check for rate limit errors specifically - check multiple possible formats
+      const errorMessage = linkError?.message || '';
+      const errorCode = linkError?.code || '';
+      const errorStatus = linkError?.status || 0;
+      
+      if (errorMessage.includes('rate limit') || 
+          errorMessage.includes('over_email_send_rate_limit') ||
+          errorMessage.includes('email rate limit') ||
+          errorCode === 'over_email_send_rate_limit' ||
+          errorCode === 'rate_limit_exceeded' ||
+          errorStatus === 429) {
+        console.log('Rate limit detected, returning 429');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Email rate limit exceeded',
+            code: 'over_email_send_rate_limit',
+            message: 'Too many emails sent. Please wait a few minutes before requesting another code.'
+          }),
+          { status: 429, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Return appropriate status code based on error
+      const statusCode = errorStatus === 429 ? 429 : (errorStatus >= 400 && errorStatus < 500 ? errorStatus : 500);
+      
       return new Response(
-        JSON.stringify({ error: 'Failed to generate OTP code' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: errorMessage || 'Failed to generate OTP code',
+          code: errorCode || 'unknown_error',
+          details: process.env.NODE_ENV === 'development' ? linkError : undefined
+        }),
+        { status: statusCode, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -120,8 +165,29 @@ export async function POST(request: Request) {
         console.log('OTP email sent successfully to:', email);
       } catch (emailError: any) {
         console.error('Error sending OTP email:', emailError);
+        
+        // Check for rate limit errors from SMTP provider
+        if (emailError?.code === 'EENVELOPE' || 
+            emailError?.responseCode === 550 ||
+            emailError?.message?.includes('rate limit') ||
+            emailError?.message?.includes('quota') ||
+            emailError?.message?.includes('too many')) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Email rate limit exceeded',
+              code: 'over_email_send_rate_limit',
+              message: 'Too many emails sent. Please wait a few minutes before requesting another code.'
+            }),
+            { status: 429, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+        
         return new Response(
-          JSON.stringify({ error: 'Failed to send OTP email' }),
+          JSON.stringify({ 
+            error: 'Failed to send OTP email',
+            code: 'email_send_failed',
+            message: emailError?.message || 'Could not send email. Please try again later.'
+          }),
           { status: 500, headers: { 'Content-Type': 'application/json' } }
         );
       }
@@ -148,8 +214,27 @@ export async function POST(request: Request) {
     );
   } catch (error: any) {
     console.error('OTP generation error:', error);
+    
+    // Check for rate limit errors in the catch block as well
+    if (error?.message?.includes('rate limit') || 
+        error?.message?.includes('over_email_send_rate_limit') ||
+        error?.code === 'over_email_send_rate_limit' ||
+        error?.status === 429) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Email rate limit exceeded',
+          code: 'over_email_send_rate_limit',
+          message: 'Too many emails sent. Please wait a few minutes before requesting another code.'
+        }),
+        { status: 429, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
     return new Response(
-      JSON.stringify({ error: error.message || 'Failed to send OTP' }),
+      JSON.stringify({ 
+        error: error.message || 'Failed to send OTP',
+        code: error.code || 'unknown_error'
+      }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

@@ -51,92 +51,42 @@ const sw = `
 if ('serviceWorker' in navigator) {
     let registration;
     
-    // Function to check for version updates
-    function checkVersionUpdate() {
-        fetch('/config/versions.json', { cache: 'no-store' })
-            .then(response => response.json())
-            .then(data => {
-                const currentVersion = localStorage.getItem('app_version');
-                const latestVersion = data.currentVersion;
-                
-                if (currentVersion && currentVersion !== latestVersion) {
-                    console.log('🔄 Version update detected! Current:', currentVersion, 'Latest:', latestVersion);
-                    
-                    // Clear all caches
-                    if ('caches' in window) {
-                        caches.keys().then(cacheNames => {
-                            return Promise.all(
-                                cacheNames.map(cacheName => {
-                                    console.log('🗑️ Clearing cache:', cacheName);
-                                    return caches.delete(cacheName);
-                                })
-                            );
-                        }).then(() => {
-                            // Unregister service worker
-                            if (registration) {
-                                registration.unregister().then(() => {
-                                    console.log('✅ Service worker unregistered');
-                                    // Reload page to get new version
-                                    window.location.reload();
-                                });
-                            } else {
-                                window.location.reload();
-                            }
-                        });
-                    } else {
-                        window.location.reload();
-                    }
-                } else if (!currentVersion) {
-                    // First time - store current version
-                    localStorage.setItem('app_version', latestVersion);
-                }
-            })
-            .catch(err => {
-                console.warn('⚠️ Version check failed:', err);
-            });
-    }
+    // DISABLED: All automatic version checking to prevent reload loops
+    // Version checking function exists but is not called automatically
     
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-            .then(reg => {
-                registration = reg;
-                console.log('✅ Service Worker registered with scope:', reg.scope);
-                
-                // Check for updates immediately
-                checkVersionUpdate();
-                
-                // Check for updates every 5 minutes
-                setInterval(checkVersionUpdate, 5 * 60 * 1000);
-                
-                // Listen for service worker updates
-                reg.addEventListener('updatefound', () => {
-                    const newWorker = reg.installing;
-                    if (newWorker) {
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                console.log('🔄 New service worker available, reloading...');
-                                checkVersionUpdate();
-                            }
-                        });
-                    }
+        setTimeout(() => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => {
+                    registration = reg;
+                    console.log('✅ Service Worker registered with scope:', reg.scope);
+                    
+                    // DISABLED: No automatic version checking
+                    // Version checks can be triggered manually if needed
+                    
+                    // Listen for service worker updates (but don't auto-reload)
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('ℹ️ New service worker available. Manual refresh recommended.');
+                                }
+                            });
+                        }
+                    });
+                    
+                    // Listen for messages from service worker (but don't auto-reload)
+                    navigator.serviceWorker.addEventListener('message', (event) => {
+                        if (event.data && event.data.type === 'VERSION_UPDATE') {
+                            console.log('ℹ️ Version update available. Manual refresh recommended.');
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('❌ Service Worker registration failed:', error);
                 });
-                
-                // Listen for messages from service worker
-                navigator.serviceWorker.addEventListener('message', (event) => {
-                    if (event.data && event.data.type === 'VERSION_UPDATE') {
-                        console.log('🔄 Version update message received:', event.data);
-                        checkVersionUpdate();
-                    }
-                });
-            })
-            .catch(error => {
-                console.error('❌ Service Worker registration failed:', error);
-            });
-    });
-    
-    // Check for version updates on focus
-    window.addEventListener('focus', () => {
-        checkVersionUpdate();
+        }, 1000);
     });
 }
 `;

@@ -127,9 +127,10 @@ export default function SpeakerSearchAndSort({
   // Initialize with all speakers (only when speakers array changes, not on search/sort)
   useEffect(() => {
     if (speakers.length > 0 && onGroupedSpeakers && onFilteredSpeakers) {
-      const filtered = filterSpeakers(speakers, searchQuery);
-      const sorted = sortSpeakers(filtered, sortBy, searchQuery);
-      const grouped = groupSpeakersByLetter(filtered, sortBy, searchQuery);
+      const filtered = filterSpeakers(speakers, '');
+      // Always use priority order on initial load (when searchQuery is empty and sortBy is 'name')
+      const sorted = sortSpeakersByPriority(filtered);
+      const grouped = groupSpeakersByLetter(filtered, 'name', '');
       onGroupedSpeakers(grouped);
       onFilteredSpeakers(sorted);
     }

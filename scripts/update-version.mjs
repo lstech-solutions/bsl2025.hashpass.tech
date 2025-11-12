@@ -527,6 +527,21 @@ const performGitOperations = async () => {
   }
 };
 
+// Update service worker version
+try {
+  const updateSwVersionPath = path.join(__dirname, 'update-sw-version.mjs');
+  if (fs.existsSync(updateSwVersionPath)) {
+    console.log('🔄 Updating service worker version...');
+    execSync(`node ${updateSwVersionPath}`, {
+      cwd: projectRoot,
+      stdio: 'inherit'
+    });
+    console.log('✅ Service worker version updated');
+  }
+} catch (swError) {
+  console.warn('⚠️  Warning: Could not update service worker version:', swError.message);
+}
+
 // Summary
 (async () => {
   if (allUpdated) {
@@ -542,6 +557,7 @@ const performGitOperations = async () => {
     console.log('   - config/versions.json');
     console.log('   - config/git-info.json');
     console.log('   - CHANGELOG.md');
+    console.log('   - public/sw.js');
     
     // Perform git operations if requested
     await performGitOperations();

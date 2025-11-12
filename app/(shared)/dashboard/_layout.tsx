@@ -14,6 +14,7 @@ import { useTheme } from '../../../hooks/useTheme';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { useAuth } from '../../../hooks/useAuth';
 import { useLanguage } from '../../../providers/LanguageProvider';
+import { isAdmin } from '../../../lib/admin-utils';
 import { ScrollProvider, useScroll } from '../../../contexts/ScrollContext';
 import { NotificationProvider, useNotifications } from '../../../contexts/NotificationContext';
 import { AnimationProvider, useAnimations } from '../../../providers/AnimationProvider';
@@ -35,7 +36,7 @@ const CopilotView = walkthroughable(View);
 // Custom drawer content component
 function CustomDrawerContent() {
   const { colors, isDark, toggleTheme } = useTheme();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { locale, setLocale } = useLanguage();
   const { unreadCount } = useNotifications();
   const { animationsEnabled } = useAnimations();
@@ -45,6 +46,7 @@ function CustomDrawerContent() {
   const copilotHook = useCopilot();
   const isMobile = useIsMobile();
   const styles = getStyles(isDark, colors, isMobile);
+  const [isUserAdmin, setIsUserAdmin] = React.useState(false);
 
   // Animated fluid gradient effect with multiple layers
   const gradientAnimation1 = useSharedValue(0);
@@ -155,13 +157,31 @@ function CustomDrawerContent() {
     };
   });
 
-  const menuItems = [
+  // Check admin status on mount
+  React.useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user) {
+        const admin = await isAdmin(user.id);
+        setIsUserAdmin(admin);
+      }
+    };
+    checkAdminStatus();
+  }, [user]);
+
+  const baseMenuItems = [
     { id: 'nav.explore', message: 'Explore', icon: 'compass-outline', route: './explore' as const },
     { id: 'nav.wallet', message: 'Wallet', icon: 'wallet-outline', route: './wallet' as const },
     { id: 'nav.notifications', message: 'Notifications', icon: 'notifications-outline', route: './notifications' as const },
     { id: 'nav.profile', message: 'Profile', icon: 'person-outline', route: './profile' as const },
     { id: 'nav.settings', message: 'Settings', icon: 'settings-outline', route: './settings' as const },
   ] as const;
+
+  // Add admin menu item if user is admin
+  const adminMenuItem = isUserAdmin 
+    ? [{ id: 'nav.admin', message: 'Admin Panel', icon: 'shield-checkmark-outline', route: './admin' as const }]
+    : [];
+
+  const menuItems = [...baseMenuItems, ...adminMenuItem] as const;
 
   const getLabel = (id: typeof menuItems[number]['id']) => {
     switch (id) {
@@ -175,6 +195,8 @@ function CustomDrawerContent() {
         return t({ id: 'nav.profile', message: 'Profile' });
       case 'nav.settings':
         return t({ id: 'nav.settings', message: 'Settings' });
+      case 'nav.admin':
+        return t({ id: 'nav.admin', message: 'Admin Panel' });
       default:
         return '';
     }
@@ -185,8 +207,13 @@ function CustomDrawerContent() {
     navigation.dispatch(DrawerActions.closeDrawer());
 
     // Only navigate if we're not already on this screen
-    if (pathname !== route) {
-      // Navigate to the route
+    const currentPath = pathname || '';
+    const isActive = route.startsWith('./') 
+      ? currentPath === route || currentPath.endsWith(route.replace('./', ''))
+      : currentPath.startsWith(route);
+    
+    if (!isActive) {
+      // Navigate to the route - all routes are relative now
       router.push(route);
     }
   };
@@ -370,7 +397,10 @@ function CustomDrawerContent() {
         paddingBottom: 16,
       }]}>
         {menuItems.map((item, index) => {
-          const isActive = pathname === item.route;
+          // Check if current path matches the route (handle both relative and absolute routes)
+          const isActive = item.route.startsWith('./') 
+            ? pathname === item.route 
+            : pathname.startsWith(item.route);
           const stepOrder = index + 2; // Start from 2 (after menu button)
           const stepNames: Record<string, string> = {
             './explore': 'sidebarExplore',
@@ -378,6 +408,7 @@ function CustomDrawerContent() {
             './notifications': 'sidebarNotifications',
             './profile': 'sidebarProfile',
             './settings': 'sidebarSettings',
+            './admin': 'sidebarAdmin',
           };
           const stepTexts: Record<string, string> = {
             './explore': 'Explore: Browse events, view your passes, and access quick links to speakers, agenda, and networking. Tap to continue.',
@@ -385,6 +416,7 @@ function CustomDrawerContent() {
             './notifications': 'Notifications: Check your meeting requests, updates, and important alerts. The badge shows unread count. Tap to continue.',
             './profile': 'Profile: View and edit your profile information and account settings. Tap to continue.',
             './settings': 'Settings: Customize app preferences, theme, language, and tutorials. Tap to finish sidebar tour.',
+            './admin': 'Admin Panel: Manage passes, scan QR codes, and create meeting matches. Admin access only.',
           };
           return (
             <CopilotStep 
@@ -935,6 +967,13 @@ export default function DashboardLayout() {
             />
             <Drawer.Screen
               name="settings"
+              options={{
+                headerShown: true,
+                header: () => <ScreenWithHeader />,
+              }}
+            />
+            <Drawer.Screen
+              name="admin"
               options={{
                 headerShown: true,
                 header: () => <ScreenWithHeader />,

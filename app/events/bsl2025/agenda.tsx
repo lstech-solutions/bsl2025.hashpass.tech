@@ -548,22 +548,42 @@ export default function BSL2025AgendaScreen() {
       .trim();
   };
 
-  // Function to find speaker ID by name
-  const findSpeakerId = (speakerName: string) => {
-    // Try to find speaker in the event speakers data
+  // Function to find speaker ID by name (synchronous check first)
+  const findSpeakerId = (speakerName: string): string | null => {
+    // Try to find speaker in the event speakers data first
     if (event?.speakers) {
       const speaker = event.speakers.find(s => 
         s.name.toLowerCase().includes(speakerName.toLowerCase()) ||
         speakerName.toLowerCase().includes(s.name.toLowerCase())
       );
-      return speaker?.id;
+      if (speaker?.id) return speaker.id;
     }
+    
+    // Return null for now - async lookup can be added later if needed
     return null;
   };
 
   // Function to handle speaker navigation
-  const handleSpeakerPress = (speakerName: string) => {
-    const speakerId = findSpeakerId(speakerName);
+  const handleSpeakerPress = async (speakerName: string) => {
+    // First try synchronous lookup
+    let speakerId = findSpeakerId(speakerName);
+    
+    // If not found, try database lookup
+    if (!speakerId) {
+      try {
+        const { data } = await supabase
+          .from('bsl_speakers')
+          .select('id')
+          .ilike('name', `%${speakerName}%`)
+          .limit(1)
+          .single();
+        
+        if (data?.id) speakerId = data.id;
+      } catch (e) {
+        // Ignore errors
+      }
+    }
+    
     if (speakerId) {
       router.push(`/events/bsl2025/speakers/${speakerId}`);
     }

@@ -82,7 +82,7 @@ export default function SpeakersCalendar() {
               title: s.title,
               company: s.company || '',
               bio: s.bio || `Experienced professional in ${s.title}.`,
-              image: s.imageurl || null // Don't use fallback URL, let SpeakerAvatar handle it
+              image: s.imageurl || getSpeakerAvatarUrl(s.name) // Use same fallback as detail page
             }));
             
             // Remove duplicates based on ID
@@ -118,7 +118,9 @@ export default function SpeakersCalendar() {
           index === self.findIndex(s => s.id === speaker.id)
         );
         
-        setSpeakers(uniqueEventSpeakers);
+        // Sort by priority order
+        const sortedEventSpeakers = sortSpeakersByPriority(uniqueEventSpeakers);
+        setSpeakers(sortedEventSpeakers);
         console.log('✅ Loaded speakers from event config (JSON fallback):', uniqueEventSpeakers.length, 'unique speakers');
         setLoading(false);
       } catch (error) {
@@ -139,7 +141,9 @@ export default function SpeakersCalendar() {
           index === self.findIndex(s => s.id === speaker.id)
         );
         
-        setSpeakers(uniqueEmergencySpeakers);
+        // Sort by priority order
+        const sortedEmergencySpeakers = sortSpeakersByPriority(uniqueEmergencySpeakers);
+        setSpeakers(sortedEmergencySpeakers);
         console.log('✅ Emergency fallback successful:', uniqueEmergencySpeakers.length, 'unique speakers');
         setLoading(false);
       }

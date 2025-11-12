@@ -1,6 +1,108 @@
 {
-  "currentVersion": "1.6.14",
+  "currentVersion": "1.6.21",
   "versions": [
+    {
+      "version": "1.6.21",
+      "buildNumber": 202511120045,
+      "releaseDate": "2025-11-12",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "Added Privacy/Terms modal component for in-app viewing",
+        "Improved mobile responsiveness for theme/language switcher on auth page"
+      ],
+      "bugfixes": [
+        "Fixed theme and language switcher overlapping with auth card on mobile views",
+        "Replaced navigation with modal for privacy and terms links on auth screen"
+      ],
+      "breakingChanges": [],
+      "notes": "Version 1.6.21 release"
+    },
+    {
+      "version": "1.6.20",
+      "buildNumber": 202511120030,
+      "releaseDate": "2025-11-12",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "Added Privacy/Terms modal component for in-app viewing",
+        "Improved mobile responsiveness for theme/language switcher on auth page"
+      ],
+      "bugfixes": [
+        "Fixed theme and language switcher overlapping with auth card on mobile views",
+        "Replaced navigation with modal for privacy and terms links on auth screen"
+      ],
+      "breakingChanges": [],
+      "notes": "Version 1.6.20 release"
+    },
+    {
+      "version": "1.6.19",
+      "buildNumber": 202511112015,
+      "releaseDate": "2025-11-11",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "Added Privacy/Terms modal component for in-app viewing",
+        "Improved mobile responsiveness for theme/language switcher on auth page"
+      ],
+      "bugfixes": [
+        "Fixed theme and language switcher overlapping with auth card on mobile views",
+        "Replaced navigation with modal for privacy and terms links on auth screen"
+      ],
+      "breakingChanges": [],
+      "notes": "Version 1.6.19 release"
+    },
+    {
+      "version": "1.6.18",
+      "buildNumber": 202511111958,
+      "releaseDate": "2025-11-11",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "Added Privacy/Terms modal component for in-app viewing",
+        "Improved mobile responsiveness for theme/language switcher on auth page"
+      ],
+      "bugfixes": [
+        "Fixed theme and language switcher overlapping with auth card on mobile views",
+        "Replaced navigation with modal for privacy and terms links on auth screen"
+      ],
+      "breakingChanges": [],
+      "notes": "Version 1.6.18 release"
+    },
+    {
+      "version": "1.6.17",
+      "buildNumber": 202511111952,
+      "releaseDate": "2025-11-11",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "Added Privacy/Terms modal component for in-app viewing",
+        "Improved mobile responsiveness for theme/language switcher on auth page"
+      ],
+      "bugfixes": [
+        "Fixed theme and language switcher overlapping with auth card on mobile views",
+        "Replaced navigation with modal for privacy and terms links on auth screen"
+      ],
+      "breakingChanges": [],
+      "notes": "Version 1.6.17 release"
+    },
+    {
+      "version": "1.6.16",
+      "buildNumber": 202511111952,
+      "releaseDate": "2025-11-11",
+      "releaseType": "beta",
+      "environment": "development",
+      "features": [
+        "Added Privacy/Terms modal component for in-app viewing",
+        "Improved mobile responsiveness for theme/language switcher on auth page"
+      ],
+      "bugfixes": [
+        "Fixed theme and language switcher overlapping with auth card on mobile views",
+        "Replaced navigation with modal for privacy and terms links on auth screen"
+      ],
+      "breakingChanges": [],
+      "notes": "Version 1.6.16 release"
+    },
     {
       "version": "1.6.14",
       "buildNumber": 202511110654,

@@ -1,5 +1,77 @@
 # Changelog
 
+## [1.6.21] - 2025-11-12
+
+### Beta
+- Version 1.6.21 release
+
+### Technical Details
+- Version: 1.6.21
+- Release Type: beta
+- Build Number: 202511120045
+- Release Date: 2025-11-12T00:45:07.173Z
+
+
+## [1.6.20] - 2025-11-12
+
+### Beta
+- Version 1.6.20 release
+
+### Technical Details
+- Version: 1.6.20
+- Release Type: beta
+- Build Number: 202511120030
+- Release Date: 2025-11-12T00:30:13.071Z
+
+
+## [1.6.19] - 2025-11-11
+
+### Beta
+- Version 1.6.19 release
+
+### Technical Details
+- Version: 1.6.19
+- Release Type: beta
+- Build Number: 202511112015
+- Release Date: 2025-11-11T20:15:18.971Z
+
+
+## [1.6.18] - 2025-11-11
+
+### Beta
+- Version 1.6.18 release
+
+### Technical Details
+- Version: 1.6.18
+- Release Type: beta
+- Build Number: 202511111958
+- Release Date: 2025-11-11T19:58:03.659Z
+
+
+## [1.6.17] - 2025-11-11
+
+### Beta
+- Version 1.6.17 release
+
+### Technical Details
+- Version: 1.6.17
+- Release Type: beta
+- Build Number: 202511111952
+- Release Date: 2025-11-11T19:52:36.855Z
+
+
+## [1.6.16] - 2025-11-11
+
+### Beta
+- Version 1.6.16 release
+
+### Technical Details
+- Version: 1.6.16
+- Release Type: beta
+- Build Number: 202511111952
+- Release Date: 2025-11-11T19:52:03.535Z
+
+
 ## [1.6.14] - 2025-11-11
 
 ### Beta

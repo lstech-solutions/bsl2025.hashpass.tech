@@ -489,7 +489,7 @@ export async function sendBookingEmail(
  */
 export async function sendUserOnboardingEmail(
   email: string,
-  locale: string = DEFAULT_LOCALE,
+  locale?: string,
   userId?: string
 ): Promise<{ success: boolean; error?: string; messageId?: string; alreadySent?: boolean }> {
   if (!emailEnabled || !transporter) {
@@ -511,6 +511,23 @@ export async function sendUserOnboardingEmail(
       user_id = foundUserId || undefined;
     }
     
+    // Detect locale if not provided
+    let userLocale = locale;
+    if (!userLocale) {
+      console.log(`[sendUserOnboardingEmail] No locale provided, detecting for user ${user_id}`);
+      userLocale = await detectUserLocale(user_id);
+    } else {
+      console.log(`[sendUserOnboardingEmail] Using provided locale: ${userLocale} for user ${user_id}`);
+    }
+    
+    // Validate locale is supported
+    if (!SUPPORTED_LOCALES.includes(userLocale)) {
+      console.warn(`[sendUserOnboardingEmail] Invalid locale ${userLocale}, defaulting to ${DEFAULT_LOCALE}`);
+      userLocale = DEFAULT_LOCALE;
+    }
+    
+    console.log(`[sendUserOnboardingEmail] Sending user onboarding email to ${email} with locale: ${userLocale}`);
+    
     // Check if user onboarding email has already been sent
     if (user_id) {
       const alreadySent = await hasEmailBeenSent(user_id, 'userOnboarding');
@@ -523,8 +540,16 @@ export async function sendUserOnboardingEmail(
     const fs = require('fs');
     const path = require('path');
     
+    // Validate and normalize locale
+    const normalizedLocale = SUPPORTED_LOCALES.includes(userLocale) ? userLocale : DEFAULT_LOCALE;
+    if (normalizedLocale !== userLocale) {
+      console.warn(`[sendUserOnboardingEmail] Invalid locale '${userLocale}', using '${normalizedLocale}' instead`);
+    }
+    
+    console.log(`[sendUserOnboardingEmail] Preparing user onboarding email for ${email} with locale: ${normalizedLocale}`);
+    
     // Get translations for the locale
-    const translations = getEmailContent('userOnboarding', locale);
+    const translations = getEmailContent('userOnboarding', normalizedLocale);
     const subject = translations.subject;
     
     let htmlContent: string;
@@ -626,10 +651,16 @@ export async function sendUserOnboardingEmail(
 
     const info = await transporter.sendMail(mailOptions);
     
-    // Mark email as sent if we have a user ID
+    // Mark email as sent if we have a user ID (this creates the flag in DB with message_id)
     if (user_id) {
-      await markEmailAsSent(user_id, 'userOnboarding', locale, info.messageId);
-      console.log(`User onboarding email marked as sent for user ${user_id} (${email})`);
+      const markResult = await markEmailAsSent(user_id, 'userOnboarding', normalizedLocale, info.messageId);
+      if (markResult.success) {
+        console.log(`✅ User onboarding email marked as sent in DB for user ${user_id} (${email}) with locale: ${normalizedLocale} and messageId: ${info.messageId}`);
+      } else {
+        console.error(`❌ Failed to mark user onboarding email as sent in DB: ${markResult.error}`);
+      }
+    } else {
+      console.warn(`⚠️ No user ID available, cannot mark user onboarding email as sent in DB for ${email}`);
     }
     
     return { success: true, messageId: info.messageId };
@@ -844,7 +875,7 @@ export async function sendWelcomeEmail(
  */
 export async function sendSpeakerOnboardingEmail(
   email: string,
-  locale: string = DEFAULT_LOCALE,
+  locale?: string,
   userId?: string
 ): Promise<{ success: boolean; error?: string; messageId?: string; alreadySent?: boolean }> {
   if (!emailEnabled || !transporter) {
@@ -866,6 +897,23 @@ export async function sendSpeakerOnboardingEmail(
       user_id = foundUserId || undefined;
     }
     
+    // Detect locale if not provided
+    let userLocale = locale;
+    if (!userLocale) {
+      console.log(`[sendSpeakerOnboardingEmail] No locale provided, detecting for user ${user_id}`);
+      userLocale = await detectUserLocale(user_id);
+    } else {
+      console.log(`[sendSpeakerOnboardingEmail] Using provided locale: ${userLocale} for user ${user_id}`);
+    }
+    
+    // Validate locale is supported
+    if (!SUPPORTED_LOCALES.includes(userLocale)) {
+      console.warn(`[sendSpeakerOnboardingEmail] Invalid locale ${userLocale}, defaulting to ${DEFAULT_LOCALE}`);
+      userLocale = DEFAULT_LOCALE;
+    }
+    
+    console.log(`[sendSpeakerOnboardingEmail] Sending speaker onboarding email to ${email} with locale: ${userLocale}`);
+    
     // Check if speaker onboarding email has already been sent
     if (user_id) {
       const alreadySent = await hasEmailBeenSent(user_id, 'speakerOnboarding');
@@ -878,8 +926,16 @@ export async function sendSpeakerOnboardingEmail(
     const fs = require('fs');
     const path = require('path');
     
+    // Validate and normalize locale
+    const normalizedLocale = SUPPORTED_LOCALES.includes(userLocale) ? userLocale : DEFAULT_LOCALE;
+    if (normalizedLocale !== userLocale) {
+      console.warn(`[sendSpeakerOnboardingEmail] Invalid locale '${userLocale}', using '${normalizedLocale}' instead`);
+    }
+    
+    console.log(`[sendSpeakerOnboardingEmail] Preparing speaker onboarding email for ${email} with locale: ${normalizedLocale}`);
+    
     // Get translations for the locale
-    const translations = getEmailContent('speakerOnboarding', locale);
+    const translations = getEmailContent('speakerOnboarding', normalizedLocale);
     const subject = translations.subject;
     
     let htmlContent: string;
@@ -981,10 +1037,16 @@ export async function sendSpeakerOnboardingEmail(
 
     const info = await transporter.sendMail(mailOptions);
     
-    // Mark email as sent if we have a user ID
+    // Mark email as sent if we have a user ID (this creates the flag in DB with message_id)
     if (user_id) {
-      await markEmailAsSent(user_id, 'speakerOnboarding', locale, info.messageId);
-      console.log(`Speaker onboarding email marked as sent for user ${user_id} (${email})`);
+      const markResult = await markEmailAsSent(user_id, 'speakerOnboarding', normalizedLocale, info.messageId);
+      if (markResult.success) {
+        console.log(`✅ Speaker onboarding email marked as sent in DB for user ${user_id} (${email}) with locale: ${normalizedLocale} and messageId: ${info.messageId}`);
+      } else {
+        console.error(`❌ Failed to mark speaker onboarding email as sent in DB: ${markResult.error}`);
+      }
+    } else {
+      console.warn(`⚠️ No user ID available, cannot mark speaker onboarding email as sent in DB for ${email}`);
     }
     
     return { success: true, messageId: info.messageId };

@@ -481,12 +481,9 @@ export default function AuthScreen() {
           }
 
           setLoading(false);
-          showSuccess('Authentication Successful', 'Welcome! You have been signed in.');
           
-          // Use a small delay to ensure toast is visible and session is stable
-          setTimeout(() => {
-            router.replace('/(shared)/dashboard/explore');
-          }, 300);
+          // Navigate immediately - user is already authenticated
+          router.replace('/(shared)/dashboard/explore');
           return;
         } else {
           throw new Error('No session created after verification');

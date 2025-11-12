@@ -11,14 +11,13 @@ import { supabase } from '../lib/supabase';
 import { PassType } from '../lib/pass-system';
 import { qrScannerService } from '../lib/qr-scanner-service';
 
-// Dynamic import for web fallback
-// Using .web.ts extension ensures Metro only resolves this on web
-let webQRScannerFallback: any = null;
+// Import web-only QR scanner
+let WebQRScanner: any = null;
 if (Platform.OS === 'web') {
   try {
-    webQRScannerFallback = require('../lib/qr-scanner-web-fallback.web').webQRScannerFallback;
+    WebQRScanner = require('./WebQRScanner').default;
   } catch (e) {
-    // Ignore if not available
+    console.warn('WebQRScanner not available:', e);
   }
 }
 
@@ -118,30 +117,13 @@ export default function AdminQRScanner({
     }
   }, [visible, user, adminCheckLoading, isUserAdmin]);
 
-  // Initialize web fallback when permission is granted and admin check passes
-  useEffect(() => {
-    if (Platform.OS === 'web' && visible && hasPermission === true && !useWebFallback && !adminCheckLoading && isUserAdmin) {
-      // Small delay to ensure DOM is ready
-      const timer = setTimeout(() => {
-        console.log('🎥 Initializing web fallback scanner...');
-        initializeWebFallback();
-      }, 500); // Increased delay to ensure DOM is fully ready
-      
-      return () => {
-        clearTimeout(timer);
-        // Stop scanner BEFORE React unmounts to prevent DOM conflicts
-        // Use the stored cleanup function if available
-        if (scannerCleanupRef.current) {
-          console.log('🧹 Cleaning up web scanner before React unmount...');
-          // Run cleanup synchronously in a way that doesn't block but happens before React cleanup
-          Promise.resolve(scannerCleanupRef.current()).catch(() => {
-            // Errors are already handled in the cleanup function
-          });
-          scannerCleanupRef.current = null;
-        }
-      };
-    }
-  }, [visible, hasPermission, useWebFallback, adminCheckLoading, isUserAdmin]);
+  // OLD WEB FALLBACK CODE - DISABLED - We now use WebQRScanner component instead
+  // This useEffect is disabled because we're using WebQRScanner on web platform
+  // useEffect(() => {
+  //   if (Platform.OS === 'web' && visible && hasPermission === true && !useWebFallback && !adminCheckLoading && isUserAdmin) {
+  //     // Disabled - using WebQRScanner instead
+  //   }
+  // }, [visible, hasPermission, useWebFallback, adminCheckLoading, isUserAdmin]);
 
   const checkPermissionStatus = async () => {
     try {
@@ -605,6 +587,33 @@ export default function AdminQRScanner({
     }
   };
 
+  const handleReactivate = async () => {
+    if (!qrDetails || !user) return;
+    
+    try {
+      const success = await qrSystemService.reactivateQR(qrDetails.token, user.id);
+      if (success) {
+        Alert.alert('Success', 'QR code has been reactivated');
+        // Refresh QR details
+        const updatedQr = await qrSystemService.getQRByToken(qrDetails.token);
+        if (updatedQr) {
+          setQrDetails(updatedQr);
+          setScanResult({
+            ...scanResult!,
+            valid: updatedQr.status === 'active',
+            status: updatedQr.status === 'active' ? 'valid' : 'suspended',
+            message: updatedQr.status === 'active' ? 'QR code is valid' : 'QR code is suspended'
+          });
+        }
+      } else {
+        Alert.alert('Error', 'Failed to reactivate QR code');
+      }
+    } catch (error: any) {
+      console.error('Error reactivating QR:', error);
+      Alert.alert('Error', error.message || 'Failed to reactivate QR code');
+    }
+  };
+
   if (!visible) return null;
 
   // Show loading while checking admin status
@@ -761,6 +770,233 @@ export default function AdminQRScanner({
       }
       return this.props.children;
     }
+  }
+
+  // Use WebQRScanner on web platform
+  if (Platform.OS === 'web' && WebQRScanner) {
+    return (
+      <>
+        <WebQRScanner
+          visible={visible}
+          onClose={onClose}
+          onScanSuccess={async (text: string) => {
+            if (scanned || isProcessing) {
+              console.log('⚠️ Scan already in progress, ignoring duplicate scan');
+              return;
+            }
+            
+            console.log('📱 QR Code received in AdminQRScanner');
+            console.log('📝 Raw QR text:', text);
+            console.log('📏 Text length:', text.length);
+            console.log('📄 First 200 chars:', text.substring(0, 200));
+            
+            setScanned(true);
+            setIsProcessing(true);
+            
+            try {
+              // Use professional QR parser
+              console.log('🔍 Parsing QR data...');
+              const parsed = qrScannerService.parseQRData(text);
+              console.log('📦 Parsed result:', parsed);
+              
+              if (!parsed.isValid || !parsed.token) {
+                console.error('❌ Invalid QR code format');
+                console.error('Parsed data:', parsed);
+                throw new Error(`Invalid QR code format. Expected token, got: ${JSON.stringify(parsed)}`);
+              }
+
+              const token = parsed.token;
+              console.log('✅ Extracted token:', token);
+              console.log('🏷️ Token type:', parsed.type);
+
+              // For admin scanning, first check validity without marking as used
+              // Then validate and use to log the scan
+              let result = await qrSystemService.checkQRValidity(token);
+              
+              // If valid, also validate and use to log the admin scan
+              if (result.valid) {
+                const useResult = await qrSystemService.validateAndUseQR(
+                  token,
+                  user?.id,
+                  'admin-scanner'
+                );
+                // Use the useResult which has more details
+                result = useResult;
+              }
+
+              console.log('QR validation result:', result);
+              setScanResult(result);
+
+              // Fetch full QR details for admin view (always fetch, even if invalid)
+              try {
+                const qr = await qrSystemService.getQRByToken(token);
+                setQrDetails(qr);
+                setShowDetails(true);
+              } catch (error) {
+                console.error('Error fetching QR details:', error);
+                // Still show result even if we can't fetch details
+                setShowDetails(true);
+              }
+
+              // Call success callback with result
+              if (onScanSuccess) {
+                onScanSuccess(result);
+              }
+            } catch (error: any) {
+              console.error('❌ Error scanning QR:', error);
+              Alert.alert('Error', error.message || 'Error processing QR code', [
+                { text: 'Try Again', onPress: () => {
+                  setScanned(false);
+                  setIsProcessing(false);
+                  // Scanner keeps running, ready for next scan
+                }},
+              ]);
+              setScanned(false);
+              setIsProcessing(false);
+              // Scanner continues running for next attempt
+            }
+          }}
+          onError={(error: Error) => {
+            console.error('QR Scanner error:', error);
+            setCameraError(error.message);
+          }}
+          title="Admin QR Scanner"
+        />
+        
+        {/* Show QR details in a separate modal when showDetails is true */}
+        {showDetails && scanResult && qrDetails && (
+          <Modal visible={showDetails} animationType="slide" transparent>
+            <View style={styles.modalContainer}>
+              <View style={styles.scannerContainer}>
+                <View style={styles.header}>
+                  <View style={styles.headerContent}>
+                    <Text style={styles.title}>QR Code Details</Text>
+                  </View>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setShowDetails(false);
+                      resetScanner();
+                    }} 
+                    style={styles.closeButton}
+                  >
+                    <Ionicons name="close" size={28} color={colors.text.primary} />
+                  </TouchableOpacity>
+                </View>
+                
+                {/* Reuse the existing details view - we'll need to extract it */}
+                <ScrollView style={styles.detailsContainer} contentContainerStyle={styles.detailsContent}>
+                  <View style={styles.detailsHeader}>
+                    <Ionicons 
+                      name={scanResult?.valid ? "checkmark-circle" : "close-circle"} 
+                      size={48} 
+                      color={scanResult?.valid ? colors.success.main : colors.error.main} 
+                    />
+                    <Text style={styles.detailsTitle}>
+                      {scanResult?.valid ? 'Valid QR Code' : 'Invalid QR Code'}
+                    </Text>
+                    <Text style={styles.detailsStatus}>{scanResult?.message}</Text>
+                  </View>
+
+                  <View style={styles.detailsSection}>
+                    <Text style={styles.sectionTitle}>QR Code Details</Text>
+                    
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Token:</Text>
+                      <Text style={styles.detailValue} selectable>{qrDetails.token}</Text>
+                    </View>
+                    
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Type:</Text>
+                      <Text style={styles.detailValue}>{qrDetails.qr_type}</Text>
+                    </View>
+                    
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Status:</Text>
+                      <Text style={[styles.detailValue, { color: getStatusColor(qrDetails.status) }]}>
+                        {qrDetails.status.toUpperCase()}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Usage:</Text>
+                      <Text style={styles.detailValue}>
+                        {qrDetails.usage_count} / {qrDetails.max_uses}
+                      </Text>
+                    </View>
+                    
+                    {qrDetails.expires_at && (
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Expires:</Text>
+                        <Text style={styles.detailValue}>
+                          {new Date(qrDetails.expires_at).toLocaleString()}
+                        </Text>
+                      </View>
+                    )}
+                    
+                    {qrDetails.display_data && (
+                      <>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Pass Number:</Text>
+                          <Text style={styles.detailValue}>
+                            {qrDetails.display_data.pass_number || 'N/A'}
+                          </Text>
+                        </View>
+                        {qrDetails.display_data.pass_type && (
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>Pass Type:</Text>
+                            <Text style={styles.detailValue}>
+                              {qrDetails.display_data.pass_type}
+                            </Text>
+                          </View>
+                        )}
+                      </>
+                    )}
+                  </View>
+
+                  {/* Admin Actions */}
+                  {isUserAdmin && (
+                    <View style={styles.actionsSection}>
+                      {qrDetails.status === 'active' && (
+                        <TouchableOpacity style={[styles.actionButton, styles.suspendButton]} onPress={handleSuspend}>
+                          <MaterialIcons name="pause-circle-outline" size={20} color="#FF9500" />
+                          <Text style={styles.actionButtonText}>Suspend QR</Text>
+                        </TouchableOpacity>
+                      )}
+                      
+                      {qrDetails.status === 'suspended' && (
+                        <TouchableOpacity 
+                          style={[styles.actionButton, { borderColor: typeof colors.success === 'string' ? colors.success : colors.success.main, borderWidth: 1 }]} 
+                          onPress={handleReactivate}
+                        >
+                          <MaterialIcons name="play-circle-outline" size={20} color={typeof colors.success === 'string' ? colors.success : colors.success.main} />
+                          <Text style={[styles.actionButtonText, { color: typeof colors.success === 'string' ? colors.success : colors.success.main }]}>Reactivate QR</Text>
+                        </TouchableOpacity>
+                      )}
+                      
+                      {qrDetails.status !== 'revoked' && (
+                        <TouchableOpacity style={[styles.actionButton, styles.revokeButton]} onPress={handleRevoke}>
+                          <MaterialIcons name="block" size={20} color={colors.error.main} />
+                          <Text style={[styles.actionButtonText, { color: colors.error.main }]}>Revoke QR</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+
+                  <View style={styles.buttonGroup}>
+                    <TouchableOpacity style={styles.resetButton} onPress={resetScanner}>
+                      <Text style={styles.resetButtonText}>Scan Another</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.resetButton, styles.closeButtonFull]} onPress={onClose}>
+                      <Text style={styles.resetButtonText}>Close</Text>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
+        )}
+      </>
+    );
   }
 
   return (

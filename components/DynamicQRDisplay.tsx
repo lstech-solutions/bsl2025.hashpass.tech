@@ -5,6 +5,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { qrSystemService, QRCode } from '../lib/qr-system';
 import { passSystemService } from '../lib/pass-system';
+import { qrScannerService } from '../lib/qr-scanner-service';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, withSpring } from 'react-native-reanimated';
 import QRCodeSvg from 'react-native-qrcode-svg';
 import Svg, { Image as SvgImage } from 'react-native-svg';
@@ -136,6 +137,43 @@ export default function DynamicQRDisplay({
       // Fetch the full QR code details
       const qrDetails = await qrSystemService.getQRById(result.qrId);
       if (qrDetails) {
+        // Validate QR code has required fields
+        if (!qrDetails.token) {
+          console.error('❌ QR code missing token:', qrDetails);
+          throw new Error('Generated QR code is missing token');
+        }
+        
+        console.log('✅ QR code generated successfully');
+        console.log('🔑 Token:', qrDetails.token);
+        console.log('📊 QR details:', {
+          id: qrDetails.id,
+          token: qrDetails.token,
+          status: qrDetails.status,
+          expires_at: qrDetails.expires_at,
+        });
+        
+        // Test QR payload generation
+        const testPayload = qrSystemService.generateQRPayload(qrDetails.token);
+        console.log('🧪 Test payload:', testPayload);
+        
+        // Test parsing the payload
+        const testParsed = qrScannerService.parseQRData(testPayload);
+        console.log('🧪 Test parsed:', testParsed);
+        
+        if (!testParsed.isValid || !testParsed.token) {
+          console.error('❌ QR payload test failed!', testParsed);
+          throw new Error('QR payload format validation failed');
+        }
+        
+        if (testParsed.token !== qrDetails.token) {
+          console.error('❌ Token mismatch!', {
+            original: qrDetails.token,
+            parsed: testParsed.token,
+          });
+          throw new Error('QR token mismatch in payload');
+        }
+        
+        console.log('✅ QR payload validation passed');
         setQrCode(qrDetails);
       } else {
         throw new Error('Failed to fetch QR code details');
@@ -184,7 +222,17 @@ export default function DynamicQRDisplay({
   };
 
   const getQRPayload = (token: string): string => {
-    return qrSystemService.generateQRPayload(token);
+    if (!token) {
+      console.error('❌ getQRPayload: No token provided');
+      throw new Error('QR token is required');
+    }
+    
+    console.log('🔑 Generating QR payload for token:', token.substring(0, 50));
+    const payload = qrSystemService.generateQRPayload(token);
+    console.log('✅ QR payload generated, length:', payload.length);
+    console.log('📄 Payload preview:', payload.substring(0, 150));
+    
+    return payload;
   };
 
   const animatedRefreshStyle = useAnimatedStyle(() => {
@@ -228,7 +276,25 @@ export default function DynamicQRDisplay({
     return null;
   }
 
+  // Validate QR code has token before generating payload
+  if (!qrCode.token) {
+    console.error('❌ QR code missing token:', qrCode);
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={48} color={colors.error} />
+          <Text style={styles.errorText}>QR code missing token. Please refresh.</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={generateQR}>
+            <Text style={styles.retryButtonText}>Refresh QR</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  console.log('🎯 Generating QR code for token:', qrCode.token);
   const qrPayload = getQRPayload(qrCode.token);
+  console.log('✅ QR payload ready for display, length:', qrPayload.length);
   
   // Get logo for embedding in QR code center - use higher resolution android-chrome-192x192.png
   // Use URI for both platforms to avoid require() issues
@@ -263,11 +329,13 @@ export default function DynamicQRDisplay({
             color={isDark ? '#FFFFFF' : '#000000'}
             backgroundColor={isDark ? '#1A1A1A' : '#FFFFFF'}
             logo={logoSource}
-            logoSize={size * 0.2}
+            logoSize={size * 0.18}
             logoBackgroundColor="transparent"
             logoMargin={2}
             logoBorderRadius={8}
-            quietZone={10}
+            quietZone={8}
+            ecl="M"
+            enableLinearGradient={false}
           />
           
           {/* Status Badge */}

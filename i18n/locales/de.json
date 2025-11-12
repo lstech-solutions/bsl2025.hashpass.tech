@@ -433,6 +433,55 @@
       "blocked": "Blockiert"
     },
     "quickAccess": "Schnellzugriff",
+    "quickAccessItems": {
+      "findSpeakers": {
+        "title": "Referenten Finden",
+        "subtitle": "Alle Referenten durchsuchen"
+      },
+      "yourRequest": {
+        "title": "Ihre Anfragen",
+        "subtitle": "Gesendete und eingehende Anfragen anzeigen"
+      },
+      "myMeetings": {
+        "title": "Meine Meetings",
+        "subtitle": "Ihre akzeptierten/erstellten Meetings"
+      },
+      "mySchedule": {
+        "title": "Mein Zeitplan",
+        "subtitle": "Zeitplan anzeigen und verwalten"
+      },
+      "blockedUsers": {
+        "title": "Blockierte Benutzer",
+        "subtitle": "Blockierte Benutzer verwalten"
+      },
+      "analytics": {
+        "title": "Analysen",
+        "subtitle": "Networking-Statistiken anzeigen"
+      }
+    },
+    "tips": {
+      "title": "Networking-Tipps",
+      "beSpecific": {
+        "title": "Seien Sie Spezifisch",
+        "description": "Fügen Sie klare Absichten in Ihre Meeting-Anfragen ein"
+      },
+      "followUp": {
+        "title": "Nachfassen",
+        "description": "Senden Sie Nachfass-Nachrichten für ausstehende Anfragen"
+      },
+      "networkSmart": {
+        "title": "Intelligentes Networking",
+        "description": "Konzentrieren Sie sich auf Qualität statt Quantität"
+      },
+      "beProfessional": {
+        "title": "Seien Sie Professionell",
+        "description": "Behalten Sie immer einen professionellen Ton in Ihren Nachrichten bei"
+      },
+      "bePatient": {
+        "title": "Seien Sie Geduldig",
+        "description": "Geben Sie Referenten Zeit, auf Ihre Anfragen zu antworten"
+      }
+    },
     "recentActivity": {
       "title": "Aktuelle Aktivität",
       "journey": "Ihre Networking-Reise",

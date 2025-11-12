@@ -433,6 +433,55 @@
       "blocked": "Bloqués"
     },
     "quickAccess": "Accès Rapide",
+    "quickAccessItems": {
+      "findSpeakers": {
+        "title": "Trouver des Conférenciers",
+        "subtitle": "Parcourir tous les conférenciers"
+      },
+      "yourRequest": {
+        "title": "Vos Demandes",
+        "subtitle": "Voir les demandes envoyées et reçues"
+      },
+      "myMeetings": {
+        "title": "Mes Réunions",
+        "subtitle": "Vos réunions acceptées/créées"
+      },
+      "mySchedule": {
+        "title": "Mon Planning",
+        "subtitle": "Voir et gérer votre planning"
+      },
+      "blockedUsers": {
+        "title": "Utilisateurs Bloqués",
+        "subtitle": "Gérer les utilisateurs bloqués"
+      },
+      "analytics": {
+        "title": "Analyses",
+        "subtitle": "Voir les statistiques de réseautage"
+      }
+    },
+    "tips": {
+      "title": "Conseils de Réseautage",
+      "beSpecific": {
+        "title": "Soyez Spécifique",
+        "description": "Incluez des intentions claires dans vos demandes de réunion"
+      },
+      "followUp": {
+        "title": "Faire un Suivi",
+        "description": "Envoyez des messages de suivi pour les demandes en attente"
+      },
+      "networkSmart": {
+        "title": "Réseautage Intelligent",
+        "description": "Concentrez-vous sur la qualité des connexions plutôt que sur la quantité"
+      },
+      "beProfessional": {
+        "title": "Soyez Professionnel",
+        "description": "Maintenez toujours un ton professionnel dans vos messages"
+      },
+      "bePatient": {
+        "title": "Soyez Patient",
+        "description": "Donnez aux conférenciers le temps de répondre à vos demandes"
+      }
+    },
     "recentActivity": {
       "title": "Activité Récente",
       "journey": "Votre Parcours de Réseautage",

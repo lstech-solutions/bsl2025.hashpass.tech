@@ -502,6 +502,55 @@
       "blocked": "Bloqueados"
     },
     "quickAccess": "Acceso Rápido",
+    "quickAccessItems": {
+      "findSpeakers": {
+        "title": "Buscar Ponentes",
+        "subtitle": "Explorar todos los ponentes"
+      },
+      "yourRequest": {
+        "title": "Tus Solicitudes",
+        "subtitle": "Ver solicitudes enviadas y recibidas"
+      },
+      "myMeetings": {
+        "title": "Mis Reuniones",
+        "subtitle": "Tus reuniones aceptadas/creadas"
+      },
+      "mySchedule": {
+        "title": "Mi Agenda",
+        "subtitle": "Ver y gestionar tu agenda"
+      },
+      "blockedUsers": {
+        "title": "Usuarios Bloqueados",
+        "subtitle": "Gestionar usuarios bloqueados"
+      },
+      "analytics": {
+        "title": "Analíticas",
+        "subtitle": "Ver estadísticas de networking"
+      }
+    },
+    "tips": {
+      "title": "Consejos de Networking",
+      "beSpecific": {
+        "title": "Sé Específico",
+        "description": "Incluye intenciones claras en tus solicitudes de reunión"
+      },
+      "followUp": {
+        "title": "Hacer Seguimiento",
+        "description": "Envía mensajes de seguimiento para solicitudes pendientes"
+      },
+      "networkSmart": {
+        "title": "Networking Inteligente",
+        "description": "Enfócate en conexiones de calidad sobre cantidad"
+      },
+      "beProfessional": {
+        "title": "Sé Profesional",
+        "description": "Mantén siempre un tono profesional en tus mensajes"
+      },
+      "bePatient": {
+        "title": "Sé Paciente",
+        "description": "Da tiempo a los ponentes para responder a tus solicitudes"
+      }
+    },
     "recentActivity": {
       "title": "Actividad Reciente",
       "journey": "Tu Viaje de Networking",

@@ -503,6 +503,55 @@
       "blocked": "Blocked"
     },
     "quickAccess": "Quick Access",
+    "quickAccessItems": {
+      "findSpeakers": {
+        "title": "Find Speakers",
+        "subtitle": "Browse all speakers"
+      },
+      "yourRequest": {
+        "title": "Your Request",
+        "subtitle": "View sent and incoming requests"
+      },
+      "myMeetings": {
+        "title": "My Meetings",
+        "subtitle": "Your accepted/created meetings"
+      },
+      "mySchedule": {
+        "title": "My Schedule",
+        "subtitle": "View and manage your schedule"
+      },
+      "blockedUsers": {
+        "title": "Blocked Users",
+        "subtitle": "Manage blocked users"
+      },
+      "analytics": {
+        "title": "Analytics",
+        "subtitle": "View networking statistics"
+      }
+    },
+    "tips": {
+      "title": "Networking Tips",
+      "beSpecific": {
+        "title": "Be Specific",
+        "description": "Include clear intentions in your meeting requests"
+      },
+      "followUp": {
+        "title": "Follow Up",
+        "description": "Send follow-up messages for pending requests"
+      },
+      "networkSmart": {
+        "title": "Network Smart",
+        "description": "Focus on quality connections over quantity"
+      },
+      "beProfessional": {
+        "title": "Be Professional",
+        "description": "Always maintain a professional tone in your messages"
+      },
+      "bePatient": {
+        "title": "Be Patient",
+        "description": "Give speakers time to respond to your requests"
+      }
+    },
     "recentActivity": {
       "title": "Recent Activity",
       "journey": "Your Networking Journey",

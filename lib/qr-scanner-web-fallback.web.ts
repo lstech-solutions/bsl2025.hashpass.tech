@@ -52,8 +52,8 @@ class WebQRScannerFallback {
   private async initializeReader() {
     if (this.reader) return this.reader;
 
-    const { BrowserMultiFormatReader } = await this.loadZXing();
-    this.reader = new BrowserMultiFormatReader();
+      const { BrowserMultiFormatReader } = await this.loadZXing();
+      this.reader = new BrowserMultiFormatReader();
     return this.reader;
   }
 
@@ -64,10 +64,10 @@ class WebQRScannerFallback {
       
       // Prefer back camera (environment facing)
       const backCamera = videoDevices.find(device => 
-        device.label.toLowerCase().includes('back') ||
-        device.label.toLowerCase().includes('rear')
-      );
-      
+      device.label.toLowerCase().includes('back') || 
+      device.label.toLowerCase().includes('rear')
+    );
+
       return backCamera?.deviceId || videoDevices[0]?.deviceId || null;
     } catch (error) {
       console.error('Error getting camera devices:', error);
@@ -110,7 +110,7 @@ class WebQRScannerFallback {
         
         if (!wrapper) {
           throw new Error(`Scanner wrapper not found: ${options.videoElement}`);
-        }
+          }
 
         // Check if wrapper is already a video element
         if (wrapper instanceof HTMLVideoElement) {
@@ -145,19 +145,19 @@ class WebQRScannerFallback {
       }
 
       // Simple styling - let parent handle dimensions
-      videoElement.style.width = '100%';
-      videoElement.style.height = '100%';
-      videoElement.style.objectFit = 'cover';
-      videoElement.setAttribute('autoplay', 'true');
-      videoElement.setAttribute('playsinline', 'true');
-      videoElement.setAttribute('muted', 'true');
+          videoElement.style.width = '100%';
+          videoElement.style.height = '100%';
+          videoElement.style.objectFit = 'cover';
+          videoElement.setAttribute('autoplay', 'true');
+          videoElement.setAttribute('playsinline', 'true');
+          videoElement.setAttribute('muted', 'true');
 
       this.videoElement = videoElement;
       this.isScanning = true;
 
       // ZXing handles video stream attachment automatically
       const continuous = options.continuous !== false;
-      
+
       reader.decodeFromVideoDevice(
         deviceId,
         videoElement,
@@ -181,8 +181,8 @@ class WebQRScannerFallback {
                (error.message.includes('NotFoundException') || error.message.includes('not found')));
             
             if (!isNotFoundException) {
-              console.warn('ZXing scan error:', error);
-              onError?.(error);
+            console.warn('ZXing scan error:', error);
+            onError?.(error);
             }
           }
         }
@@ -210,12 +210,12 @@ class WebQRScannerFallback {
       }
       this.reader = null;
     }
-
+    
     if (this.videoElement) {
       // Stop video stream
       if (this.videoElement.srcObject) {
         const stream = this.videoElement.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach(track => track.stop());
         this.videoElement.srcObject = null;
       }
       this.videoElement = null;

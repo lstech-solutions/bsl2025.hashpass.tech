@@ -112,17 +112,24 @@ if ('serviceWorker' in navigator) {
                     }
                     
                     // Also check version via API directly (client-side check)
+                    // Note: Using fetch directly here because this inline script runs before React/imports are available
+                    // The API client is used in lib/version-checker.ts for other version checks
                     fetch('/api/config/versions?t=' + Date.now(), {
                         cache: 'no-store',
                         headers: {
                             'Cache-Control': 'no-store, no-cache, must-revalidate',
                         }
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            console.warn('Version check API returned:', response.status, response.statusText);
+                            return null;
+                        }
+                        return response.json();
+                    })
                     .then(data => {
-                        const latestVersion = data?.currentVersion;
-                        if (latestVersion) {
-                            console.log('📦 Current app version check:', latestVersion);
+                        if (data?.currentVersion) {
+                            console.log('📦 Current app version check:', data.currentVersion);
                             // Version mismatch will be handled by service worker
                         }
                     })

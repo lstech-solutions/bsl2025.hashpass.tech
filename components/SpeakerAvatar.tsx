@@ -1,160 +1,160 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ActivityIndicator, Animated } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '../hooks/useTheme';
+import { View, Text, StyleSheet, Image } from 'react-native';
+import { getSpeakerAvatarUrl } from '../lib/string-utils';
 
 interface SpeakerAvatarProps {
-  imageUrl?: string;
   name?: string;
+  imageUrl?: string | null;
   size?: number;
   style?: any;
   showBorder?: boolean;
-  isOnline?: boolean;
 }
 
 export default function SpeakerAvatar({ 
-  imageUrl, 
   name, 
+  imageUrl,
   size = 50, 
   style, 
-  showBorder = false,
-  isOnline = false
+  showBorder = false
 }: SpeakerAvatarProps) {
-  const { isDark, colors } = useTheme();
-  const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
-  const [fadeAnim] = useState(new Animated.Value(0));
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageTimeout, setImageTimeout] = useState(false);
+  const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
 
-  const styles = getStyles(isDark, colors, size, showBorder);
+  // Generate initial avatar URL - prefer provided imageUrl, otherwise generate from name
+  const initialAvatarUrl = imageUrl || (name ? getSpeakerAvatarUrl(name) : null);
+  
+  // Check if initial URL is S3 and generate fallback URL
+  const isS3Url = initialAvatarUrl?.includes('s3.amazonaws.com') || initialAvatarUrl?.includes('hashpass-assets');
+  const fallbackBlockchainUrl = name && isS3Url 
+    ? `https://blockchainsummit.la/wp-content/uploads/2025/09/foto-${name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')}.png`
+    : null;
+  
+  // Use fallback URL if S3 failed, otherwise use initial URL
+  const avatarUrl = fallbackUrl || initialAvatarUrl;
 
-  // Generate initials from name
-  const getInitials = (name: string | undefined) => {
-    if (!name || typeof name !== 'string') {
-      return '??';
-    }
-    return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  // Handle image load success
-  const handleImageLoad = () => {
-    setImageLoading(false);
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  // Handle image load error
-  const handleImageError = () => {
-    setImageLoading(false);
-    setImageError(true);
-    console.warn(`❌ Failed to load image for ${name}: ${imageUrl}`);
-  };
-
-  // Reset states when imageUrl changes
+  // Reset error state when imageUrl changes
   useEffect(() => {
-    if (imageUrl) {
-      console.log(`🖼️ Loading image for ${name}: ${imageUrl}`);
-      setImageLoading(true);
+    // Reset fallback when imageUrl prop changes
+    setFallbackUrl(null);
+    
+    if (initialAvatarUrl) {
+      console.log(`[SpeakerAvatar] Attempting to load image for ${name}:`, initialAvatarUrl);
       setImageError(false);
-      fadeAnim.setValue(0);
+      setImageLoading(true);
+      setImageTimeout(false);
+      
+      // Set timeout for image loading (10 seconds - increased for S3)
+      const timeoutId = setTimeout(() => {
+        console.log(`[SpeakerAvatar] Image load timeout for ${name}:`, initialAvatarUrl);
+        // Try fallback if S3 times out
+        if (isS3Url && fallbackBlockchainUrl && !fallbackUrl) {
+          console.log(`[SpeakerAvatar] Trying fallback URL after timeout for ${name}:`, fallbackBlockchainUrl);
+          setFallbackUrl(fallbackBlockchainUrl);
+          setImageError(false);
+          setImageLoading(true);
+        } else {
+          setImageTimeout(true);
+          setImageLoading(false);
+        }
+      }, 10000);
+
+      return () => clearTimeout(timeoutId);
     } else {
-      console.log(`⚠️ No image URL for ${name}`);
+      setImageError(true);
+      setImageLoading(false);
     }
-  }, [imageUrl, name]);
+  }, [imageUrl, name]); // Reset when imageUrl or name changes
+
+  // Helper to get initials (always two letters or '??')
+  const getInitials = (n?: string) => {
+    if (!n || typeof n !== 'string' || !n.trim()) return '??';
+    const parts = n.trim().split(' ');
+    if (parts.length === 1) return (parts[0][0] + (parts[0][1] || parts[0][0])).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  };
+
+  const styles = getStyles(size, showBorder);
+  // Show image if we have a URL and haven't had an error or timeout yet
+  const showImage = avatarUrl && !imageError && !imageTimeout;
+  const showPlaceholder = !showImage || imageError || imageTimeout;
 
   return (
     <View style={[styles.container, style]}>
-      {imageUrl && !imageError ? (
-        <View style={styles.imageContainer}>
-          {imageLoading && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator 
-                size="small" 
-                color={isDark ? '#FFFFFF' : '#007AFF'} 
-              />
-            </View>
-          )}
-          <Animated.View style={[styles.imageWrapper, { opacity: fadeAnim }]}>
-            <Image
-              source={{ 
-                uri: imageUrl,
-                cache: 'force-cache' // Enable aggressive caching
-              }}
-              style={styles.image}
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-              resizeMode="cover"
-            />
-          </Animated.View>
-        </View>
-      ) : (
-        <View style={styles.placeholderContainer}>
-          <Text style={styles.initialsText}>
-            {getInitials(name)}
-          </Text>
-        </View>
+      {/* Placeholder (always rendered, behind image) */}
+      <View style={styles.placeholderContainer}>
+        <Text style={styles.initialsText}>{getInitials(name)}</Text>
+      </View>
+      {/* Image (rendered on top if available and no error) */}
+      {showImage && (
+        <Image
+          source={{ uri: avatarUrl }}
+          style={styles.image}
+          onError={(error) => {
+            console.log(`[SpeakerAvatar] Image load error for ${name}:`, avatarUrl, error.nativeEvent?.error);
+            // If S3 URL failed, try fallback to blockchainsummit.la
+            if (isS3Url && fallbackBlockchainUrl && !fallbackUrl) {
+              console.log(`[SpeakerAvatar] Trying fallback URL for ${name}:`, fallbackBlockchainUrl);
+              setFallbackUrl(fallbackBlockchainUrl);
+              setImageError(false);
+              setImageLoading(true);
+              setImageTimeout(false);
+            } else {
+              setImageError(true);
+              setImageLoading(false);
+            }
+          }}
+          onLoad={() => {
+            console.log(`[SpeakerAvatar] Image loaded successfully for ${name}:`, avatarUrl);
+            setImageLoading(false);
+            setImageTimeout(false);
+          }}
+          onLoadEnd={() => {
+            setImageLoading(false);
+          }}
+        />
       )}
     </View>
   );
 }
 
-const getStyles = (isDark: boolean, colors: any, size: number, showBorder: boolean) => StyleSheet.create({
+const getStyles = (size: number, showBorder: boolean) => StyleSheet.create({
   container: {
-    width: size,
-    height: size,
-    borderRadius: size / 2,
-  },
-  imageContainer: {
     width: size,
     height: size,
     borderRadius: size / 2,
     overflow: 'hidden',
     position: 'relative',
-    borderWidth: showBorder ? 2 : 0,
-    borderColor: showBorder ? '#007AFF' : 'transparent',
-  },
-  imageWrapper: {
-    width: size,
-    height: size,
-    borderRadius: size / 2,
   },
   image: {
     width: size,
     height: size,
     borderRadius: size / 2,
-  },
-  loadingContainer: {
+    borderWidth: showBorder ? 2 : 0,
+    borderColor: showBorder ? '#007AFF' : 'transparent',
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: size / 2,
+    backgroundColor: 'transparent',
   },
   placeholderContainer: {
     width: size,
     height: size,
     borderRadius: size / 2,
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#E0E0E0',
+    backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: showBorder ? 2 : 0,
     borderColor: showBorder ? '#007AFF' : 'transparent',
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   initialsText: {
     fontSize: size * 0.35,
     fontWeight: '600',
-    color: isDark ? '#FFFFFF' : '#666666',
+    color: '#666666',
     textAlign: 'center',
   },
 });

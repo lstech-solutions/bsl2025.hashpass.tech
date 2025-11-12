@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { AppState, AppStateStatus } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { MeetingRequest } from '@/types/networking';
+import { memoryManager } from '../lib/memory-manager';
 
 export interface RequestWithDirection extends MeetingRequest {
   _direction?: 'sent' | 'incoming';

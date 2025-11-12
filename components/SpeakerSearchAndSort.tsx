@@ -7,8 +7,8 @@ import { sortSpeakersByPriority } from '../lib/speaker-priority';
 interface Speaker {
   id: string;
   name: string;
-  title: string;
-  company: string;
+  title: string | null;
+  company: string | null;
   bio?: string;
   image?: string;
 }
@@ -50,8 +50,8 @@ export default function SpeakerSearchAndSort({
     const lowercaseQuery = query.toLowerCase();
     return speakers.filter(speaker => 
       speaker.name.toLowerCase().includes(lowercaseQuery) ||
-      speaker.title.toLowerCase().includes(lowercaseQuery) ||
-      speaker.company.toLowerCase().includes(lowercaseQuery) ||
+      (speaker.title && speaker.title.toLowerCase().includes(lowercaseQuery)) ||
+      (speaker.company && speaker.company.toLowerCase().includes(lowercaseQuery)) ||
       (speaker.bio && speaker.bio.toLowerCase().includes(lowercaseQuery))
     );
   }, []);
@@ -73,12 +73,12 @@ export default function SpeakerSearchAndSort({
           bValue = b.name.toLowerCase();
           break;
         case 'company':
-          aValue = a.company.toLowerCase();
-          bValue = b.company.toLowerCase();
+          aValue = (a.company || '').toLowerCase();
+          bValue = (b.company || '').toLowerCase();
           break;
         case 'title':
-          aValue = a.title.toLowerCase();
-          bValue = b.title.toLowerCase();
+          aValue = (a.title || '').toLowerCase();
+          bValue = (b.title || '').toLowerCase();
           break;
       }
       
@@ -98,15 +98,15 @@ export default function SpeakerSearchAndSort({
           firstLetter = speaker.name.charAt(0).toUpperCase();
           break;
         case 'company':
-          firstLetter = speaker.company.charAt(0).toUpperCase();
+          firstLetter = (speaker.company || '').charAt(0).toUpperCase() || '#';
           break;
         case 'title':
-          firstLetter = speaker.title.charAt(0).toUpperCase();
+          firstLetter = (speaker.title || '').charAt(0).toUpperCase() || '#';
           break;
       }
       
-      // Handle non-alphabetic characters
-      if (!/[A-Z]/.test(firstLetter)) {
+      // Handle non-alphabetic characters or empty strings
+      if (!firstLetter || !/[A-Z]/.test(firstLetter)) {
         firstLetter = '#';
       }
       

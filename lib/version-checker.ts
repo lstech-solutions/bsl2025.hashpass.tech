@@ -4,8 +4,7 @@
  */
 
 import { Platform } from 'react-native';
-
-const VERSION_CHECK_URL = '/api/config/versions';
+import { apiClient } from './api-client';
 const VERSION_STORAGE_KEY = '@hashpass:last_version_check';
 const VERSION_CHECK_COOLDOWN = 60000; // 1 minute cooldown
 
@@ -31,18 +30,16 @@ async function getCurrentVersion(): Promise<string> {
     // Try to fetch from API endpoint (safer than importing modules)
     try {
       const timestamp = Date.now();
-      const response = await fetch(`${VERSION_CHECK_URL}?t=${timestamp}`, { 
-        cache: 'no-store',
+      const response = await apiClient.get('/config/versions', {
+        skipEventSegment: true,
+        params: { t: timestamp.toString() },
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate',
           'Pragma': 'no-cache',
         }
       });
-      if (response.ok) {
-        const data = await response.json();
-        if (data?.currentVersion) {
-          return data.currentVersion;
-        }
+      if (response.success && response.data?.currentVersion) {
+        return response.data.currentVersion;
       }
     } catch (e) {
       // Ignore fetch errors - will use fallback
@@ -59,23 +56,22 @@ async function getCurrentVersion(): Promise<string> {
 async function fetchLatestVersion(): Promise<string | null> {
   try {
     const timestamp = Date.now();
-    const response = await fetch(`${VERSION_CHECK_URL}?t=${timestamp}`, {
-      method: 'GET',
+    const response = await apiClient.get('/config/versions', {
+      skipEventSegment: true,
+      params: { t: timestamp.toString() },
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',
-      },
-      cache: 'no-store',
+      }
     });
 
-    if (!response.ok) {
-      console.warn('[VersionChecker] Failed to fetch version:', response.status);
+    if (!response.success) {
+      console.warn('[VersionChecker] Failed to fetch version:', response.error);
       return null;
     }
 
-    const data = await response.json();
-    return data?.currentVersion || null;
+    return response.data?.currentVersion || null;
   } catch (error) {
     console.error('[VersionChecker] Error fetching version:', error);
     return null;

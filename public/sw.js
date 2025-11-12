@@ -1,7 +1,7 @@
 // Version-aware Service Worker for HashPass
 // Automatically clears cache when version changes
 
-const APP_VERSION = '1.6.20'; // This will be updated during build
+const APP_VERSION = '1.6.21'; // This will be updated during build
 const CACHE_NAME = `hashpass-v${APP_VERSION}`;
 const VERSION_CHECK_URL = '/api/config/versions';
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
@@ -90,7 +90,25 @@ self.addEventListener('fetch', (event) => {
 });
 
 // Check for version updates periodically
+let versionCheckInProgress = false;
+let lastVersionCheck = 0;
+const VERSION_CHECK_COOLDOWN = 60000; // 1 minute cooldown between checks
+
 function checkForVersionUpdate() {
+  // Prevent multiple simultaneous checks
+  if (versionCheckInProgress) {
+    return;
+  }
+  
+  // Cooldown to prevent excessive checks
+  const now = Date.now();
+  if (now - lastVersionCheck < VERSION_CHECK_COOLDOWN) {
+    return;
+  }
+  
+  versionCheckInProgress = true;
+  lastVersionCheck = now;
+  
   fetch(VERSION_CHECK_URL, { cache: 'no-store' })
     .then((response) => {
       if (!response.ok) {
@@ -99,10 +117,16 @@ function checkForVersionUpdate() {
       return response.json();
     })
     .then((data) => {
-      const latestVersion = data.currentVersion;
-      if (latestVersion && latestVersion !== APP_VERSION) {
+      const latestVersion = data && data.currentVersion ? data.currentVersion : null;
+      if (!latestVersion) {
+        console.warn('[SW] No version found in response');
+        versionCheckInProgress = false;
+        return;
+      }
+      
+      if (latestVersion !== APP_VERSION) {
         console.log('[SW] Version mismatch detected! Current:', APP_VERSION, 'Latest:', latestVersion);
-        // Clear all caches and reload
+        // Clear all caches
         caches.keys().then((cacheNames) => {
           return Promise.all(
             cacheNames.map((cacheName) => {
@@ -111,7 +135,7 @@ function checkForVersionUpdate() {
             })
           );
         }).then(() => {
-          // Notify all clients to reload
+          // Notify all clients - client will handle reload with safeguards
           return self.clients.matchAll().then((clients) => {
             clients.forEach((client) => {
               client.postMessage({
@@ -121,11 +145,16 @@ function checkForVersionUpdate() {
               });
             });
           });
+        }).finally(() => {
+          versionCheckInProgress = false;
         });
+      } else {
+        versionCheckInProgress = false;
       }
     })
     .catch((err) => {
       console.warn('[SW] Version check failed:', err);
+      versionCheckInProgress = false;
     });
 }
 

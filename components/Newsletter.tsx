@@ -96,7 +96,10 @@ const Newsletter = ({ mode }: Props) => {
 
     return (
         <div className='flex justify-center items-center py-8 md:py-20 px-4 w-full'>
-            <div className="w-full max-w-md rounded-xl p-6 overflow-hidden z-50 transition-all duration-300">
+            <div 
+                className="w-full max-w-md rounded-xl p-6 overflow-hidden z-50 transition-all duration-300"
+                style={{ backgroundColor: mode === "dark" ? 'transparent' : '#FFFFFF' }}
+            >
                 <AnimatePresence>
                     {!subscribed ? (
                         <motion.div
@@ -145,7 +148,7 @@ const Newsletter = ({ mode }: Props) => {
 
                             <div className='w-full space-y-4 mt-6'>
                                 <div className='relative'>
-                                    <div className={`relative flex items-center rounded-full  border ${error ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all duration-200`}>
+                                    <div className={`relative flex items-center rounded-full border ${error ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all duration-200 ${mode === "dark" ? 'bg-transparent' : 'bg-white'}`}>
                                         <svg className='h-5 w-5 text-gray-400 absolute left-3' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
                                             <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' />
                                         </svg>
@@ -159,7 +162,12 @@ const Newsletter = ({ mode }: Props) => {
                                             placeholder={t('emailPlaceholder')}
                                             className='w-full px-4 py-3 pl-10 text-sm sm:text-base rounded-full  bg-transparent outline-none transition-all duration-200 placeholder-gray-400 dark:placeholder-white dark:text-white text-gray-600 dark:text-gray-300'
                                             disabled={isLoading}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleSubscribe()}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleSubscribe();
+                                                }
+                                            }}
                                         />
                                     </div>
                                     {error && (
@@ -172,7 +180,11 @@ const Newsletter = ({ mode }: Props) => {
                                     )}
                                 </div>
                                 <button
-                                    onClick={handleSubscribe}
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleSubscribe();
+                                    }}
                                     disabled={isLoading}
                                     className={`w-full rounded-full font-medium py-3 px-6 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl disabled:hover:shadow-none ${isDark
                                             ? 'bg-cyan-700 hover:bg-cyan-700 text-white hover:shadow-cyan-900/50'
@@ -207,6 +219,7 @@ const Newsletter = ({ mode }: Props) => {
                             exit={{ opacity: 0, scale: 1.05 }}
                             transition={{ duration: 0.3, type: 'spring', stiffness: 500, damping: 30 }}
                             className='flex flex-col items-center justify-center h-full text-center p-4'
+                            style={{ backgroundColor: 'transparent' }}
                         >
                             <div className='w-20 h-20 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mb-6 shadow-inner'>
                                 <svg xmlns='http://www.w3.org/2000/svg' className='h-10 w-10 text-green-600 dark:text-green-400' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth='2'>
@@ -226,7 +239,9 @@ const Newsletter = ({ mode }: Props) => {
                                 )}
                             </p>
                             <button
-                                onClick={() => {
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
                                     setSubscribed(false);
                                     setEmail('');
                                 }}

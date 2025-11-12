@@ -6,7 +6,7 @@
 import { Platform } from 'react-native';
 import { apiClient } from './api-client';
 const VERSION_STORAGE_KEY = '@hashpass:last_version_check';
-const VERSION_CHECK_COOLDOWN = 60000; // 1 minute cooldown
+const VERSION_CHECK_COOLDOWN = 5 * 60 * 1000; // 5 minutes cooldown (increased from 1 minute)
 
 interface VersionCheckResult {
   currentVersion: string;
@@ -119,6 +119,30 @@ function compareVersions(v1: string, v2: string): number {
 }
 
 /**
+ * Check if user is actively using the app (not idle)
+ * Prevents version checks from interrupting active sessions
+ */
+function isUserActive(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  // Check if we're on a networking or active page
+  const pathname = window.location.pathname;
+  const activePages = [
+    '/events/bsl2025/networking',
+    '/events/bsl2025/my-bookings',
+    '/events/bsl2025/agenda',
+    '/dashboard',
+  ];
+  
+  const isOnActivePage = activePages.some(page => pathname.includes(page));
+  
+  // Also check if page is visible (not in background tab)
+  const isPageVisible = typeof document !== 'undefined' && !document.hidden;
+  
+  return isOnActivePage && isPageVisible;
+}
+
+/**
  * Clear all caches (Service Worker and browser caches)
  */
 async function clearAllCaches(): Promise<void> {
@@ -173,6 +197,12 @@ export async function checkVersionAndClearCache(forceCheck: boolean = false): Pr
   }
 
   try {
+    // Don't check if user is actively using the app
+    if (!forceCheck && isUserActive()) {
+      console.log('[VersionChecker] User is active, skipping version check');
+      return false;
+    }
+    
     // Check cooldown
     if (!forceCheck) {
       const lastCheck = localStorage.getItem(VERSION_STORAGE_KEY);
@@ -242,6 +272,14 @@ export async function checkVersionOnStart(): Promise<void> {
   // This prevents path resolution issues during module loading
   setTimeout(async () => {
     try {
+      // Don't check if user is actively using networking or other features
+      if (isUserActive()) {
+        console.log('[VersionChecker] User is active, deferring version check');
+        // Defer check until user is idle
+        setTimeout(() => checkVersionOnStart(), 10 * 60 * 1000); // Retry in 10 minutes
+        return;
+      }
+      
       // Check immediately on first load
       const wasCleared = await checkVersionAndClearCache(true);
       
@@ -250,16 +288,22 @@ export async function checkVersionOnStart(): Promise<void> {
         return;
       }
 
-      // Also check periodically
+      // Also check periodically, but only when user is not active
       setInterval(() => {
+        // Skip check if user is actively using the app
+        if (isUserActive()) {
+          console.log('[VersionChecker] User is active, skipping periodic check');
+          return;
+        }
+        
         checkVersionAndClearCache(false).catch((error) => {
           console.warn('[VersionChecker] Periodic check failed:', error);
         });
-      }, 5 * 60 * 1000); // Every 5 minutes
+      }, 10 * 60 * 1000); // Every 10 minutes (increased from 5)
     } catch (error) {
       console.error('[VersionChecker] Version check on start failed:', error);
     }
-  }, 1000); // Delay by 1 second to let app initialize
+  }, 2000); // Increased delay to 2 seconds to let app fully initialize
 }
 
 /**

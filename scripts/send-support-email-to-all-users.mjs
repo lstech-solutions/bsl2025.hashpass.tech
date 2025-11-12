@@ -1,53 +1,71 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 
 // Load environment variables
 dotenv.config();
 
-async function sendSupportEmail() {
-  // Validate required environment variables
-  const requiredVars = [
-    'NODEMAILER_HOST',
-    'NODEMAILER_PORT',
-    'NODEMAILER_USER',
-    'NODEMAILER_PASS',
-    'NODEMAILER_FROM'
-  ];
+// Initialize Supabase
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  const missingVars = requiredVars.filter(varName => !process.env[varName]);
-  if (missingVars.length > 0) {
-    console.error(`❌ Missing required environment variables: ${missingVars.join(', ')}`);
-    process.exit(1);
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Missing required environment variables:');
+  console.error('   EXPO_PUBLIC_SUPABASE_URL:', !!supabaseUrl);
+  console.error('   SUPABASE_SERVICE_ROLE_KEY:', !!supabaseServiceKey);
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
   }
+});
 
-  const smtpHost = process.env.NODEMAILER_HOST;
-  const smtpPort = parseInt(process.env.NODEMAILER_PORT || '587');
-  const smtpUser = process.env.NODEMAILER_USER;
-  const smtpPass = process.env.NODEMAILER_PASS;
-  const fromEmail = process.env.NODEMAILER_FROM;
-  const toEmail = 'hash@lstech.solutions';
+// Validate required environment variables
+const requiredVars = [
+  'NODEMAILER_HOST',
+  'NODEMAILER_PORT',
+  'NODEMAILER_USER',
+  'NODEMAILER_PASS',
+  'NODEMAILER_FROM'
+];
 
-  const isBrevo = smtpHost.includes('brevo.com') || smtpHost.includes('sendinblue.com');
+const missingVars = requiredVars.filter(varName => !process.env[varName]);
+if (missingVars.length > 0) {
+  console.error(`❌ Missing required environment variables: ${missingVars.join(', ')}`);
+  process.exit(1);
+}
 
-  const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: false,
-    auth: {
-      user: smtpUser,
-      pass: smtpPass,
-    },
-    connectionTimeout: 10000,
-    tls: {
-      rejectUnauthorized: process.env.NODE_ENV === 'production',
-      servername: isBrevo ? 'smtp-relay.sendinblue.com' : undefined,
-      checkServerIdentity: isBrevo ? () => undefined : undefined,
-    },
-    requireTLS: true,
-  });
+const smtpHost = process.env.NODEMAILER_HOST;
+const smtpPort = parseInt(process.env.NODEMAILER_PORT || '587');
+const smtpUser = process.env.NODEMAILER_USER;
+const smtpPass = process.env.NODEMAILER_PASS;
+const fromEmail = process.env.NODEMAILER_FROM;
 
-  const subject = '⚠️ Acceso restablecido y guía para comenzar';
+const isBrevo = smtpHost.includes('brevo.com') || smtpHost.includes('sendinblue.com');
 
+const transporter = nodemailer.createTransport({
+  host: smtpHost,
+  port: smtpPort,
+  secure: false,
+  auth: {
+    user: smtpUser,
+    pass: smtpPass,
+  },
+  connectionTimeout: 10000,
+  tls: {
+    rejectUnauthorized: process.env.NODE_ENV === 'production',
+    servername: isBrevo ? 'smtp-relay.sendinblue.com' : undefined,
+    checkServerIdentity: isBrevo ? () => undefined : undefined,
+  },
+  requireTLS: true,
+});
+
+const subject = '⚠️ Acceso restablecido y guía para comenzar';
+
+const getEmailContent = () => {
   const htmlContent = `
 <!DOCTYPE html>
 <html lang="es">
@@ -265,61 +283,142 @@ El equipo de HashPass
 https://hashpass.co
   `;
 
+  return { htmlContent, textContent };
+};
+
+async function sendSupportEmailToUser(email) {
+  const { htmlContent, textContent } = getEmailContent();
+  
   try {
-    console.log(`\n📧 Email Configuration:`);
-    console.log(`   From: ${fromEmail}`);
-    console.log(`   To: ${toEmail}`);
-    console.log(`   Subject: ${subject}\n`);
-    console.log(`📤 Sending email...`);
-    
     const mailOptions = {
       from: `HashPass <${fromEmail}>`,
-      to: toEmail,
+      to: email,
       subject: subject,
       html: htmlContent,
       text: textContent,
     };
     
     const info = await transporter.sendMail(mailOptions);
-
-    console.log(`\n✅ Email sent successfully!`);
-    console.log(`📬 Message ID: ${info.messageId}`);
-    console.log(`📧 Sent to: ${toEmail}\n`);
-    
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error(`\n❌ Error sending email:`);
-    console.error(`   Message: ${error.message}`);
-    if (error.code) {
-      console.error(`   Code: ${error.code}`);
-    }
-    if (error.response) {
-      console.error(`   Server response: ${error.response}`);
-    }
-    if (error.responseCode) {
-      console.error(`   Response code: ${error.responseCode}`);
-    }
-    if (error.command) {
-      console.error(`   Command: ${error.command}`);
-    }
-    console.error(`\n`);
     return { success: false, error: error.message };
   }
 }
 
-// Run the script
-sendSupportEmail()
-  .then(result => {
-    if (result.success) {
-      console.log('\n✅ Email sent successfully!');
-      process.exit(0);
-    } else {
-      console.error('\n❌ Failed to send email');
-      process.exit(1);
+async function getAllUsers() {
+  try {
+    console.log('📋 Fetching all users from database...');
+    let allUsers = [];
+    let page = 1;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const { data: users, error } = await supabase.auth.admin.listUsers({
+        page: page,
+        perPage: 1000
+      });
+      
+      if (error) {
+        console.error('❌ Error fetching users:', error);
+        throw error;
+      }
+      
+      if (users && users.users && users.users.length > 0) {
+        allUsers = allUsers.concat(users.users);
+        console.log(`   Fetched ${users.users.length} users (total: ${allUsers.length})`);
+        
+        // Check if there are more pages
+        hasMore = users.users.length === 1000;
+        page++;
+      } else {
+        hasMore = false;
+      }
     }
+    
+    console.log(`\n✅ Total users found: ${allUsers.length}\n`);
+    return allUsers;
+  } catch (error) {
+    console.error('❌ Error getting users:', error);
+    throw error;
+  }
+}
+
+async function main() {
+  console.log('🚀 Starting support email campaign to all users...\n');
+  
+  try {
+    // Get all users
+    const allUsers = await getAllUsers();
+    
+    if (allUsers.length === 0) {
+      console.log('⚠️  No users found in database');
+      return;
+    }
+    
+    // Statistics
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    
+    // Process each user
+    for (let i = 0; i < allUsers.length; i++) {
+      const user = allUsers[i];
+      const email = user.email;
+      
+      if (!email) {
+        console.log(`⚠️  Skipping user ${user.id} - no email address`);
+        continue;
+      }
+      
+      console.log(`[${i + 1}/${allUsers.length}] 📧 Sending to: ${email}`);
+      
+      const result = await sendSupportEmailToUser(email);
+      
+      if (result.success) {
+        successCount++;
+        console.log(`   ✅ Sent successfully (Message ID: ${result.messageId})`);
+      } else {
+        errorCount++;
+        errors.push({ email, error: result.error });
+        console.log(`   ❌ Failed: ${result.error}`);
+      }
+      
+      // Add a small delay to avoid rate limiting
+      if (i < allUsers.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+      }
+    }
+    
+    // Print summary
+    console.log('\n' + '='.repeat(60));
+    console.log('📊 Campaign Summary');
+    console.log('='.repeat(60));
+    console.log(`✅ Successfully sent: ${successCount}`);
+    console.log(`❌ Failed: ${errorCount}`);
+    console.log(`📧 Total users processed: ${allUsers.length}`);
+    
+    if (errors.length > 0) {
+      console.log('\n❌ Errors:');
+      errors.forEach(({ email, error }) => {
+        console.log(`   ${email}: ${error}`);
+      });
+    }
+    
+    console.log('\n');
+  } catch (error) {
+    console.error('\n❌ Unexpected error:', error);
+    process.exit(1);
+  }
+}
+
+// Run the script
+main()
+  .then(() => {
+    console.log('✅ Campaign completed!');
+    process.exit(0);
   })
   .catch(error => {
-    console.error('\n❌ Unexpected error:', error);
+    console.error('\n❌ Fatal error:', error);
     process.exit(1);
   });
 

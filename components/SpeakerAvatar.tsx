@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, Image, Animated } from 'react-native';
+import { View, Text, StyleSheet, Image, Animated, ActivityIndicator } from 'react-native';
 import { getSpeakerAvatarUrl, getLocalOptimizedAvatarUrl } from '../lib/string-utils';
 
 interface SpeakerAvatarProps {
@@ -19,8 +19,10 @@ export default function SpeakerAvatar({
   showBorder = false,
   isOnline // Accept but don't use
 }: SpeakerAvatarProps) {
+  // Initial state: start with loading=true if we expect to have a URL
+  // This ensures we show loading spinner initially, not initials
   const [imageError, setImageError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
+  const [imageLoading, setImageLoading] = useState(false); // Will be set to true when URL is determined
   const [imageTimeout, setImageTimeout] = useState(false);
   // Track failed URLs to prevent infinite retry loops
   const failedUrlsRef = useRef<Set<string>>(new Set());
@@ -45,6 +47,11 @@ export default function SpeakerAvatar({
   
   // Determine which URL to use (prioritize local optimized)
   useEffect(() => {
+    // Reset loading state when URLs change
+    setImageLoading(true);
+    setImageError(false);
+    setImageTimeout(false);
+    
     if (localOptimizedUrl) {
       // Try local optimized first
       setCurrentAvatarUrl(localOptimizedUrl);
@@ -54,8 +61,12 @@ export default function SpeakerAvatar({
       setCurrentAvatarUrl(s3Url);
       setUrlSource('s3');
     } else {
+      // No URLs available - show initials immediately
       setCurrentAvatarUrl(null);
       setUrlSource(null);
+      setImageLoading(false);
+      setImageError(true);
+      setImageTimeout(true);
     }
   }, [localOptimizedUrl, s3Url]);
   
@@ -71,58 +82,63 @@ export default function SpeakerAvatar({
       if (failedUrlsRef.current.has(avatarUrl)) {
         // If local optimized failed, try S3
         if (urlSource === 'local' && s3Url && s3Url !== avatarUrl) {
-          // Only log in development
-          if (process.env.NODE_ENV !== 'production') {
-            console.log(`[SpeakerAvatar] Local optimized failed for ${name}, trying S3:`, s3Url);
-          }
+          console.log(`[SpeakerAvatar] Local optimized failed for ${name}, trying S3:`, s3Url);
           setCurrentAvatarUrl(s3Url);
           setUrlSource('s3');
+          // Reset states for new attempt
+          setImageError(false);
+          setImageLoading(true);
+          setImageTimeout(false);
           return;
         }
         
         // If S3 also failed or no fallback, show initials
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`[SpeakerAvatar] All URLs failed for ${name}, showing initials`);
-        }
+        console.warn(`[SpeakerAvatar] All URLs failed for ${name}, showing initials`);
         setImageError(true);
         setImageLoading(false);
-        setImageTimeout(false);
+        setImageTimeout(true);
         return;
       }
       
-      // Only log in development to reduce console noise
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[SpeakerAvatar] Loading ${urlSource} image for ${name}:`, {
-          url: avatarUrl,
-          source: urlSource,
-          hasImageUrl: !!imageUrl,
-        });
-      }
+      // Always log to help debug avatar loading issues
+      console.log(`[SpeakerAvatar] Loading ${urlSource} image for ${name}:`, {
+        url: avatarUrl,
+        source: urlSource,
+        hasImageUrl: !!imageUrl,
+        localOptimizedUrl,
+        s3Url,
+      });
+      
+      // Reset all states and start loading
       setImageError(false);
       setImageLoading(true);
       setImageTimeout(false);
       // Reset fade animation when URL changes
       fadeAnim.setValue(0);
       
-      // Shorter timeout for local optimized (should be instant), longer for S3
-      const timeoutDuration = urlSource === 'local' ? 3000 : 10000;
+      // For local optimized, use a very short timeout (2 seconds) since it should be instant
+      // For S3, use longer timeout (15 seconds) to handle slow connections
+      const timeoutDuration = urlSource === 'local' ? 2000 : 15000;
       const timeoutId = setTimeout(() => {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`[SpeakerAvatar] Image load timeout (${timeoutDuration}ms) for ${name}:`, avatarUrl);
-        }
+        console.warn(`[SpeakerAvatar] ⏱️ Image load timeout (${timeoutDuration}ms) for ${name} from ${urlSource}:`, avatarUrl);
         // Mark URL as failed
-        failedUrlsRef.current.add(avatarUrl);
+        if (avatarUrl) {
+          failedUrlsRef.current.add(avatarUrl);
+        }
         
-        // If local optimized failed, try S3 fallback
+        // If local optimized failed, try S3 fallback immediately
         if (urlSource === 'local' && s3Url && s3Url !== avatarUrl) {
-          if (process.env.NODE_ENV !== 'production') {
-            console.log(`[SpeakerAvatar] Local optimized timeout, falling back to S3 for ${name}`);
-          }
+          console.log(`[SpeakerAvatar] Local optimized timeout (likely 404), falling back to S3 for ${name}:`, s3Url);
           setCurrentAvatarUrl(s3Url);
           setUrlSource('s3');
+          // Reset error state to allow S3 to try
+          setImageError(false);
+          setImageLoading(true);
+          setImageTimeout(false);
           // Don't set error yet - try S3 first
         } else {
           // S3 also failed or no fallback - show initials
+          console.warn(`[SpeakerAvatar] All image sources timed out for ${name}, showing initials`);
           setImageTimeout(true);
           setImageLoading(false);
         }
@@ -144,23 +160,39 @@ export default function SpeakerAvatar({
   };
 
   const styles = getStyles(size, showBorder);
-  // Show image when we have a URL - it will load and appear smoothly
-  // Only show placeholder if image failed to load or timed out
-  // Image is hidden initially (opacity 0) and fades in when loaded to prevent flicker
-  const showImage = avatarUrl && !imageError && !imageTimeout;
-  const showPlaceholder = !avatarUrl || imageError || imageTimeout;
+  // Show image when we have a URL and it loaded successfully (not loading, no errors)
+  // Show loading state when actively loading (has URL, loading=true, no errors yet)
+  // Show placeholder (initials) only when:
+  //   - No URL available at all, OR
+  //   - All sources failed (error + timeout) and not currently loading
+  const showImage = avatarUrl && !imageError && !imageTimeout && !imageLoading;
+  const showLoading = imageLoading && avatarUrl && !imageError && !imageTimeout;
+  const showPlaceholder = !avatarUrl || (!imageLoading && (imageError || imageTimeout));
 
   return (
     <View style={[styles.container, style]}>
-      {/* Placeholder (always rendered, behind image) */}
-      <View 
-        style={styles.placeholderContainer}
-        pointerEvents={showImage ? "none" : "auto"}
-      >
-        <Text style={styles.initialsText}>{getInitials(name)}</Text>
-      </View>
-      {/* Image (rendered on top if available and no error) */}
-      {showImage && (
+      {/* Placeholder with initials (shown when no image or all sources failed) */}
+      {showPlaceholder && (
+        <View 
+          style={styles.placeholderContainer}
+          pointerEvents={showImage ? "none" : "auto"}
+        >
+          <Text style={styles.initialsText}>{getInitials(name)}</Text>
+        </View>
+      )}
+      
+      {/* Loading indicator (shown while loading) */}
+      {showLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator 
+            size={size < 40 ? 'small' : 'small'} 
+            color="#007AFF" 
+          />
+        </View>
+      )}
+      
+      {/* Image (rendered on top when loaded successfully) */}
+      {showImage && avatarUrl && (
         <Animated.View
           style={[
             styles.imageContainer,
@@ -176,42 +208,48 @@ export default function SpeakerAvatar({
             const errorMessage = error.nativeEvent?.error || error.message || 'Unknown error';
             const statusCode = error.nativeEvent?.statusCode || error.statusCode || 'unknown';
             
-            if (process.env.NODE_ENV !== 'production') {
-              console.error(`[SpeakerAvatar] ${urlSource} image load error for ${name}:`, {
-                url: avatarUrl,
-                error: errorMessage,
-                statusCode: statusCode,
-                source: urlSource,
-              });
-            }
+            // Always log errors to help debug
+            console.error(`[SpeakerAvatar] ${urlSource} image load error for ${name}:`, {
+              url: avatarUrl,
+              error: errorMessage,
+              statusCode: statusCode,
+              source: urlSource,
+              hasS3Fallback: !!(s3Url && s3Url !== avatarUrl),
+              errorObject: error,
+            });
             
             // Mark URL as failed
             if (avatarUrl) {
               failedUrlsRef.current.add(avatarUrl);
             }
             
-            // If local optimized failed, try S3 fallback
+            // If local optimized failed (404 or any error), try S3 fallback immediately
             if (urlSource === 'local' && s3Url && s3Url !== avatarUrl) {
-              if (process.env.NODE_ENV !== 'production') {
-                console.log(`[SpeakerAvatar] Local optimized failed, falling back to S3 for ${name}`);
-              }
+              console.log(`[SpeakerAvatar] Local optimized failed (status: ${statusCode}), falling back to S3 for ${name}:`, s3Url);
               setCurrentAvatarUrl(s3Url);
               setUrlSource('s3');
+              // Reset error state to allow S3 to try
+              setImageError(false);
+              setImageLoading(true);
+              setImageTimeout(false);
               // Don't set error yet - try S3 first
             } else {
               // S3 also failed or no fallback - show initials
+              console.warn(`[SpeakerAvatar] All image sources failed for ${name}, showing initials`);
               setImageError(true);
               setImageLoading(false);
+              setImageTimeout(true);
             }
           }}
           onLoad={() => {
-            // Only log in development
-            if (process.env.NODE_ENV !== 'production') {
-              console.log(`[SpeakerAvatar] Image loaded successfully for ${name}:`, avatarUrl);
-            }
+            console.log(`[SpeakerAvatar] ✅ Image loaded successfully for ${name} from ${urlSource}:`, avatarUrl);
             setImageLoading(false);
             setImageTimeout(false);
             setImageError(false);
+            // Clear from failed URLs since it loaded successfully
+            if (avatarUrl) {
+              failedUrlsRef.current.delete(avatarUrl);
+            }
             // Fade in the image smoothly
             Animated.timing(fadeAnim, {
               toValue: 1,
@@ -281,6 +319,22 @@ const getStyles = (size: number, showBorder: boolean) => StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 0,
+  },
+  loadingContainer: {
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: showBorder ? 2 : 0,
+    borderColor: showBorder ? '#007AFF' : 'transparent',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
   },
   initialsText: {
     fontSize: size * 0.35,

@@ -171,6 +171,17 @@ config.server = {
             return fs.createReadStream(assetsPath).pipe(res);
           }
         }
+        
+        // File not found - return 404 immediately so Image component can handle it
+        // This is important for avatar fallback logic
+        if (req.url.includes('/speakers/avatars/')) {
+          res.writeHead(404, {
+            'Content-Type': 'text/plain',
+            'Cache-Control': 'no-cache',
+          });
+          res.end('Not Found');
+          return;
+        }
       }
       // If not handled, pass to original middleware
       return middleware(req, res, next);

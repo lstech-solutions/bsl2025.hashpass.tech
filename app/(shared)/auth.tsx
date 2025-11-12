@@ -205,20 +205,27 @@ export default function AuthScreen() {
                           
                           // After welcome email is sent, send onboarding emails
                           // This includes user onboarding for all users and speaker onboarding if user is a speaker
+                          // Only send if welcome email was actually sent (not skipped or already sent)
                           apiClient.post('/auth/send-onboarding-emails', { userId, email: userEmail, locale: userLocale }, { skipEventSegment: true })
                             .then(onboardingResult => {
                               if (onboardingResult.success && onboardingResult.data) {
                                 if (onboardingResult.data.results?.userOnboarding?.success && !onboardingResult.data.results.userOnboarding.alreadySent) {
                                   console.log('✅ User onboarding email sent successfully');
+                                } else if (onboardingResult.data.results?.userOnboarding?.alreadySent) {
+                                  console.log('ℹ️ User onboarding email already sent, skipped');
                                 }
                                 if (onboardingResult.data.results?.speakerOnboarding?.isSpeaker) {
                                   if (onboardingResult.data.results.speakerOnboarding.success && !onboardingResult.data.results.speakerOnboarding.alreadySent) {
                                     console.log('✅ Speaker onboarding email sent successfully');
+                                  } else if (onboardingResult.data.results.speakerOnboarding.alreadySent) {
+                                    console.log('ℹ️ Speaker onboarding email already sent, skipped');
                                   }
                                 }
                               }
                             })
                             .catch(err => console.error('❌ Error sending onboarding emails:', err));
+                        } else if (result.data?.alreadySent) {
+                          console.log('ℹ️ Welcome email already sent, skipping onboarding emails');
                         }
                       })
                       .catch(err => console.error('❌ Error sending welcome email:', err));

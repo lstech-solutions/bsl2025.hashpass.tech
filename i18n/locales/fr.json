@@ -417,6 +417,27 @@
     "viewFullDetails": "Voir tous les détails",
     "flipBack": "Retourner",
     "qrCodeModalTitle": "Votre code QR du passe"
+  },
+  "networking": {
+    "title": "Centre de Réseautage",
+    "subtitle": "Connectez-vous avec les conférenciers et les participants",
+    "tutorialResetMessage": "Le tutoriel de réseautage démarrera automatiquement lorsque vous visiterez le centre de réseautage.",
+    "stats": {
+      "title": "Vos Statistiques de Réseautage",
+      "totalRequests": "Demandes Totales",
+      "pending": "En Attente",
+      "accepted": "Acceptées",
+      "declined": "Refusées",
+      "cancelled": "Annulées",
+      "scheduled": "Planifiées",
+      "blocked": "Bloqués"
+    },
+    "quickAccess": "Accès Rapide",
+    "recentActivity": {
+      "title": "Activité Récente",
+      "journey": "Votre Parcours de Réseautage",
+      "description": "Vous avez envoyé {totalRequests} demandes de réunion et avez {pendingRequests} réponses en attente."
+    }
   }
 }
 

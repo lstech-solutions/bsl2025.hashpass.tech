@@ -417,6 +417,27 @@
     "viewFullDetails": "Alle Details anzeigen",
     "flipBack": "Zurück",
     "qrCodeModalTitle": "Ihr Pass-QR-Code"
+  },
+  "networking": {
+    "title": "Netzwerkzentrum",
+    "subtitle": "Verbinden Sie sich mit Referenten und Teilnehmern",
+    "tutorialResetMessage": "Das Networking-Tutorial startet automatisch, wenn Sie das Netzwerkzentrum besuchen.",
+    "stats": {
+      "title": "Ihre Networking-Statistiken",
+      "totalRequests": "Gesamtanfragen",
+      "pending": "Ausstehend",
+      "accepted": "Akzeptiert",
+      "declined": "Abgelehnt",
+      "cancelled": "Storniert",
+      "scheduled": "Geplant",
+      "blocked": "Blockiert"
+    },
+    "quickAccess": "Schnellzugriff",
+    "recentActivity": {
+      "title": "Aktuelle Aktivität",
+      "journey": "Ihre Networking-Reise",
+      "description": "Sie haben {totalRequests} Meeting-Anfragen gesendet und haben {pendingRequests} ausstehende Antworten."
+    }
   }
 }
 

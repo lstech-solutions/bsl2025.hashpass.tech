@@ -417,6 +417,27 @@
     "viewFullDetails": "Ver todos os detalhes",
     "flipBack": "Voltar",
     "qrCodeModalTitle": "Seu código QR do passe"
+  },
+  "networking": {
+    "title": "Centro de Networking",
+    "subtitle": "Conecte-se com palestrantes e participantes",
+    "tutorialResetMessage": "O tutorial de networking começará automaticamente quando você visitar o centro de networking.",
+    "stats": {
+      "title": "Suas Estatísticas de Networking",
+      "totalRequests": "Solicitações Totais",
+      "pending": "Pendentes",
+      "accepted": "Aceitas",
+      "declined": "Recusadas",
+      "cancelled": "Canceladas",
+      "scheduled": "Agendadas",
+      "blocked": "Bloqueados"
+    },
+    "quickAccess": "Acesso Rápido",
+    "recentActivity": {
+      "title": "Atividade Recente",
+      "journey": "Sua Jornada de Networking",
+      "description": "Você enviou {totalRequests} solicitações de reunião e tem {pendingRequests} respostas pendentes."
+    }
   }
 }
 

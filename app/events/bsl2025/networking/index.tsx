@@ -20,6 +20,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import { NetworkingStats, StatsState, QuickAccessItem } from '@/types/networking';
 import { CopilotStep, walkthroughable, useCopilot } from 'react-native-copilot';
 import { useTutorialPreferences } from '@/hooks/useTutorialPreferences';
+import { useTranslation } from '@/i18n/i18n';
 
 const CopilotView = walkthroughable(View);
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
@@ -29,6 +30,7 @@ export default function NetworkingView() {
   const { user } = useAuth();
   const router = useRouter();
   const { showSuccess, showError } = useToastHelpers();
+  const { t } = useTranslation();
   const { start: startNetworkingTutorial, copilotEvents, handleNth } = useCopilot();
   const { shouldShowTutorial, markTutorialCompleted, isReady, networkingTutorialCompleted, updateTutorialStep } = useTutorialPreferences();
   const { isLoggedIn, isLoading: authLoading } = useAuth();
@@ -528,21 +530,21 @@ export default function NetworkingView() {
         {/* Header */}
         <View style={styles.header}>
           <MaterialIcons name="people-alt" size={32} color={colors.primary} />
-          <Text style={styles.headerTitle}>Networking Center</Text>
-          <Text style={styles.headerSubtitle}>Connect with speakers and attendees</Text>
+          <Text style={styles.headerTitle}>{t({ id: 'networking.title', message: 'Networking Center' })}</Text>
+          <Text style={styles.headerSubtitle}>{t({ id: 'networking.subtitle', message: 'Connect with speakers and attendees' })}</Text>
         </View>
 
       {/* Statistics Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Networking Stats</Text>
+        <Text style={styles.sectionTitle}>{t({ id: 'networking.stats.title', message: 'Your Networking Stats' })}</Text>
         <View style={styles.statsGrid}>
-          {renderStatsCard('Total Requests', statsState.data.totalRequests, 'send', '#4CAF50')}
-          {renderStatsCard('Pending', statsState.data.pendingRequests, 'schedule', '#FF9800')}
-          {renderStatsCard('Accepted', statsState.data.acceptedRequests, 'check-circle', '#4CAF50')}
-          {renderStatsCard('Declined', statsState.data.declinedRequests, 'cancel', '#F44336')}
-          {renderStatsCard('Cancelled', statsState.data.cancelledRequests, 'close', '#9E9E9E')}
-          {renderStatsCard('Scheduled', statsState.data.scheduledMeetings, 'event', '#2196F3')}
-          {renderStatsCard('Blocked', statsState.data.blockedUsers, 'block', '#F44336')}
+          {renderStatsCard(t({ id: 'networking.stats.totalRequests', message: 'Total Requests' }), statsState.data.totalRequests, 'send', '#4CAF50')}
+          {renderStatsCard(t({ id: 'networking.stats.pending', message: 'Pending' }), statsState.data.pendingRequests, 'schedule', '#FF9800')}
+          {renderStatsCard(t({ id: 'networking.stats.accepted', message: 'Accepted' }), statsState.data.acceptedRequests, 'check-circle', '#4CAF50')}
+          {renderStatsCard(t({ id: 'networking.stats.declined', message: 'Declined' }), statsState.data.declinedRequests, 'cancel', '#F44336')}
+          {renderStatsCard(t({ id: 'networking.stats.cancelled', message: 'Cancelled' }), statsState.data.cancelledRequests, 'close', '#9E9E9E')}
+          {renderStatsCard(t({ id: 'networking.stats.scheduled', message: 'Scheduled' }), statsState.data.scheduledMeetings, 'event', '#2196F3')}
+          {renderStatsCard(t({ id: 'networking.stats.blocked', message: 'Blocked' }), statsState.data.blockedUsers, 'block', '#F44336')}
         </View>
       </View>
 
@@ -558,7 +560,7 @@ export default function NetworkingView() {
               color: item.color,
               route: item.route
             }))}
-            title="Quick Access"
+            title={t({ id: 'networking.quickAccess', message: 'Quick Access' })}
             showScrollArrows={true}
             cardWidth={160}
             cardSpacing={12}
@@ -569,13 +571,16 @@ export default function NetworkingView() {
 
       {/* Recent Activity Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <Text style={styles.sectionTitle}>{t({ id: 'networking.recentActivity.title', message: 'Recent Activity' })}</Text>
         <View style={styles.activityCard}>
           <MaterialIcons name="history" size={24} color={colors.primary} />
           <View style={styles.activityContent}>
-            <Text style={styles.activityTitle}>Your Networking Journey</Text>
+            <Text style={styles.activityTitle}>{t({ id: 'networking.recentActivity.journey', message: 'Your Networking Journey' })}</Text>
             <Text style={styles.activityDescription}>
-              You've sent {statsState.data.totalRequests} meeting requests and have {statsState.data.pendingRequests} pending responses.
+              {t({ 
+                id: 'networking.recentActivity.description', 
+                message: 'You\'ve sent {totalRequests} meeting requests and have {pendingRequests} pending responses.' 
+              }).replace('{totalRequests}', String(statsState.data.totalRequests)).replace('{pendingRequests}', String(statsState.data.pendingRequests))}
             </Text>
           </View>
         </View>

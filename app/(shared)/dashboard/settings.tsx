@@ -27,6 +27,7 @@ export default function SettingsScreen() {
   const { headerHeight } = useScroll();
   const { showSuccess, showInfo, showError } = useToastHelpers();
   const { t: tProfile } = useTranslation('profile');
+  const { t: tSettings } = useTranslation();
   const router = useRouter();
   const { resetTutorial, resetAllTutorials, mainTutorialCompleted, networkingTutorialCompleted } = useTutorialPreferences();
   const { user, signOut } = useAuth();
@@ -424,7 +425,7 @@ export default function SettingsScreen() {
             onPress: async () => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               await resetTutorial('networking');
-              showSuccess('Tutorial Reset', 'The networking tutorial will start automatically when you visit the networking center.');
+              showSuccess('Tutorial Reset', tSettings('networking.tutorialResetMessage') || 'The networking tutorial will start automatically when you visit the networking center.');
               // Navigate after a short delay to ensure state is updated
               setTimeout(() => {
                 router.push('/events/bsl2025/networking' as any);

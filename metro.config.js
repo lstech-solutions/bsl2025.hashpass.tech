@@ -14,6 +14,9 @@ const webOnlyPackages = [
   'bs58',
   '@noble/ed25519',
   '@adraffy/ens-normalize',
+  '@zxing/browser',
+  '@zxing/library',
+  'html5-qrcode',
 ];
 
 // Store original resolveRequest if it exists
@@ -36,8 +39,7 @@ config.resolver = {
       return { type: 'empty' };
     }
     
-    // On native platforms, block web-only packages
-    // On web, allow them to be resolved normally
+    // Block ZXing library imports on native platforms
     if (platform !== 'web') {
       // Check if this is a web-only package
       for (const pkg of webOnlyPackages) {
@@ -45,13 +47,48 @@ config.resolver = {
           return { type: 'empty' };
         }
       }
+      
+      // Block web scanner modules on native
+      if (moduleName === './qr-scanner-web-fallback' || 
+          moduleName === '../lib/qr-scanner-web-fallback' ||
+          moduleName === './qr-scanner-web-html5' ||
+          moduleName === '../lib/qr-scanner-web-html5' ||
+          context.originModulePath?.includes('qr-scanner-web-fallback') ||
+          context.originModulePath?.includes('qr-scanner-web-html5')) {
+        return { type: 'empty' };
+      }
+      
+      // Block any ZXing internal module resolution
+      if (moduleName.includes('@zxing') || 
+          context.originModulePath?.includes('@zxing')) {
+        return { type: 'empty' };
+      }
+      
+      // Block html5-qrcode on native
+      if (moduleName === 'html5-qrcode' || 
+          moduleName.startsWith('html5-qrcode/') ||
+          context.originModulePath?.includes('html5-qrcode')) {
+        return { type: 'empty' };
+      }
     }
     
     // Use original resolveRequest if it exists, otherwise use default
-    if (originalResolveRequest) {
-      return originalResolveRequest(context, moduleName, platform);
+    // Add safety checks to prevent undefined path errors
+    try {
+      if (originalResolveRequest) {
+        return originalResolveRequest(context, moduleName, platform);
+      }
+      // Ensure context has required properties before calling resolveRequest
+      if (context && typeof context.resolveRequest === 'function') {
+        return context.resolveRequest(context, moduleName, platform);
+      }
+      // Fallback: return empty module if resolution fails
+      console.warn(`[Metro] Could not resolve module: ${moduleName}`);
+      return { type: 'empty' };
+    } catch (error) {
+      console.warn(`[Metro] Error resolving module ${moduleName}:`, error.message);
+      return { type: 'empty' };
     }
-    return context.resolveRequest(context, moduleName, platform);
   },
 };
 
@@ -144,6 +181,10 @@ config.server = {
 // Reduce memory usage
 config.maxWorkers = 1; // Use single worker to reduce memory
 config.cacheStores = config.cacheStores || [];
+
+// Limit cache size to prevent memory issues
+config.cacheVersion = '1.0';
+config.resetCache = false;
 
 // Optimize transformer for memory and production builds
 config.transformer = {

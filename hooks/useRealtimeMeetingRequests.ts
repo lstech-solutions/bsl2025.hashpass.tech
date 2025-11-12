@@ -418,6 +418,16 @@ export function useRealtimeMeetingRequests({
 
     channelsRef.current.push(notificationChannel);
 
+    // Register with memory manager for cleanup
+    const subscriptionId = `meeting-requests-${userId}`;
+    memoryManager.registerSubscription(subscriptionId, () => {
+      channelsRef.current.forEach(channel => {
+        supabase.removeChannel(channel);
+      });
+      channelsRef.current = [];
+      isSubscribedRef.current = false;
+    });
+
     isSubscribedRef.current = true;
   }, [userId, onRequestInserted, onRequestUpdated, onRequestDeleted, onError, fetchFullRequest]);
 

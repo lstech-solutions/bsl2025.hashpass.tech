@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { BarCodeScanner, BarCodeScannerResult } from 'expo-barcode-scanner';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -9,6 +9,18 @@ import { isAdmin } from '../lib/admin-utils';
 import { cameraPermissionManager } from '../lib/camera-permissions';
 import { supabase } from '../lib/supabase';
 import { PassType } from '../lib/pass-system';
+import { qrScannerService } from '../lib/qr-scanner-service';
+
+// Dynamic import for web fallback
+// Using .web.ts extension ensures Metro only resolves this on web
+let webQRScannerFallback: any = null;
+if (Platform.OS === 'web') {
+  try {
+    webQRScannerFallback = require('../lib/qr-scanner-web-fallback.web').webQRScannerFallback;
+  } catch (e) {
+    // Ignore if not available
+  }
+}
 
 interface AdminQRScannerProps {
   visible: boolean;
@@ -29,16 +41,28 @@ export default function AdminQRScanner({
   const [scanResult, setScanResult] = useState<QRScanResult | null>(null);
   const [qrDetails, setQrDetails] = useState<QRCode | null>(null);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
+  const [adminCheckLoading, setAdminCheckLoading] = useState(true); // Track admin check status
   const [showDetails, setShowDetails] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [useWebFallback, setUseWebFallback] = useState(false);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const scannerWrapperRef = React.useRef<any>(null);
+  const scannerCleanupRef = React.useRef<(() => Promise<void>) | null>(null);
 
   const styles = getStyles(isDark, colors);
 
   useEffect(() => {
     if (visible && user) {
+      // Reset admin check state
+      setAdminCheckLoading(true);
+      setIsUserAdmin(false);
+      
+      // Check admin status first
       checkAdminStatus();
-      checkPermissionStatus();
+      
+      // Only check permissions if admin check passes
+      // We'll check permissions after admin check completes
       // Reset scanner state when modal opens
       setScanned(false);
       setIsProcessing(false);
@@ -47,12 +71,77 @@ export default function AdminQRScanner({
       setShowDetails(false);
       setCameraReady(false);
       setCameraError(null);
+      setUseWebFallback(false);
+      
+      // On web, enable fallback
+      if (Platform.OS === 'web') {
+        qrScannerService.enableWebFallback();
+      }
     } else if (!visible) {
       // Reset camera state when modal closes
       setCameraReady(false);
       setCameraError(null);
+      setAdminCheckLoading(true);
+      
+      // Cleanup web fallback IMMEDIATELY when closing (before React unmounts)
+      // This prevents React from trying to remove nodes that html5-qrcode manages
+      if (scannerCleanupRef.current) {
+        // Run cleanup immediately and synchronously
+        scannerCleanupRef.current().then(() => {
+          scannerCleanupRef.current = null;
+          setUseWebFallback(false);
+        }).catch(() => {
+          // Errors already handled in cleanup function
+          scannerCleanupRef.current = null;
+          setUseWebFallback(false);
+        });
+      } else if (useWebFallback) {
+        // Fallback if cleanup ref is not set
+        qrScannerService.stopWebFallback().catch((error: any) => {
+          // Suppress DOM errors - these are expected when React unmounts
+          const errorMsg = error?.message || String(error);
+          if (!errorMsg.includes('removeChild') && 
+              !errorMsg.includes('not a child') &&
+              !errorMsg.includes('Node.removeChild')) {
+            console.warn('Error stopping web fallback on close:', error);
+          }
+        });
+        setUseWebFallback(false);
+      }
     }
   }, [visible, user]);
+
+  // Check permissions after admin check completes
+  useEffect(() => {
+    if (visible && user && !adminCheckLoading && isUserAdmin) {
+      checkPermissionStatus();
+    }
+  }, [visible, user, adminCheckLoading, isUserAdmin]);
+
+  // Initialize web fallback when permission is granted and admin check passes
+  useEffect(() => {
+    if (Platform.OS === 'web' && visible && hasPermission === true && !useWebFallback && !adminCheckLoading && isUserAdmin) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        console.log('🎥 Initializing web fallback scanner...');
+        initializeWebFallback();
+      }, 500); // Increased delay to ensure DOM is fully ready
+      
+      return () => {
+        clearTimeout(timer);
+        // Stop scanner BEFORE React unmounts to prevent DOM conflicts
+        // Use the stored cleanup function if available
+        if (scannerCleanupRef.current) {
+          console.log('🧹 Cleaning up web scanner before React unmount...');
+          // Run cleanup synchronously in a way that doesn't block but happens before React cleanup
+          Promise.resolve(scannerCleanupRef.current()).catch(() => {
+            // Errors are already handled in the cleanup function
+          });
+          scannerCleanupRef.current = null;
+        }
+      };
+    }
+  }, [visible, hasPermission, useWebFallback, adminCheckLoading, isUserAdmin]);
 
   const checkPermissionStatus = async () => {
     try {
@@ -82,9 +171,23 @@ export default function AdminQRScanner({
   };
 
   const checkAdminStatus = async () => {
-    if (!user) return;
-    const admin = await isAdmin(user.id);
-    setIsUserAdmin(admin);
+    if (!user) {
+      setAdminCheckLoading(false);
+      setIsUserAdmin(false);
+      return;
+    }
+    try {
+      setAdminCheckLoading(true);
+      console.log('🔐 Checking admin status for user:', user.id);
+      const admin = await isAdmin(user.id);
+      console.log('🔐 Admin check result:', admin);
+      setIsUserAdmin(admin);
+    } catch (error) {
+      console.error('❌ Error checking admin status:', error);
+      setIsUserAdmin(false);
+    } finally {
+      setAdminCheckLoading(false);
+    }
   };
 
   const requestCameraPermission = async () => {
@@ -116,7 +219,150 @@ export default function AdminQRScanner({
     }
   };
 
-  const handleBarCodeScanned = async ({ type, data }: BarCodeScannerResult) => {
+  const initializeWebFallback = async () => {
+    if (Platform.OS !== 'web' || !hasPermission) return;
+    
+    try {
+      // Wait a bit for DOM to be ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Get scanner wrapper from ref
+      let scannerWrapper: HTMLElement | null = null;
+      
+      if (scannerWrapperRef.current) {
+        const refElement = scannerWrapperRef.current as any;
+        if (refElement && refElement.setNativeProps === undefined) {
+          scannerWrapper = refElement as HTMLElement;
+        } else if (refElement && refElement._nativeNode) {
+          scannerWrapper = refElement._nativeNode;
+        } else if (refElement && typeof refElement === 'object') {
+          const node = refElement.querySelector?.('div') || refElement;
+          if (node && node.nodeType === 1) {
+            scannerWrapper = node as HTMLElement;
+          }
+        }
+      }
+      
+      if (!scannerWrapper) {
+        scannerWrapper = document.querySelector('[data-testid="scanner-wrapper"]') as HTMLElement ||
+                        document.querySelector('.scanner-wrapper') as HTMLElement ||
+                        document.querySelector('[data-scanner-id]') as HTMLElement;
+      }
+      
+      if (!scannerWrapper) {
+        console.error('Scanner wrapper not found, retrying...');
+        setTimeout(() => initializeWebFallback(), 300);
+        return;
+      }
+
+      // Ensure wrapper has proper dimensions and ID
+      if (!scannerWrapper.id) {
+        scannerWrapper.id = `admin-qr-scanner-container-${Date.now()}`;
+      }
+      scannerWrapper.setAttribute('data-scanner-id', scannerWrapper.id);
+      scannerWrapper.setAttribute('data-testid', 'scanner-wrapper');
+      scannerWrapper.className = 'scanner-wrapper';
+      
+      // Ensure wrapper has dimensions
+      const rect = scannerWrapper.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        console.warn('Scanner wrapper has no dimensions, waiting...');
+        setTimeout(() => initializeWebFallback(), 200);
+        return;
+      }
+
+      // Start web fallback scanning
+      console.log('🎥 Starting web fallback scanner on element:', scannerWrapper.id);
+      const result = await qrScannerService.startWebFallback(
+        scannerWrapper.id,
+        async (scanResult) => {
+          console.log('📷 QR code scanned via web fallback:', scanResult.text);
+          const barCodeResult: BarCodeScannerResult = {
+            type: 'qr' as any,
+            data: scanResult.text,
+          };
+          
+          if (handleBarCodeScanned) {
+            handleBarCodeScanned(barCodeResult);
+          }
+        },
+        (error) => {
+          console.error('❌ Web fallback scan error:', error);
+          setCameraError(error.message || 'Camera scan error');
+        }
+      );
+
+      if (result.success) {
+        setUseWebFallback(true);
+        setCameraReady(true);
+        console.log('✅ Admin web scanner initialized successfully');
+        
+        // Store cleanup function for later use
+        scannerCleanupRef.current = async () => {
+          try {
+            await qrScannerService.stopWebFallback();
+          } catch (error: any) {
+            // Suppress DOM errors
+            const errorMsg = error?.message || String(error);
+            if (!errorMsg.includes('removeChild') && !errorMsg.includes('not a child')) {
+              console.warn('Error during scanner cleanup:', error);
+            }
+          }
+        };
+        
+        // Force a small delay to ensure video element is rendered
+        setTimeout(() => {
+          // Check if video element exists
+          const videoElement = scannerWrapper.querySelector('video');
+          if (videoElement) {
+            console.log('✅ Video element found and should be visible');
+            // Ensure video is visible
+            videoElement.style.display = 'block';
+            videoElement.style.width = '100%';
+            videoElement.style.height = '100%';
+            videoElement.style.objectFit = 'cover';
+          } else {
+            console.warn('⚠️ Video element not found after initialization');
+          }
+        }, 200);
+      } else {
+        console.error('❌ Failed to start web fallback:', result.error);
+        setUseWebFallback(false);
+        setCameraError(result.error || 'Failed to start camera');
+        // Try native scanner as fallback
+        if (Platform.OS !== 'web') {
+          setUseWebFallback(false);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error initializing web fallback:', error);
+      setUseWebFallback(false);
+    }
+  };
+
+  const resetScanner = useCallback(async () => {
+    console.log('Resetting scanner...');
+    setScanned(false);
+    setIsProcessing(false);
+    setScanResult(null);
+    setQrDetails(null);
+    setShowDetails(false);
+    
+    // Stop web fallback if active
+    if (useWebFallback) {
+      await qrScannerService.stopWebFallback();
+      setUseWebFallback(false);
+      // Reinitialize after a short delay
+      if (Platform.OS === 'web' && hasPermission === true) {
+        setTimeout(() => {
+          initializeWebFallback();
+        }, 500);
+      }
+    }
+  }, [useWebFallback, hasPermission]);
+
+  // Memoize scan callback to prevent unnecessary re-renders of BarCodeScanner
+  const scanCallback = useCallback(async ({ type, data }: BarCodeScannerResult) => {
     if (scanned || isProcessing) return;
 
     console.log('QR Code scanned:', { type, data });
@@ -124,28 +370,14 @@ export default function AdminQRScanner({
     setIsProcessing(true);
 
     try {
-      let token: string;
+      // Use professional QR parser
+      const parsed = qrScannerService.parseQRData(data);
       
-      try {
-        // Try parsing as JSON first
-        const parsed = JSON.parse(data);
-        if (parsed.token) {
-          token = parsed.token;
-        } else if (parsed.type === 'hashpass_qr' && parsed.token) {
-          token = parsed.token;
-        } else {
-          token = data; // Fallback to raw data
-        }
-      } catch {
-        // If not JSON, check if it's a URL with token parameter
-        if (data.includes('token=')) {
-          const urlParams = new URLSearchParams(data.split('?')[1]);
-          token = urlParams.get('token') || data;
-        } else {
-          // Assume the entire data is the token
-          token = data;
-        }
+      if (!parsed.isValid || !parsed.token) {
+        throw new Error('Invalid QR code format');
       }
+
+      const token = parsed.token;
 
       console.log('Extracted token:', token);
 
@@ -190,16 +422,30 @@ export default function AdminQRScanner({
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [scanned, isProcessing, user?.id, onScanSuccess, resetScanner]);
 
-  const resetScanner = () => {
-    console.log('Resetting scanner...');
-    setScanned(false);
-    setIsProcessing(false);
-    setScanResult(null);
-    setQrDetails(null);
-    setShowDetails(false);
-  };
+  const errorCallback = useCallback((error: Error) => {
+    console.error('QR scan error:', error);
+    Alert.alert('Error', error.message || 'Error processing QR code', [
+      { text: 'Try Again', onPress: resetScanner },
+    ]);
+  }, [resetScanner]);
+
+  // Memoize scan handler to prevent BarCodeScanner re-renders
+  const handleBarCodeScanned = useMemo(
+    () => qrScannerService.createScanHandler(
+      {
+        onScan: scanCallback,
+        onError: errorCallback,
+      },
+      {
+        qrOnly: true,
+        scanThrottle: 1000,
+        hapticFeedback: true,
+      }
+    ),
+    [scanCallback, errorCallback]
+  );
 
   const handleRevoke = async () => {
     if (!scanResult || !qrDetails || !user) return;
@@ -274,6 +520,21 @@ export default function AdminQRScanner({
 
   if (!visible) return null;
 
+  // Show loading while checking admin status
+  if (adminCheckLoading) {
+    return (
+      <Modal visible={visible} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.permissionText}>Checking admin access...</Text>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // Only show admin error if check completed and user is not admin
   if (!isUserAdmin) {
     return (
       <Modal visible={visible} animationType="slide" transparent>
@@ -283,6 +544,9 @@ export default function AdminQRScanner({
             <Text style={styles.errorTitle}>Admin Access Required</Text>
             <Text style={styles.errorText}>
               You need admin privileges to use the admin QR scanner.
+            </Text>
+            <Text style={styles.errorText}>
+              User ID: {user?.id || 'Unknown'}
             </Text>
             <TouchableOpacity style={styles.button} onPress={onClose}>
               <Text style={styles.buttonText}>Close</Text>
@@ -354,10 +618,69 @@ export default function AdminQRScanner({
     );
   }
 
+  // Error boundary wrapper to catch DOM removal errors
+  const ScannerWrapper = ({ children }: { children: React.ReactNode }) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Wrap in error boundary for web
+      return (
+        <ErrorBoundary
+          fallback={null}
+          onError={(error) => {
+            // Suppress DOM removal errors
+            const errorMsg = error?.message || String(error);
+            if (errorMsg.includes('removeChild') || 
+                errorMsg.includes('not a child') ||
+                errorMsg.includes('Node.removeChild')) {
+              console.debug('Suppressed DOM removal error in error boundary:', errorMsg);
+              return true; // Suppress error
+            }
+            return false; // Let other errors propagate
+          }}
+        >
+          {children}
+        </ErrorBoundary>
+      );
+    }
+    return <>{children}</>;
+  };
+
+  // Simple error boundary component
+  class ErrorBoundary extends React.Component<
+    { children: React.ReactNode; fallback: React.ReactNode; onError?: (error: Error) => boolean },
+    { hasError: boolean }
+  > {
+    constructor(props: any) {
+      super(props);
+      this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError() {
+      return { hasError: true };
+    }
+
+    componentDidCatch(error: Error) {
+      if (this.props.onError) {
+        const shouldSuppress = this.props.onError(error);
+        if (shouldSuppress) {
+          // Reset error state if suppressed
+          this.setState({ hasError: false });
+        }
+      }
+    }
+
+    render() {
+      if (this.state.hasError) {
+        return this.props.fallback;
+      }
+      return this.props.children;
+    }
+  }
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.modalContainer}>
-        <View style={styles.scannerContainer}>
+      <ScannerWrapper>
+        <View style={styles.modalContainer}>
+          <View style={styles.scannerContainer}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerContent}>
@@ -372,15 +695,17 @@ export default function AdminQRScanner({
           {!showDetails ? (
             <>
               {/* Scanner View */}
-              <View style={styles.scannerWrapper}>
+              <View style={styles.scannerWrapper} ref={!useWebFallback ? scannerWrapperRef : undefined}>
                 {hasPermission === true && (
                   <>
-                    <BarCodeScanner
-                      onBarCodeScanned={scanned || isProcessing ? undefined : handleBarCodeScanned}
-                      style={StyleSheet.absoluteFillObject}
-                      barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
-                      type="back"
-                      onMountError={(error) => {
+                    {!useWebFallback ? (
+                      <BarCodeScanner
+                        onBarCodeScanned={scanned || isProcessing ? undefined : handleBarCodeScanned}
+                        style={[StyleSheet.absoluteFillObject, styles.cameraView]}
+                        barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
+                        type="back"
+                        ratio="16:9"
+                        onMountError={(error) => {
                         console.error('Camera mount error:', error);
                         const errorMessage = error?.message || String(error);
                         setCameraError(errorMessage);
@@ -417,6 +742,45 @@ export default function AdminQRScanner({
                       // Note: onCameraReady may not fire on all platforms
                       // We use timeout fallback in checkPermissionStatus
                     />
+                    ) : (
+                      // Web fallback using html5-qrcode or ZXing
+                      Platform.OS === 'web' && (
+                        <View 
+                          ref={(ref) => {
+                            scannerWrapperRef.current = ref;
+                            // When ref is set, ensure cleanup happens on unmount
+                            if (ref && typeof window !== 'undefined') {
+                              // Store original parent for cleanup
+                              const originalParent = ref;
+                              // Override removeChild to suppress errors
+                              if (originalParent && typeof originalParent.removeChild === 'function') {
+                                const originalRemoveChild = originalParent.removeChild.bind(originalParent);
+                                (originalParent as any).removeChild = function(child: any) {
+                                  try {
+                                    return originalRemoveChild(child);
+                                  } catch (e: any) {
+                                    // Suppress removeChild errors - they're harmless
+                                    if (e.message?.includes('not a child') || 
+                                        e.message?.includes('removeChild')) {
+                                      console.debug('Suppressed removeChild error:', e.message);
+                                      return child;
+                                    }
+                                    throw e;
+                                  }
+                                };
+                              }
+                            }
+                          }}
+                          style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000', minHeight: 400 }]}
+                          // @ts-ignore - Web-specific attributes
+                          data-testid="scanner-wrapper"
+                          // @ts-ignore
+                          className="scanner-wrapper"
+                          // @ts-ignore
+                          id={`admin-qr-scanner-wrapper-${Date.now()}`}
+                        />
+                      )
+                    )}
                     {/* Only show loading overlay briefly, then hide it to show camera */}
                     {!cameraReady && !cameraError && hasPermission === true && (
                       <View style={styles.cameraLoadingOverlay} pointerEvents="none">
@@ -453,7 +817,7 @@ export default function AdminQRScanner({
                   </View>
                 )}
 
-                {/* Overlay - only show when camera is ready to avoid blocking */}
+                {/* Overlay - only show when camera is ready, pointerEvents none to not block camera */}
                 {cameraReady && hasPermission === true && (
                   <View style={styles.overlay} pointerEvents="none">
                     <View style={styles.overlayTop} />
@@ -730,7 +1094,8 @@ export default function AdminQRScanner({
             </ScrollView>
           )}
         </View>
-      </View>
+        </View>
+      </ScannerWrapper>
     </Modal>
   );
 }
@@ -798,6 +1163,11 @@ const getStyles = (isDark: boolean, colors: any) =>
       width: '100%',
       height: '100%',
       overflow: 'hidden',
+    },
+    cameraView: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: '#000',
     },
     overlay: {
       ...StyleSheet.absoluteFillObject,

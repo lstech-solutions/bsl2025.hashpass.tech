@@ -1,7 +1,7 @@
 // Version-aware Service Worker for HashPass
 // Automatically clears cache when version changes
 
-const APP_VERSION = '1.6.23'; // This will be updated during build
+const APP_VERSION = '1.6.29'; // This will be updated during build
 const CACHE_NAME = `hashpass-v${APP_VERSION}`;
 const VERSION_CHECK_URL = '/api/config/versions';
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
@@ -49,7 +49,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - network first with cache fallback
+// Fetch event - network first with cache fallback and size limits
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -60,16 +60,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip large files from caching (images, videos, etc.)
+  const isLargeFile = url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|pdf)$/i);
+  const maxCacheSize = 5 * 1024 * 1024; // 5MB limit
+
   // For other requests, try network first, then cache
   event.respondWith(
     fetch(request)
       .then((response) => {
-        // If network request succeeds, cache it
+        // Only cache if response is OK and not too large
         if (response && response.status === 200) {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseToCache);
-          });
+          // Check content-length header if available
+          const contentLength = response.headers.get('content-length');
+          const size = contentLength ? parseInt(contentLength, 10) : 0;
+          
+          // Don't cache large files or images (they should use browser cache)
+          if (!isLargeFile && (size === 0 || size < maxCacheSize)) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseToCache).catch((err) => {
+                console.warn('[SW] Failed to cache:', request.url, err);
+              });
+            });
+          }
         }
         return response;
       })
@@ -109,7 +122,16 @@ function checkForVersionUpdate() {
   versionCheckInProgress = true;
   lastVersionCheck = now;
   
-  fetch(VERSION_CHECK_URL, { cache: 'no-store' })
+  // Add timestamp to prevent caching
+  const timestamp = Date.now();
+  fetch(`${VERSION_CHECK_URL}?t=${timestamp}`, { 
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    }
+  })
     .then((response) => {
       if (!response.ok) {
         throw new Error('Failed to fetch version');
@@ -191,11 +213,9 @@ self.addEventListener('activate', (event) => {
           })
         );
       }),
-      // Check for version updates (with delay to prevent loops)
-      new Promise((resolve) => {
-        setTimeout(() => {
-          checkForVersionUpdate().then(() => resolve()).catch(() => resolve());
-        }, 3000); // Wait 3 seconds before checking to prevent loops
+      // Check for version updates immediately (no delay for first check)
+      checkForVersionUpdate().catch((err) => {
+        console.warn('[SW] Initial version check failed:', err);
       })
     ]).then(() => {
       return self.clients.claim();

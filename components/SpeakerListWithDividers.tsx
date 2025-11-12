@@ -70,57 +70,91 @@ export default function SpeakerListWithDividers({
     }
   };
 
+  // Flatten speakers for FlatList with section headers
+  const flatListData = React.useMemo(() => {
+    const items: Array<{ type: 'header' | 'speaker'; letter?: string; speaker?: any; id: string }> = [];
+    sortedGroupKeys.forEach((letter) => {
+      items.push({ type: 'header', letter, id: `header-${letter}` });
+      groupedSpeakers[letter].forEach((speaker) => {
+        items.push({ type: 'speaker', speaker, id: speaker.id });
+      });
+    });
+    return items;
+  }, [sortedGroupKeys, groupedSpeakers]);
+
+  const renderItem = React.useCallback(({ item }: { item: typeof flatListData[0] }) => {
+    if (item.type === 'header') {
+      return (
+        <View 
+          key={item.id}
+          style={styles.groupContainer}
+          ref={(ref) => {
+            if (item.letter) {
+              groupRefs.current[item.letter] = ref;
+            }
+          }}
+        >
+          <View style={styles.groupHeader}>
+            <Text style={styles.groupTitle}>{getGroupLabel(item.letter || '')}</Text>
+            <Text style={styles.groupSubtitle}>{getGroupSubtitle(item.letter || '')}</Text>
+            <View style={styles.groupDivider} />
+          </View>
+        </View>
+      );
+    }
+
+    const speaker = item.speaker;
+    if (!speaker) return null;
+
+    return (
+      <TouchableOpacity
+        key={speaker.id}
+        style={styles.speakerCard}
+        onPress={() => onSpeakerPress(speaker)}
+      >
+        <View style={styles.speakerImageContainer}>
+          <SpeakerAvatar
+            imageUrl={speaker.image}
+            name={speaker.name}
+            size={50}
+            showBorder={false}
+          />
+        </View>
+        <View style={styles.speakerInfo}>
+          <Text style={styles.speakerName}>{speaker.name}</Text>
+          <Text style={styles.speakerTitle}>{speaker.title}</Text>
+          <Text style={styles.speakerCompany}>{speaker.company}</Text>
+        </View>
+        <MaterialIcons name="chevron-right" size={20} color="#666" />
+      </TouchableOpacity>
+    );
+  }, [onSpeakerPress, styles, getGroupLabel, getGroupSubtitle]);
+
+  const getItemLayout = React.useCallback((data: any, index: number) => {
+    const item = flatListData[index];
+    if (item?.type === 'header') {
+      return { length: 60, offset: 60 * index, index };
+    }
+    return { length: 80, offset: 80 * index, index };
+  }, [flatListData]);
+
   return (
     <View style={styles.container}>
-      <ScrollView
+      <FlatList
         ref={scrollViewRef}
+        data={flatListData}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        getItemLayout={getItemLayout}
         style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-      >
-        {sortedGroupKeys.map((letter) => (
-          <View 
-            key={letter} 
-            style={styles.groupContainer}
-            ref={(ref) => {
-              groupRefs.current[letter] = ref;
-            }}
-          >
-            {/* Group Header */}
-            <View style={styles.groupHeader}>
-              <Text style={styles.groupTitle}>{getGroupLabel(letter)}</Text>
-              <Text style={styles.groupSubtitle}>{getGroupSubtitle(letter)}</Text>
-              <View style={styles.groupDivider} />
-            </View>
-
-            {/* Speakers in this group */}
-            <View style={styles.speakersList}>
-              {groupedSpeakers[letter].map((speaker) => (
-                <TouchableOpacity
-                  key={speaker.id}
-                  style={styles.speakerCard}
-                  onPress={() => onSpeakerPress(speaker)}
-                >
-                  <View style={styles.speakerImageContainer}>
-                    <SpeakerAvatar
-                      imageUrl={speaker.image}
-                      name={speaker.name}
-                      size={50}
-                      showBorder={false}
-                    />
-                  </View>
-                  <View style={styles.speakerInfo}>
-                    <Text style={styles.speakerName}>{speaker.name}</Text>
-                    <Text style={styles.speakerTitle}>{speaker.title}</Text>
-                    <Text style={styles.speakerCompany}>{speaker.company}</Text>
-                  </View>
-                  <MaterialIcons name="chevron-right" size={20} color="#666" />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={15}
+        windowSize={10}
+      />
 
       {/* Quick Scroll */}
       <SpeakerQuickScroll

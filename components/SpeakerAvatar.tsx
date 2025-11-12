@@ -24,11 +24,11 @@ export default function SpeakerAvatar({
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageTimeout, setImageTimeout] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false); // Track if image loaded successfully (state, not ref)
   
   // Track failed URLs to prevent infinite retry loops
   const failedUrlsRef = useRef<Set<string>>(new Set());
   const currentUrlRef = useRef<string | null>(null);
-  const loadSuccessRef = useRef<boolean>(false);
   const isProcessingRef = useRef<boolean>(false); // Prevent concurrent processing
   const timeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -92,7 +92,7 @@ export default function SpeakerAvatar({
     // Reset states when URLs change
     setImageError(false);
     setImageTimeout(false);
-    loadSuccessRef.current = false;
+    setImageLoaded(false);
     
     if (localOptimizedUrl) {
       // Try local optimized first - set loading state and URL
@@ -177,6 +177,7 @@ export default function SpeakerAvatar({
         // All sources failed - show initials
         setImageTimeout(true);
         setImageLoading(false);
+        setImageLoaded(false);
       }
     }, timeoutDuration);
 
@@ -196,7 +197,7 @@ export default function SpeakerAvatar({
     const statusCode = error.nativeEvent?.statusCode || error.statusCode || 'unknown';
     
     // Mark as not successfully loaded
-    loadSuccessRef.current = false;
+    setImageLoaded(false);
     
     // Only log in development
     if (process.env.NODE_ENV !== 'production') {
@@ -222,6 +223,7 @@ export default function SpeakerAvatar({
         setImageError(false);
         setImageLoading(true);
         setImageTimeout(false);
+        setImageLoaded(false); // Reset loaded state for new URL
         fadeAnim.setValue(0);
         currentUrlRef.current = s3UrlRef.current;
         // Reset processing flag after a short delay
@@ -234,6 +236,7 @@ export default function SpeakerAvatar({
       setImageError(true);
       setImageLoading(false);
       setImageTimeout(true);
+      setImageLoaded(false);
       isProcessingRef.current = false;
     }
   }, [avatarUrl, urlSource, name]);
@@ -243,7 +246,7 @@ export default function SpeakerAvatar({
     if (isProcessingRef.current) return; // Already processing
     
     // Mark as successfully loaded
-    loadSuccessRef.current = true;
+    setImageLoaded(true);
     
     // Only log in development
     if (process.env.NODE_ENV !== 'production') {
@@ -277,6 +280,7 @@ export default function SpeakerAvatar({
       setImageError(false);
       setImageTimeout(false);
       setImageLoading(true);
+      setImageLoaded(false); // Reset loaded state when starting new load
       fadeAnim.setValue(0);
     }
   }, [avatarUrl]);
@@ -293,10 +297,13 @@ export default function SpeakerAvatar({
   
   // Determine what to show
   const hasUrlsAvailable = !!(localOptimizedUrl || s3Url);
-  const showImage = avatarUrl && !imageError && !imageTimeout && !imageLoading && loadSuccessRef.current;
-  const showLoading = imageLoading && avatarUrl && !imageError && !imageTimeout;
+  // Show image when loaded successfully
+  const showImage = avatarUrl && imageLoaded && !imageError && !imageTimeout && !imageLoading;
+  // Show loading when actively loading
+  const showLoading = imageLoading && avatarUrl && !imageError && !imageTimeout && !imageLoaded;
+  // Show placeholder when no URLs or all failed
   const showPlaceholder = (!hasUrlsAvailable && !avatarUrl) || 
-                          (!imageLoading && (imageError || imageTimeout));
+                          (!imageLoading && !imageLoaded && (imageError || imageTimeout));
 
   return (
     <View style={[styles.container, style]}>

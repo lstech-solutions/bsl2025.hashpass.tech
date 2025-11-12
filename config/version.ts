@@ -22,27 +22,43 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511121726, // Updated to current timestamp
+  buildNumber: 202511121744, // Updated to current timestamp
   releaseDate: '2025-11-12',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [],
   bugfixes: [
-    'Fixed avatar loading stuck on loading state',
-    'Fixed infinite loop in SpeakerAvatar component (Maximum update depth exceeded)',
-    'Fixed Metro asset resolver trying to scan wrong directory for /assets/ requests',
-    'Improved avatar loading logic with proper state management and refs',
-    'Fixed onLoad/onError callbacks not firing by always rendering Image component',
-    'Added loadSuccessRef to track successful image loads',
-    'Fixed Metro middleware to handle /assets/ requests before asset resolver',
-    'Improved error handling and fallback logic for avatar loading'
+    'Fixed speaker avatar loading to show loader first, then fallback to initials',
+    'Fixed Metro middleware to allow Expo asset requests (fonts) to pass through',
+    'Improved avatar loading state management - only show loader when URLs are available',
+    'Fixed avatar component to properly normalize imageUrl (null/undefined/empty string handling)',
+    'Fixed Metro asset resolver to distinguish between Expo assets and custom assets',
+    'Added support for font file types (.ttf, .woff, .woff2) in Metro middleware'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.58 release - Avatar loading fixes and Metro configuration improvements'
+  notes: 'Version 1.6.59 release - Avatar loading improvements and Metro asset handling fixes'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.59': {
+    version: '1.6.59',
+    buildNumber: 202511121744,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [],
+    bugfixes: [
+      'Fixed speaker avatar loading to show loader first, then fallback to initials',
+      'Fixed Metro middleware to allow Expo asset requests (fonts) to pass through',
+      'Improved avatar loading state management - only show loader when URLs are available',
+      'Fixed avatar component to properly normalize imageUrl (null/undefined/empty string handling)',
+      'Fixed Metro asset resolver to distinguish between Expo assets and custom assets',
+      'Added support for font file types (.ttf, .woff, .woff2) in Metro middleware'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.59 release - Avatar loading improvements and Metro asset handling fixes'
+  },
   '1.6.58': {
     version: '1.6.58',
     buildNumber: 202511121726,

@@ -2,6 +2,8 @@
  * Utility functions for string manipulation
  */
 
+import Constants from 'expo-constants';
+
 /**
  * Converts accented characters to ASCII equivalents for URL-safe strings
  * @param str - The string to convert
@@ -28,17 +30,15 @@ export function speakerNameToFilename(name: string): string {
 }
 
 /**
- * Generates avatar URL for a speaker with S3 fallback
+ * Generates avatar URL for a speaker from S3
  * Note: The database imageurl should contain the S3 URL if available.
  * This function is used as a fallback when imageurl is not set.
  * @param name - The speaker's name
- * @param baseUrl - The base URL for images (optional, defaults to blockchainsummit.la)
  * @param s3Url - S3 URL if already known (optional)
- * @returns Complete avatar URL
+ * @returns Complete avatar URL (always S3)
  */
 export function getSpeakerAvatarUrl(
   name: string, 
-  baseUrl: string = 'https://blockchainsummit.la/wp-content/uploads/2025/09',
   s3Url?: string
 ): string {
   // If S3 URL is provided, use it as primary
@@ -56,10 +56,47 @@ export function getSpeakerAvatarUrl(
   let cdnUrl = '';
   let awsRegion = defaultAwsRegion;
 
+  // Check environment variables (server-side or build-time)
+  // Also check for AWS_S3_BUCKET (not just AWS_S3_BUCKET_NAME)
   if (typeof process !== 'undefined' && process.env) {
-    s3Bucket = process.env.AWS_S3_BUCKET_NAME || process.env.EXPO_PUBLIC_AWS_S3_BUCKET_NAME || '';
-    cdnUrl = process.env.AWS_S3_CDN_URL || process.env.AWS_S3_BUCKET_URL || process.env.EXPO_PUBLIC_AWS_S3_CDN_URL || '';
-    awsRegion = process.env.AWS_REGION || process.env.EXPO_PUBLIC_AWS_REGION || defaultAwsRegion;
+    s3Bucket = process.env.AWS_S3_BUCKET || 
+               process.env.AWS_S3_BUCKET_NAME || 
+               process.env.EXPO_PUBLIC_AWS_S3_BUCKET || 
+               process.env.EXPO_PUBLIC_AWS_S3_BUCKET_NAME || 
+               '';
+    cdnUrl = process.env.AWS_S3_CDN_URL || 
+             process.env.AWS_S3_BUCKET_URL || 
+             process.env.EXPO_PUBLIC_AWS_S3_CDN_URL || 
+             process.env.EXPO_PUBLIC_AWS_S3_BUCKET_URL || 
+             '';
+    awsRegion = process.env.AWS_REGION || 
+                process.env.EXPO_PUBLIC_AWS_REGION || 
+                defaultAwsRegion;
+  }
+
+  // Check Expo Constants (client-side runtime)
+  // This allows accessing env vars in React Native/Expo client-side code
+  if (Constants?.expoConfig?.extra) {
+    const extra = Constants.expoConfig.extra as any;
+    if (!s3Bucket) {
+      s3Bucket = extra.AWS_S3_BUCKET || 
+                 extra.AWS_S3_BUCKET_NAME || 
+                 extra.EXPO_PUBLIC_AWS_S3_BUCKET || 
+                 extra.EXPO_PUBLIC_AWS_S3_BUCKET_NAME || 
+                 '';
+    }
+    if (!cdnUrl) {
+      cdnUrl = extra.AWS_S3_CDN_URL || 
+               extra.AWS_S3_BUCKET_URL || 
+               extra.EXPO_PUBLIC_AWS_S3_CDN_URL || 
+               extra.EXPO_PUBLIC_AWS_S3_BUCKET_URL || 
+               '';
+    }
+    if (awsRegion === defaultAwsRegion) {
+      awsRegion = extra.AWS_REGION || 
+                  extra.EXPO_PUBLIC_AWS_REGION || 
+                  defaultAwsRegion;
+    }
   }
 
   // Use default bucket if not in env (we know it's hashpass-assets)
@@ -78,9 +115,9 @@ export function getSpeakerAvatarUrl(
     return `https://${s3Bucket}.s3.${awsRegion}.amazonaws.com/${s3Key}`;
   }
 
-  // Fallback to original blockchainsummit.la URL
-  // This will be used if S3 is not configured
-  return `${baseUrl}/foto-${filename}.png`;
+  // Always return S3 URL - never fallback to blockchainsummit.la
+  // If S3 bucket is not configured, still return S3 URL format (will fail gracefully)
+  return `https://${s3Bucket}.s3.${awsRegion}.amazonaws.com/${s3Key}`;
 }
 
 /**

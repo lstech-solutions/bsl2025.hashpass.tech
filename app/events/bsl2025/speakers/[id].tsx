@@ -1070,7 +1070,7 @@ export default function SpeakerDetail() {
           <SpeakerAvatar
             imageUrl={speaker.image}
             name={speaker.name}
-            size={80}
+            size={150}
             showBorder={true}
             isOnline={speaker.isOnline}
           />

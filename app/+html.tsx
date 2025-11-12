@@ -91,12 +91,28 @@ if ('serviceWorker' in navigator) {
                         }
                     });
                     
-                    // Listen for messages from service worker (but don't auto-reload)
+                    // Listen for messages from service worker
                     navigator.serviceWorker.addEventListener('message', (event) => {
                         if (event.data && event.data.type === 'VERSION_UPDATE') {
-                            console.log('ℹ️ Version update available. Manual refresh recommended.');
+                            console.log('ℹ️ Version update detected:', event.data);
+                            if (event.data.action === 'reload') {
+                                console.log('🔄 Reloading page due to version update...');
+                                // Reload after a short delay to allow message to be processed
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 500);
+                            } else {
+                                console.log('ℹ️ Version update available. Manual refresh recommended.');
+                            }
                         }
                     });
+                    
+                    // Check version on page load
+                    setTimeout(() => {
+                        if (reg.active) {
+                            reg.active.postMessage({ type: 'CHECK_VERSION' });
+                        }
+                    }, 3000);
                 })
                 .catch(error => {
                     console.error('❌ Service Worker registration failed:', error);

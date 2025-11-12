@@ -35,11 +35,28 @@ export const CURRENT_VERSION: VersionInfo = {
     'Replaced navigation with modal for privacy and terms links on auth screen'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.25 release'
+  notes: 'Version 1.6.26 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.26': {
+    version: '1.6.26',
+    buildNumber: 202511120452,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added Privacy/Terms modal component for in-app viewing',
+      'Improved mobile responsiveness for theme/language switcher on auth page'
+    ],
+    bugfixes: [
+      'Fixed theme and language switcher overlapping with auth card on mobile views',
+      'Replaced navigation with modal for privacy and terms links on auth screen'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.26 release'
+  },
   '1.6.25': {
     version: '1.6.25',
     buildNumber: 202511120452,

@@ -22,23 +22,47 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511122205, // Updated to current timestamp
+  buildNumber: 202511121726, // Updated to current timestamp
   releaseDate: '2025-11-12',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [],
   bugfixes: [
-    'Fixed OTP verification redirect issue on production',
-    'Added session verification before navigation after OTP verification',
-    'Improved redirect timing to ensure session is fully established',
-    'Added proper loading state management during OTP verification'
+    'Fixed avatar loading stuck on loading state',
+    'Fixed infinite loop in SpeakerAvatar component (Maximum update depth exceeded)',
+    'Fixed Metro asset resolver trying to scan wrong directory for /assets/ requests',
+    'Improved avatar loading logic with proper state management and refs',
+    'Fixed onLoad/onError callbacks not firing by always rendering Image component',
+    'Added loadSuccessRef to track successful image loads',
+    'Fixed Metro middleware to handle /assets/ requests before asset resolver',
+    'Improved error handling and fallback logic for avatar loading'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.57 release'
+  notes: 'Version 1.6.58 release - Avatar loading fixes and Metro configuration improvements'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.58': {
+    version: '1.6.58',
+    buildNumber: 202511121726,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [],
+    bugfixes: [
+      'Fixed avatar loading stuck on loading state',
+      'Fixed infinite loop in SpeakerAvatar component (Maximum update depth exceeded)',
+      'Fixed Metro asset resolver trying to scan wrong directory for /assets/ requests',
+      'Improved avatar loading logic with proper state management and refs',
+      'Fixed onLoad/onError callbacks not firing by always rendering Image component',
+      'Added loadSuccessRef to track successful image loads',
+      'Fixed Metro middleware to handle /assets/ requests before asset resolver',
+      'Improved error handling and fallback logic for avatar loading'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.58 release - Avatar loading fixes and Metro configuration improvements'
+  },
   '1.6.57': {
     version: '1.6.57',
     buildNumber: 202511122205,

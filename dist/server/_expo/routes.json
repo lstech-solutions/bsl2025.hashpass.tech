@@ -1,6 +1,12 @@
 {
   "apiRoutes": [
     {
+      "file": "_expo/functions/api/auth/otp+api.js",
+      "page": "/api/auth/otp",
+      "namedRegex": "^/api/auth/otp(?:/)?$",
+      "routeKeys": {}
+    },
+    {
       "file": "_expo/functions/api/qr/admin+api.js",
       "page": "/api/qr/admin",
       "namedRegex": "^/api/qr/admin(?:/)?$",
@@ -22,6 +28,18 @@
       "file": "_expo/functions/api/bslatam/agenda+api.js",
       "page": "/api/bslatam/agenda",
       "namedRegex": "^/api/bslatam/agenda(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/auth/otp/verify+api.js",
+      "page": "/api/auth/otp/verify",
+      "namedRegex": "^/api/auth/otp/verify(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/config/versions+api.js",
+      "page": "/api/config/versions",
+      "namedRegex": "^/api/config/versions(?:/)?$",
       "routeKeys": {}
     },
     {
@@ -49,6 +67,18 @@
       "routeKeys": {}
     },
     {
+      "file": "_expo/functions/api/bslatam/subscribe+api.js",
+      "page": "/api/bslatam/subscribe",
+      "namedRegex": "^/api/bslatam/subscribe(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/auth/wallet/solana+api.js",
+      "page": "/api/auth/wallet/solana",
+      "namedRegex": "^/api/auth/wallet/solana(?:/)?$",
+      "routeKeys": {}
+    },
+    {
       "file": "_expo/functions/api/bslatam/auto-match+api.js",
       "page": "/api/bslatam/auto-match",
       "namedRegex": "^/api/bslatam/auto\\-match(?:/)?$",
@@ -64,6 +94,18 @@
       "file": "_expo/functions/api/qr/admin/reactivate+api.js",
       "page": "/api/qr/admin/reactivate",
       "namedRegex": "^/api/qr/admin/reactivate(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/auth/wallet/ethereum+api.js",
+      "page": "/api/auth/wallet/ethereum",
+      "namedRegex": "^/api/auth/wallet/ethereum(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/auth/wallet/challenge+api.js",
+      "page": "/api/auth/wallet/challenge",
+      "namedRegex": "^/api/auth/wallet/challenge(?:/)?$",
       "routeKeys": {}
     },
     {
@@ -85,6 +127,24 @@
       "routeKeys": {}
     },
     {
+      "file": "_expo/functions/api/auth/delete-account-otp+api.js",
+      "page": "/api/auth/delete-account-otp",
+      "namedRegex": "^/api/auth/delete\\-account\\-otp(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/auth/send-welcome-email+api.js",
+      "page": "/api/auth/send-welcome-email",
+      "namedRegex": "^/api/auth/send\\-welcome\\-email(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/auth/delete-account-email+api.js",
+      "page": "/api/auth/delete-account-email",
+      "namedRegex": "^/api/auth/delete\\-account\\-email(?:/)?$",
+      "routeKeys": {}
+    },
+    {
       "file": "_expo/functions/api/bslatam/meeting-slots/book/+api.js",
       "page": "/api/bslatam/meeting-slots/book/",
       "namedRegex": "^/api/bslatam/meeting\\-slots/book(?:/)?$",
@@ -100,6 +160,12 @@
       "file": "_expo/functions/api/bslatam/add-day-name-column+api.js",
       "page": "/api/bslatam/add-day-name-column",
       "namedRegex": "^/api/bslatam/add\\-day\\-name\\-column(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/auth/delete-account-otp/verify+api.js",
+      "page": "/api/auth/delete-account-otp/verify",
+      "namedRegex": "^/api/auth/delete\\-account\\-otp/verify(?:/)?$",
       "routeKeys": {}
     },
     {
@@ -133,9 +199,27 @@
       "routeKeys": {}
     },
     {
+      "file": "./(shared)/docs.tsx",
+      "page": "/(shared)/docs",
+      "namedRegex": "^(?:/\\(shared\\))?/docs(?:/)?$",
+      "routeKeys": {}
+    },
+    {
       "file": "./(shared)/auth.tsx",
       "page": "/(shared)/auth",
       "namedRegex": "^(?:/\\(shared\\))?/auth(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(shared)/terms.tsx",
+      "page": "/(shared)/terms",
+      "namedRegex": "^(?:/\\(shared\\))?/terms(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(shared)/privacy.tsx",
+      "page": "/(shared)/privacy",
+      "namedRegex": "^(?:/\\(shared\\))?/privacy(?:/)?$",
       "routeKeys": {}
     },
     {
@@ -145,9 +229,27 @@
       "routeKeys": {}
     },
     {
+      "file": "./events/bsl2025/home.tsx",
+      "page": "/events/bsl2025/home",
+      "namedRegex": "^/events/bsl2025/home(?:/)?$",
+      "routeKeys": {}
+    },
+    {
       "file": "./home.tsx",
       "page": "/home",
       "namedRegex": "^/home(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(shared)/dashboard/admin.tsx",
+      "page": "/(shared)/dashboard/admin",
+      "namedRegex": "^(?:/\\(shared\\))?/dashboard/admin(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./terms.tsx",
+      "page": "/terms",
+      "namedRegex": "^/terms(?:/)?$",
       "routeKeys": {}
     },
     {
@@ -178,6 +280,12 @@
       "file": "./(shared)/dashboard/explore.tsx",
       "page": "/(shared)/dashboard/explore",
       "namedRegex": "^(?:/\\(shared\\))?/dashboard/explore(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./privacy.tsx",
+      "page": "/privacy",
+      "namedRegex": "^/privacy(?:/)?$",
       "routeKeys": {}
     },
     {

@@ -1,11 +1,58 @@
 <!DOCTYPE html><html  lang="en"><head><title data-rh="true"></title><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no, viewport-fit=cover"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>HashPass</title><meta name="description" content="YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS"/><meta name="keywords" content="community, event, benefits, security, encryption, digital security, password protection, blockchain, wallet, loyalty"/><meta name="author" content="HashPass"/><meta name="publisher" content="HashPass"/><meta name="robots" content="index, follow"/><meta property="og:title" content="HashPass - YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS"/><meta property="og:description" content="YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS"/><meta property="og:type" content="website"/><meta property="og:url" content="https://hashpass.tech"/><meta property="og:image" content="/og-image.png"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:title" content="HashPass - YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS"/><meta name="twitter:description" content="YOUR EVENT - YOUR COMMUNITY - YOUR BENEFITS"/><meta name="twitter:image" content="/twitter-image.png"/><meta name="theme-color" content="#000000"/><link rel="manifest" href="/manifest.json"/><script>
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(registration => {
-            console.log('Service Worker registered with scope:', registration.scope);
-        }).catch(error => {
-            console.error('Service Worker registration failed:', error);
-        });
+    // First, unregister all existing service workers to stop reload loops
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+            registration.unregister().then(function(success) {
+                if (success) {
+                    console.log('✅ Unregistered old service worker');
+                }
+            });
+        }
+    }).then(() => {
+        // Clear all caches
+        if ('caches' in window) {
+            caches.keys().then(function(cacheNames) {
+                return Promise.all(
+                    cacheNames.map(function(cacheName) {
+                        console.log('🗑️ Clearing cache:', cacheName);
+                        return caches.delete(cacheName);
+                    })
+                );
+            }).then(() => {
+                console.log('✅ All caches cleared');
+            });
+        }
+    }).then(() => {
+        // Wait before registering new service worker
+        setTimeout(() => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => {
+                    console.log('✅ Service Worker registered with scope:', reg.scope);
+                    
+                    // Listen for service worker updates (but don't auto-reload)
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('ℹ️ New service worker available. Manual refresh recommended.');
+                                }
+                            });
+                        }
+                    });
+                    
+                    // Listen for messages from service worker (but don't auto-reload)
+                    navigator.serviceWorker.addEventListener('message', (event) => {
+                        if (event.data && event.data.type === 'VERSION_UPDATE') {
+                            console.log('ℹ️ Version update available. Manual refresh recommended.');
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('❌ Service Worker registration failed:', error);
+                });
+        }, 2000);
     });
 }
 </script><style id="expo-reset">#root,body,html{height:100%}body{overflow:hidden}#root{display:flex}</style><style id="react-native-stylesheet">[stylesheet-group="0"]{}
@@ -224,6 +271,7 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 .r-1sxrcry{background-size:auto;}
 .r-1udbk01{text-overflow:ellipsis;}
 .r-1ui5ee8{font-size:32px;}
+.r-1uwte3a{padding-bottom:40px;}
 .r-1uypc71{animation-timing-function:ease-in;}
 .r-1vr29t4{font-weight:800;}
 .r-1w6e6rj{flex-wrap:wrap;}
@@ -321,7 +369,6 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 .r-sfbmgh{z-index:9999;}
 .r-so7y2g{line-height:64px;}
 .r-tsynxw{text-transform:uppercase;}
-.r-u04ygo{padding-top:60px;}
 .r-u6sd8q{background-repeat:no-repeat;}
 .r-u8s1d{position:absolute;}
 .r-u92y06{background-color:rgba(255,165,0,1.00);}
@@ -353,5 +400,5 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 @keyframes r-1pzkwqh{0%{transform:translateY(100%);}100%{transform:translateY(0%);}}
 @keyframes r-imtty0{0%{opacity:0;}100%{opacity:1;}}
 @keyframes r-q67da2{0%{transform:translateX(-100%);}100%{transform:translateX(400%);}}
-@keyframes r-t2lo5v{0%{opacity:1;}100%{opacity:0;}}</style><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script><link rel="preload" href="/_expo/static/css/global-3ffed4f93e1c8bbbea93a29a0b53b5fc.css" as="style"><link rel="stylesheet" href="/_expo/static/css/global-3ffed4f93e1c8bbbea93a29a0b53b5fc.css"></head><body><div id="root"><div class="css-g5y9jx r-13awgt0"><!--$--><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx" style="flex:1"></div></div><!--/$--></div></div><script src="/_expo/static/js/web/entry-b3c783641e9f88e26d829007305d95cf.js" defer></script>
+@keyframes r-t2lo5v{0%{opacity:1;}100%{opacity:0;}}</style><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script><link rel="preload" href="/_expo/static/css/web-27d1ee099f2b04d408812f765ff3f9ab.css" as="style"><link rel="stylesheet" href="/_expo/static/css/web-27d1ee099f2b04d408812f765ff3f9ab.css"></head><body><div id="root"><div class="css-g5y9jx r-13awgt0"><!--$--><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx" style="flex:1"></div></div><!--/$--></div></div><script src="/_expo/static/js/web/entry-ef4f57ac40fa78e8927afa22a2e3b46b.js" defer></script>
 </body></html>

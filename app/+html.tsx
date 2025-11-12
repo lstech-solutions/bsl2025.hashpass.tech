@@ -49,147 +49,52 @@ export default function Root({ children, metadata }: { children: ReactNode, meta
 
 const sw = `
 if ('serviceWorker' in navigator) {
-    let registration;
-    let isReloading = false;
-    let versionCheckTimeout = null;
-    let lastReloadTime = 0;
-    const RELOAD_COOLDOWN = 10000; // 10 seconds cooldown between reloads
-    
-    // Function to check for version updates
-    function checkVersionUpdate() {
-        // Prevent multiple simultaneous checks
-        if (versionCheckTimeout) {
-            return;
-        }
-        
-        // Prevent reload loops
-        if (isReloading) {
-            return;
-        }
-        
-        versionCheckTimeout = setTimeout(() => {
-            versionCheckTimeout = null;
-        }, 2000);
-        
-        fetch('/api/config/versions', { cache: 'no-store' })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to fetch version');
+    // First, unregister all existing service workers to stop reload loops
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+            registration.unregister().then(function(success) {
+                if (success) {
+                    console.log('✅ Unregistered old service worker');
                 }
-                return response.json();
-            })
-            .then(data => {
-                const currentVersion = localStorage.getItem('app_version');
-                const latestVersion = data && data.currentVersion ? data.currentVersion : null;
-                
-                // Validate version exists
-                if (!latestVersion) {
-                    console.warn('⚠️ No version found in response');
-                    return;
-                }
-                
-                // First time - store current version
-                if (!currentVersion) {
-                    localStorage.setItem('app_version', latestVersion);
-                    console.log('✅ Stored initial version:', latestVersion);
-                    return;
-                }
-                
-                // Only reload if versions actually differ and cooldown has passed
-                if (currentVersion !== latestVersion) {
-                    const now = Date.now();
-                    if (now - lastReloadTime < RELOAD_COOLDOWN) {
-                        console.log('⏳ Reload cooldown active, skipping reload');
-                        return;
-                    }
-                    
-                    console.log('🔄 Version update detected! Current:', currentVersion, 'Latest:', latestVersion);
-                    
-                    // Set reload flag to prevent loops
-                    isReloading = true;
-                    lastReloadTime = now;
-                    
-                    // Clear all caches
-                    if ('caches' in window) {
-                        caches.keys().then(cacheNames => {
-                            return Promise.all(
-                                cacheNames.map(cacheName => {
-                                    console.log('🗑️ Clearing cache:', cacheName);
-                                    return caches.delete(cacheName);
-                                })
-                            );
-                        }).then(() => {
-                            // Unregister service worker
-                            if (registration) {
-                                registration.unregister().then(() => {
-                                    console.log('✅ Service worker unregistered');
-                                    // Reload page to get new version
-                                    setTimeout(() => {
-                                        window.location.reload();
-                                    }, 500);
-                                });
-                            } else {
-                                setTimeout(() => {
-                                    window.location.reload();
-                                }, 500);
-                            }
-                        }).catch(err => {
-                            console.error('❌ Error clearing caches:', err);
-                            isReloading = false;
-                        });
-                    } else {
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 500);
-                    }
-                }
-            })
-            .catch(err => {
-                console.warn('⚠️ Version check failed:', err);
-                // Don't reload on error
             });
-    }
-    
-    window.addEventListener('load', () => {
-        // Delay initial check to prevent immediate reloads
+        }
+    }).then(() => {
+        // Clear all caches
+        if ('caches' in window) {
+            caches.keys().then(function(cacheNames) {
+                return Promise.all(
+                    cacheNames.map(function(cacheName) {
+                        console.log('🗑️ Clearing cache:', cacheName);
+                        return caches.delete(cacheName);
+                    })
+                );
+            }).then(() => {
+                console.log('✅ All caches cleared');
+            });
+        }
+    }).then(() => {
+        // Wait before registering new service worker
         setTimeout(() => {
             navigator.serviceWorker.register('/sw.js')
                 .then(reg => {
-                    registration = reg;
                     console.log('✅ Service Worker registered with scope:', reg.scope);
                     
-                    // Check for updates after a delay (5 seconds)
-                    setTimeout(() => {
-                        checkVersionUpdate();
-                    }, 5000);
-                    
-                    // Check for updates every 5 minutes
-                    setInterval(checkVersionUpdate, 5 * 60 * 1000);
-                    
-                    // Listen for service worker updates
+                    // Listen for service worker updates (but don't auto-reload)
                     reg.addEventListener('updatefound', () => {
                         const newWorker = reg.installing;
                         if (newWorker) {
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    console.log('🔄 New service worker available');
-                                    // Delay check to prevent immediate reload
-                                    setTimeout(() => {
-                                        checkVersionUpdate();
-                                    }, 5000);
+                                    console.log('ℹ️ New service worker available. Manual refresh recommended.');
                                 }
                             });
                         }
                     });
                     
-                    // Listen for messages from service worker
+                    // Listen for messages from service worker (but don't auto-reload)
                     navigator.serviceWorker.addEventListener('message', (event) => {
                         if (event.data && event.data.type === 'VERSION_UPDATE') {
-                            console.log('🔄 Version update message received:', event.data);
-                            // Delay check to prevent immediate reload
-                            setTimeout(() => {
-                                checkVersionUpdate();
-                            }, 2000);
+                            console.log('ℹ️ Version update available. Manual refresh recommended.');
                         }
                     });
                 })
@@ -197,16 +102,6 @@ if ('serviceWorker' in navigator) {
                     console.error('❌ Service Worker registration failed:', error);
                 });
         }, 2000);
-    });
-    
-    // Check for version updates on focus (with delay and cooldown)
-    window.addEventListener('focus', () => {
-        setTimeout(() => {
-            const now = Date.now();
-            if (now - lastReloadTime > RELOAD_COOLDOWN) {
-                checkVersionUpdate();
-            }
-        }, 3000);
     });
 }
 `;

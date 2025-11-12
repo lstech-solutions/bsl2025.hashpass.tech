@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       speakerOnboarding?: { success: boolean; alreadySent?: boolean; error?: string; isSpeaker?: boolean };
     } = {};
 
-    // Check if user onboarding email has already been sent
+    // Check if user onboarding email has already been sent (with message_id) - database-level check
     let userOnboardingAlreadySent = false;
     try {
       const { data: userOnboardingCheck } = await supabase.rpc('has_email_been_sent', {
@@ -60,18 +60,24 @@ export async function POST(request: Request) {
         p_email_type: 'userOnboarding'
       } as any);
       userOnboardingAlreadySent = userOnboardingCheck === true;
+      
+      if (userOnboardingAlreadySent) {
+        console.log(`ℹ️ User onboarding email already sent to user ${userId} (${email}), skipping`);
+        results.userOnboarding = { success: true, alreadySent: true };
+      }
     } catch (err) {
       console.warn('⚠️ Error checking user onboarding email status:', err);
+      // Continue to try sending if check fails
     }
 
     // 1. Send user onboarding email to all users (only if not already sent)
-    if (userOnboardingAlreadySent) {
-      console.log(`ℹ️ User onboarding email already sent to user ${userId}, skipping`);
-      results.userOnboarding = { success: true, alreadySent: true };
-    } else {
+    if (!userOnboardingAlreadySent) {
       console.log(`📧 Sending user onboarding email to ${email}...`);
       const userOnboardingResult = await sendUserOnboardingEmail(email, locale || 'en', userId);
       results.userOnboarding = userOnboardingResult;
+    } else if (!results.userOnboarding) {
+      // Ensure result is set if check passed but result wasn't set
+      results.userOnboarding = { success: true, alreadySent: true };
     }
 
     // 2. Check if user is a speaker

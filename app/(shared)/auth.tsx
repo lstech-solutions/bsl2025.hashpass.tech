@@ -59,6 +59,25 @@ export default function AuthScreen() {
     }
   }, []);
 
+  // Check for existing session on mount (handles page reload)
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user && !hasNavigatedRef.current) {
+          console.log(`🔐 Found existing session on mount for user: ${session.user.id}`);
+          // Navigate immediately if user is already authenticated
+          hasNavigatedRef.current = true;
+          router.replace('/(shared)/dashboard/explore');
+        }
+      } catch (error) {
+        console.warn('⚠️ Error checking existing session:', error);
+      }
+    };
+    
+    checkExistingSession();
+  }, [router]);
+
   useEffect(() => {
     // Throttled auth change handler (reduced throttle for faster response)
     const throttledHandleAuthChange = throttle(async (event: AuthChangeEvent, session: Session | null) => {
@@ -73,16 +92,30 @@ export default function AuthScreen() {
       if (session?.user) {
         const userId = session.user.id;
         
-        // Skip if already processed this user
-        if (processedUsersRef.current.has(userId)) {
-          console.log(`⏭️ User ${userId} already processed, skipping`);
+        // Skip if already processed this user (but allow on reload by checking if we've navigated)
+        if (processedUsersRef.current.has(userId) && hasNavigatedRef.current) {
+          console.log(`⏭️ User ${userId} already processed and navigated, skipping`);
           return;
         }
 
-        if (event === 'SIGNED_IN') {
+        // Handle SIGNED_IN, INITIAL_SESSION, or TOKEN_REFRESHED events
+        // INITIAL_SESSION fires on page reload when user is already authenticated
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || (event === 'TOKEN_REFRESHED' && !hasNavigatedRef.current)) {
           isProcessingRef.current = true;
           processedUsersRef.current.add(userId);
-          console.log(`🔐 SIGNED_IN event for user: ${session.user.id}, email: ${session.user.email}`);
+          console.log(`🔐 ${event} event for user: ${session.user.id}, email: ${session.user.email}`);
+          
+          // For INITIAL_SESSION (reload), skip pass creation and email sending - just navigate
+          if (event === 'INITIAL_SESSION') {
+            console.log('🔄 INITIAL_SESSION detected - user already authenticated, navigating to dashboard');
+            if (!hasNavigatedRef.current) {
+              hasNavigatedRef.current = true;
+              router.replace('/(shared)/dashboard/explore');
+            }
+            isProcessingRef.current = false;
+            return;
+          }
+          
           try {
             console.log('🎫 Creating default pass for user:', session.user.id);
             const { data: passId, error } = await supabase
@@ -140,39 +173,10 @@ export default function AuthScreen() {
               setWelcomeEmailSending(prev => new Set(prev).add(userId));
               
                 // Send email in background - don't await, let it run async
+                // NOTE: We rely on the API endpoint to check if email was already sent
+                // The API has proper permissions (service_role) to check the database
                 (async () => {
               try {
-                    // Reset welcome email flag if needed (for existing users)
-                    try {
-                      await supabase.rpc('reset_welcome_email_if_not_sent', {
-                  p_user_id: userId
-                });
-                    } catch (err) {
-                      console.warn('⚠️ Error resetting welcome email flag:', err);
-                }
-                
-                    // Check if email was already sent
-                    let alreadySentCheck = false;
-                    try {
-                      const { data } = await supabase.rpc('has_email_been_sent', {
-                  p_user_id: userId,
-                  p_email_type: 'welcome'
-                } as any);
-                      alreadySentCheck = data === true;
-                    } catch {
-                      alreadySentCheck = false;
-                    }
-                
-                    if (alreadySentCheck === true) {
-                  console.log(`ℹ️ Welcome email already sent to user ${userId}, skipping`);
-                  setWelcomeEmailSending(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(userId);
-                    return newSet;
-                  });
-                  return;
-                }
-                
                     // Get locale
                 let userLocale = 'en';
                 try {
@@ -198,10 +202,22 @@ export default function AuthScreen() {
                 }
                 
                     // Send welcome email
+                    // The API endpoint will check if email was already sent (with message_id) and skip if so
                     apiClient.post('/auth/send-welcome-email', { userId, email: userEmail, locale: userLocale }, { skipEventSegment: true })
                       .then(result => {
-                        if (result.success && result.data && !result.data.skipped && !result.data.alreadySent) {
-                    console.log('✅ Welcome email sent successfully');
+                        if (result.success && result.data) {
+                          if (result.data.alreadySent) {
+                            console.log(`ℹ️ Welcome email already sent to user ${userId}, skipping`);
+                            // Don't send onboarding emails if welcome email was already sent
+                            return;
+                          }
+                          
+                          if (result.data.skipped) {
+                            console.log(`ℹ️ Welcome email skipped for user ${userId} (wallet address or other reason)`);
+                            return;
+                          }
+                          
+                          console.log('✅ Welcome email sent successfully');
                           
                           // After welcome email is sent, send onboarding emails
                           // This includes user onboarding for all users and speaker onboarding if user is a speaker
@@ -224,8 +240,8 @@ export default function AuthScreen() {
                               }
                             })
                             .catch(err => console.error('❌ Error sending onboarding emails:', err));
-                        } else if (result.data?.alreadySent) {
-                          console.log('ℹ️ Welcome email already sent, skipping onboarding emails');
+                        } else {
+                          console.warn('⚠️ Welcome email API returned unsuccessful result:', result);
                         }
                       })
                       .catch(err => console.error('❌ Error sending welcome email:', err));

@@ -44,13 +44,19 @@ const s3Client = new S3Client({
   } : undefined,
 });
 
-const BUCKET_NAME = (process.env.AWS_S3_BUCKET_NAME || '').trim().replace(/[`'"]/g, '');
+// Speaker avatars bucket - uses EXPO_PUBLIC_AWS_S3_BUCKET (hashpass-assets)
+const BUCKET_NAME = (
+  process.env.EXPO_PUBLIC_AWS_S3_BUCKET || 
+  process.env.AWS_S3_BUCKET || 
+  process.env.AWS_S3_BUCKET_NAME || 
+  'hashpass-assets'
+).trim().replace(/[`'"]/g, '');
 const CDN_URL = (process.env.AWS_S3_CDN_URL || process.env.AWS_S3_BUCKET_URL || '').trim();
 const SPEAKER_AVATARS_PREFIX = 'speakers/avatars/';
 
 if (!BUCKET_NAME) {
-  console.error('❌ Missing AWS_S3_BUCKET_NAME environment variable');
-  console.error('   Please set AWS_S3_BUCKET_NAME in your .env file');
+  console.error('❌ Missing EXPO_PUBLIC_AWS_S3_BUCKET environment variable');
+  console.error('   Please set EXPO_PUBLIC_AWS_S3_BUCKET in your .env file');
   process.exit(1);
 }
 

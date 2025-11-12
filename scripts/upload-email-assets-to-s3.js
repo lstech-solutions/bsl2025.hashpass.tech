@@ -10,7 +10,7 @@
  *   AWS_REGION - AWS region (default: us-east-1)
  *   AWS_ACCESS_KEY_ID - AWS access key
  *   AWS_SECRET_ACCESS_KEY - AWS secret key
- *   AWS_S3_BUCKET_NAME - S3 bucket name
+ *   EXPO_PUBLIC_AWS_S3_BUCKET_NAME - Email assets S3 bucket name (hashpass-email-assets)
  *   AWS_S3_CDN_URL - CDN URL (optional, for CloudFront or similar)
  */
 
@@ -32,7 +32,12 @@ async function uploadAllEmailAssets(localAssetsDir) {
     },
   });
 
-  const bucketName = (process.env.AWS_S3_BUCKET_NAME || '').trim().replace(/[`'"]/g, '');
+  // Email assets bucket - uses EXPO_PUBLIC_AWS_S3_BUCKET_NAME (hashpass-email-assets)
+  const bucketName = (
+    process.env.EXPO_PUBLIC_AWS_S3_BUCKET_NAME || 
+    process.env.AWS_S3_BUCKET_NAME || 
+    'hashpass-email-assets'
+  ).trim().replace(/[`'"]/g, '');
   const cdnUrl = (process.env.AWS_S3_CDN_URL || '').trim();
   const prefix = 'emails/assets/';
 
@@ -157,7 +162,7 @@ async function main() {
   console.log('🚀 Starting email assets upload to S3...\n');
 
   // Check required environment variables
-  const requiredVars = ['AWS_S3_BUCKET_NAME', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'];
+  const requiredVars = ['EXPO_PUBLIC_AWS_S3_BUCKET_NAME', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'];
   const missingVars = requiredVars.filter(varName => !process.env[varName]);
 
   if (missingVars.length > 0) {
@@ -168,7 +173,7 @@ async function main() {
   }
 
   console.log('Configuration:');
-  console.log(`   Bucket: ${process.env.AWS_S3_BUCKET_NAME}`);
+    console.log(`   Bucket: ${process.env.EXPO_PUBLIC_AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET_NAME || 'hashpass-email-assets'}`);
   console.log(`   Region: ${process.env.AWS_REGION || 'us-east-1'}`);
   if (process.env.AWS_S3_CDN_URL) {
     console.log(`   CDN URL: ${process.env.AWS_S3_CDN_URL}`);

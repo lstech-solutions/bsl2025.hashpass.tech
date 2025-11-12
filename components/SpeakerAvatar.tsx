@@ -44,15 +44,19 @@ export default function SpeakerAvatar({
   // Reset error state when imageUrl or name changes
   useEffect(() => {
     if (initialAvatarUrl) {
-      console.log(`[SpeakerAvatar] Loading S3 image for ${name}:`, initialAvatarUrl);
+      console.log(`[SpeakerAvatar] Loading S3 image for ${name}:`, {
+        url: initialAvatarUrl,
+        isS3Url: isS3Url,
+        hasImageUrl: !!imageUrl,
+      });
       setImageError(false);
       setImageLoading(true);
       setImageTimeout(false);
       
       // Reduced timeout since images are now optimized (~70KB instead of 1.3MB)
-      const timeoutDuration = 5000; // 5 seconds should be enough for optimized images
+      const timeoutDuration = 10000; // Increased to 10 seconds to account for S3 policy propagation
       const timeoutId = setTimeout(() => {
-        console.log(`[SpeakerAvatar] Image load timeout (${timeoutDuration}ms) for ${name}:`, initialAvatarUrl);
+        console.warn(`[SpeakerAvatar] Image load timeout (${timeoutDuration}ms) for ${name}:`, initialAvatarUrl);
         setImageTimeout(true);
         setImageLoading(false);
         // Don't try fallback - just show initials if S3 fails
@@ -79,6 +83,18 @@ export default function SpeakerAvatar({
   // Image is hidden initially (opacity 0) and fades in when loaded to prevent flicker
   const showImage = avatarUrl && !imageError && !imageTimeout;
   const showPlaceholder = !avatarUrl || imageError || imageTimeout;
+  
+  // Debug: Log what URL we're trying to load
+  useEffect(() => {
+    if (avatarUrl) {
+      console.log(`[SpeakerAvatar] Attempting to load avatar:`, {
+        name,
+        imageUrl: imageUrl || 'none (generated)',
+        finalUrl: avatarUrl,
+        isS3Url,
+      });
+    }
+  }, [avatarUrl, name, imageUrl, isS3Url]);
 
   return (
     <View style={[styles.container, style]}>
@@ -101,7 +117,14 @@ export default function SpeakerAvatar({
           resizeMode="cover"
           pointerEvents="auto"
           onError={(error) => {
-            console.log(`[SpeakerAvatar] S3 image load error for ${name}:`, avatarUrl, error.nativeEvent?.error);
+            const errorMessage = error.nativeEvent?.error || error.message || 'Unknown error';
+            const statusCode = error.nativeEvent?.statusCode || error.statusCode || 'unknown';
+            console.error(`[SpeakerAvatar] S3 image load error for ${name}:`, {
+              url: avatarUrl,
+              error: errorMessage,
+              statusCode: statusCode,
+              isS3Url: isS3Url,
+            });
             // No fallback - just show initials if S3 fails
             setImageError(true);
             setImageLoading(false);

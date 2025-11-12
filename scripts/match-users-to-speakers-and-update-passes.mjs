@@ -1,0 +1,320 @@
+#!/usr/bin/env node
+import { createClient } from '@supabase/supabase-js';
+import 'dotenv/config';
+
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !serviceKey) {
+  console.error('❌ Missing Supabase environment variables');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, serviceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
+
+// Normalize name for comparison (remove accents, lowercase, trim)
+function normalizeName(name) {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^\w\s]/g, '') // Remove special characters
+    .replace(/\s+/g, ' '); // Normalize whitespace
+}
+
+// Check if two names match (fuzzy matching)
+function namesMatch(name1, name2) {
+  const normalized1 = normalizeName(name1);
+  const normalized2 = normalizeName(name2);
+  
+  // Exact match after normalization
+  if (normalized1 === normalized2) return true;
+  
+  // Check if one contains the other (for partial matches)
+  if (normalized1.includes(normalized2) || normalized2.includes(normalized1)) {
+    // Only consider it a match if both are substantial (at least 5 chars)
+    if (normalized1.length >= 5 && normalized2.length >= 5) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+async function updateUserToVIPAndSpeaker(userId, speakerId, speakerName) {
+  try {
+    console.log(`\n🔧 Processing user ${userId} (${speakerName})...`);
+
+    // Step 1: Update/Create VIP pass
+    console.log('📋 Step 1: Checking/updating VIP pass...');
+    const { data: currentPass } = await supabase
+      .from('passes')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('event_id', 'bsl2025')
+      .maybeSingle();
+    
+    if (!currentPass) {
+      console.log('⚠️  No pass found, creating VIP pass...');
+      
+      // Get limits for VIP pass type
+      const { data: limitsData, error: limitsError } = await supabase
+        .rpc('get_pass_type_limits', { p_pass_type: 'vip' });
+      
+      if (limitsError) {
+        console.warn('⚠️  Error getting VIP limits, using defaults:', limitsError.message);
+      }
+      
+      const maxRequests = limitsData?.max_requests || 20;
+      const maxBoost = limitsData?.max_boost || 500.00;
+      
+      // Create new VIP pass using the function
+      const { data: passId, error: createError } = await supabase
+        .rpc('create_default_pass', {
+          p_user_id: userId,
+          p_pass_type: 'vip'
+        });
+      
+      if (createError) {
+        console.error('❌ Error creating VIP pass:', createError);
+        // Try manual creation as fallback
+        const manualPassId = `pass-${userId}-${Date.now()}`;
+        const { data: newPass, error: manualError } = await supabase
+          .from('passes')
+          .insert({
+            id: manualPassId,
+            user_id: userId,
+            event_id: 'bsl2025',
+            pass_type: 'vip',
+            status: 'active',
+            pass_number: `BSL2025-VIP-${Date.now()}`,
+            max_meeting_requests: maxRequests,
+            max_boost_amount: maxBoost,
+            access_features: ['all_sessions', 'networking', 'exclusive_events', 'priority_seating', 'speaker_access'],
+            special_perks: ['concierge_service', 'exclusive_lounge', 'premium_swag'],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        
+        if (manualError) {
+          console.error('❌ Error creating VIP pass manually:', manualError);
+          return false;
+        }
+        
+        console.log('✅ VIP pass created manually');
+      } else {
+        // Update the created pass to VIP if it wasn't already
+        if (passId) {
+          const { error: updateError } = await supabase
+            .from('passes')
+            .update({
+              pass_type: 'vip',
+              access_features: ['all_sessions', 'networking', 'exclusive_events', 'priority_seating', 'speaker_access'],
+              special_perks: ['concierge_service', 'exclusive_lounge', 'premium_swag'],
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', passId);
+          
+          if (updateError) {
+            console.warn('⚠️  Error updating pass to VIP:', updateError.message);
+          } else {
+            console.log('✅ VIP pass created/updated');
+          }
+        }
+      }
+    } else {
+      console.log(`📋 Current pass type: ${currentPass.pass_type}`);
+      
+      if (currentPass.pass_type === 'vip') {
+        console.log('✅ Already has VIP pass');
+      } else {
+        console.log('🔄 Updating pass to VIP...');
+        
+        const { error: updateError } = await supabase
+          .from('passes')
+          .update({
+            pass_type: 'vip',
+            status: 'active',
+            access_features: ['all_sessions', 'networking', 'exclusive_events', 'priority_seating', 'speaker_access'],
+            special_perks: ['concierge_service', 'exclusive_lounge', 'premium_swag'],
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentPass.id);
+        
+        if (updateError) {
+          console.error('❌ Error updating pass:', updateError);
+          return false;
+        }
+        
+        console.log('✅ Pass updated to VIP');
+      }
+    }
+
+    // Step 2: Add speaker role
+    console.log('\n📋 Step 2: Checking/adding speaker role...');
+    const { data: existingRole } = await supabase
+      .from('user_roles')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('role', 'speaker')
+      .maybeSingle();
+    
+    if (!existingRole) {
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'speaker'
+        });
+      
+      if (roleError) {
+        console.error('❌ Error adding speaker role:', roleError);
+        return false;
+      }
+      console.log('✅ Speaker role added');
+    } else {
+      console.log('✅ Speaker role already exists');
+    }
+
+    // Step 3: Link user to speaker in bsl_speakers
+    console.log('\n📋 Step 3: Linking user to speaker record...');
+    const { error: linkError } = await supabase
+      .from('bsl_speakers')
+      .update({
+        user_id: userId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', speakerId);
+    
+    if (linkError) {
+      console.error('❌ Error linking user to speaker:', linkError);
+      return false;
+    }
+    
+    console.log('✅ User linked to speaker record');
+    
+    return true;
+  } catch (error) {
+    console.error(`💥 Error processing user ${userId}:`, error);
+    return false;
+  }
+}
+
+async function main() {
+  try {
+    console.log('🚀 Matching users to speakers and updating passes...\n');
+    
+    // Get all speakers
+    console.log('📋 Fetching speakers...');
+    const { data: speakers, error: speakersError } = await supabase
+      .from('bsl_speakers')
+      .select('id, name, user_id')
+      .order('name');
+    
+    if (speakersError) {
+      console.error('❌ Error fetching speakers:', speakersError);
+      process.exit(1);
+    }
+    
+    console.log(`✅ Found ${speakers.length} speakers\n`);
+    
+    // Get all users
+    console.log('📋 Fetching users...');
+    const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
+    
+    if (usersError) {
+      console.error('❌ Error fetching users:', usersError);
+      process.exit(1);
+    }
+    
+    const users = usersData.users.filter(u => {
+      const name = u.user_metadata?.name || u.user_metadata?.full_name || u.email;
+      return name && name !== u.email; // Filter out users without proper names
+    });
+    
+    console.log(`✅ Found ${users.length} users with names\n`);
+    
+    // Match users to speakers
+    console.log('📋 Matching users to speakers...\n');
+    const matches = [];
+    const processedSpeakers = new Set();
+    
+    for (const speaker of speakers) {
+      if (speaker.user_id) {
+        console.log(`⏭️  Speaker "${speaker.name}" already has user_id, skipping...`);
+        continue;
+      }
+      
+      const speakerName = speaker.name;
+      let bestMatch = null;
+      let bestMatchUser = null;
+      
+      for (const user of users) {
+        const userName = user.user_metadata?.name || user.user_metadata?.full_name;
+        if (!userName) continue;
+        
+        if (namesMatch(speakerName, userName)) {
+          bestMatch = speaker;
+          bestMatchUser = user;
+          break; // Use first exact match
+        }
+      }
+      
+      if (bestMatch && bestMatchUser) {
+        matches.push({
+          speaker: bestMatch,
+          user: bestMatchUser
+        });
+        processedSpeakers.add(bestMatch.id);
+      }
+    }
+    
+    console.log(`\n✅ Found ${matches.length} matches\n`);
+    console.log('='.repeat(60));
+    
+    // Process matches
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const match of matches) {
+      const { speaker, user } = match;
+      const userName = user.user_metadata?.name || user.user_metadata?.full_name || user.email;
+      
+      console.log(`\n🎯 Match: "${speaker.name}" <-> "${userName}" (${user.email})`);
+      
+      const success = await updateUserToVIPAndSpeaker(user.id, speaker.id, speaker.name);
+      
+      if (success) {
+        successCount++;
+        console.log(`✅ Successfully updated ${userName}`);
+      } else {
+        failCount++;
+        console.error(`❌ Failed to update ${userName}`);
+      }
+    }
+    
+    console.log('\n' + '='.repeat(60));
+    console.log('📊 SUMMARY');
+    console.log('='.repeat(60));
+    console.log(`Total matches found: ${matches.length}`);
+    console.log(`✅ Successfully updated: ${successCount}`);
+    console.log(`❌ Failed: ${failCount}`);
+    console.log('='.repeat(60));
+    
+  } catch (error) {
+    console.error('💥 Fatal error:', error);
+    process.exit(1);
+  }
+}
+
+main();
+

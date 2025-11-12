@@ -19,10 +19,10 @@ export default function SpeakerAvatar({
   showBorder = false,
   isOnline // Accept but don't use
 }: SpeakerAvatarProps) {
-  // Initial state: start with loading=true if we expect to have a URL
-  // This ensures we show loading spinner initially, not initials
+  // Initial state: start with loading=false, will be set to true when we have URLs to load
+  // This ensures we show initials immediately if no URLs are available
   const [imageError, setImageError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true); // Start with loading=true to show loader immediately
+  const [imageLoading, setImageLoading] = useState(false); // Start with false, will be set to true when loading starts
   const [imageTimeout, setImageTimeout] = useState(false);
   // Track failed URLs to prevent infinite retry loops
   const failedUrlsRef = useRef<Set<string>>(new Set());
@@ -42,11 +42,16 @@ export default function SpeakerAvatar({
   
   // Memoize computed values to determine avatar URL priority
   const { localOptimizedUrl, s3Url } = useMemo(() => {
+    // Normalize imageUrl: treat null, undefined, or empty string as null
+    const normalizedImageUrl = (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') 
+      ? imageUrl.trim() 
+      : null;
+    
     // Priority 1: Check for local optimized avatar in public folder
     const localUrl = name ? getLocalOptimizedAvatarUrl(name) : null;
     
-    // Priority 2: Use provided imageUrl or generate S3 URL
-    const s3 = imageUrl || (name ? getSpeakerAvatarUrl(name) : null);
+    // Priority 2: Use provided imageUrl (if valid) or generate S3 URL from name
+    const s3 = normalizedImageUrl || (name ? getSpeakerAvatarUrl(name) : null);
     
     return { localOptimizedUrl: localUrl, s3Url: s3 };
   }, [imageUrl, name]);
@@ -60,18 +65,20 @@ export default function SpeakerAvatar({
   // Determine which URL to use (prioritize local optimized)
   // This effect only runs when the computed URLs change, not when avatarUrl changes
   useEffect(() => {
-    // Always start with loading state when URLs change
-    setImageLoading(true);
+    // Reset states when URLs change
     setImageError(false);
     setImageTimeout(false);
+    loadSuccessRef.current = false;
     
     if (localOptimizedUrl) {
-      // Try local optimized first - loader will show while loading
+      // Try local optimized first - set loading state and URL
+      setImageLoading(true);
       setCurrentAvatarUrl(localOptimizedUrl);
       setUrlSource('local');
       previousAvatarUrlRef.current = localOptimizedUrl;
     } else if (s3Url) {
-      // Fallback to S3 - loader will show while loading
+      // Fallback to S3 - set loading state and URL
+      setImageLoading(true);
       setCurrentAvatarUrl(s3Url);
       setUrlSource('s3');
       previousAvatarUrlRef.current = s3Url;
@@ -206,16 +213,15 @@ export default function SpeakerAvatar({
   //   - All sources failed (error + timeout) and not currently loading
   const hasUrlsAvailable = !!(localOptimizedUrl || s3Url);
   // Show image when loaded successfully (not loading, no errors, has URL)
+  // Note: We check !imageLoading && !imageError && !imageTimeout to ensure image is ready
   const showImage = avatarUrl && !imageError && !imageTimeout && !imageLoading;
   // Show loading when:
-  // - Actively loading (imageLoading=true and have URL), OR
-  // - Have URLs but no avatarUrl set yet (initial state)
+  // - Actively loading (imageLoading=true and have URL)
   // BUT NOT when we have errors/timeouts (those should show placeholder)
-  const showLoading = (imageLoading && avatarUrl && !imageError && !imageTimeout) || 
-                       (hasUrlsAvailable && !avatarUrl && !imageError && !imageTimeout);
+  const showLoading = imageLoading && avatarUrl && !imageError && !imageTimeout;
   // Show placeholder when:
   // - No URLs available at all, OR
-  // - All sources failed (error + timeout) and not currently loading
+  // - All sources failed (error or timeout) and not currently loading
   const showPlaceholder = (!hasUrlsAvailable && !avatarUrl) || 
                           (!imageLoading && (imageError || imageTimeout));
 

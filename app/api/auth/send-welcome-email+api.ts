@@ -103,8 +103,17 @@ export async function POST(request: Request) {
       console.warn('⚠️ Error in double-check:', err);
     }
 
+    // Validate locale if provided
+    let validatedLocale = locale;
+    if (validatedLocale && !['en', 'es', 'ko', 'fr', 'pt', 'de'].includes(validatedLocale)) {
+      console.warn(`[send-welcome-email API] Invalid locale '${validatedLocale}', defaulting to 'en'`);
+      validatedLocale = 'en';
+    }
+    
+    console.log(`[send-welcome-email API] Sending welcome email to ${email} (userId: ${userId}) with locale: ${validatedLocale || 'auto-detect'}`);
+    
     // Send welcome email (this will mark it as sent with message_id)
-    const result = await sendWelcomeEmailToNewUser(userId, email, locale);
+    const result = await sendWelcomeEmailToNewUser(userId, email, validatedLocale);
     
     // Verify message_id was saved
     if (result.success && result.messageId) {

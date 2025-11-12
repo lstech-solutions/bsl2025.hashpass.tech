@@ -75,3 +75,4 @@ async function scrapeSpeakerAvatars() {
 scrapeSpeakerAvatars().then(()=>console.log('✅ All done')).catch(e=>{console.error('❌ Fatal:',e);process.exit(1)});
 
 
+

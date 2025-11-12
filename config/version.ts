@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511121240, // Updated to current timestamp
+  buildNumber: 202511121245, // Updated to current timestamp
   releaseDate: '2025-11-12',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -37,11 +37,30 @@ export const CURRENT_VERSION: VersionInfo = {
     'Ensured version display always shows current version from source of truth'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.38 release'
+  notes: 'Version 1.6.39 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.39': {
+    version: '1.6.39',
+    buildNumber: 202511121245,
+    releaseDate: '2025-11-12',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Refactored version system to use version.ts as single source of truth',
+      'Updated versionService to read directly from version.ts instead of versions.json',
+      'Improved version display accuracy in sidebar'
+    ],
+    bugfixes: [
+      'Fixed sidebar version display showing stale/incorrect data',
+      'Fixed versionService reading from outdated versions.json file',
+      'Ensured version display always shows current version from source of truth'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.39 release'
+  },
   '1.6.38': {
     version: '1.6.38',
     buildNumber: 202511121240,
@@ -286,92 +305,7 @@ export const VERSION_HISTORY: VersionHistory = {
     breakingChanges: [],
     notes: 'Version 1.6.27 release'
   },
-  '1.6.26': {
-    version: '1.6.26',
-    buildNumber: 202511120452,
-    releaseDate: '2025-11-12',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'Added Privacy/Terms modal component for in-app viewing',
-      'Improved mobile responsiveness for theme/language switcher on auth page'
-    ],
-    bugfixes: [
-      'Fixed theme and language switcher overlapping with auth card on mobile views',
-      'Replaced navigation with modal for privacy and terms links on auth screen'
-    ],
-    breakingChanges: [],
-    notes: 'Version 1.6.26 release'
-  },
-  '1.6.25': {
-    version: '1.6.25',
-    buildNumber: 202511120452,
-    releaseDate: '2025-11-12',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'Added Privacy/Terms modal component for in-app viewing',
-      'Improved mobile responsiveness for theme/language switcher on auth page'
-    ],
-    bugfixes: [
-      'Fixed theme and language switcher overlapping with auth card on mobile views',
-      'Replaced navigation with modal for privacy and terms links on auth screen'
-    ],
-    breakingChanges: [],
-    notes: 'Version 1.6.25 release'
-  },
-  '1.6.25': {
-    version: '1.6.25',
-    buildNumber: 202511120438,
-    releaseDate: '2025-11-12',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'Added Privacy/Terms modal component for in-app viewing',
-      'Improved mobile responsiveness for theme/language switcher on auth page'
-    ],
-    bugfixes: [
-      'Fixed theme and language switcher overlapping with auth card on mobile views',
-      'Replaced navigation with modal for privacy and terms links on auth screen'
-    ],
-    breakingChanges: [],
-    notes: 'Version 1.6.25 release'
-  },
-  '1.6.25': {
-    version: '1.6.25',
-    buildNumber: 202511120436,
-    releaseDate: '2025-11-12',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'Added Privacy/Terms modal component for in-app viewing',
-      'Improved mobile responsiveness for theme/language switcher on auth page'
-    ],
-    bugfixes: [
-      'Fixed theme and language switcher overlapping with auth card on mobile views',
-      'Replaced navigation with modal for privacy and terms links on auth screen'
-    ],
-    breakingChanges: [],
-    notes: 'Version 1.6.25 release'
-  },
-  '1.6.25': {
-    version: '1.6.25',
-    buildNumber: 202511120436,
-    releaseDate: '2025-11-12',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'Added Privacy/Terms modal component for in-app viewing',
-      'Improved mobile responsiveness for theme/language switcher on auth page'
-    ],
-    bugfixes: [
-      'Fixed theme and language switcher overlapping with auth card on mobile views',
-      'Replaced navigation with modal for privacy and terms links on auth screen'
-    ],
-    breakingChanges: [],
-    notes: 'Version 1.6.25 release'
-  },
-  '1.6.23': {
+'1.6.23': {
     version: '1.6.23',
     buildNumber: 202511120431,
     releaseDate: '2025-11-12',
@@ -388,24 +322,7 @@ export const VERSION_HISTORY: VersionHistory = {
     breakingChanges: [],
     notes: 'Version 1.6.23 release'
   },
-  '1.6.25': {
-    version: '1.6.25',
-    buildNumber: 202511120431,
-    releaseDate: '2025-11-12',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'Added Privacy/Terms modal component for in-app viewing',
-      'Improved mobile responsiveness for theme/language switcher on auth page'
-    ],
-    bugfixes: [
-      'Fixed theme and language switcher overlapping with auth card on mobile views',
-      'Replaced navigation with modal for privacy and terms links on auth screen'
-    ],
-    breakingChanges: [],
-    notes: 'Version 1.6.25 release'
-  },
-  '1.6.24': {
+'1.6.24': {
     version: '1.6.24',
     buildNumber: 202511120416,
     releaseDate: '2025-11-12',
@@ -422,58 +339,7 @@ export const VERSION_HISTORY: VersionHistory = {
     breakingChanges: [],
     notes: 'Version 1.6.24 release'
   },
-  '1.6.24': {
-    version: '1.6.24',
-    buildNumber: 202511120415,
-    releaseDate: '2025-11-12',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'Added Privacy/Terms modal component for in-app viewing',
-      'Improved mobile responsiveness for theme/language switcher on auth page'
-    ],
-    bugfixes: [
-      'Fixed theme and language switcher overlapping with auth card on mobile views',
-      'Replaced navigation with modal for privacy and terms links on auth screen'
-    ],
-    breakingChanges: [],
-    notes: 'Version 1.6.24 release'
-  },
-  '1.6.23': {
-    version: '1.6.23',
-    buildNumber: 202511120315,
-    releaseDate: '2025-11-12',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'Added Privacy/Terms modal component for in-app viewing',
-      'Improved mobile responsiveness for theme/language switcher on auth page'
-    ],
-    bugfixes: [
-      'Fixed theme and language switcher overlapping with auth card on mobile views',
-      'Replaced navigation with modal for privacy and terms links on auth screen'
-    ],
-    breakingChanges: [],
-    notes: 'Version 1.6.23 release'
-  },
-  '1.6.23': {
-    version: '1.6.23',
-    buildNumber: 202511120313,
-    releaseDate: '2025-11-12',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'Added Privacy/Terms modal component for in-app viewing',
-      'Improved mobile responsiveness for theme/language switcher on auth page'
-    ],
-    bugfixes: [
-      'Fixed theme and language switcher overlapping with auth card on mobile views',
-      'Replaced navigation with modal for privacy and terms links on auth screen'
-    ],
-    breakingChanges: [],
-    notes: 'Version 1.6.23 release'
-  },
-  '1.6.22': {
+'1.6.22': {
     version: '1.6.22',
     buildNumber: 202511120256,
     releaseDate: '2025-11-12',
@@ -915,24 +781,7 @@ export const VERSION_HISTORY: VersionHistory = {
     breakingChanges: [],
     notes: 'Improved toast styling to match theme colors and enhance text contrast'
   },
-  '1.5.13': {
-    version: '1.5.13',
-    buildNumber: 202511070248,
-    releaseDate: '2025-11-07',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'Added Privacy/Terms modal component for in-app viewing',
-      'Improved mobile responsiveness for theme/language switcher on auth page'
-    ],
-    bugfixes: [
-      'Fixed theme and language switcher overlapping with auth card on mobile views',
-      'Replaced navigation with modal for privacy and terms links on auth screen'
-    ],
-    breakingChanges: [],
-    notes: 'Improved toast styling to match theme colors and enhance text contrast'
-  },
-  '1.5.12': {
+'1.5.12': {
     version: '1.5.12',
     buildNumber: 202511070059,
     releaseDate: '2025-11-07',
@@ -1337,27 +1186,7 @@ export const VERSION_HISTORY: VersionHistory = {
     breakingChanges: [],
     notes: 'Version 1.4.0 release'
   },
-  '1.4.0': {
-    version: '1.4.0',
-    buildNumber: 202511020054,
-    releaseDate: '2025-11-02',
-    releaseType: 'stable',
-    environment: 'development',
-    features: [
-      'Unified LoadingScreen component for consistent loading states across the app',
-      'Integrated LoadingScreen in networking, agenda, and speakers screens',
-      'Global loader implementation for agenda screen to prevent banner expansion issues'
-    ],
-    bugfixes: [
-      'Fixed LoadingScreen subtitle undefined error in getStyles function',
-      'Fixed agenda banner expansion issue during initial loading',
-      'Fixed missing LoadingScreen import in speakers calendar component',
-      'Fixed loader not showing at beginning of agenda screen causing banner to expand'
-    ],
-    breakingChanges: [],
-    notes: 'Polished profile view with avatar update functionality, removed sign out button and version display'
-  },
-  '1.3.9': {
+'1.3.9': {
     version: '1.3.9',
     buildNumber: 202510310833,
     releaseDate: '2025-10-31',
@@ -1493,36 +1322,7 @@ export const VERSION_HISTORY: VersionHistory = {
     breakingChanges: [],
     notes: 'Version 1.3.5 release'
   },
-  '1.3.5': {
-    version: '1.3.5',
-    buildNumber: 202510310421,
-    releaseDate: '2025-10-31',
-    releaseType: 'beta',
-    environment: 'development',
-    features: [
-      'User pass management system',
-      'BSL 2025 event integration',
-      'Speaker profile system with avatars',
-      'Event agenda with live updates',
-      'Unified search and filter system',
-      'Dark mode support',
-      'Event banner component',
-      'Pass card UI with BSL branding',
-      'Agenda tabbed interface',
-      'Real-time countdown system'
-    ],
-    bugfixes: [
-      'Fixed SVG logo rendering issues',
-      'Resolved TypeScript undefined property errors',
-      'Fixed agenda data grouping logic',
-      'Corrected speaker count discrepancies',
-      'Fixed dark mode contrast issues',
-      'Resolved navigation routing problems'
-    ],
-    breakingChanges: [],
-    notes: 'Version 1.3.5 release'
-  },
-  '1.3.4': {
+'1.3.4': {
     version: '1.3.4',
     buildNumber: 202510302121,
     releaseDate: '2025-10-30',

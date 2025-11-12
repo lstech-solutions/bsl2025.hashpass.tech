@@ -158,21 +158,15 @@ function checkForVersionUpdate() {
     });
 }
 
-// Check for updates on activation (with delay to prevent immediate reloads)
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    new Promise((resolve) => {
-      // Delay check to prevent immediate reloads on activation
-      setTimeout(() => {
-        checkForVersionUpdate();
-        resolve();
-      }, 5000);
-    })
-  );
-});
+// DISABLED: Version checking on activation to prevent reload loops
+// self.addEventListener('activate', (event) => {
+//   event.waitUntil(
+//     checkForVersionUpdate()
+//   );
+// });
 
-// Periodic version check (every 5 minutes)
-setInterval(checkForVersionUpdate, VERSION_CHECK_INTERVAL);
+// DISABLED: Periodic version check to prevent reload loops
+// setInterval(checkForVersionUpdate, VERSION_CHECK_INTERVAL);
 
 // Listen for messages from clients
 self.addEventListener('message', (event) => {

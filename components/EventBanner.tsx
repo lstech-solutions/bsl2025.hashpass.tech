@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, StatusBar, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
+import AgendaTracker from './AgendaTracker';
 
 interface EventBannerProps {
   title: string;
@@ -150,8 +151,13 @@ export default function EventBanner({
         </View>
       )}
 
-      {/* Countdown Timer */}
-      {showCountdown && !isLive && (
+      {/* Agenda Tracker - Show when event is live, hide countdown */}
+      {isLive && (
+        <AgendaTracker eventId={eventId} backgroundColor={backgroundColor} />
+      )}
+
+      {/* Countdown Timer - Only show before event starts */}
+      {showCountdown && !isLive && !isEventLive && (
         <View style={styles.countdownContainer}>
           <Text style={styles.countdownLabel}>Event starts in:</Text>
           <View style={styles.countdownTimer}>

@@ -433,73 +433,55 @@ export default function AuthScreen() {
 
     setLoading(true);
     try {
-      // Try standard Supabase verification first
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: email.trim(),
-        token: otpCode,
-        type: 'email',
-      });
+      // Use our custom API endpoint first since we're using custom 6-digit codes
+      // This avoids the race condition where Supabase's direct verification fails
+      // because it doesn't recognize our custom codes
+      const verifyResult = await apiClient.post('/auth/otp/verify', { 
+        email: email.trim(), 
+        code: otpCode 
+      }, { skipEventSegment: true });
 
-      if (error) {
-        // If standard verification fails, try our custom API endpoint
-        try {
-          const verifyResult = await apiClient.post('/auth/otp/verify', { 
-              email: email.trim(), 
-              code: otpCode 
-          }, { skipEventSegment: true });
+      if (!verifyResult.success) {
+        throw new Error(verifyResult.error || 'Verification failed');
+      }
 
-          if (!verifyResult.success) {
-            throw new Error(verifyResult.error || 'Verification failed');
+      if (verifyResult.data?.token_hash) {
+        // Verify the token_hash using client-side Supabase
+        // Only token_hash and type should be provided (no email)
+        const { data: verifyResultData, error: verifyErr } = await supabase.auth.verifyOtp({
+          token_hash: verifyResult.data.token_hash,
+          type: 'magiclink',
+        });
+
+        if (verifyErr) {
+          // Try with type 'email'
+          const { data: emailVerifyResult, error: emailVerifyErr } = await supabase.auth.verifyOtp({
+            token_hash: verifyResult.data.token_hash,
+            type: 'email',
+          });
+
+          if (emailVerifyErr || !emailVerifyResult?.session) {
+            throw new Error(emailVerifyErr?.message || 'Verification failed');
           }
 
-          if (verifyResult.data?.token_hash) {
-            // Verify the token_hash using client-side Supabase
-            // Only token_hash and type should be provided (no email)
-            const { data: verifyResultData, error: verifyErr } = await supabase.auth.verifyOtp({
-              token_hash: verifyResult.data.token_hash,
-              type: 'magiclink',
-            });
-
-            if (verifyErr) {
-              // Try with type 'email'
-              const { data: emailVerifyResult, error: emailVerifyErr } = await supabase.auth.verifyOtp({
-                token_hash: verifyResult.data.token_hash,
-                type: 'email',
-              });
-
-              if (emailVerifyErr || !emailVerifyResult?.session) {
-                throw new Error(emailVerifyErr?.message || 'Verification failed');
-              }
-
-              showSuccess('Authentication Successful', 'Welcome! You have been signed in.');
-              // Navigate immediately, no delay
-              router.replace('/(shared)/dashboard/explore');
-              return;
-            }
-
-            if (verifyResultData?.session) {
-              showSuccess('Authentication Successful', 'Welcome! You have been signed in.');
-              // Navigate immediately, no delay
-              router.replace('/(shared)/dashboard/explore');
-              return;
-            }
-          }
-        } catch (apiError: any) {
-          console.error('Custom OTP verification error:', apiError);
-          showError('Verification Failed', apiError.message || 'Invalid code. Please try again.');
-          setLoading(false);
+          showSuccess('Authentication Successful', 'Welcome! You have been signed in.');
+          // Navigate immediately, no delay
+          router.replace('/(shared)/dashboard/explore');
           return;
         }
-      } else if (data?.session) {
-        showSuccess('Authentication Successful', 'Welcome! You have been signed in.');
-        // Navigate immediately, no delay
-        router.replace('/(shared)/dashboard/explore');
+
+        if (verifyResultData?.session) {
+          showSuccess('Authentication Successful', 'Welcome! You have been signed in.');
+          // Navigate immediately, no delay
+          router.replace('/(shared)/dashboard/explore');
+          return;
+        }
       } else {
-        showError('Verification Failed', 'Unable to create session. Please try again.');
-        setLoading(false);
+        throw new Error('No token_hash received from verification');
       }
     } catch (error: any) {
-      showError('Error', error.message || 'Failed to verify code.');
+      console.error('OTP verification error:', error);
+      showError('Verification Failed', error.message || 'Invalid code. Please try again.');
       setLoading(false);
     }
   };

@@ -160,3 +160,4 @@ async function tryDownload(name) {
   console.log(`✔️ Descarga finalizada. Avatares: ${found.length}, Faltantes: ${missing.length}`);
 })();
 
+

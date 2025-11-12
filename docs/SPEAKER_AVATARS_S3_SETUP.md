@@ -60,7 +60,7 @@ The script updates the `bsl_speakers.imageurl` field with the S3 URL. The applic
 ## Fallback Logic
 
 1. **Primary**: Use `imageurl` from database (S3 URL after script runs)
-2. **Fallback**: Use `getSpeakerAvatarUrl(name)` which tries S3 first, then blockchainsummit.la
+2. **Fallback**: Use `getSpeakerAvatarUrl(name)` which always generates S3 URLs
 
 ## Troubleshooting
 

@@ -304,24 +304,18 @@ export default function SpeakerAvatar({
 
   const styles = getStyles(size, showBorder);
   
-  // Determine what to show
+  // Determine what to show - simplified logic
   const hasUrlsAvailable = !!(localOptimizedUrl || s3Url);
   
-  // Show image when:
-  // - We have a URL AND
-  // - Image loaded successfully OR we're still loading (optimistic rendering)
-  // - AND no errors/timeouts
-  const showImage = avatarUrl && (imageLoaded || imageLoading) && !imageError && !imageTimeout;
+  // Always show image if we have a URL (let Image component handle loading/errors)
+  // Only hide if explicitly failed with no fallback
+  const showImage = avatarUrl && !(imageError && imageTimeout && !s3UrlRef.current);
   
-  // Show loading indicator when:
-  // - Actively loading AND haven't loaded yet AND no errors
-  const showLoading = imageLoading && avatarUrl && !imageLoaded && !imageError && !imageTimeout;
+  // Show loading indicator only when actively loading and image not loaded yet
+  const showLoading = imageLoading && !imageLoaded && avatarUrl;
   
-  // Show placeholder when:
-  // - No URLs available at all, OR
-  // - All sources failed (error + timeout) and not currently loading
-  const showPlaceholder = (!hasUrlsAvailable && !avatarUrl) || 
-                          (!imageLoading && !imageLoaded && imageError && imageTimeout);
+  // Show placeholder only when no URLs or all sources definitively failed
+  const showPlaceholder = !avatarUrl || (imageError && imageTimeout && !s3UrlRef.current);
 
   return (
     <View style={[styles.container, style]}>
@@ -345,35 +339,26 @@ export default function SpeakerAvatar({
         </View>
       )}
       
-      {/* Image - Always render when we have a URL to load */}
+      {/* Image - Always render when we have a URL */}
       {avatarUrl && (
         <Animated.View
           style={[
             styles.imageContainer,
             { 
-              opacity: showImage ? (imageLoaded ? fadeAnim : 0.3) : 0, // Show with low opacity while loading
+              opacity: imageLoaded ? fadeAnim : (imageLoading ? 0.5 : 0),
               zIndex: showImage ? 2 : 1
             }
           ]}
-          pointerEvents={showImage && imageLoaded ? "auto" : "none"}
+          pointerEvents="none"
         >
           <Image
-            key={avatarUrl} // Force re-render when URL changes
+            key={avatarUrl}
             source={{ uri: avatarUrl }}
             style={styles.image}
             resizeMode="cover"
-            onError={(error) => {
-              console.log(`[SpeakerAvatar] onError called for ${name}:`, avatarUrl, error);
-              handleError(error);
-            }}
-            onLoad={() => {
-              console.log(`[SpeakerAvatar] onLoad called for ${name}:`, avatarUrl);
-              handleLoad();
-            }}
-            onLoadStart={() => {
-              console.log(`[SpeakerAvatar] onLoadStart called for ${name}:`, avatarUrl);
-              handleLoadStart();
-            }}
+            onError={handleError}
+            onLoad={handleLoad}
+            onLoadStart={handleLoadStart}
           />
         </Animated.View>
       )}
@@ -412,7 +397,7 @@ const getStyles = (size: number, showBorder: boolean) => StyleSheet.create({
     width: size,
     height: size,
     borderRadius: size / 2,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#E8E8E8',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: showBorder ? 2 : 0,
@@ -428,7 +413,7 @@ const getStyles = (size: number, showBorder: boolean) => StyleSheet.create({
     width: size,
     height: size,
     borderRadius: size / 2,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: showBorder ? 2 : 0,
@@ -441,9 +426,10 @@ const getStyles = (size: number, showBorder: boolean) => StyleSheet.create({
     zIndex: 1,
   },
   initialsText: {
-    fontSize: size * 0.35,
-    fontWeight: '600',
-    color: '#666666',
+    fontSize: size * 0.38,
+    fontWeight: '700',
+    color: '#888888',
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
 });

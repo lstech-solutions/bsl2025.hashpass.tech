@@ -306,13 +306,22 @@ export default function SpeakerAvatar({
   
   // Determine what to show
   const hasUrlsAvailable = !!(localOptimizedUrl || s3Url);
-  // Show image when loaded successfully
-  const showImage = avatarUrl && imageLoaded && !imageError && !imageTimeout && !imageLoading;
-  // Show loading when actively loading
-  const showLoading = imageLoading && avatarUrl && !imageError && !imageTimeout && !imageLoaded;
-  // Show placeholder when no URLs or all failed
+  
+  // Show image when:
+  // - We have a URL AND
+  // - Image loaded successfully OR we're still loading (optimistic rendering)
+  // - AND no errors/timeouts
+  const showImage = avatarUrl && (imageLoaded || imageLoading) && !imageError && !imageTimeout;
+  
+  // Show loading indicator when:
+  // - Actively loading AND haven't loaded yet AND no errors
+  const showLoading = imageLoading && avatarUrl && !imageLoaded && !imageError && !imageTimeout;
+  
+  // Show placeholder when:
+  // - No URLs available at all, OR
+  // - All sources failed (error + timeout) and not currently loading
   const showPlaceholder = (!hasUrlsAvailable && !avatarUrl) || 
-                          (!imageLoading && !imageLoaded && (imageError || imageTimeout));
+                          (!imageLoading && !imageLoaded && imageError && imageTimeout);
 
   return (
     <View style={[styles.container, style]}>
@@ -342,20 +351,29 @@ export default function SpeakerAvatar({
           style={[
             styles.imageContainer,
             { 
-              opacity: showImage ? fadeAnim : 0,
+              opacity: showImage ? (imageLoaded ? fadeAnim : 0.3) : 0, // Show with low opacity while loading
               zIndex: showImage ? 2 : 1
             }
           ]}
-          pointerEvents={showImage ? "auto" : "none"}
+          pointerEvents={showImage && imageLoaded ? "auto" : "none"}
         >
           <Image
             key={avatarUrl} // Force re-render when URL changes
             source={{ uri: avatarUrl }}
             style={styles.image}
             resizeMode="cover"
-            onError={handleError}
-            onLoad={handleLoad}
-            onLoadStart={handleLoadStart}
+            onError={(error) => {
+              console.log(`[SpeakerAvatar] onError called for ${name}:`, avatarUrl, error);
+              handleError(error);
+            }}
+            onLoad={() => {
+              console.log(`[SpeakerAvatar] onLoad called for ${name}:`, avatarUrl);
+              handleLoad();
+            }}
+            onLoadStart={() => {
+              console.log(`[SpeakerAvatar] onLoadStart called for ${name}:`, avatarUrl);
+              handleLoadStart();
+            }}
           />
         </Animated.View>
       )}

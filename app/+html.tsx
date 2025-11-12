@@ -49,20 +49,35 @@ export default function Root({ children, metadata }: { children: ReactNode, meta
 
 const sw = `
 if ('serviceWorker' in navigator) {
-    let registration;
-    
-    // DISABLED: All automatic version checking to prevent reload loops
-    // Version checking function exists but is not called automatically
-    
-    window.addEventListener('load', () => {
+    // First, unregister all existing service workers to stop reload loops
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+            registration.unregister().then(function(success) {
+                if (success) {
+                    console.log('✅ Unregistered old service worker');
+                }
+            });
+        }
+    }).then(() => {
+        // Clear all caches
+        if ('caches' in window) {
+            caches.keys().then(function(cacheNames) {
+                return Promise.all(
+                    cacheNames.map(function(cacheName) {
+                        console.log('🗑️ Clearing cache:', cacheName);
+                        return caches.delete(cacheName);
+                    })
+                );
+            }).then(() => {
+                console.log('✅ All caches cleared');
+            });
+        }
+    }).then(() => {
+        // Wait before registering new service worker
         setTimeout(() => {
             navigator.serviceWorker.register('/sw.js')
                 .then(reg => {
-                    registration = reg;
                     console.log('✅ Service Worker registered with scope:', reg.scope);
-                    
-                    // DISABLED: No automatic version checking
-                    // Version checks can be triggered manually if needed
                     
                     // Listen for service worker updates (but don't auto-reload)
                     reg.addEventListener('updatefound', () => {
@@ -86,7 +101,7 @@ if ('serviceWorker' in navigator) {
                 .catch(error => {
                     console.error('❌ Service Worker registration failed:', error);
                 });
-        }, 1000);
+        }, 2000);
     });
 }
 `;

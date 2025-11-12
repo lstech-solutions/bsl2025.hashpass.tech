@@ -101,7 +101,74 @@ config.server = {
     const fs = require('fs');
     
     // Return a new middleware that wraps the original
+    // This middleware runs BEFORE Metro's asset resolver
     return (req, res, next) => {
+      // CRITICAL: Handle /assets/ requests FIRST before Metro tries to resolve them
+      // Metro's asset resolver will try to scan directories if we don't handle this
+      // This MUST be the first check to prevent Metro from processing /assets/ requests
+      if (req.url && req.url.startsWith('/assets/')) {
+        const contentTypes = {
+          '.png': 'image/png',
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.gif': 'image/gif',
+          '.svg': 'image/svg+xml',
+          '.webp': 'image/webp',
+        };
+        
+        // Try public folder first (e.g., /assets/speakers/avatars/... -> public/assets/speakers/avatars/...)
+        const publicPath = path.join(__dirname, 'public', req.url);
+        if (fs.existsSync(publicPath)) {
+          try {
+            const stat = fs.statSync(publicPath);
+            if (stat.isFile()) {
+              const ext = path.extname(publicPath).toLowerCase();
+              res.writeHead(200, {
+                'Content-Type': contentTypes[ext] || 'application/octet-stream',
+                'Content-Length': stat.size,
+                'Cache-Control': 'public, max-age=31536000',
+              });
+              return fs.createReadStream(publicPath).pipe(res);
+            }
+          } catch (err) {
+            // File exists but can't read it - fall through to 404
+            console.warn(`[Metro] Error reading ${publicPath}:`, err.message);
+          }
+        }
+        
+        // Fallback: try assets folder (without /assets/ prefix)
+        // e.g., /assets/speakers/avatars/... -> assets/speakers/avatars/...
+        const fileName = req.url.replace(/^\/assets\//, '');
+        const assetsPath = path.join(__dirname, 'assets', fileName);
+        if (fs.existsSync(assetsPath)) {
+          try {
+            const stat = fs.statSync(assetsPath);
+            if (stat.isFile()) {
+              const ext = path.extname(assetsPath).toLowerCase();
+              res.writeHead(200, {
+                'Content-Type': contentTypes[ext] || 'application/octet-stream',
+                'Content-Length': stat.size,
+                'Cache-Control': 'public, max-age=31536000',
+              });
+              return fs.createReadStream(assetsPath).pipe(res);
+            }
+          } catch (err) {
+            // File exists but can't read it - fall through to 404
+            console.warn(`[Metro] Error reading ${assetsPath}:`, err.message);
+          }
+        }
+        
+        // File not found - return 404 immediately so Image component can handle it
+        // This is important for avatar fallback logic
+        // MUST return here to prevent Metro from trying to resolve it
+        res.writeHead(404, {
+          'Content-Type': 'text/plain',
+          'Cache-Control': 'no-cache',
+        });
+        res.end('Not Found');
+        return; // CRITICAL: Return here to prevent Metro from processing this request
+      }
+      
       // Intercept /config/versions.json requests
       if (req.url && req.url === '/config/versions.json') {
         const configPath = path.join(__dirname, 'config', 'versions.json');
@@ -131,6 +198,7 @@ config.server = {
       }
       
       // Intercept /assets/ requests BEFORE Metro tries to resolve them
+      // This MUST return a response to prevent Metro from trying to resolve it as an asset
       if (req.url && req.url.startsWith('/assets/')) {
         const contentTypes = {
           '.png': 'image/png',
@@ -141,47 +209,57 @@ config.server = {
           '.webp': 'image/webp',
         };
         
-        // Try public folder first
+        // Try public folder first (e.g., /assets/speakers/avatars/... -> public/assets/speakers/avatars/...)
         const publicPath = path.join(__dirname, 'public', req.url);
         if (fs.existsSync(publicPath)) {
-          const stat = fs.statSync(publicPath);
-          if (stat.isFile()) {
-            const ext = path.extname(publicPath).toLowerCase();
-            res.writeHead(200, {
-              'Content-Type': contentTypes[ext] || 'application/octet-stream',
-              'Content-Length': stat.size,
-              'Cache-Control': 'public, max-age=31536000',
-            });
-            return fs.createReadStream(publicPath).pipe(res);
+          try {
+            const stat = fs.statSync(publicPath);
+            if (stat.isFile()) {
+              const ext = path.extname(publicPath).toLowerCase();
+              res.writeHead(200, {
+                'Content-Type': contentTypes[ext] || 'application/octet-stream',
+                'Content-Length': stat.size,
+                'Cache-Control': 'public, max-age=31536000',
+              });
+              return fs.createReadStream(publicPath).pipe(res);
+            }
+          } catch (err) {
+            // File exists but can't read it - fall through to 404
+            console.warn(`[Metro] Error reading ${publicPath}:`, err.message);
           }
         }
         
         // Fallback: try assets folder (without /assets/ prefix)
-        const fileName = req.url.replace('/assets/', '');
+        // e.g., /assets/speakers/avatars/... -> assets/speakers/avatars/...
+        const fileName = req.url.replace(/^\/assets\//, '');
         const assetsPath = path.join(__dirname, 'assets', fileName);
         if (fs.existsSync(assetsPath)) {
-          const stat = fs.statSync(assetsPath);
-          if (stat.isFile()) {
-            const ext = path.extname(assetsPath).toLowerCase();
-            res.writeHead(200, {
-              'Content-Type': contentTypes[ext] || 'application/octet-stream',
-              'Content-Length': stat.size,
-              'Cache-Control': 'public, max-age=31536000',
-            });
-            return fs.createReadStream(assetsPath).pipe(res);
+          try {
+            const stat = fs.statSync(assetsPath);
+            if (stat.isFile()) {
+              const ext = path.extname(assetsPath).toLowerCase();
+              res.writeHead(200, {
+                'Content-Type': contentTypes[ext] || 'application/octet-stream',
+                'Content-Length': stat.size,
+                'Cache-Control': 'public, max-age=31536000',
+              });
+              return fs.createReadStream(assetsPath).pipe(res);
+            }
+          } catch (err) {
+            // File exists but can't read it - fall through to 404
+            console.warn(`[Metro] Error reading ${assetsPath}:`, err.message);
           }
         }
         
         // File not found - return 404 immediately so Image component can handle it
         // This is important for avatar fallback logic
-        if (req.url.includes('/speakers/avatars/')) {
-          res.writeHead(404, {
-            'Content-Type': 'text/plain',
-            'Cache-Control': 'no-cache',
-          });
-          res.end('Not Found');
-          return;
-        }
+        // MUST return here to prevent Metro from trying to resolve it
+        res.writeHead(404, {
+          'Content-Type': 'text/plain',
+          'Cache-Control': 'no-cache',
+        });
+        res.end('Not Found');
+        return; // CRITICAL: Return here to prevent Metro from processing this request
       }
       // If not handled, pass to original middleware
       return middleware(req, res, next);

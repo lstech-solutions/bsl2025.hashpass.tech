@@ -309,7 +309,29 @@ export default function AgendaTracker({
 
   const handleCurrentEventPress = () => {
     if (currentEvent?.id) {
-      router.push(`/events/bsl2025/agenda?session=${currentEvent.id}&scrollTo=current`);
+      // Determine day key from currentEvent's day property
+      let dayKey: string | null = null;
+      const day = (currentEvent as any).day;
+      
+      if (day) {
+        // Extract day number from complex day names or use simple day numbers
+        if (day.includes('Día 1') || day === '1') {
+          dayKey = 'Day 1 - November 12';
+        } else if (day.includes('Día 2') || day === '2') {
+          dayKey = 'Day 2 - November 13';
+        } else if (day.includes('Día 3') || day === '3') {
+          dayKey = 'Day 3 - November 14';
+        }
+      }
+      
+      // If we have day info, include it in the URL to help with navigation
+      if (dayKey) {
+        console.log(`[AgendaTracker] Navigating to session ${currentEvent.id} on ${dayKey}`);
+        router.push(`/events/bsl2025/agenda?session=${currentEvent.id}&scrollTo=current&day=${encodeURIComponent(dayKey)}`);
+      } else {
+        console.log(`[AgendaTracker] Navigating to session ${currentEvent.id} (day unknown)`);
+        router.push(`/events/bsl2025/agenda?session=${currentEvent.id}&scrollTo=current`);
+      }
     } else {
       router.push('/events/bsl2025/agenda');
     }
@@ -317,7 +339,29 @@ export default function AgendaTracker({
 
   const handleNextEventPress = () => {
     if (nextEvent?.id) {
-      router.push(`/events/bsl2025/agenda?session=${nextEvent.id}&scrollTo=next`);
+      // Determine day key from nextEvent's day property
+      let dayKey: string | null = null;
+      const day = (nextEvent as any).day;
+      
+      if (day) {
+        // Extract day number from complex day names or use simple day numbers
+        if (day.includes('Día 1') || day === '1') {
+          dayKey = 'Day 1 - November 12';
+        } else if (day.includes('Día 2') || day === '2') {
+          dayKey = 'Day 2 - November 13';
+        } else if (day.includes('Día 3') || day === '3') {
+          dayKey = 'Day 3 - November 14';
+        }
+      }
+      
+      // If we have day info, include it in the URL to help with navigation
+      if (dayKey) {
+        console.log(`[AgendaTracker] Navigating to next session ${nextEvent.id} on ${dayKey}`);
+        router.push(`/events/bsl2025/agenda?session=${nextEvent.id}&scrollTo=next&day=${encodeURIComponent(dayKey)}`);
+      } else {
+        console.log(`[AgendaTracker] Navigating to next session ${nextEvent.id} (day unknown)`);
+        router.push(`/events/bsl2025/agenda?session=${nextEvent.id}&scrollTo=next`);
+      }
     } else {
       router.push('/events/bsl2025/agenda');
     }

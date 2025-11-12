@@ -22,17 +22,23 @@ export default function SpeakerAvatar({
   // Initial state: start with loading=true if we expect to have a URL
   // This ensures we show loading spinner initially, not initials
   const [imageError, setImageError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(false); // Will be set to true when URL is determined
+  const [imageLoading, setImageLoading] = useState(true); // Start with loading=true to show loader immediately
   const [imageTimeout, setImageTimeout] = useState(false);
   // Track failed URLs to prevent infinite retry loops
   const failedUrlsRef = useRef<Set<string>>(new Set());
   const currentUrlRef = useRef<string | null>(null);
+  const loadSuccessRef = useRef<boolean>(false); // Track if onLoad was called
   // Animated value for smooth fade-in
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // Track which URL we're currently trying (local optimized, S3, or null)
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
   const [urlSource, setUrlSource] = useState<'local' | 's3' | null>(null);
+  
+  // Store URLs in refs to prevent dependency issues
+  const localOptimizedUrlRef = useRef<string | null>(null);
+  const s3UrlRef = useRef<string | null>(null);
+  const previousAvatarUrlRef = useRef<string | null>(null);
   
   // Memoize computed values to determine avatar URL priority
   const { localOptimizedUrl, s3Url } = useMemo(() => {
@@ -45,25 +51,35 @@ export default function SpeakerAvatar({
     return { localOptimizedUrl: localUrl, s3Url: s3 };
   }, [imageUrl, name]);
   
-  // Determine which URL to use (prioritize local optimized)
+  // Update refs when URLs change
   useEffect(() => {
-    // Reset loading state when URLs change
+    localOptimizedUrlRef.current = localOptimizedUrl;
+    s3UrlRef.current = s3Url;
+  }, [localOptimizedUrl, s3Url]);
+  
+  // Determine which URL to use (prioritize local optimized)
+  // This effect only runs when the computed URLs change, not when avatarUrl changes
+  useEffect(() => {
+    // Always start with loading state when URLs change
     setImageLoading(true);
     setImageError(false);
     setImageTimeout(false);
     
     if (localOptimizedUrl) {
-      // Try local optimized first
+      // Try local optimized first - loader will show while loading
       setCurrentAvatarUrl(localOptimizedUrl);
       setUrlSource('local');
+      previousAvatarUrlRef.current = localOptimizedUrl;
     } else if (s3Url) {
-      // Fallback to S3
+      // Fallback to S3 - loader will show while loading
       setCurrentAvatarUrl(s3Url);
       setUrlSource('s3');
+      previousAvatarUrlRef.current = s3Url;
     } else {
-      // No URLs available - show initials immediately
+      // No URLs available - show initials immediately (no loader needed)
       setCurrentAvatarUrl(null);
       setUrlSource(null);
+      previousAvatarUrlRef.current = null;
       setImageLoading(false);
       setImageError(true);
       setImageTimeout(true);
@@ -71,24 +87,33 @@ export default function SpeakerAvatar({
   }, [localOptimizedUrl, s3Url]);
   
   const avatarUrl = currentAvatarUrl;
-  const isS3Url = urlSource === 's3';
 
-  // Reset error state when avatarUrl changes
+  // Handle timeouts and loading state - only runs when avatarUrl actually changes
   useEffect(() => {
+    // Skip if URL hasn't actually changed
+    if (avatarUrl === previousAvatarUrlRef.current) {
+      return;
+    }
+    
+    previousAvatarUrlRef.current = avatarUrl;
+    
     if (avatarUrl) {
       currentUrlRef.current = avatarUrl;
       
       // Check if this URL has already failed - if so, try fallback
       if (failedUrlsRef.current.has(avatarUrl)) {
         // If local optimized failed, try S3
-        if (urlSource === 'local' && s3Url && s3Url !== avatarUrl) {
-          console.log(`[SpeakerAvatar] Local optimized failed for ${name}, trying S3:`, s3Url);
-          setCurrentAvatarUrl(s3Url);
-          setUrlSource('s3');
-          // Reset states for new attempt
-          setImageError(false);
-          setImageLoading(true);
-          setImageTimeout(false);
+        if (urlSource === 'local' && s3UrlRef.current && s3UrlRef.current !== avatarUrl) {
+          console.log(`[SpeakerAvatar] Local optimized failed for ${name}, trying S3:`, s3UrlRef.current);
+          // Use setTimeout to break the update cycle
+          setTimeout(() => {
+            setCurrentAvatarUrl(s3UrlRef.current);
+            setUrlSource('s3');
+            // Reset states for new attempt
+            setImageError(false);
+            setImageLoading(true);
+            setImageTimeout(false);
+          }, 0);
           return;
         }
         
@@ -105,14 +130,15 @@ export default function SpeakerAvatar({
         url: avatarUrl,
         source: urlSource,
         hasImageUrl: !!imageUrl,
-        localOptimizedUrl,
-        s3Url,
+        localOptimizedUrl: localOptimizedUrlRef.current,
+        s3Url: s3UrlRef.current,
       });
       
       // Reset all states and start loading
       setImageError(false);
       setImageLoading(true);
       setImageTimeout(false);
+      loadSuccessRef.current = false; // Reset load success flag
       // Reset fade animation when URL changes
       fadeAnim.setValue(0);
       
@@ -120,6 +146,11 @@ export default function SpeakerAvatar({
       // For S3, use longer timeout (15 seconds) to handle slow connections
       const timeoutDuration = urlSource === 'local' ? 2000 : 15000;
       const timeoutId = setTimeout(() => {
+        // Check if URL is still the same (might have changed)
+        if (currentUrlRef.current !== avatarUrl) {
+          return; // URL changed, ignore this timeout
+        }
+        
         console.warn(`[SpeakerAvatar] ⏱️ Image load timeout (${timeoutDuration}ms) for ${name} from ${urlSource}:`, avatarUrl);
         // Mark URL as failed
         if (avatarUrl) {
@@ -127,15 +158,21 @@ export default function SpeakerAvatar({
         }
         
         // If local optimized failed, try S3 fallback immediately
-        if (urlSource === 'local' && s3Url && s3Url !== avatarUrl) {
-          console.log(`[SpeakerAvatar] Local optimized timeout (likely 404), falling back to S3 for ${name}:`, s3Url);
-          setCurrentAvatarUrl(s3Url);
+        if (urlSource === 'local' && s3UrlRef.current && s3UrlRef.current !== avatarUrl) {
+          console.log(`[SpeakerAvatar] ⏱️ Local optimized timeout (likely 404), falling back to S3 for ${name}:`, s3UrlRef.current);
+          
+          // Reset load success flag for new attempt
+          loadSuccessRef.current = false;
+          
+          // Immediately switch to S3 URL
+          setCurrentAvatarUrl(s3UrlRef.current);
           setUrlSource('s3');
           // Reset error state to allow S3 to try
           setImageError(false);
           setImageLoading(true);
           setImageTimeout(false);
-          // Don't set error yet - try S3 first
+          // Update currentUrlRef so we track the new URL
+          currentUrlRef.current = s3UrlRef.current;
         } else {
           // S3 also failed or no fallback - show initials
           console.warn(`[SpeakerAvatar] All image sources timed out for ${name}, showing initials`);
@@ -149,7 +186,7 @@ export default function SpeakerAvatar({
       setImageError(true);
       setImageLoading(false);
     }
-  }, [avatarUrl, urlSource, name, imageUrl, s3Url]);
+  }, [avatarUrl, urlSource, name, imageUrl]); // Removed s3Url and localOptimizedUrl from deps
 
   // Helper to get initials (always two letters or '??')
   const getInitials = (n?: string) => {
@@ -161,13 +198,26 @@ export default function SpeakerAvatar({
 
   const styles = getStyles(size, showBorder);
   // Show image when we have a URL and it loaded successfully (not loading, no errors)
-  // Show loading state when actively loading (has URL, loading=true, no errors yet)
+  // Show loading state when:
+  //   - Actively loading (has URL, loading=true, no errors yet), OR
+  //   - We have URLs available but haven't set avatarUrl yet (initial load)
   // Show placeholder (initials) only when:
   //   - No URL available at all, OR
   //   - All sources failed (error + timeout) and not currently loading
+  const hasUrlsAvailable = !!(localOptimizedUrl || s3Url);
+  // Show image when loaded successfully (not loading, no errors, has URL)
   const showImage = avatarUrl && !imageError && !imageTimeout && !imageLoading;
-  const showLoading = imageLoading && avatarUrl && !imageError && !imageTimeout;
-  const showPlaceholder = !avatarUrl || (!imageLoading && (imageError || imageTimeout));
+  // Show loading when:
+  // - Actively loading (imageLoading=true and have URL), OR
+  // - Have URLs but no avatarUrl set yet (initial state)
+  // BUT NOT when we have errors/timeouts (those should show placeholder)
+  const showLoading = (imageLoading && avatarUrl && !imageError && !imageTimeout) || 
+                       (hasUrlsAvailable && !avatarUrl && !imageError && !imageTimeout);
+  // Show placeholder when:
+  // - No URLs available at all, OR
+  // - All sources failed (error + timeout) and not currently loading
+  const showPlaceholder = (!hasUrlsAvailable && !avatarUrl) || 
+                          (!imageLoading && (imageError || imageTimeout));
 
   return (
     <View style={[styles.container, style]}>
@@ -191,15 +241,21 @@ export default function SpeakerAvatar({
         </View>
       )}
       
-      {/* Image (rendered on top when loaded successfully) */}
-      {showImage && avatarUrl && (
+      {/* Image - Always render when we have a URL to load, even while loading
+          This ensures onLoad/onError callbacks fire properly */}
+      {avatarUrl && (
         <Animated.View
           style={[
             styles.imageContainer,
-            { opacity: fadeAnim }
+            { 
+              opacity: showImage ? fadeAnim : 0, // Hide while loading, show when loaded
+              zIndex: showImage ? 2 : 1 // Show on top when loaded
+            }
           ]}
+          pointerEvents={showImage ? "auto" : "none"}
         >
           <Image
+            key={avatarUrl} // Force re-render when URL changes
             source={{ uri: avatarUrl }}
             style={styles.image}
             resizeMode="cover"
@@ -208,13 +264,18 @@ export default function SpeakerAvatar({
             const errorMessage = error.nativeEvent?.error || error.message || 'Unknown error';
             const statusCode = error.nativeEvent?.statusCode || error.statusCode || 'unknown';
             
+            // Mark as not successfully loaded
+            loadSuccessRef.current = false;
+            
             // Always log errors to help debug
-            console.error(`[SpeakerAvatar] ${urlSource} image load error for ${name}:`, {
+            console.error(`[SpeakerAvatar] ❌ ${urlSource} image load error for ${name}:`, {
               url: avatarUrl,
               error: errorMessage,
               statusCode: statusCode,
               source: urlSource,
-              hasS3Fallback: !!(s3Url && s3Url !== avatarUrl),
+              hasS3Fallback: !!(s3UrlRef.current && s3UrlRef.current !== avatarUrl),
+              s3Url: s3UrlRef.current,
+              localOptimizedUrl: localOptimizedUrlRef.current,
               errorObject: error,
             });
             
@@ -224,18 +285,28 @@ export default function SpeakerAvatar({
             }
             
             // If local optimized failed (404 or any error), try S3 fallback immediately
-            if (urlSource === 'local' && s3Url && s3Url !== avatarUrl) {
-              console.log(`[SpeakerAvatar] Local optimized failed (status: ${statusCode}), falling back to S3 for ${name}:`, s3Url);
-              setCurrentAvatarUrl(s3Url);
+            if (urlSource === 'local' && s3UrlRef.current && s3UrlRef.current !== avatarUrl) {
+              console.log(`[SpeakerAvatar] 🔄 Local optimized failed (status: ${statusCode}), falling back to S3 for ${name}`);
+              console.log(`[SpeakerAvatar] 🔄 Switching from local: ${avatarUrl} to S3: ${s3UrlRef.current}`);
+              
+              // Reset load success flag for new attempt
+              loadSuccessRef.current = false;
+              
+              // Immediately switch to S3 URL - don't use setTimeout to avoid delays
+              setCurrentAvatarUrl(s3UrlRef.current);
               setUrlSource('s3');
               // Reset error state to allow S3 to try
               setImageError(false);
               setImageLoading(true);
               setImageTimeout(false);
-              // Don't set error yet - try S3 first
+              // Reset fade animation for new image
+              fadeAnim.setValue(0);
+              
+              // Update currentUrlRef so timeout handler knows URL changed
+              currentUrlRef.current = s3UrlRef.current;
             } else {
               // S3 also failed or no fallback - show initials
-              console.warn(`[SpeakerAvatar] All image sources failed for ${name}, showing initials`);
+              console.warn(`[SpeakerAvatar] ❌ All image sources failed for ${name}, showing initials`);
               setImageError(true);
               setImageLoading(false);
               setImageTimeout(true);
@@ -243,6 +314,9 @@ export default function SpeakerAvatar({
           }}
           onLoad={() => {
             console.log(`[SpeakerAvatar] ✅ Image loaded successfully for ${name} from ${urlSource}:`, avatarUrl);
+            // Mark as successfully loaded
+            loadSuccessRef.current = true;
+            // Always clear loading state when image loads
             setImageLoading(false);
             setImageTimeout(false);
             setImageError(false);
@@ -258,15 +332,30 @@ export default function SpeakerAvatar({
             }).start();
           }}
           onLoadEnd={() => {
-            setImageLoading(false);
+            // onLoadEnd fires after both success and error
+            // Check if onLoad was called - if so, image loaded successfully
+            // If onLoad wasn't called, onError should have been called instead
+            // Use a small delay to allow onLoad/onError to update loadSuccessRef
+            setTimeout(() => {
+              if (loadSuccessRef.current) {
+                // Image loaded successfully - ensure loading is false
+                setImageLoading(false);
+                setImageError(false);
+                setImageTimeout(false);
+              }
+              // If loadSuccessRef is false, onError should have handled it
+              // But if somehow neither fired, we'll rely on the timeout
+            }, 100);
           }}
           onLoadStart={() => {
             // Only reset error if this URL hasn't failed before
             // This prevents infinite retry loops for missing images
             if (avatarUrl && !failedUrlsRef.current.has(avatarUrl)) {
               setImageError(false);
+              setImageTimeout(false);
+              // Set loading to true when starting to load
+              setImageLoading(true);
             }
-            setImageLoading(true);
             // Reset fade animation when starting to load
             fadeAnim.setValue(0);
           }}

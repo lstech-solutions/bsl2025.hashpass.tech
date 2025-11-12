@@ -129,15 +129,15 @@ function checkForVersionUpdate() {
     });
 }
 
-// Check for updates on activation
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    checkForVersionUpdate()
-  );
-});
+// DISABLED: Version checking on activation to prevent reload loops
+// self.addEventListener('activate', (event) => {
+//   event.waitUntil(
+//     checkForVersionUpdate()
+//   );
+// });
 
-// Periodic version check
-setInterval(checkForVersionUpdate, VERSION_CHECK_INTERVAL);
+// DISABLED: Periodic version check to prevent reload loops
+// setInterval(checkForVersionUpdate, VERSION_CHECK_INTERVAL);
 
 // Listen for messages from clients
 self.addEventListener('message', (event) => {

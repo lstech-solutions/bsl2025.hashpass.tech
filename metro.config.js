@@ -235,6 +235,7 @@ config.server = {
             const stat = fs.statSync(publicPath);
             if (stat.isFile()) {
               const ext = path.extname(publicPath).toLowerCase();
+              console.log(`[Metro] ✅ Serving from public: ${req.url} -> ${publicPath}`);
               res.writeHead(200, {
                 'Content-Type': contentTypes[ext] || 'application/octet-stream',
                 'Content-Length': stat.size,
@@ -257,6 +258,7 @@ config.server = {
             const stat = fs.statSync(assetsPath);
             if (stat.isFile()) {
               const ext = path.extname(assetsPath).toLowerCase();
+              console.log(`[Metro] ✅ Serving from assets: ${req.url} -> ${assetsPath}`);
               res.writeHead(200, {
                 'Content-Type': contentTypes[ext] || 'application/octet-stream',
                 'Content-Length': stat.size,
@@ -270,7 +272,12 @@ config.server = {
           }
         }
         
-        // File not found - return 404 immediately so Image component can handle it
+        // File not found - log for debugging
+        console.log(`[Metro] ❌ Not found: ${req.url}`);
+        console.log(`[Metro]   Tried public: ${publicPath} (exists: ${fs.existsSync(publicPath)})`);
+        console.log(`[Metro]   Tried assets: ${assetsPath} (exists: ${fs.existsSync(assetsPath)})`);
+        
+        // Return 404 immediately so Image component can handle it
         // This is important for avatar fallback logic
         // MUST return here to prevent Metro from trying to resolve it
         res.writeHead(404, {

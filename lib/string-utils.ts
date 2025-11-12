@@ -33,7 +33,7 @@ export function speakerNameToFilename(name: string): string {
  * Gets the local optimized avatar URL if it exists in public folder
  * Checks if optimized avatar exists at public/assets/speakers/avatars/foto-{filename}.png
  * @param name - The speaker's name
- * @returns Local avatar URL or null if not found
+ * @returns Local avatar URL with full origin for web, or null if not found
  */
 export function getLocalOptimizedAvatarUrl(name: string): string | null {
   if (!name) return null;
@@ -41,7 +41,14 @@ export function getLocalOptimizedAvatarUrl(name: string): string | null {
   const filename = speakerNameToFilename(name);
   // In web/Expo, public assets are served from root
   // Path: /assets/speakers/avatars/foto-{filename}.png
-  const localPath = `/assets/speakers/avatars/foto-${filename}.png`;
+  let localPath = `/assets/speakers/avatars/foto-${filename}.png`;
+  
+  // For web, we need to include the origin to make it a full URL
+  // This ensures the image loads correctly in web browsers
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin;
+    localPath = `${origin}${localPath}`;
+  }
   
   // Return the path - the component will check if it loads successfully
   // We can't check file size here in client-side code, so we rely on the component

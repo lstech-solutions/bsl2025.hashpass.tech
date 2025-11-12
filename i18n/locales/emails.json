@@ -614,7 +614,9 @@
         "ctaSubtitle": "No download required • Works on all devices",
         "footerHelp": "Questions about managing your speaker account?<br>We're here to help! Reply to this email or contact us at {supportEmail}",
         "footerCopyright": "© 2025 HashPass. All rights reserved.",
-        "footerLinks": "{hashpassUrl} | {bslUrl}"
+        "footerLinks": "{hashpassUrl} | {bslUrl}",
+        "guideTitle": "Your guide to get started at Blockchain Summit Latam 2025",
+        "speakerCredentialsWarning": "⚠️ Important: If you are a speaker and do not have speaker status and/or VIP access displayed in your passes section on HashPass, please contact support or send an email with your actual email to properly set your credentials and allow you to accept meeting requests."
       }
     },
     "es": {
@@ -622,6 +624,7 @@
       "html": {
         "title": "🎤 ¡Bienvenido, Ponente!",
         "subtitle": "Tu guía para gestionar reuniones y horarios",
+        "guideTitle": "Tu guía para comenzar en Blockchain Summit Latam 2025",
         "introTitle": "¡Gracias por ser parte de HashPass! 🙏",
         "introText": "Como ponente, recibirás solicitudes de reunión de asistentes que quieren conectarse contigo. Esta guía te ayudará a gestionar tu horario y aceptar solicitudes de manera eficiente.",
         "step1Title": "Iniciar Sesión en Tu Cuenta de Ponente",
@@ -673,7 +676,8 @@
         "ctaSubtitle": "No requiere descarga • Funciona en todos los dispositivos",
         "footerHelp": "¿Preguntas sobre cómo gestionar tu cuenta de ponente?<br>¡Estamos aquí para ayudar! Responde a este correo o contáctanos en {supportEmail}",
         "footerCopyright": "© 2025 HashPass. Todos los derechos reservados.",
-        "footerLinks": "{hashpassUrl} | {bslUrl}"
+        "footerLinks": "{hashpassUrl} | {bslUrl}",
+        "speakerCredentialsWarning": "⚠️ Importante: Si eres ponente y no tienes el estatus de ponente y/o acceso VIP mostrado en tu sección de pases en HashPass, por favor contacta a soporte o envía un correo con tu correo actual para configurar correctamente tus credenciales y permitirte aceptar solicitudes de reunión."
       }
     },
     "ko": {
@@ -732,7 +736,9 @@
         "ctaSubtitle": "다운로드 불필요 • 모든 기기에서 작동",
         "footerHelp": "연사 계정 관리에 대한 질문이 있으신가요?<br>저희가 도와드리겠습니다! 이 이메일에 답장하거나 {supportEmail}로 문의하세요.",
         "footerCopyright": "© 2025 HashPass. 모든 권리 보유.",
-        "footerLinks": "{hashpassUrl} | {bslUrl}"
+        "footerLinks": "{hashpassUrl} | {bslUrl}",
+        "guideTitle": "Blockchain Summit Latam 2025 시작 가이드",
+        "speakerCredentialsWarning": "⚠️ 중요: 연사이시고 HashPass의 패스 섹션에 연사 상태 및/또는 VIP 액세스가 표시되지 않는 경우, 지원팀에 문의하거나 실제 이메일로 이메일을 보내 자격 증명을 올바르게 설정하고 미팅 요청을 수락할 수 있도록 해주세요."
       }
     },
     "fr": {
@@ -791,7 +797,9 @@
         "ctaSubtitle": "Aucun téléchargement requis • Fonctionne sur tous les appareils",
         "footerHelp": "Des questions sur la gestion de votre compte conférencier ?<br>Nous sommes là pour vous aider ! Répondez à cet e-mail ou contactez-nous à {supportEmail}",
         "footerCopyright": "© 2025 HashPass. Tous droits réservés.",
-        "footerLinks": "{hashpassUrl} | {bslUrl}"
+        "footerLinks": "{hashpassUrl} | {bslUrl}",
+        "guideTitle": "Votre guide pour commencer au Blockchain Summit Latam 2025",
+        "speakerCredentialsWarning": "⚠️ Important : Si vous êtes conférencier et n'avez pas le statut de conférencier et/ou l'accès VIP affiché dans votre section des passes sur HashPass, veuillez contacter le support ou envoyer un e-mail avec votre e-mail actuel pour configurer correctement vos identifiants et vous permettre d'accepter les demandes de réunion."
       }
     },
     "pt": {
@@ -850,7 +858,9 @@
         "ctaSubtitle": "Sem download necessário • Funciona em todos os dispositivos",
         "footerHelp": "Perguntas sobre como gerenciar sua conta de palestrante?<br>Estamos aqui para ajudar! Responda a este e-mail ou entre em contato conosco em {supportEmail}",
         "footerCopyright": "© 2025 HashPass. Todos os direitos reservados.",
-        "footerLinks": "{hashpassUrl} | {bslUrl}"
+        "footerLinks": "{hashpassUrl} | {bslUrl}",
+        "guideTitle": "Seu guia para começar no Blockchain Summit Latam 2025",
+        "speakerCredentialsWarning": "⚠️ Importante: Se você é um palestrante e não tem o status de palestrante e/ou acesso VIP exibido em sua seção de passes no HashPass, entre em contato com o suporte ou envie um e-mail com seu e-mail atual para configurar corretamente suas credenciais e permitir que você aceite solicitações de reunião."
       }
     },
     "de": {
@@ -909,7 +919,9 @@
         "ctaSubtitle": "Kein Download erforderlich • Funktioniert auf allen Geräten",
         "footerHelp": "Fragen zur Verwaltung Ihres Redner-Kontos?<br>Wir sind hier, um zu helfen! Antworten Sie auf diese E-Mail oder kontaktieren Sie uns unter {supportEmail}",
         "footerCopyright": "© 2025 HashPass. Alle Rechte vorbehalten.",
-        "footerLinks": "{hashpassUrl} | {bslUrl}"
+        "footerLinks": "{hashpassUrl} | {bslUrl}",
+        "guideTitle": "Ihr Leitfaden zum Einstieg beim Blockchain Summit Latam 2025",
+        "speakerCredentialsWarning": "⚠️ Wichtig: Wenn Sie Redner sind und keinen Rednerstatus und/oder VIP-Zugang in Ihrem Pass-Bereich auf HashPass angezeigt haben, kontaktieren Sie bitte den Support oder senden Sie eine E-Mail mit Ihrer tatsächlichen E-Mail-Adresse, um Ihre Anmeldedaten ordnungsgemäß einzurichten und Ihnen zu ermöglichen, Meeting-Anfragen anzunehmen."
       }
     }
   }

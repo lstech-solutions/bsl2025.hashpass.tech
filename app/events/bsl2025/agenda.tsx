@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, InteractionManager } from 'react-native';
 import { useEvent } from '../../../contexts/EventContext';
 import { useTheme } from '../../../hooks/useTheme';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -85,7 +85,7 @@ export default function BSL2025AgendaScreen() {
   const { event } = useEvent();
   const { isDark, colors } = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ session?: string; scrollTo?: string }>();
+  const params = useLocalSearchParams<{ session?: string; scrollTo?: string; day?: string }>();
   const styles = getStyles(isDark, colors);
   const { user } = useAuth();
   const { showSuccess, showError, showWarning } = useToastHelpers();
@@ -97,6 +97,8 @@ export default function BSL2025AgendaScreen() {
   const [activeTab, setActiveTab] = useState<string>('Day 1 - November 12'); // Default to Day 1
   const [agenda, setAgenda] = useState<AgendaItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasSetInitialTabRef = useRef(false); // Track if we've set initial tab
+  const userSelectedTabRef = useRef(false); // Track if user manually selected a tab
   const [isLive, setIsLive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<AgendaType | 'all'>('all');
@@ -498,66 +500,194 @@ export default function BSL2025AgendaScreen() {
     console.log('📅 Final grouped data:', Object.keys(sortedGrouped).map(key => `${key}: ${sortedGrouped[key].length} items`));
     setAgendaByDay(sortedGrouped);
     
-    // Set first tab as active (Day 1) - only if:
+    // Set first tab as active (Day 1) - only on initial load:
     // 1. We're not navigating from banner (no params.session)
-    // 2. Current activeTab is empty/default OR current activeTab doesn't exist in the new grouped data
-    // This prevents overriding user's manual tab selection
-    if (!params.session) {
-      const availableTabs = Object.keys(sortedGrouped);
-      const currentTabExists = activeTab && availableTabs.includes(activeTab);
+    // 2. We haven't set initial tab yet
+    // 3. User hasn't manually selected a tab
+    // 4. Current activeTab doesn't exist in the new grouped data (only if it's the initial default)
+    // This prevents overriding user's manual tab selection or session navigation
+    const availableTabs = Object.keys(sortedGrouped);
+    const currentTabExists = activeTab && availableTabs.includes(activeTab);
+    
+    // NEVER override if user manually selected a tab
+    if (userSelectedTabRef.current && currentTabExists) {
+      console.log('📅 User selected tab preserved:', activeTab);
+      return; // Don't change anything if user selected it
+    }
+    
+    // Only set initial tab if:
+    // - No session navigation in progress
+    // - User hasn't manually selected a tab
+    // - Haven't set initial tab yet
+    // - Current tab doesn't exist (meaning it's the default and needs to be set)
+    if (!params.session && !handledSessionRef.current && !hasSetInitialTabRef.current && !userSelectedTabRef.current && !currentTabExists && availableTabs.length > 0) {
+      // Always prioritize Day 1, then Day 2, then Day 3 - use dayOrder to ensure correct order
+      const dayOrder = ['Day 1 - November 12', 'Day 2 - November 13', 'Day 3 - November 14'];
+      const tabToSelect = dayOrder.find(dayKey => sortedGrouped[dayKey] && sortedGrouped[dayKey].length > 0) || availableTabs[0];
       
-      // Only set tab if current tab doesn't exist or is empty/default
-      if (!currentTabExists) {
-        const firstTab = 'Day 1 - November 12';
-        if (sortedGrouped[firstTab]) {
-          console.log('📅 Setting active tab to:', firstTab);
-          setActiveTab(firstTab);
-        } else if (availableTabs.length > 0) {
-          // Fallback: prioritize Day 1, then Day 2, then Day 3, otherwise first available
-          const day1Tab = availableTabs.find(tab => tab.includes('Day 1'));
-          const day2Tab = availableTabs.find(tab => tab.includes('Day 2'));
-          const day3Tab = availableTabs.find(tab => tab.includes('Day 3'));
-          const tabToSelect = day1Tab || day2Tab || day3Tab || availableTabs[0];
-          console.log('📅 Setting active tab to:', tabToSelect);
-          setActiveTab(tabToSelect);
-        }
+      if (tabToSelect) {
+        console.log('📅 Setting initial active tab to:', tabToSelect, '(from available tabs:', availableTabs, ')');
+        setActiveTab(tabToSelect);
+        hasSetInitialTabRef.current = true;
+      }
+    } else if (currentTabExists && !hasSetInitialTabRef.current && !userSelectedTabRef.current) {
+      // Tab already exists and is valid, mark as set so we don't override it
+      // This handles the case where the default tab already exists in the grouped data
+      // BUT: if it's not Day 1 and we haven't set initial tab yet, force Day 1
+      if (activeTab !== 'Day 1 - November 12' && sortedGrouped['Day 1 - November 12']) {
+        console.log('📅 Current tab is not Day 1, forcing Day 1:', activeTab, '-> Day 1 - November 12');
+        setActiveTab('Day 1 - November 12');
+        hasSetInitialTabRef.current = true;
+      } else {
+        console.log('📅 Current tab exists, marking as set:', activeTab);
+        hasSetInitialTabRef.current = true;
       }
     }
-  }, [agenda, loading, params.session]);
+  }, [agenda, loading]); // Removed activeTab from deps to prevent loops
 
   // Effect to handle scrolling to a specific session when clicking from banner
   useEffect(() => {
     // Only run if we have both session and scrollTo params
     if (!params.session || !params.scrollTo || Object.keys(agendaByDay).length === 0) {
-      handledSessionRef.current = null; // Reset when params are cleared
+      // Only reset handledSessionRef if params are actually cleared (not just initial load)
+      if (!params.session && !params.scrollTo) {
+        handledSessionRef.current = null;
+        // Don't reset hasSetInitialTabRef - user might have manually selected a tab
+      }
       return;
     }
 
-    const sessionId = params.session;
+    const sessionId = String(params.session); // Ensure it's a string
     
     // Skip if we've already handled this exact session and we're on the correct tab
-    if (handledSessionRef.current === sessionId) {
-      return;
+    if (handledSessionRef.current === sessionId && activeTab) {
+      // Double-check we're on the right tab
+      let foundDay: string | null = null;
+      for (const dayKey in agendaByDay) {
+        const dayItems = agendaByDay[dayKey];
+        if (dayItems.some(item => String(item.id) === sessionId)) {
+          foundDay = dayKey;
+          break;
+        }
+      }
+      if (foundDay === activeTab) {
+        return; // Already handled and on correct tab
+      }
     }
     
     // Find which day contains this session
+    // First, check if day was provided in URL params (from AgendaTracker)
     let sessionDayKey: string | null = null;
-    for (const dayKey in agendaByDay) {
-      const dayItems = agendaByDay[dayKey];
-      if (dayItems.some(item => String(item.id) === String(sessionId))) {
-        sessionDayKey = dayKey;
-        break;
+    let foundItem: AgendaItem | null = null;
+    
+    if (params.day) {
+      // Use the day from URL params if provided (more reliable)
+      const providedDay = decodeURIComponent(params.day);
+      if (agendaByDay[providedDay]) {
+        // Verify the session exists in this day
+        const dayItems = agendaByDay[providedDay];
+        foundItem = dayItems.find(item => {
+          const itemIdStr = String(item.id);
+          const sessionIdStr = String(sessionId);
+          return itemIdStr === sessionIdStr || 
+                 itemIdStr === String(Number(sessionIdStr)) ||
+                 String(Number(itemIdStr)) === sessionIdStr ||
+                 item.id === Number(sessionIdStr) ||
+                 Number(itemIdStr) === Number(sessionIdStr);
+        }) || null;
+        
+        if (foundItem) {
+          sessionDayKey = providedDay;
+          console.log(`✅ Using provided day from URL: ${providedDay} for session ${sessionId}`);
+        } else {
+          console.warn(`⚠️ Session ${sessionId} not found in provided day ${providedDay}, searching all days...`);
+        }
+      }
+    }
+    
+    // If not found using provided day, search in correct order (Day 1, Day 2, Day 3)
+    if (!sessionDayKey) {
+      const dayOrder = ['Day 1 - November 12', 'Day 2 - November 13', 'Day 3 - November 14'];
+      
+      console.log(`🔍 Searching for session ${sessionId} in agenda...`);
+      console.log(`📅 Available days:`, Object.keys(agendaByDay));
+      console.log(`📅 Day counts:`, dayOrder.map(day => ({ day, count: agendaByDay[day]?.length || 0 })));
+      
+      // First, try searching in the ordered days
+      for (const dayKey of dayOrder) {
+        if (!agendaByDay[dayKey]) continue;
+        
+        const dayItems = agendaByDay[dayKey];
+        foundItem = dayItems.find(item => {
+          // Try multiple ID comparison methods
+          const itemIdStr = String(item.id);
+          const sessionIdStr = String(sessionId);
+          const matches = itemIdStr === sessionIdStr || 
+                          itemIdStr === String(Number(sessionIdStr)) ||
+                          String(Number(itemIdStr)) === sessionIdStr ||
+                          item.id === Number(sessionIdStr) ||
+                          Number(itemIdStr) === Number(sessionIdStr);
+          
+          if (matches) {
+            console.log(`✅ Found match in ${dayKey}:`, {
+              itemId: item.id,
+              itemIdStr,
+              sessionId,
+              sessionIdStr,
+              title: item.title?.substring(0, 50),
+            });
+          }
+          
+          return matches;
+        }) || null;
+        
+        if (foundItem) {
+          sessionDayKey = dayKey;
+          console.log(`🎯 Session ${sessionId} found in ${dayKey}`);
+          break;
+        }
+      }
+      
+      // If not found in ordered days, try all days as fallback
+      if (!sessionDayKey) {
+        console.log(`⚠️ Not found in ordered days, searching all days...`);
+        for (const dayKey in agendaByDay) {
+          if (dayOrder.includes(dayKey)) continue; // Already searched
+          
+          const dayItems = agendaByDay[dayKey];
+          foundItem = dayItems.find(item => {
+            const itemIdStr = String(item.id);
+            const sessionIdStr = String(sessionId);
+            return itemIdStr === sessionIdStr || 
+                   itemIdStr === String(Number(sessionIdStr)) ||
+                   String(Number(itemIdStr)) === sessionIdStr ||
+                   item.id === Number(sessionIdStr) ||
+                   Number(itemIdStr) === Number(sessionIdStr);
+          }) || null;
+          
+          if (foundItem) {
+            sessionDayKey = dayKey;
+            console.log(`🎯 Session ${sessionId} found in ${dayKey} (fallback)`);
+            break;
+          }
+        }
       }
     }
 
     if (!sessionDayKey) {
-      console.warn(`Session with ID ${sessionId} not found in agenda`);
+      console.error(`❌ Session with ID ${sessionId} not found in agenda!`);
+      console.error(`📋 Available session IDs by day:`, 
+        Object.entries(agendaByDay).map(([day, items]) => ({
+          day,
+          ids: items.map(item => ({ id: item.id, title: item.title?.substring(0, 30) }))
+        }))
+      );
       return;
     }
 
     // Set the active tab to the session's day if it's different
     if (activeTab !== sessionDayKey) {
-      console.log(`Setting active tab to ${sessionDayKey} for session ${sessionId}`);
+      console.log(`📅 Setting active tab to ${sessionDayKey} for session ${sessionId} (was ${activeTab})`);
       setActiveTab(sessionDayKey);
       // Don't mark as handled yet - wait until we're on the correct tab
       // Return early - the effect will run again when activeTab changes
@@ -567,77 +697,96 @@ export default function BSL2025AgendaScreen() {
     // We're on the correct tab, mark as handling and proceed to scroll
     handledSessionRef.current = sessionId;
 
-    // Wait for layout to render after tab is set
-    const scrollTimeout = setTimeout(() => {
+    // Function to attempt scrolling
+    const attemptScroll = (attemptNumber: number = 1, maxAttempts: number = 5) => {
       const sessionRef = sessionItemRefs.current[sessionId];
-      if (sessionRef && scrollViewRef.current) {
-        // Use measureLayout to get the position of the session item
+      
+      if (!sessionRef) {
+        console.warn(`[Scroll] Attempt ${attemptNumber}: Session ref not found for ID: ${sessionId}`);
+        if (attemptNumber < maxAttempts) {
+          // Retry with exponential backoff
+          setTimeout(() => attemptScroll(attemptNumber + 1, maxAttempts), 200 * attemptNumber);
+        } else {
+          console.error(`[Scroll] Failed to find session ref after ${maxAttempts} attempts`);
+        }
+        return;
+      }
+      
+      if (!scrollViewRef.current) {
+        console.warn(`[Scroll] Attempt ${attemptNumber}: ScrollView ref not found`);
+        if (attemptNumber < maxAttempts) {
+          setTimeout(() => attemptScroll(attemptNumber + 1, maxAttempts), 200 * attemptNumber);
+        }
+        return;
+      }
+
+      // Use measureLayout to get the position of the session item
+      try {
         sessionRef.measureLayout(
           scrollViewRef.current as any,
           (x, y, width, height) => {
-            console.log(`Scrolling to session ${sessionId} at y: ${y}`);
-            // Scroll with some offset for better visibility
+            console.log(`[Scroll] ✅ Successfully measured session ${sessionId}:`, {
+              x,
+              y,
+              width,
+              height,
+              scrollY: y - 150, // Offset by 150px for header/tabs
+            });
+            
+            // Calculate scroll position with proper offset
+            // Account for header, tabs, and search bar
+            const headerOffset = 150; // Approximate header + tabs height
+            const scrollY = Math.max(0, y - headerOffset);
+            
             scrollViewRef.current?.scrollTo({ 
-              y: Math.max(0, y - 100), // Offset by 100px from top
+              y: scrollY,
               animated: true 
             });
+            
+            console.log(`[Scroll] Scrolled to y: ${scrollY} for session ${sessionId}`);
             
             // Clear URL parameters after scrolling to prevent re-triggering
             setTimeout(() => {
               router.replace('/events/bsl2025/agenda', { scroll: false });
-            }, 500);
+            }, 1000);
           },
           (error) => {
-            console.error('Error measuring session layout:', error);
-            // Fallback: try scrolling after a longer delay
-            setTimeout(() => {
-              const retryRef = sessionItemRefs.current[sessionId];
-              if (retryRef && scrollViewRef.current) {
-                retryRef.measureLayout(
-                  scrollViewRef.current as any,
-                  (x, y, width, height) => {
-                    scrollViewRef.current?.scrollTo({ 
-                      y: Math.max(0, y - 100),
-                      animated: true 
-                    });
-                    // Clear URL parameters after scrolling
-                    setTimeout(() => {
-                      router.replace('/events/bsl2025/agenda', { scroll: false });
-                    }, 500);
-                  },
-                  () => {}
-                );
-              }
-            }, 1000);
+            console.error(`[Scroll] Error measuring session layout (attempt ${attemptNumber}):`, error);
+            if (attemptNumber < maxAttempts) {
+              // Retry with exponential backoff
+              setTimeout(() => attemptScroll(attemptNumber + 1, maxAttempts), 300 * attemptNumber);
+            } else {
+              console.error(`[Scroll] Failed to measure layout after ${maxAttempts} attempts`);
+            }
           }
         );
-      } else {
-        console.warn(`Session ref not found for ID: ${sessionId}, retrying...`);
-        // Retry after a short delay if ref not found yet
-        setTimeout(() => {
-          const retryRef = sessionItemRefs.current[sessionId];
-          if (retryRef && scrollViewRef.current) {
-            retryRef.measureLayout(
-              scrollViewRef.current as any,
-              (x, y, width, height) => {
-                scrollViewRef.current?.scrollTo({ 
-                  y: Math.max(0, y - 100),
-                  animated: true 
-                });
-                // Clear URL parameters after scrolling
-                setTimeout(() => {
-                  router.replace('/events/bsl2025/agenda', { scroll: false });
-                }, 500);
-              },
-              () => {}
-            );
-          }
-        }, 500);
+      } catch (error) {
+        console.error(`[Scroll] Exception during measureLayout (attempt ${attemptNumber}):`, error);
+        if (attemptNumber < maxAttempts) {
+          setTimeout(() => attemptScroll(attemptNumber + 1, maxAttempts), 300 * attemptNumber);
+        }
       }
-    }, 400); // Wait for tab content to render
+    };
 
-    return () => clearTimeout(scrollTimeout);
-  }, [params.session, params.scrollTo, agendaByDay, activeTab, router]);
+    // Wait for layout to render after tab is set
+    // Use InteractionManager to wait for all interactions to complete
+    let timeoutId: NodeJS.Timeout | null = null;
+    const interactionHandle = InteractionManager.runAfterInteractions(() => {
+      // Additional delay to ensure DOM is fully rendered
+      timeoutId = setTimeout(() => {
+        attemptScroll(1, 5);
+      }, 600); // Increased from 400ms to 600ms
+    });
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (interactionHandle) {
+        interactionHandle.cancel();
+      }
+    };
+  }, [params.session, params.scrollTo, agendaByDay, activeTab]); // Removed router to prevent infinite loops
 
   // Function to clean session titles by removing type prefixes
   const cleanSessionTitle = (title: string) => {
@@ -1148,7 +1297,16 @@ export default function BSL2025AgendaScreen() {
                     styles.tab,
                     activeTab === dayKey && styles.activeTab
                   ]}
-                  onPress={() => setActiveTab(dayKey)}
+                  onPress={() => {
+                    userSelectedTabRef.current = true; // Mark as user-selected
+                    // Clear URL query parameters when user manually switches tabs
+                    // This prevents the scrolling effect from interfering with manual tab selection
+                    if (params.session || params.scrollTo) {
+                      handledSessionRef.current = null; // Reset session ref
+                      router.replace('/events/bsl2025/agenda', { scroll: false });
+                    }
+                    setActiveTab(dayKey);
+                  }}
                 >
                   <Text style={[
                     styles.tabLabel,
@@ -1201,7 +1359,7 @@ export default function BSL2025AgendaScreen() {
                 return dayItems.some(dayItem => String((dayItem as any).id) === String((item as any).id));
               });
               
-              console.log('📅 Rendering filtered agenda items for', activeTab, ':', filteredItems.length, 'items');
+              // Removed console.log to prevent infinite re-renders
               
               if (filteredItems.length === 0) {
                 return (

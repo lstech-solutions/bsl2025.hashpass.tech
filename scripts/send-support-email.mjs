@@ -25,7 +25,7 @@ async function sendSupportEmail() {
   const smtpUser = process.env.NODEMAILER_USER;
   const smtpPass = process.env.NODEMAILER_PASS;
   const fromEmail = process.env.NODEMAILER_FROM;
-  const toEmail = 'support@hashpass.tech';
+  const toEmail = 'hash@lstech.solutions';
 
   const isBrevo = smtpHost.includes('brevo.com') || smtpHost.includes('sendinblue.com');
 
@@ -155,6 +155,13 @@ async function sendSupportEmail() {
         </ul>
       </div>
       
+      <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ff9500;">
+        <h4 style="color: #856404; margin-top: 0; font-size: 18px;">⚠️ Importante para Ponentes</h4>
+        <p style="margin-top: 10px; color: #856404;">
+          Si eres ponente y no tienes el estatus de ponente y/o acceso VIP mostrado en tu sección de pases en HashPass, por favor contacta a soporte o envía un correo con tu correo actual para configurar correctamente tus credenciales y permitirte aceptar solicitudes de reunión.
+        </p>
+      </div>
+      
       <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
         <h4 style="color: #0c5460; margin-top: 0; font-size: 18px;">🧩 ¿Necesitas ayuda?</h4>
         <p style="margin-top: 10px; color: #0c5460;">Nuestro equipo está disponible para apoyarte:</p>
@@ -241,6 +248,10 @@ Si la página no carga correctamente:
   * Mac: Cmd + Shift + R
 - O abre la página en una ventana de incógnito
 
+⚠️ Importante para Ponentes
+
+Si eres ponente y no tienes el estatus de ponente y/o acceso VIP mostrado en tu sección de pases en HashPass, por favor contacta a soporte o envía un correo con tu correo actual para configurar correctamente tus credenciales y permitirte aceptar solicitudes de reunión.
+
 🧩 ¿Necesitas ayuda?
 
 Nuestro equipo está disponible para apoyarte:
@@ -255,18 +266,15 @@ https://hashpass.co
   `;
 
   try {
-    const ccEmails = ['r@Blockchainsummit.la', 'rodrigo@sainz.cl'];
     console.log(`\n📧 Email Configuration:`);
     console.log(`   From: ${fromEmail}`);
     console.log(`   To: ${toEmail}`);
-    console.log(`   CC: ${ccEmails.join(', ')}`);
     console.log(`   Subject: ${subject}\n`);
     console.log(`📤 Sending email...`);
     
     const mailOptions = {
       from: `HashPass <${fromEmail}>`,
       to: toEmail,
-      cc: ccEmails,
       subject: subject,
       html: htmlContent,
       text: textContent,
@@ -276,8 +284,7 @@ https://hashpass.co
 
     console.log(`\n✅ Email sent successfully!`);
     console.log(`📬 Message ID: ${info.messageId}`);
-    console.log(`📧 Sent to: ${toEmail}`);
-    console.log(`📋 CC sent to: ${ccEmails.join(', ')}\n`);
+    console.log(`📧 Sent to: ${toEmail}\n`);
     
     return { success: true, messageId: info.messageId };
   } catch (error) {

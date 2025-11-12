@@ -480,7 +480,8 @@
       "bePatient": {
         "title": "Soyez Patient",
         "description": "Donnez aux conférenciers le temps de répondre à vos demandes"
-      }
+      },
+      "summary": "5 conseils utiles pour un meilleur réseautage"
     },
     "recentActivity": {
       "title": "Activité Récente",

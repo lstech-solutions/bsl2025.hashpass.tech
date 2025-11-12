@@ -480,7 +480,8 @@
       "bePatient": {
         "title": "인내심 갖기",
         "description": "연사가 요청에 응답할 시간을 주세요"
-      }
+      },
+      "summary": "더 나은 네트워킹을 위한 5가지 유용한 팁"
     },
     "recentActivity": {
       "title": "최근 활동",

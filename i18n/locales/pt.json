@@ -480,7 +480,8 @@
       "bePatient": {
         "title": "Seja Paciente",
         "description": "Dê tempo aos palestrantes para responderem às suas solicitações"
-      }
+      },
+      "summary": "5 dicas úteis para um melhor networking"
     },
     "recentActivity": {
       "title": "Atividade Recente",

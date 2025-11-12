@@ -549,7 +549,8 @@
       "bePatient": {
         "title": "Sé Paciente",
         "description": "Da tiempo a los ponentes para responder a tus solicitudes"
-      }
+      },
+      "summary": "5 consejos útiles para un mejor networking"
     },
     "recentActivity": {
       "title": "Actividad Reciente",

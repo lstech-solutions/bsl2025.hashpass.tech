@@ -550,7 +550,8 @@
       "bePatient": {
         "title": "Be Patient",
         "description": "Give speakers time to respond to your requests"
-      }
+      },
+      "summary": "5 helpful tips for better networking"
     },
     "recentActivity": {
       "title": "Recent Activity",

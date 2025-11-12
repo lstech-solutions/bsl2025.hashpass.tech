@@ -130,83 +130,83 @@ export default function NetworkingView() {
     {
       icon: 'edit',
       color: '#FFC107',
-      title: 'Be Specific',
-      description: 'Include clear intentions in your meeting requests'
+      title: t({ id: 'networking.tips.beSpecific.title', message: 'Be Specific' }),
+      description: t({ id: 'networking.tips.beSpecific.description', message: 'Include clear intentions in your meeting requests' })
     },
     {
       icon: 'schedule',
       color: '#4CAF50',
-      title: 'Follow Up',
-      description: 'Send follow-up messages for pending requests'
+      title: t({ id: 'networking.tips.followUp.title', message: 'Follow Up' }),
+      description: t({ id: 'networking.tips.followUp.description', message: 'Send follow-up messages for pending requests' })
     },
     {
       icon: 'people',
       color: '#2196F3',
-      title: 'Network Smart',
-      description: 'Focus on quality connections over quantity'
+      title: t({ id: 'networking.tips.networkSmart.title', message: 'Network Smart' }),
+      description: t({ id: 'networking.tips.networkSmart.description', message: 'Focus on quality connections over quantity' })
     },
     {
       icon: 'star',
       color: '#9C27B0',
-      title: 'Be Professional',
-      description: 'Always maintain a professional tone in your messages'
+      title: t({ id: 'networking.tips.beProfessional.title', message: 'Be Professional' }),
+      description: t({ id: 'networking.tips.beProfessional.description', message: 'Always maintain a professional tone in your messages' })
     },
     {
       icon: 'timeline',
       color: '#FF5722',
-      title: 'Be Patient',
-      description: 'Give speakers time to respond to your requests'
+      title: t({ id: 'networking.tips.bePatient.title', message: 'Be Patient' }),
+      description: t({ id: 'networking.tips.bePatient.description', message: 'Give speakers time to respond to your requests' })
     }
   ];
 
   const quickAccessItems: QuickAccessItem[] = [
     {
       id: 'find-speakers',
-      title: 'Find Speakers',
+      title: t({ id: 'networking.quickAccessItems.findSpeakers.title', message: 'Find Speakers' }),
       icon: 'search',
       color: '#FF9800',
       route: '/events/bsl2025/speakers',
-      subtitle: 'Browse all speakers',
+      subtitle: t({ id: 'networking.quickAccessItems.findSpeakers.subtitle', message: 'Browse all speakers' }),
     },
     {
       id: 'my-requests',
-      title: 'Your Request',
+      title: t({ id: 'networking.quickAccessItems.yourRequest.title', message: 'Your Request' }),
       icon: 'mail',
       color: '#4CAF50',
       route: '/events/bsl2025/networking/my-requests',
-      subtitle: 'View sent and incoming requests',
+      subtitle: t({ id: 'networking.quickAccessItems.yourRequest.subtitle', message: 'View sent and incoming requests' }),
     },
     {
       id: 'my-meetings',
-      title: 'My Meetings',
+      title: t({ id: 'networking.quickAccessItems.myMeetings.title', message: 'My Meetings' }),
       icon: 'event',
       color: '#3F51B5',
       route: '/events/bsl2025/networking/my-meetings',
-      subtitle: 'Your accepted/created meetings',
+      subtitle: t({ id: 'networking.quickAccessItems.myMeetings.subtitle', message: 'Your accepted/created meetings' }),
     },
     {
       id: 'my-schedule',
-      title: 'My Schedule',
+      title: t({ id: 'networking.quickAccessItems.mySchedule.title', message: 'My Schedule' }),
       icon: 'event-note',
       color: '#9C27B0',
       route: '/events/bsl2025/networking/my-schedule',
-      subtitle: 'View and manage your schedule',
+      subtitle: t({ id: 'networking.quickAccessItems.mySchedule.subtitle', message: 'View and manage your schedule' }),
     },
     {
       id: 'blocked-users',
-      title: 'Blocked Users',
+      title: t({ id: 'networking.quickAccessItems.blockedUsers.title', message: 'Blocked Users' }),
       icon: 'block',
       color: '#F44336',
       route: '/events/bsl2025/networking/blocked',
-      subtitle: 'Manage blocked users',
+      subtitle: t({ id: 'networking.quickAccessItems.blockedUsers.subtitle', message: 'Manage blocked users' }),
     },
     {
       id: 'analytics',
-      title: 'Analytics',
+      title: t({ id: 'networking.quickAccessItems.analytics.title', message: 'Analytics' }),
       icon: 'bar-chart',
       color: '#607D8B',
       route: '/events/bsl2025/networking/analytics',
-      subtitle: 'View networking statistics',
+      subtitle: t({ id: 'networking.quickAccessItems.analytics.subtitle', message: 'View networking statistics' }),
     },
   ];
 
@@ -601,7 +601,7 @@ export default function NetworkingView() {
               style={styles.headerIcon}
             />
             <View style={styles.tipsHeaderText}>
-              <Text style={styles.tipsSectionTitle}>Networking Tips</Text>
+              <Text style={styles.tipsSectionTitle}>{t({ id: 'networking.tips.title', message: 'Networking Tips' })}</Text>
               <Animated.View 
                 style={[
                   styles.tipTextRow,
@@ -616,7 +616,7 @@ export default function NetworkingView() {
                 />
                 <Text style={styles.tipsSummary}>
                   {tipsExpanded 
-                    ? '5 helpful tips for better networking' 
+                    ? t({ id: 'networking.tips.summary', message: '5 helpful tips for better networking' })
                     : `${networkingTips[currentTipIndex]?.title}: ${networkingTips[currentTipIndex]?.description}`
                   }
                 </Text>

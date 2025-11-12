@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform, Image, TouchableOpacity, Linking } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { createSessionFromUrl, supabase } from '../../../lib/supabase';
@@ -10,12 +10,29 @@ export default function AuthCallback() {
     const params = useLocalSearchParams();
     const [status, setStatus] = useState<'processing' | 'success' | 'warning' | 'error' | 'show_download'>('processing');
     const [message, setMessage] = useState('Processing authentication...');
+    
+    // Processing guard to prevent duplicate processing
+    const isProcessingRef = useRef(false);
+    const hasNavigatedRef = useRef(false);
 
     useEffect(() => {
+        // Prevent duplicate processing
+        if (isProcessingRef.current || hasNavigatedRef.current) {
+            console.log('⏭️ Auth callback already processing or navigated, skipping');
+            return;
+        }
+        
         handleAuthCallback();
     }, []);
 
     const handleAuthCallback = async () => {
+        // Set processing flag immediately
+        if (isProcessingRef.current) {
+            console.log('⏭️ Already processing auth callback, skipping');
+            return;
+        }
+        isProcessingRef.current = true;
+        
         try {
             setStatus('processing');
             // Detect authentication type from URL params
@@ -78,9 +95,12 @@ export default function AuthCallback() {
                     : 'Google';
                 setMessage(`✅ ${authType} authentication successful!`);
 
-                setTimeout(() => {
-                    router.replace('/(shared)/dashboard/explore');
-                }, 1000);
+                if (!hasNavigatedRef.current) {
+                    hasNavigatedRef.current = true;
+                    setTimeout(() => {
+                        router.replace('/(shared)/dashboard/explore');
+                    }, 1000);
+                }
             } else {
                 console.log('⚠️ No session created but no error - checking for existing session');
 
@@ -91,9 +111,12 @@ export default function AuthCallback() {
                     setStatus('success');
                     setMessage('✅ Authentication successful!');
 
-                    setTimeout(() => {
-                        router.replace('/(shared)/dashboard/explore');
-                    }, 1000);
+                    if (!hasNavigatedRef.current) {
+                        hasNavigatedRef.current = true;
+                        setTimeout(() => {
+                            router.replace('/(shared)/dashboard/explore');
+                        }, 1000);
+                    }
                 } else {
                     throw new Error('No session could be established');
                 }
@@ -107,18 +130,26 @@ export default function AuthCallback() {
                 setStatus('warning');
                 setMessage('✅ Google authentication successful!\n\n⚠️ Email not provided by Google (this is normal)');
 
-                setTimeout(() => {
-                    router.replace('/(shared)/dashboard/explore');
-                }, 3000);
+                if (!hasNavigatedRef.current) {
+                    hasNavigatedRef.current = true;
+                    setTimeout(() => {
+                        router.replace('/(shared)/dashboard/explore');
+                    }, 3000);
+                }
                 return;
             }
 
             setStatus('error');
             setMessage(`❌ Authentication failed: ${error.message}`);
 
-            setTimeout(() => {
-                router.replace('/');
-            }, 5000);
+            if (!hasNavigatedRef.current) {
+                hasNavigatedRef.current = true;
+                setTimeout(() => {
+                    router.replace('/');
+                }, 5000);
+            }
+        } finally {
+            isProcessingRef.current = false;
         }
     };
 

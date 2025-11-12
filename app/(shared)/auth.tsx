@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation, getCurrentLocale } from '../../i18n/i18n';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Platform, Image, ScrollView } from 'react-native';
@@ -15,6 +15,8 @@ import { useToastHelpers } from '../../contexts/ToastContext';
 import { getEmailProviderUrl, openEmailProvider } from '../../lib/email-provider';
 import PrivacyTermsModal from '../../components/PrivacyTermsModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { memoryManager } from '../../lib/memory-manager';
+import { throttle } from '../../lib/performance-utils';
 
 type AuthMethod = 'magiclink' | 'otp';
 
@@ -35,6 +37,12 @@ export default function AuthScreen() {
   const [modalType, setModalType] = useState<'privacy' | 'terms'>('privacy');
   const [welcomeEmailSending, setWelcomeEmailSending] = useState<Set<string>>(new Set()); // Track users currently sending welcome email
   const styles = getStyles(isDark, colors);
+  
+  // Processing guards to prevent duplicate processing
+  const isProcessingRef = useRef(false);
+  const hasNavigatedRef = useRef(false);
+  const processedUsersRef = useRef<Set<string>>(new Set());
+  const subscriptionIdRef = useRef<string | null>(null);
 
   // Check wallet availability on web
   useEffect(() => {
@@ -45,10 +53,28 @@ export default function AuthScreen() {
   }, []);
 
   useEffect(() => {
-    const handleAuthChange = async (event: AuthChangeEvent, session: Session | null) => {
+    // Throttled auth change handler to prevent rapid processing
+    const throttledHandleAuthChange = throttle(async (event: AuthChangeEvent, session: Session | null) => {
+      // Prevent duplicate processing
+      if (isProcessingRef.current || hasNavigatedRef.current) {
+        console.log('⏭️ Auth change already processing or navigated, skipping');
+        return;
+      }
+
       console.log(`🔐 Auth event: ${event}, user: ${session?.user?.id || 'none'}`);
+      
       if (session?.user) {
+        const userId = session.user.id;
+        
+        // Skip if already processed this user
+        if (processedUsersRef.current.has(userId)) {
+          console.log(`⏭️ User ${userId} already processed, skipping`);
+          return;
+        }
+
         if (event === 'SIGNED_IN') {
+          isProcessingRef.current = true;
+          processedUsersRef.current.add(userId);
           console.log(`🔐 SIGNED_IN event for user: ${session.user.id}, email: ${session.user.email}`);
           try {
             console.log('🎫 Creating default pass for user:', session.user.id);
@@ -61,10 +87,16 @@ export default function AuthScreen() {
             if (error) {
               console.error('❌ Error creating default pass:', error);
               // Continue to dashboard even if pass creation fails
-              router.replace('/(shared)/dashboard/explore');
+              if (!hasNavigatedRef.current) {
+                hasNavigatedRef.current = true;
+                router.replace('/(shared)/dashboard/explore');
+              }
             } else if (passId) {
               console.log('✅ Default pass created successfully:', passId);
-              router.replace('/(shared)/dashboard/explore');
+              if (!hasNavigatedRef.current) {
+                hasNavigatedRef.current = true;
+                router.replace('/(shared)/dashboard/explore');
+              }
             } else {
               console.warn('⚠️ Pass creation returned null - pass may already exist or creation failed silently');
               // Check if pass already exists
@@ -82,7 +114,10 @@ export default function AuthScreen() {
               } else {
                 console.warn('⚠️ No pass found - user may need to create one manually');
               }
-              router.replace('/(shared)/dashboard/explore');
+              if (!hasNavigatedRef.current) {
+                hasNavigatedRef.current = true;
+                router.replace('/(shared)/dashboard/explore');
+              }
             }
 
             // Send welcome email if user hasn't received it yet (only if email is real, not wallet address)
@@ -208,20 +243,43 @@ export default function AuthScreen() {
           } catch (error) {
             console.error('❌ Error in pass creation:', error);
             // Continue to dashboard even if pass creation fails
-            router.replace('/(shared)/dashboard/explore');
+            if (!hasNavigatedRef.current) {
+              hasNavigatedRef.current = true;
+              router.replace('/(shared)/dashboard/explore');
+            }
+          } finally {
+            isProcessingRef.current = false;
           }
         } else {
-          router.replace('/(shared)/dashboard/explore');
+          if (!hasNavigatedRef.current) {
+            hasNavigatedRef.current = true;
+            router.replace('/(shared)/dashboard/explore');
+          }
         }
       }
-    };
+    }, 1000); // Throttle to max once per second
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      throttledHandleAuthChange(event, session);
+    });
+
+    // Register with memory manager for cleanup
+    const subscriptionId = `auth-screen-${Date.now()}`;
+    subscriptionIdRef.current = subscriptionId;
+    memoryManager.registerSubscription(subscriptionId, () => {
+      subscription.unsubscribe();
+    });
 
     return () => {
+      if (subscriptionIdRef.current) {
+        memoryManager.unregisterSubscription(subscriptionIdRef.current);
+        subscriptionIdRef.current = null;
+      }
       subscription.unsubscribe();
+      isProcessingRef.current = false;
+      hasNavigatedRef.current = false;
     };
-  }, []);
+  }, [router]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -23,12 +23,12 @@ export const useAuth = () => {
       setIsLoading(false);
     });
 
-    // Throttle auth state changes to prevent rapid updates
+    // Throttle auth state changes to prevent rapid updates (reduced from 500ms to 100ms for faster response)
     const throttledAuthChange = throttle((_event: string, session: Session | null) => {
       setUser(session?.user ?? null);
       setIsLoggedIn(!!session?.user);
       setIsLoading(false);
-    }, 500); // Throttle to max once per 500ms
+    }, 100); // Throttle to max once per 100ms for faster auth updates
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {

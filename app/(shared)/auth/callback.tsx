@@ -97,9 +97,8 @@ export default function AuthCallback() {
 
                 if (!hasNavigatedRef.current) {
                     hasNavigatedRef.current = true;
-                    setTimeout(() => {
-                        router.replace('/(shared)/dashboard/explore');
-                    }, 1000);
+                    // Navigate immediately, no delay
+                    router.replace('/(shared)/dashboard/explore');
                 }
             } else {
                 console.log('⚠️ No session created but no error - checking for existing session');
@@ -113,9 +112,8 @@ export default function AuthCallback() {
 
                     if (!hasNavigatedRef.current) {
                         hasNavigatedRef.current = true;
-                        setTimeout(() => {
-                            router.replace('/(shared)/dashboard/explore');
-                        }, 1000);
+                        // Navigate immediately, no delay
+                        router.replace('/(shared)/dashboard/explore');
                     }
                 } else {
                     throw new Error('No session could be established');
@@ -132,9 +130,8 @@ export default function AuthCallback() {
 
                 if (!hasNavigatedRef.current) {
                     hasNavigatedRef.current = true;
-                    setTimeout(() => {
-                        router.replace('/(shared)/dashboard/explore');
-                    }, 3000);
+                    // Navigate immediately, no delay
+                    router.replace('/(shared)/dashboard/explore');
                 }
                 return;
             }
@@ -144,9 +141,10 @@ export default function AuthCallback() {
 
             if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
+                // Navigate after short delay to show error message
                 setTimeout(() => {
                     router.replace('/');
-                }, 5000);
+                }, 2000); // Reduced from 5000ms to 2000ms
             }
         } finally {
             isProcessingRef.current = false;

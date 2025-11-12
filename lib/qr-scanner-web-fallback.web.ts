@@ -146,11 +146,50 @@ class WebQRScannerFallback {
       let videoElement: HTMLVideoElement;
       if (options.videoElement) {
         if (typeof options.videoElement === 'string') {
-          const element = document.getElementById(options.videoElement);
-          if (!element || !(element instanceof HTMLVideoElement)) {
-            throw new Error(`Video element not found: ${options.videoElement}`);
+          // Try to find element by ID or data attribute
+          let element = document.getElementById(options.videoElement) ||
+                       document.querySelector(`[data-scanner-id="${options.videoElement}"]`) as HTMLElement;
+          
+          // If element doesn't exist, create a container
+          if (!element) {
+            const container = document.createElement('div');
+            container.id = options.videoElement;
+            container.style.width = '100%';
+            container.style.height = '100%';
+            container.style.position = 'relative';
+            container.setAttribute('data-scanner-id', options.videoElement);
+            
+            // Try to find parent container
+            const parent = document.querySelector(`[data-testid="scanner-wrapper"]`) ||
+                          document.querySelector('.scanner-wrapper');
+            
+            if (parent) {
+              parent.appendChild(container);
+              element = container;
+            } else {
+              throw new Error(`Could not find container for scanner: ${options.videoElement}`);
+            }
           }
-          videoElement = element;
+          
+          // If element is not a video, create a video inside it
+          if (element instanceof HTMLVideoElement) {
+            videoElement = element;
+          } else {
+            // Create video element inside the container
+            const existingVideo = element.querySelector('video') as HTMLVideoElement;
+            if (existingVideo) {
+              videoElement = existingVideo;
+            } else {
+              videoElement = document.createElement('video');
+              videoElement.style.width = '100%';
+              videoElement.style.height = '100%';
+              videoElement.style.objectFit = 'cover';
+              videoElement.setAttribute('autoplay', 'true');
+              videoElement.setAttribute('playsinline', 'true');
+              videoElement.setAttribute('muted', 'true');
+              element.appendChild(videoElement);
+            }
+          }
         } else {
           videoElement = options.videoElement;
         }
@@ -192,7 +231,8 @@ class WebQRScannerFallback {
       // Start continuous scanning using ZXing
       const scanInterval = options.scanInterval || 500;
       const continuous = options.continuous !== false;
-      const { NotFoundException: ZXingNotFoundException } = await this.loadZXing();
+      const zxingModule = await this.loadZXing();
+      const NotFoundException = zxingModule?.NotFoundException;
 
       // Use ZXing's decodeFromVideoDevice which handles continuous scanning
       reader.decodeFromVideoDevice(
@@ -210,10 +250,36 @@ class WebQRScannerFallback {
             if (!continuous) {
               this.stopScanning();
             }
-          } else if (error && !(error instanceof ZXingNotFoundException)) {
-            // NotFoundException is normal when no QR code is detected
-            console.warn('ZXing scan error:', error);
-            onError?.(error);
+          } else if (error) {
+            // Check if it's a NotFoundException (normal when no QR code is detected)
+            // Use error name/type check instead of instanceof for dynamic imports
+            // instanceof doesn't work reliably with dynamically imported classes
+            let isNotFoundException = false;
+            
+            if (NotFoundException) {
+              try {
+                // Try instanceof first (might work in some cases)
+                isNotFoundException = error instanceof NotFoundException;
+              } catch (e) {
+                // instanceof failed, try other methods
+              }
+            }
+            
+            // Fallback checks for NotFoundException
+            if (!isNotFoundException) {
+              isNotFoundException = 
+                error?.name === 'NotFoundException' ||
+                error?.constructor?.name === 'NotFoundException' ||
+                (typeof error === 'object' && error !== null && 'name' in error && (error as any).name === 'NotFoundException') ||
+                (error?.message && typeof error.message === 'string' && error.message.includes('NotFoundException'));
+            }
+            
+            if (!isNotFoundException) {
+              // Only log non-NotFoundException errors
+              console.warn('ZXing scan error:', error);
+              onError?.(error);
+            }
+            // NotFoundException is normal when no QR code is detected - silently ignore
           }
         }
       );

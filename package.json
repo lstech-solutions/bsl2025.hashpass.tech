@@ -1,7 +1,7 @@
 {
   "name": "hashpass.tech",
   "main": "expo-router/entry",
-  "version": "1.6.27",
+  "version": "1.6.28",
   "scripts": {
     "start": "NODE_OPTIONS='--max-old-space-size=4096' expo start",
     "start:reset": "NODE_OPTIONS='--max-old-space-size=4096' expo start --clear",
@@ -104,6 +104,7 @@
     "expo-symbols": "~0.4.4",
     "expo-system-ui": "~5.0.7",
     "expo-web-browser": "~14.1.6",
+    "html5-qrcode": "^2.3.8",
     "i18n-js": "^4.5.1",
     "lightningcss": "^1.29.2",
     "lucide-react": "^0.548.0",

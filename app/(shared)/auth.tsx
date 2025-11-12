@@ -53,7 +53,7 @@ export default function AuthScreen() {
   }, []);
 
   useEffect(() => {
-    // Throttled auth change handler to prevent rapid processing
+    // Throttled auth change handler (reduced throttle for faster response)
     const throttledHandleAuthChange = throttle(async (event: AuthChangeEvent, session: Session | null) => {
       // Prevent duplicate processing
       if (isProcessingRef.current || hasNavigatedRef.current) {
@@ -93,6 +93,7 @@ export default function AuthScreen() {
               }
             } else if (passId) {
               console.log('✅ Default pass created successfully:', passId);
+              // Navigate immediately, don't wait
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
                 router.replace('/(shared)/dashboard/explore');
@@ -120,124 +121,85 @@ export default function AuthScreen() {
               }
             }
 
-            // Send welcome email if user hasn't received it yet (only if email is real, not wallet address)
+            // Send welcome email asynchronously (don't block navigation)
+            // This runs in the background and doesn't delay user experience
             const userEmail = session.user.email;
             if (userEmail && !userEmail.includes('@wallet.')) {
-              // Prevent duplicate sends: check if we're already sending for this user
               const userId = session.user.id;
               if (welcomeEmailSending.has(userId)) {
                 console.log(`⏭️ Welcome email already being sent for user ${userId}, skipping duplicate`);
-                return;
-              }
-              
-              // Mark as sending to prevent duplicates
-              setWelcomeEmailSending(prev => new Set(prev).add(userId));
-              
-              // Reset welcome email flag if user exists but hasn't received email
-              // This ensures existing users who haven't received the email will get it
-              try {
-                // First, reset the flag if needed (for existing users)
-                const { error: resetError } = await supabase.rpc('reset_welcome_email_if_not_sent', {
-                  p_user_id: userId
-                });
+              } else {
+                // Mark as sending to prevent duplicates
+                setWelcomeEmailSending(prev => new Set(prev).add(userId));
                 
-                if (resetError) {
-                  console.warn('⚠️ Error resetting welcome email flag:', resetError);
-                }
-                
-                // Wait a bit to ensure the reset operation completes
-                await new Promise(resolve => setTimeout(resolve, 100));
-                
-                // Double-check if email was already sent (after reset)
-                const { data: alreadySentCheck, error: checkError } = await supabase.rpc('has_email_been_sent', {
-                  p_user_id: userId,
-                  p_email_type: 'welcome'
-                } as any);
-                
-                if (checkError) {
-                  console.warn('⚠️ Error checking if email was sent:', checkError);
-                } else if (alreadySentCheck === true) {
-                  console.log(`ℹ️ Welcome email already sent to user ${userId}, skipping`);
-                  setWelcomeEmailSending(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(userId);
-                    return newSet;
-                  });
-                  return;
-                }
-                
-                // Get the current locale from AsyncStorage (user's selected language)
-                // This ensures the email is sent in the language the user has selected
-                let userLocale = 'en';
-                try {
-                  const savedLocale = await AsyncStorage.getItem('user_locale');
-                  if (savedLocale && ['en', 'es', 'ko', 'fr', 'pt', 'de'].includes(savedLocale)) {
-                    userLocale = savedLocale;
-                  } else {
-                    // Fallback to current i18n locale
-                    userLocale = getCurrentLocale() || 'en';
-                  }
-                } catch (error) {
-                  console.warn('⚠️ Could not get locale from AsyncStorage, using current locale:', error);
-                  userLocale = getCurrentLocale() || 'en';
-                }
-                
-                // Also try to get from user metadata as fallback
-                if (!userLocale || userLocale === 'en') {
-                  userLocale = session.user.user_metadata?.locale || userLocale || 'en';
-                }
-                
-                // Update user metadata with current locale if it's different
-                if (session.user.user_metadata?.locale !== userLocale) {
+                // Send email in background - don't await, let it run async
+                (async () => {
                   try {
-                    await supabase.auth.updateUser({
-                      data: { locale: userLocale }
+                    // Reset welcome email flag if needed (for existing users)
+                    await supabase.rpc('reset_welcome_email_if_not_sent', {
+                      p_user_id: userId
+                    }).catch(err => console.warn('⚠️ Error resetting welcome email flag:', err));
+                    
+                    // Check if email was already sent
+                    const { data: alreadySentCheck } = await supabase.rpc('has_email_been_sent', {
+                      p_user_id: userId,
+                      p_email_type: 'welcome'
+                    } as any).catch(() => ({ data: false }));
+                    
+                    if (alreadySentCheck === true) {
+                      console.log(`ℹ️ Welcome email already sent to user ${userId}, skipping`);
+                      setWelcomeEmailSending(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(userId);
+                        return newSet;
+                      });
+                      return;
+                    }
+                    
+                    // Get locale
+                    let userLocale = 'en';
+                    try {
+                      const savedLocale = await AsyncStorage.getItem('user_locale');
+                      if (savedLocale && ['en', 'es', 'ko', 'fr', 'pt', 'de'].includes(savedLocale)) {
+                        userLocale = savedLocale;
+                      } else {
+                        userLocale = getCurrentLocale() || 'en';
+                      }
+                    } catch {
+                      userLocale = getCurrentLocale() || 'en';
+                    }
+                    
+                    if (!userLocale || userLocale === 'en') {
+                      userLocale = session.user.user_metadata?.locale || userLocale || 'en';
+                    }
+                    
+                    // Update locale if needed (non-blocking)
+                    if (session.user.user_metadata?.locale !== userLocale) {
+                      supabase.auth.updateUser({
+                        data: { locale: userLocale }
+                      }).catch(err => console.warn('⚠️ Could not update user metadata with locale:', err));
+                    }
+                    
+                    // Send welcome email
+                    fetch('/api/auth/send-welcome-email', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId, email: userEmail, locale: userLocale }),
+                    }).then(res => res.json()).then(result => {
+                      if (result.success && !result.skipped && !result.alreadySent) {
+                        console.log('✅ Welcome email sent successfully');
+                      }
+                    }).catch(err => console.error('❌ Error sending welcome email:', err));
+                  } catch (emailError) {
+                    console.error('❌ Error in welcome email flow:', emailError);
+                  } finally {
+                    setWelcomeEmailSending(prev => {
+                      const newSet = new Set(prev);
+                      newSet.delete(userId);
+                      return newSet;
                     });
-                    console.log(`✅ Updated user metadata with locale: ${userLocale}`);
-                  } catch (updateError) {
-                    console.warn('⚠️ Could not update user metadata with locale:', updateError);
                   }
-                }
-                
-                // Then try to send welcome email - the API will check if it was already sent
-                console.log(`📧 Checking and sending welcome email for user: ${userEmail} with locale: ${userLocale}`);
-                const response = await fetch('/api/auth/send-welcome-email', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    userId: userId,
-                    email: userEmail,
-                    locale: userLocale
-                  }),
-                });
-
-                if (response.ok) {
-                  const result = await response.json();
-                  if (result.success && !result.skipped && !result.alreadySent) {
-                    console.log('✅ Welcome email sent successfully');
-                  } else if (result.skipped) {
-                    console.log('ℹ️ Welcome email skipped (wallet address)');
-                  } else if (result.alreadySent) {
-                    console.log('ℹ️ Welcome email already sent to this user');
-                  } else {
-                    console.log('ℹ️ Welcome email status:', result);
-                  }
-                } else {
-                  const errorText = await response.text();
-                  console.warn('⚠️ Failed to send welcome email:', errorText);
-                }
-              } catch (emailError) {
-                console.error('❌ Error sending welcome email:', emailError);
-                // Don't block user flow if email fails
-              } finally {
-                // Always remove from sending set
-                setWelcomeEmailSending(prev => {
-                  const newSet = new Set(prev);
-                  newSet.delete(userId);
-                  return newSet;
-                });
+                })();
               }
             }
           } catch (error) {
@@ -257,7 +219,7 @@ export default function AuthScreen() {
           }
         }
       }
-    }, 1000); // Throttle to max once per second
+    }, 300); // Throttle to max once per 300ms for faster auth processing
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       throttledHandleAuthChange(event, session);
@@ -474,14 +436,14 @@ export default function AuthScreen() {
               }
 
               showSuccess('Authentication Successful', 'Welcome! You have been signed in.');
-              await new Promise(resolve => setTimeout(resolve, 500));
+              // Navigate immediately, no delay
               router.replace('/(shared)/dashboard/explore');
               return;
             }
 
             if (verifyResult?.session) {
               showSuccess('Authentication Successful', 'Welcome! You have been signed in.');
-              await new Promise(resolve => setTimeout(resolve, 500));
+              // Navigate immediately, no delay
               router.replace('/(shared)/dashboard/explore');
               return;
             }
@@ -494,7 +456,7 @@ export default function AuthScreen() {
         }
       } else if (data?.session) {
         showSuccess('Authentication Successful', 'Welcome! You have been signed in.');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Navigate immediately, no delay
         router.replace('/(shared)/dashboard/explore');
       } else {
         showError('Verification Failed', 'Unable to create session. Please try again.');
@@ -544,7 +506,7 @@ export default function AuthScreen() {
         if (!verifyError && verifyData?.session) {
           setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
-          await new Promise(resolve => setTimeout(resolve, 100));
+          // Navigate immediately, no delay
           router.replace('/(shared)/dashboard/explore');
           return;
         }
@@ -567,7 +529,7 @@ export default function AuthScreen() {
               if (!retryError && retryData?.session) {
                 setLoading(false);
                 showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // Navigate immediately, no delay
                 router.replace('/(shared)/dashboard/explore');
                 return;
               }
@@ -633,7 +595,7 @@ export default function AuthScreen() {
         if (!verifyError && verifyData?.session) {
           setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
-          await new Promise(resolve => setTimeout(resolve, 100));
+          // Navigate immediately, no delay
           router.replace('/(shared)/dashboard/explore');
           return;
         }
@@ -656,7 +618,7 @@ export default function AuthScreen() {
               if (!retryError && retryData?.session) {
                 setLoading(false);
                 showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // Navigate immediately, no delay
                 router.replace('/(shared)/dashboard/explore');
                 return;
               }

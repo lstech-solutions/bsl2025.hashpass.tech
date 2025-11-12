@@ -16,6 +16,7 @@ const webOnlyPackages = [
   '@adraffy/ens-normalize',
   '@zxing/browser',
   '@zxing/library',
+  'html5-qrcode',
 ];
 
 // Store original resolveRequest if it exists
@@ -47,16 +48,26 @@ config.resolver = {
         }
       }
       
-      // Block web fallback module on native
+      // Block web scanner modules on native
       if (moduleName === './qr-scanner-web-fallback' || 
           moduleName === '../lib/qr-scanner-web-fallback' ||
-          context.originModulePath?.includes('qr-scanner-web-fallback')) {
+          moduleName === './qr-scanner-web-html5' ||
+          moduleName === '../lib/qr-scanner-web-html5' ||
+          context.originModulePath?.includes('qr-scanner-web-fallback') ||
+          context.originModulePath?.includes('qr-scanner-web-html5')) {
         return { type: 'empty' };
       }
       
       // Block any ZXing internal module resolution
       if (moduleName.includes('@zxing') || 
           context.originModulePath?.includes('@zxing')) {
+        return { type: 'empty' };
+      }
+      
+      // Block html5-qrcode on native
+      if (moduleName === 'html5-qrcode' || 
+          moduleName.startsWith('html5-qrcode/') ||
+          context.originModulePath?.includes('html5-qrcode')) {
         return { type: 'empty' };
       }
     }

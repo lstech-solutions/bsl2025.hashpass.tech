@@ -12,22 +12,29 @@ import { Platform } from 'react-native';
 import { BarCodeScanner, BarCodeScannerResult } from 'expo-barcode-scanner';
 import { cameraPermissionManager } from './camera-permissions';
 
-// Dynamic import for web fallback to avoid bundling ZXing on native
-let webQRScannerFallback: any = null;
+// Dynamic import for web scanners to avoid bundling on native
+let webQRScannerFallback: any = null; // ZXing (primary)
+let html5QRScanner: any = null; // html5-qrcode (fallback)
 let WebQRScanResult: any = null;
 
-// Only import web fallback on web platform
+// Only import web scanners on web platform
 // Using .web.ts extension ensures Metro only resolves this on web
 if (Platform.OS === 'web') {
   try {
-    // Use require to avoid static analysis
-    // Metro will automatically resolve .web.ts extension on web platform
+    // Primary: @zxing/browser (most robust)
     const webFallbackModule = require('./qr-scanner-web-fallback.web');
     webQRScannerFallback = webFallbackModule.webQRScannerFallback;
     WebQRScanResult = webFallbackModule.WebQRScanResult;
   } catch (e) {
-    // Ignore if module can't be loaded
-    console.warn('Web QR scanner fallback not available:', e);
+    console.warn('ZXing web scanner not available:', e);
+  }
+
+  try {
+    // Fallback: html5-qrcode
+    const html5Module = require('./qr-scanner-web-html5.web');
+    html5QRScanner = html5Module.html5QRScanner;
+  } catch (e) {
+    console.warn('html5-qrcode scanner fallback not available:', e);
   }
 }
 
@@ -55,7 +62,9 @@ class QRScannerService {
   private scanThrottle = 1000; // Default 1 second throttle
   private isScanning = false;
   private useWebFallback = false;
-  private webFallbackActive = false;
+  private webFallbackActive = false; // ZXing scanner active
+  private html5ScannerActive = false; // html5-qrcode fallback active
+  private currentVideoElement: HTMLElement | string | null = null;
 
   /**
    * Check if QR scanning is supported on this platform
@@ -130,49 +139,61 @@ class QRScannerService {
     const hapticEnabled = options.hapticFeedback !== false;
 
     return (result: BarCodeScannerResult) => {
+      // Quick early returns to avoid blocking camera rendering
+      // Only process QR codes if qrOnly is true (default)
+      if (options.qrOnly !== false && result.type !== BarCodeScanner.Constants.BarCodeType.qr) {
+        return;
+      }
+
       // Throttle scans to prevent excessive processing
       const now = Date.now();
       if (now - this.lastScanTime < throttle) {
         return;
       }
 
-      // Only process QR codes if qrOnly is true (default)
-      if (options.qrOnly !== false && result.type !== BarCodeScanner.Constants.BarCodeType.qr) {
-        return;
-      }
-
-      this.lastScanTime = now;
-
       // Prevent duplicate scans
       if (this.isScanning) {
         return;
       }
 
+      this.lastScanTime = now;
       this.isScanning = true;
 
-      // Haptic feedback (if available)
-      if (hapticEnabled && Platform.OS !== 'web') {
-        try {
-          // Note: expo-haptics would need to be imported if available
-          // import * as Haptics from 'expo-haptics';
-          // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        } catch (e) {
-          // Haptics not available, continue silently
+      // Use requestIdleCallback or setTimeout to process scan asynchronously
+      // This prevents blocking the camera rendering thread
+      const processScan = () => {
+        // Haptic feedback (if available) - non-blocking
+        if (hapticEnabled && Platform.OS !== 'web') {
+          try {
+            // Note: expo-haptics would need to be imported if available
+            // import * as Haptics from 'expo-haptics';
+            // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          } catch (e) {
+            // Haptics not available, continue silently
+          }
         }
-      }
 
-      // Process scan
-      Promise.resolve(callback.onScan(result))
-        .catch((error) => {
-          console.error('Error in scan callback:', error);
-          callback.onError?.(error);
-        })
-        .finally(() => {
-          // Reset scanning flag after a delay
-          setTimeout(() => {
-            this.isScanning = false;
-          }, throttle);
-        });
+        // Process scan asynchronously to not block camera
+        Promise.resolve(callback.onScan(result))
+          .catch((error) => {
+            console.error('Error in scan callback:', error);
+            callback.onError?.(error);
+          })
+          .finally(() => {
+            // Reset scanning flag after a delay
+            setTimeout(() => {
+              this.isScanning = false;
+            }, throttle);
+          });
+      };
+
+      // Use setTimeout with 0 delay to process scan in next event loop tick
+      // This ensures camera rendering continues smoothly
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(processScan, { timeout: 100 });
+      } else {
+        setTimeout(processScan, 0);
+      }
     };
   }
 
@@ -259,19 +280,17 @@ class QRScannerService {
   /**
    * Reset scan state (useful after processing a scan)
    */
-  reset(): void {
+  async reset(): Promise<void> {
     this.lastScanTime = 0;
     this.isScanning = false;
     
     // Stop web fallback if active
-    if (this.webFallbackActive) {
-      webQRScannerFallback.stopScanning();
-      this.webFallbackActive = false;
-    }
+    await this.stopWebFallback();
   }
 
   /**
    * Start web fallback scanning
+   * Tries @zxing/browser first (most robust), falls back to html5-qrcode if needed
    */
   async startWebFallback(
     videoElement: HTMLVideoElement | string,
@@ -282,46 +301,222 @@ class QRScannerService {
       return { success: false, error: 'Web fallback not available' };
     }
 
-    this.webFallbackActive = true;
-    return webQRScannerFallback.startScanning(
-      onScan,
-      onError,
-      {
-        videoElement,
-        scanInterval: this.scanThrottle,
-        continuous: true,
+    this.currentVideoElement = videoElement;
+
+    // Try @zxing/browser first (most robust)
+    if (webQRScannerFallback) {
+      try {
+        const isAvailable = webQRScannerFallback.isAvailable();
+        if (isAvailable) {
+          this.webFallbackActive = true;
+          const result = await webQRScannerFallback.startScanning(
+            onScan,
+            onError,
+            {
+              videoElement,
+              scanInterval: this.scanThrottle,
+              continuous: true,
+            }
+          );
+          if (result.success) {
+            console.log('✅ Using @zxing/browser scanner (primary)');
+            return { success: true };
+          }
+          // If ZXing fails, try html5-qrcode fallback
+          console.warn('ZXing scanner failed, trying html5-qrcode fallback:', result.error);
+        }
+      } catch (error: any) {
+        console.warn('ZXing scanner failed, trying html5-qrcode fallback:', error);
       }
-    );
+    }
+
+    // Fallback to html5-qrcode if ZXing failed or not available
+    if (html5QRScanner) {
+      try {
+        const isAvailable = await html5QRScanner.isAvailable();
+        if (isAvailable) {
+          // Get element ID or create one
+          let elementId: string;
+          let element: HTMLElement | null = null;
+
+          if (typeof videoElement === 'string') {
+            elementId = videoElement;
+            element = document.getElementById(elementId) || 
+                     document.querySelector(`[data-scanner-id="${elementId}"]`) as HTMLElement;
+          } else {
+            // Create or use existing ID
+            if (!videoElement.id) {
+              videoElement.id = `html5qr-scanner-${Date.now()}`;
+            }
+            elementId = videoElement.id;
+            element = videoElement;
+          }
+
+          // If element doesn't exist, create a container
+          if (!element) {
+            const container = document.createElement('div');
+            container.id = elementId;
+            container.style.width = '100%';
+            container.style.height = '100%';
+            container.style.position = 'relative';
+            container.setAttribute('data-scanner-id', elementId);
+            
+            // Try to find parent container
+            const parent = typeof videoElement === 'string' 
+              ? document.querySelector(`[data-testid="scanner-wrapper"]`) ||
+                document.querySelector('.scanner-wrapper')
+              : videoElement.parentElement;
+            
+            if (parent) {
+              parent.appendChild(container);
+              element = container;
+            } else {
+              throw new Error('Could not find container for scanner');
+            }
+          }
+
+          const result = await html5QRScanner.startScanning(
+            element,
+            {
+              onScanSuccess: (scanResult: any) => {
+                // Convert html5-qrcode result to WebQRScanResult format
+                const webResult: WebQRScanResult = {
+                  text: scanResult.text,
+                  format: scanResult.result?.result?.format?.formatName || 'QR_CODE',
+                  timestamp: Date.now(),
+                };
+                onScan(webResult);
+              },
+              onScanError: (error: Error) => {
+                // Non-fatal errors (like "no QR found") are expected
+                if (error.message && 
+                    !error.message.includes('No QR code') && 
+                    !error.message.includes('NotFoundException')) {
+                  console.error('html5-qrcode scan error:', error);
+                  if (onError) {
+                    onError(error);
+                  }
+                }
+              },
+            },
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 250 },
+              aspectRatio: 1.0,
+            }
+          );
+
+          if (result.success) {
+            this.html5ScannerActive = true;
+            this.webFallbackActive = true;
+            console.log('✅ Using html5-qrcode scanner (fallback)');
+            return { success: true };
+          }
+        }
+      } catch (error: any) {
+        console.error('html5-qrcode fallback also failed:', error);
+        return { success: false, error: error.message || 'Both scanners failed' };
+      }
+    }
+
+    return { success: false, error: 'No web scanner available' };
   }
 
   /**
    * Stop web fallback scanning
    */
-  stopWebFallback(): void {
+  async stopWebFallback(): Promise<void> {
+    // Stop ZXing scanner (primary)
     if (this.webFallbackActive && webQRScannerFallback) {
-      webQRScannerFallback.stopScanning();
-      this.webFallbackActive = false;
+      try {
+        webQRScannerFallback.stopScanning();
+        this.webFallbackActive = false;
+      } catch (error: any) {
+        // Ignore DOM removal errors
+        const errorMsg = error?.message || String(error);
+        if (!errorMsg.includes('removeChild') &&
+            !errorMsg.includes('not a child')) {
+          console.error('Error stopping ZXing scanner:', error);
+        }
+        this.webFallbackActive = false;
+      }
     }
+
+    // Stop html5-qrcode scanner (fallback)
+    if (this.html5ScannerActive && html5QRScanner) {
+      try {
+        await html5QRScanner.stopScanning();
+        this.html5ScannerActive = false;
+      } catch (error: any) {
+        // Ignore DOM removal errors - React may have already cleaned up
+        const errorMsg = error?.message || String(error);
+        if (!errorMsg.includes('removeChild') &&
+            !errorMsg.includes('not a child')) {
+          console.error('Error stopping html5-qrcode scanner:', error);
+        }
+        this.html5ScannerActive = false;
+      }
+    }
+
+    this.currentVideoElement = null;
   }
 
   /**
    * Check web fallback permissions
    */
   async checkWebFallbackPermissions(): Promise<{ granted: boolean; canAskAgain: boolean }> {
-    if (!this.shouldUseWebFallback() || !webQRScannerFallback) {
+    if (!this.shouldUseWebFallback()) {
       return { granted: false, canAskAgain: false };
     }
-    return webQRScannerFallback.checkPermissions();
+
+    // Try ZXing first (primary)
+    if (webQRScannerFallback) {
+      try {
+        return webQRScannerFallback.checkPermissions();
+      } catch (error) {
+        console.warn('ZXing permission check failed:', error);
+      }
+    }
+
+    // Fallback to html5-qrcode
+    if (html5QRScanner) {
+      try {
+        return await html5QRScanner.checkPermissions();
+      } catch (error) {
+        console.warn('html5-qrcode permission check failed:', error);
+      }
+    }
+
+    return { granted: false, canAskAgain: false };
   }
 
   /**
    * Request web fallback permissions
    */
   async requestWebFallbackPermissions(): Promise<{ granted: boolean; canAskAgain: boolean }> {
-    if (!this.shouldUseWebFallback() || !webQRScannerFallback) {
+    if (!this.shouldUseWebFallback()) {
       return { granted: false, canAskAgain: false };
     }
-    return webQRScannerFallback.requestPermissions();
+
+    // Try ZXing first (primary)
+    if (webQRScannerFallback) {
+      try {
+        return webQRScannerFallback.requestPermissions();
+      } catch (error) {
+        console.warn('ZXing permission request failed:', error);
+      }
+    }
+
+    // Fallback to html5-qrcode
+    if (html5QRScanner) {
+      try {
+        return await html5QRScanner.requestPermissions();
+      } catch (error) {
+        console.warn('html5-qrcode permission request failed:', error);
+      }
+    }
+
+    return { granted: false, canAskAgain: false };
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator, Platform, ScrollView } from 'react-native';
 import { BarCodeScanner, BarCodeScannerResult } from 'expo-barcode-scanner';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -67,7 +67,7 @@ export default function QRScanner({
         isAdmin(user.id).then(setIsUserAdmin);
       }
       
-      // On web, enable fallback
+      // On web, enable fallback and initialize after permission is granted
       if (Platform.OS === 'web') {
         qrScannerService.enableWebFallback();
       }
@@ -78,13 +78,31 @@ export default function QRScanner({
       // Reset permission state when modal closes
       setHasPermission(null);
       
-      // Cleanup web fallback when closing
+      // Cleanup web fallback when closing (use async to avoid blocking)
       if (useWebFallback) {
-        qrScannerService.stopWebFallback();
+        qrScannerService.stopWebFallback().catch((error: any) => {
+          // Ignore DOM removal errors - React cleanup may have already happened
+          if (!error.message?.includes('removeChild') &&
+              !error.message?.includes('not a child')) {
+            console.error('Error stopping web fallback on close:', error);
+          }
+        });
         setUseWebFallback(false);
       }
     }
   }, [visible, user]);
+
+  // Initialize web fallback when permission is granted
+  useEffect(() => {
+    if (Platform.OS === 'web' && visible && hasPermission === true && !useWebFallback) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        initializeWebFallback();
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [visible, hasPermission, useWebFallback]);
 
   const checkPermissionStatus = async (forceRefresh: boolean = false) => {
     try {
@@ -190,126 +208,158 @@ export default function QRScanner({
     }
   };
 
-  const handleBarCodeScanned = qrScannerService.createScanHandler(
-    {
-      onScan: async ({ type, data }: BarCodeScannerResult) => {
-        if (scanned || isProcessing) return;
+  const resetScanner = useCallback(async () => {
+    setScanned(false);
+    setIsProcessing(false);
+    setScanResult(null);
+    setQrDetails(null);
+    setShowDetails(false);
+    
+    // Stop web fallback if active
+    if (useWebFallback) {
+      await qrScannerService.stopWebFallback();
+      setUseWebFallback(false);
+      // Reinitialize after a short delay
+      if (Platform.OS === 'web' && hasPermission === true) {
+        setTimeout(() => {
+          initializeWebFallback();
+        }, 500);
+      }
+    }
+  }, [useWebFallback, hasPermission]);
 
-        setScanned(true);
-        setIsProcessing(true);
+  // Memoize scan callback to prevent unnecessary re-renders of BarCodeScanner
+  const scanCallback = useCallback(async ({ type, data }: BarCodeScannerResult) => {
+    if (scanned || isProcessing) return;
 
+    setScanned(true);
+    setIsProcessing(true);
+
+    try {
+      // Use professional QR parser
+      const parsed = qrScannerService.parseQRData(data);
+      
+      if (!parsed.isValid || !parsed.token) {
+        throw new Error('Invalid QR code format');
+      }
+
+      const token = parsed.token;
+
+      // Validate and use QR code
+      const result = await qrSystemService.validateAndUseQR(
+        token,
+        user?.id,
+        Platform.OS === 'web' ? 'web-scanner' : 'mobile-scanner'
+      );
+
+      setScanResult(result);
+
+      if (result.valid) {
+        // Fetch QR details to show pass information
+        let qr = null;
         try {
-          // Use professional QR parser
-          const parsed = qrScannerService.parseQRData(data);
+          qr = await qrSystemService.getQRByToken(token);
+          setQrDetails(qr);
           
-          if (!parsed.isValid || !parsed.token) {
-            throw new Error('Invalid QR code format');
+          // If admin, show detailed view
+          if (isUserAdmin) {
+            setShowDetails(true);
           }
+        } catch (e) {
+          console.error('Error fetching QR details:', e);
+        }
 
-          const token = parsed.token;
-
-          // Validate and use QR code
-          const result = await qrSystemService.validateAndUseQR(
-            token,
-            user?.id,
-            Platform.OS === 'web' ? 'web-scanner' : 'mobile-scanner'
-          );
-
-          setScanResult(result);
-
-          if (result.valid) {
-            // Fetch QR details to show pass information
-            let qr = null;
-            try {
-              qr = await qrSystemService.getQRByToken(token);
-              setQrDetails(qr);
-              
-              // If admin, show detailed view
-              if (isUserAdmin) {
-                setShowDetails(true);
-              }
-            } catch (e) {
-              console.error('Error fetching QR details:', e);
-            }
-
-            if (onScanSuccess) {
-              onScanSuccess(result);
-            } else if (!isUserAdmin) {
-              // Regular user success handling with pass details
-              const passInfo = qr?.display_data;
-              const passNumber = passInfo?.pass_number || 'N/A';
-              const passType = passInfo?.pass_type || 'N/A';
-              
-              Alert.alert(
-                'QR Code Valid ✓',
-                `Pass Number: ${passNumber}\nPass Type: ${passType}\n\n${result.message || 'QR code scanned successfully'}`,
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => {
-                      resetScanner();
-                    },
-                  },
-                ]
-              );
-            }
-          } else {
-            const errorMessage = result.message || 'Invalid QR code';
-            if (onScanError) {
-              onScanError(errorMessage);
-            } else {
-              Alert.alert('QR Code Invalid', errorMessage, [
-                {
-                  text: 'Try Again',
-                  onPress: () => {
-                    resetScanner();
-                  },
-                },
-                {
-                  text: 'Close',
-                  style: 'cancel',
-                  onPress: onClose,
-                },
-              ]);
-            }
-          }
-        } catch (error: any) {
-          console.error('Error scanning QR:', error);
-          const errorMessage = error.message || 'Error processing QR code';
-          if (onScanError) {
-            onScanError(errorMessage);
-          } else {
-            Alert.alert('Error', errorMessage, [
+        if (onScanSuccess) {
+          onScanSuccess(result);
+        } else if (!isUserAdmin) {
+          // Regular user success handling with pass details
+          const passInfo = qr?.display_data;
+          const passNumber = passInfo?.pass_number || 'N/A';
+          const passType = passInfo?.pass_type || 'N/A';
+          
+          Alert.alert(
+            'QR Code Valid ✓',
+            `Pass Number: ${passNumber}\nPass Type: ${passType}\n\n${result.message || 'QR code scanned successfully'}`,
+            [
               {
-                text: 'Try Again',
+                text: 'OK',
                 onPress: () => {
                   resetScanner();
                 },
               },
-            ]);
-          }
-        } finally {
-          setIsProcessing(false);
+            ]
+          );
         }
-      },
-      onError: (error) => {
-        console.error('QR scan error:', error);
+      } else {
+        const errorMessage = result.message || 'Invalid QR code';
         if (onScanError) {
-          onScanError(error.message);
+          onScanError(errorMessage);
+        } else {
+          Alert.alert('QR Code Invalid', errorMessage, [
+            {
+              text: 'Try Again',
+              onPress: () => {
+                resetScanner();
+              },
+            },
+            {
+              text: 'Close',
+              style: 'cancel',
+              onPress: onClose,
+            },
+          ]);
         }
-      },
-    },
-    {
-      qrOnly: true,
-      scanThrottle: 1000,
-      hapticFeedback: true,
+      }
+    } catch (error: any) {
+      console.error('Error scanning QR:', error);
+      const errorMessage = error.message || 'Error processing QR code';
+      if (onScanError) {
+        onScanError(errorMessage);
+      } else {
+        Alert.alert('Error', errorMessage, [
+          {
+            text: 'Try Again',
+            onPress: () => {
+              resetScanner();
+            },
+          },
+        ]);
+      }
+    } finally {
+      setIsProcessing(false);
     }
+  }, [scanned, isProcessing, user?.id, isUserAdmin, onScanSuccess, onScanError, onClose, resetScanner]);
+
+  const errorCallback = useCallback((error: Error) => {
+    console.error('QR scan error:', error);
+    if (onScanError) {
+      onScanError(error.message);
+    }
+  }, [onScanError]);
+
+  // Memoize scan handler to prevent BarCodeScanner re-renders
+  const handleBarCodeScanned = useMemo(
+    () => qrScannerService.createScanHandler(
+      {
+        onScan: scanCallback,
+        onError: errorCallback,
+      },
+      {
+        qrOnly: true,
+        scanThrottle: 1000,
+        hapticFeedback: true,
+      }
+    ),
+    [scanCallback, errorCallback]
   );
 
   const initializeWebFallback = async () => {
     if (Platform.OS !== 'web' || !hasPermission) return;
     
     try {
+      // Wait a bit for DOM to be ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Get scanner wrapper from ref
       let scannerWrapper: HTMLElement | null = null;
       
@@ -322,13 +372,20 @@ export default function QRScanner({
         } else if (refElement && refElement._nativeNode) {
           // React Native Web internal node
           scannerWrapper = refElement._nativeNode;
+        } else if (refElement && typeof refElement === 'object') {
+          // Try to find the actual DOM node
+          const node = refElement.querySelector?.('div') || refElement;
+          if (node && node.nodeType === 1) {
+            scannerWrapper = node as HTMLElement;
+          }
         }
       }
       
       // Fallback: try to find by querySelector
       if (!scannerWrapper) {
         scannerWrapper = document.querySelector('[data-testid="scanner-wrapper"]') as HTMLElement ||
-                        document.querySelector('.scanner-wrapper') as HTMLElement;
+                        document.querySelector('.scanner-wrapper') as HTMLElement ||
+                        document.querySelector('[data-scanner-id]') as HTMLElement;
       }
       
       if (!scannerWrapper) {
@@ -338,29 +395,27 @@ export default function QRScanner({
         return;
       }
 
-      // Create video element if it doesn't exist
-      if (!videoRef.current) {
-        const video = document.createElement('video');
-        video.id = 'qr-scanner-video';
-        video.style.width = '100%';
-        video.style.height = '100%';
-        video.style.objectFit = 'cover';
-        video.setAttribute('autoplay', 'true');
-        video.setAttribute('playsinline', 'true');
-        video.setAttribute('muted', 'true');
-        videoRef.current = video;
+      // Ensure wrapper has proper dimensions and ID
+      if (!scannerWrapper.id) {
+        scannerWrapper.id = `qr-scanner-container-${Date.now()}`;
+      }
+      scannerWrapper.setAttribute('data-scanner-id', scannerWrapper.id);
+      scannerWrapper.setAttribute('data-testid', 'scanner-wrapper');
+      scannerWrapper.className = 'scanner-wrapper';
+      
+      // Ensure wrapper has dimensions
+      const rect = scannerWrapper.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        console.warn('Scanner wrapper has no dimensions, waiting...');
+        setTimeout(() => initializeWebFallback(), 200);
+        return;
       }
 
-      // Append video to container if not already there
-      if (scannerWrapper && videoRef.current && !scannerWrapper.contains(videoRef.current)) {
-        scannerWrapper.appendChild(videoRef.current);
-      }
-
-      // Start web fallback scanning
+      // Start web fallback scanning (html5-qrcode will handle video element creation)
       const result = await qrScannerService.startWebFallback(
-        videoRef.current,
+        scannerWrapper.id, // Pass element ID
         async (scanResult) => {
-          // Convert ZXing result to BarCodeScannerResult format
+          // Convert to BarCodeScannerResult format
           const barCodeResult: BarCodeScannerResult = {
             type: 'qr' as any,
             data: scanResult.text,
@@ -379,26 +434,15 @@ export default function QRScanner({
         }
       );
 
-      if (!result.success) {
+      if (result.success) {
+        setUseWebFallback(true);
+        console.log('✅ Web scanner initialized successfully');
+      } else {
         console.error('Failed to start web fallback:', result.error);
         setUseWebFallback(false);
       }
     } catch (error: any) {
       console.error('Error initializing web fallback:', error);
-      setUseWebFallback(false);
-    }
-  };
-
-  const resetScanner = () => {
-    setScanned(false);
-    setIsProcessing(false);
-    setScanResult(null);
-    setQrDetails(null);
-    setShowDetails(false);
-    
-    // Stop web fallback if active
-    if (useWebFallback) {
-      qrScannerService.stopWebFallback();
       setUseWebFallback(false);
     }
   };
@@ -531,13 +575,14 @@ export default function QRScanner({
           </View>
 
           {/* Scanner View */}
-          <View style={styles.scannerWrapper}>
+          <View style={styles.scannerWrapper} ref={scannerWrapperRef}>
             {!useWebFallback ? (
               <BarCodeScanner
                 onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-                style={StyleSheet.absoluteFillObject}
+                style={[StyleSheet.absoluteFillObject, styles.cameraView]}
                 barCodeTypes={qrScannerService.getBarCodeTypes()}
                 type={qrScannerService.getRecommendedCameraType()}
+                ratio="16:9"
                 onMountError={(error) => {
                   console.error('Camera mount error:', error);
                   
@@ -581,7 +626,7 @@ export default function QRScanner({
                 }}
               />
             ) : (
-              // Web fallback using ZXing - video element will be injected by initializeWebFallback
+              // Web fallback using html5-qrcode or ZXing
               Platform.OS === 'web' && (
                 <View 
                   ref={scannerWrapperRef}
@@ -590,12 +635,14 @@ export default function QRScanner({
                   data-testid="scanner-wrapper"
                   // @ts-ignore
                   className="scanner-wrapper"
+                  // @ts-ignore
+                  id={`qr-scanner-wrapper-${Date.now()}`}
                 />
               )
             )}
 
-            {/* Overlay with scanning frame */}
-            <View style={styles.overlay}>
+            {/* Overlay with scanning frame - pointerEvents none to not block camera */}
+            <View style={styles.overlay} pointerEvents="none">
               {/* Top overlay */}
               <View style={styles.overlayTop} />
               
@@ -759,6 +806,14 @@ const getStyles = (isDark: boolean, colors: any) =>
     scannerWrapper: {
       flex: 1,
       position: 'relative',
+      width: '100%',
+      height: '100%',
+      overflow: 'hidden',
+    },
+    cameraView: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: '#000',
     },
     overlay: {
       ...StyleSheet.absoluteFillObject,

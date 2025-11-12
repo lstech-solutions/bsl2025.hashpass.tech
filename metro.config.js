@@ -104,9 +104,17 @@ config.server = {
     // This middleware runs BEFORE Metro's asset resolver
     return (req, res, next) => {
       // CRITICAL: Handle /assets/ requests FIRST before Metro tries to resolve them
-      // Metro's asset resolver will try to scan directories if we don't handle this
-      // This MUST be the first check to prevent Metro from processing /assets/ requests
+      // BUT: Allow Expo's asset requests (with unstable_path query param) to pass through to Metro
       if (req.url && req.url.startsWith('/assets/')) {
+        // Check if this is an Expo asset request (has unstable_path query parameter)
+        // These should be handled by Metro's default asset resolver
+        const urlObj = new URL(req.url, 'http://localhost');
+        if (urlObj.searchParams.has('unstable_path')) {
+          // This is an Expo asset request - let Metro handle it
+          return middleware(req, res, next);
+        }
+        
+        // This is our custom asset request (speaker avatars, etc.)
         const contentTypes = {
           '.png': 'image/png',
           '.jpg': 'image/jpeg',
@@ -114,10 +122,16 @@ config.server = {
           '.gif': 'image/gif',
           '.svg': 'image/svg+xml',
           '.webp': 'image/webp',
+          '.ttf': 'font/ttf',
+          '.woff': 'font/woff',
+          '.woff2': 'font/woff2',
         };
         
+        // Extract the path without query parameters for file system operations
+        const assetPath = urlObj.pathname;
+        
         // Try public folder first (e.g., /assets/speakers/avatars/... -> public/assets/speakers/avatars/...)
-        const publicPath = path.join(__dirname, 'public', req.url);
+        const publicPath = path.join(__dirname, 'public', assetPath);
         if (fs.existsSync(publicPath)) {
           try {
             const stat = fs.statSync(publicPath);
@@ -138,7 +152,7 @@ config.server = {
         
         // Fallback: try assets folder (without /assets/ prefix)
         // e.g., /assets/speakers/avatars/... -> assets/speakers/avatars/...
-        const fileName = req.url.replace(/^\/assets\//, '');
+        const fileName = assetPath.replace(/^\/assets\//, '');
         const assetsPath = path.join(__dirname, 'assets', fileName);
         if (fs.existsSync(assetsPath)) {
           try {
@@ -158,15 +172,20 @@ config.server = {
           }
         }
         
-        // File not found - return 404 immediately so Image component can handle it
-        // This is important for avatar fallback logic
-        // MUST return here to prevent Metro from trying to resolve it
-        res.writeHead(404, {
-          'Content-Type': 'text/plain',
-          'Cache-Control': 'no-cache',
-        });
-        res.end('Not Found');
-        return; // CRITICAL: Return here to prevent Metro from processing this request
+        // File not found - let Metro try to resolve it (might be an Expo asset)
+        // Only return 404 for our specific asset paths (speaker avatars)
+        if (assetPath.includes('/speakers/avatars/')) {
+          // This is a speaker avatar - return 404 so Image component can handle fallback
+          res.writeHead(404, {
+            'Content-Type': 'text/plain',
+            'Cache-Control': 'no-cache',
+          });
+          res.end('Not Found');
+          return;
+        }
+        
+        // For other /assets/ requests, let Metro handle them
+        return middleware(req, res, next);
       }
       
       // Intercept /config/versions.json requests
@@ -216,6 +235,7 @@ config.server = {
             const stat = fs.statSync(publicPath);
             if (stat.isFile()) {
               const ext = path.extname(publicPath).toLowerCase();
+              console.log(`[Metro] ✅ Serving from public: ${req.url} -> ${publicPath}`);
               res.writeHead(200, {
                 'Content-Type': contentTypes[ext] || 'application/octet-stream',
                 'Content-Length': stat.size,
@@ -238,6 +258,7 @@ config.server = {
             const stat = fs.statSync(assetsPath);
             if (stat.isFile()) {
               const ext = path.extname(assetsPath).toLowerCase();
+              console.log(`[Metro] ✅ Serving from assets: ${req.url} -> ${assetsPath}`);
               res.writeHead(200, {
                 'Content-Type': contentTypes[ext] || 'application/octet-stream',
                 'Content-Length': stat.size,
@@ -251,7 +272,12 @@ config.server = {
           }
         }
         
-        // File not found - return 404 immediately so Image component can handle it
+        // File not found - log for debugging
+        console.log(`[Metro] ❌ Not found: ${req.url}`);
+        console.log(`[Metro]   Tried public: ${publicPath} (exists: ${fs.existsSync(publicPath)})`);
+        console.log(`[Metro]   Tried assets: ${assetsPath} (exists: ${fs.existsSync(assetsPath)})`);
+        
+        // Return 404 immediately so Image component can handle it
         // This is important for avatar fallback logic
         // MUST return here to prevent Metro from trying to resolve it
         res.writeHead(404, {

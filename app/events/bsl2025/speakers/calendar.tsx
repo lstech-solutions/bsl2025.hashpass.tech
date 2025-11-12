@@ -16,10 +16,12 @@ import LoadingScreen from '../../../../components/LoadingScreen';
 interface Speaker {
   id: string;
   name: string;
-  title: string;
-  company: string;
+  title: string | null;
+  company: string | null;
   bio?: string;
   image?: string;
+  user_id?: string;
+  isActive?: boolean; // Has user_id = active speaker
 }
 
 interface AgendaItem {
@@ -55,7 +57,7 @@ export default function SpeakersCalendar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [loading, setLoading] = useState(true);
-  const agenda = event.agenda || [];
+  const agenda = event?.agenda || [];
 
   // Load speakers from database with JSON fallback
   useEffect(() => {
@@ -79,10 +81,12 @@ export default function SpeakersCalendar() {
             const formattedSpeakers = dbSpeakers.map((s: any) => ({
               id: s.id,
               name: s.name,
-              title: s.title,
-              company: s.company || '',
-              bio: s.bio || `Experienced professional in ${s.title}.`,
-              image: s.imageurl || getSpeakerAvatarUrl(s.name) // Use same fallback as detail page
+              title: s.title || null,
+              company: s.company || null,
+              bio: s.bio || (s.title ? `Experienced professional in ${s.title}.` : undefined),
+              image: s.imageurl || getSpeakerAvatarUrl(s.name), // Use same fallback as detail page
+              user_id: s.user_id || undefined,
+              isActive: !!s.user_id // Active if has user_id
             }));
             
             // Remove duplicates based on ID
@@ -91,7 +95,7 @@ export default function SpeakersCalendar() {
             );
             
             // Sort by priority order
-            const sortedSpeakers = sortSpeakersByPriority(uniqueSpeakers);
+            const sortedSpeakers = sortSpeakersByPriority<Speaker>(uniqueSpeakers);
             setSpeakers(sortedSpeakers);
             console.log('✅ Loaded speakers from database:', uniqueSpeakers.length, 'unique speakers');
             setLoading(false);
@@ -103,13 +107,13 @@ export default function SpeakersCalendar() {
 
         // Fallback to event config (JSON)
         console.log('📋 Loading speakers from event config (JSON fallback)...');
-        const eventSpeakers = event.speakers || [];
+        const eventSpeakers = event?.speakers || [];
         const formattedEventSpeakers = eventSpeakers.map(s => ({
           id: s.id,
           name: s.name,
-          title: s.title,
-          company: s.company,
-          bio: `Experienced professional in ${s.title} at ${s.company}.`,
+          title: s.title || null,
+          company: s.company || null,
+          bio: (s.title && s.company) ? `Experienced professional in ${s.title} at ${s.company}.` : undefined,
           image: getSpeakerAvatarUrl(s.name)
         }));
         
@@ -119,20 +123,20 @@ export default function SpeakersCalendar() {
         );
         
         // Sort by priority order
-        const sortedEventSpeakers = sortSpeakersByPriority(uniqueEventSpeakers);
+        const sortedEventSpeakers = sortSpeakersByPriority<Speaker>(uniqueEventSpeakers);
         setSpeakers(sortedEventSpeakers);
         console.log('✅ Loaded speakers from event config (JSON fallback):', uniqueEventSpeakers.length, 'unique speakers');
         setLoading(false);
       } catch (error) {
         console.error('❌ Error loading speakers:', error);
         // Emergency fallback to event config
-        const eventSpeakers = event.speakers || [];
+        const eventSpeakers = event?.speakers || [];
         const formattedEventSpeakers = eventSpeakers.map(s => ({
           id: s.id,
           name: s.name,
-          title: s.title,
-          company: s.company,
-          bio: `Experienced professional in ${s.title} at ${s.company}.`,
+          title: s.title || null,
+          company: s.company || null,
+          bio: (s.title && s.company) ? `Experienced professional in ${s.title} at ${s.company}.` : undefined,
           image: getSpeakerAvatarUrl(s.name)
         }));
         
@@ -179,9 +183,22 @@ export default function SpeakersCalendar() {
             size={50}
             showBorder={false}
           />
+          {/* Active speaker badge */}
+          {speaker.isActive && (
+            <View style={styles.activeBadge}>
+              <View style={styles.activeIndicator} />
+            </View>
+          )}
         </View>
         <View style={styles.speakerInfo}>
-          <Text style={styles.speakerName}>{speaker.name}</Text>
+          <View style={styles.speakerNameRow}>
+            <Text style={styles.speakerName}>{speaker.name}</Text>
+            {speaker.isActive && (
+              <View style={styles.activeLabel}>
+                <Text style={styles.activeLabelText}>Active</Text>
+              </View>
+            )}
+          </View>
           {speaker.title && <Text style={styles.speakerTitle}>{speaker.title}</Text>}
           {speaker.company && <Text style={styles.speakerCompany}>{speaker.company}</Text>}
         </View>
@@ -351,39 +368,86 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   speakerCard: {
     flexDirection: 'row',
     backgroundColor: colors.background.paper,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 12,
-    shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.08)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.divider,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
   },
   speakerImageContainer: {
-    marginRight: 12,
+    marginRight: 16,
+    shadowColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+    position: 'relative',
+  },
+  activeBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.background.paper,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.background.paper,
+  },
+  activeIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#34A853',
   },
   speakerInfo: {
     flex: 1,
     justifyContent: 'center',
   },
+  speakerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 8,
+  },
   speakerName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
     color: colors.text.primary,
-    marginBottom: 2,
+    letterSpacing: 0.2,
+    flex: 1,
+  },
+  activeLabel: {
+    backgroundColor: '#34A853',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  activeLabelText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   speakerTitle: {
     fontSize: 14,
     color: colors.text.secondary,
-    marginBottom: 2,
+    marginBottom: 3,
+    fontWeight: '500',
   },
   speakerCompany: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.text.secondary,
+    fontWeight: '400',
+    opacity: 0.8,
   },
   agendaList: {
     gap: 12,

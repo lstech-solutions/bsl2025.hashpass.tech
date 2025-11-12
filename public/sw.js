@@ -1,9 +1,9 @@
 // Version-aware Service Worker for HashPass
 // Automatically clears cache when version changes
 
-const APP_VERSION = '1.6.18'; // This will be updated during build
+const APP_VERSION = '1.6.20'; // This will be updated during build
 const CACHE_NAME = `hashpass-v${APP_VERSION}`;
-const VERSION_CHECK_URL = '/config/versions.json';
+const VERSION_CHECK_URL = '/api/config/versions';
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
 
 // Install event - cache resources
@@ -92,7 +92,12 @@ self.addEventListener('fetch', (event) => {
 // Check for version updates periodically
 function checkForVersionUpdate() {
   fetch(VERSION_CHECK_URL, { cache: 'no-store' })
-    .then((response) => response.json())
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error('Failed to fetch version');
+      }
+      return response.json();
+    })
     .then((data) => {
       const latestVersion = data.currentVersion;
       if (latestVersion && latestVersion !== APP_VERSION) {

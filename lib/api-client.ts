@@ -113,8 +113,14 @@ export class EventApiClient {
         baseUrl = `${cleanEnvBase}${eventSegment}`;
       }
     } else {
-      // Fallback to event config or constructor default
-      baseUrl = event?.api?.basePath || this.baseURL;
+      // No envBase - check if we should skip event segment
+      if (options.skipEventSegment) {
+        // For global endpoints, use just /api without event segment
+        baseUrl = '/api';
+      } else {
+        // Fallback to event config or constructor default
+        baseUrl = event?.api?.basePath || this.baseURL;
+      }
     }
     
     // Build the final URL

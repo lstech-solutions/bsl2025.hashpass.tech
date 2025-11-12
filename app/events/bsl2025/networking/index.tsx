@@ -20,6 +20,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import { NetworkingStats, StatsState, QuickAccessItem } from '@/types/networking';
 import { CopilotStep, walkthroughable, useCopilot } from 'react-native-copilot';
 import { useTutorialPreferences } from '@/hooks/useTutorialPreferences';
+import { useTranslation } from '@/i18n/i18n';
 
 const CopilotView = walkthroughable(View);
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
@@ -29,6 +30,7 @@ export default function NetworkingView() {
   const { user } = useAuth();
   const router = useRouter();
   const { showSuccess, showError } = useToastHelpers();
+  const { t } = useTranslation();
   const { start: startNetworkingTutorial, copilotEvents, handleNth } = useCopilot();
   const { shouldShowTutorial, markTutorialCompleted, isReady, networkingTutorialCompleted, updateTutorialStep } = useTutorialPreferences();
   const { isLoggedIn, isLoading: authLoading } = useAuth();
@@ -128,83 +130,83 @@ export default function NetworkingView() {
     {
       icon: 'edit',
       color: '#FFC107',
-      title: 'Be Specific',
-      description: 'Include clear intentions in your meeting requests'
+      title: t({ id: 'networking.tips.beSpecific.title', message: 'Be Specific' }),
+      description: t({ id: 'networking.tips.beSpecific.description', message: 'Include clear intentions in your meeting requests' })
     },
     {
       icon: 'schedule',
       color: '#4CAF50',
-      title: 'Follow Up',
-      description: 'Send follow-up messages for pending requests'
+      title: t({ id: 'networking.tips.followUp.title', message: 'Follow Up' }),
+      description: t({ id: 'networking.tips.followUp.description', message: 'Send follow-up messages for pending requests' })
     },
     {
       icon: 'people',
       color: '#2196F3',
-      title: 'Network Smart',
-      description: 'Focus on quality connections over quantity'
+      title: t({ id: 'networking.tips.networkSmart.title', message: 'Network Smart' }),
+      description: t({ id: 'networking.tips.networkSmart.description', message: 'Focus on quality connections over quantity' })
     },
     {
       icon: 'star',
       color: '#9C27B0',
-      title: 'Be Professional',
-      description: 'Always maintain a professional tone in your messages'
+      title: t({ id: 'networking.tips.beProfessional.title', message: 'Be Professional' }),
+      description: t({ id: 'networking.tips.beProfessional.description', message: 'Always maintain a professional tone in your messages' })
     },
     {
       icon: 'timeline',
       color: '#FF5722',
-      title: 'Be Patient',
-      description: 'Give speakers time to respond to your requests'
+      title: t({ id: 'networking.tips.bePatient.title', message: 'Be Patient' }),
+      description: t({ id: 'networking.tips.bePatient.description', message: 'Give speakers time to respond to your requests' })
     }
   ];
 
   const quickAccessItems: QuickAccessItem[] = [
     {
       id: 'find-speakers',
-      title: 'Find Speakers',
+      title: t({ id: 'networking.quickAccessItems.findSpeakers.title', message: 'Find Speakers' }),
       icon: 'search',
       color: '#FF9800',
       route: '/events/bsl2025/speakers',
-      subtitle: 'Browse all speakers',
+      subtitle: t({ id: 'networking.quickAccessItems.findSpeakers.subtitle', message: 'Browse all speakers' }),
     },
     {
       id: 'my-requests',
-      title: 'Your Request',
+      title: t({ id: 'networking.quickAccessItems.yourRequest.title', message: 'Your Request' }),
       icon: 'mail',
       color: '#4CAF50',
       route: '/events/bsl2025/networking/my-requests',
-      subtitle: 'View sent and incoming requests',
+      subtitle: t({ id: 'networking.quickAccessItems.yourRequest.subtitle', message: 'View sent and incoming requests' }),
     },
     {
       id: 'my-meetings',
-      title: 'My Meetings',
+      title: t({ id: 'networking.quickAccessItems.myMeetings.title', message: 'My Meetings' }),
       icon: 'event',
       color: '#3F51B5',
       route: '/events/bsl2025/networking/my-meetings',
-      subtitle: 'Your accepted/created meetings',
+      subtitle: t({ id: 'networking.quickAccessItems.myMeetings.subtitle', message: 'Your accepted/created meetings' }),
     },
     {
       id: 'my-schedule',
-      title: 'My Schedule',
+      title: t({ id: 'networking.quickAccessItems.mySchedule.title', message: 'My Schedule' }),
       icon: 'event-note',
       color: '#9C27B0',
       route: '/events/bsl2025/networking/my-schedule',
-      subtitle: 'View and manage your schedule',
+      subtitle: t({ id: 'networking.quickAccessItems.mySchedule.subtitle', message: 'View and manage your schedule' }),
     },
     {
       id: 'blocked-users',
-      title: 'Blocked Users',
+      title: t({ id: 'networking.quickAccessItems.blockedUsers.title', message: 'Blocked Users' }),
       icon: 'block',
       color: '#F44336',
       route: '/events/bsl2025/networking/blocked',
-      subtitle: 'Manage blocked users',
+      subtitle: t({ id: 'networking.quickAccessItems.blockedUsers.subtitle', message: 'Manage blocked users' }),
     },
     {
       id: 'analytics',
-      title: 'Analytics',
+      title: t({ id: 'networking.quickAccessItems.analytics.title', message: 'Analytics' }),
       icon: 'bar-chart',
       color: '#607D8B',
       route: '/events/bsl2025/networking/analytics',
-      subtitle: 'View networking statistics',
+      subtitle: t({ id: 'networking.quickAccessItems.analytics.subtitle', message: 'View networking statistics' }),
     },
   ];
 
@@ -528,21 +530,21 @@ export default function NetworkingView() {
         {/* Header */}
         <View style={styles.header}>
           <MaterialIcons name="people-alt" size={32} color={colors.primary} />
-          <Text style={styles.headerTitle}>Networking Center</Text>
-          <Text style={styles.headerSubtitle}>Connect with speakers and attendees</Text>
+          <Text style={styles.headerTitle}>{t({ id: 'networking.title', message: 'Networking Center' })}</Text>
+          <Text style={styles.headerSubtitle}>{t({ id: 'networking.subtitle', message: 'Connect with speakers and attendees' })}</Text>
         </View>
 
       {/* Statistics Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Networking Stats</Text>
+        <Text style={styles.sectionTitle}>{t({ id: 'networking.stats.title', message: 'Your Networking Stats' })}</Text>
         <View style={styles.statsGrid}>
-          {renderStatsCard('Total Requests', statsState.data.totalRequests, 'send', '#4CAF50')}
-          {renderStatsCard('Pending', statsState.data.pendingRequests, 'schedule', '#FF9800')}
-          {renderStatsCard('Accepted', statsState.data.acceptedRequests, 'check-circle', '#4CAF50')}
-          {renderStatsCard('Declined', statsState.data.declinedRequests, 'cancel', '#F44336')}
-          {renderStatsCard('Cancelled', statsState.data.cancelledRequests, 'close', '#9E9E9E')}
-          {renderStatsCard('Scheduled', statsState.data.scheduledMeetings, 'event', '#2196F3')}
-          {renderStatsCard('Blocked', statsState.data.blockedUsers, 'block', '#F44336')}
+          {renderStatsCard(t({ id: 'networking.stats.totalRequests', message: 'Total Requests' }), statsState.data.totalRequests, 'send', '#4CAF50')}
+          {renderStatsCard(t({ id: 'networking.stats.pending', message: 'Pending' }), statsState.data.pendingRequests, 'schedule', '#FF9800')}
+          {renderStatsCard(t({ id: 'networking.stats.accepted', message: 'Accepted' }), statsState.data.acceptedRequests, 'check-circle', '#4CAF50')}
+          {renderStatsCard(t({ id: 'networking.stats.declined', message: 'Declined' }), statsState.data.declinedRequests, 'cancel', '#F44336')}
+          {renderStatsCard(t({ id: 'networking.stats.cancelled', message: 'Cancelled' }), statsState.data.cancelledRequests, 'close', '#9E9E9E')}
+          {renderStatsCard(t({ id: 'networking.stats.scheduled', message: 'Scheduled' }), statsState.data.scheduledMeetings, 'event', '#2196F3')}
+          {renderStatsCard(t({ id: 'networking.stats.blocked', message: 'Blocked' }), statsState.data.blockedUsers, 'block', '#F44336')}
         </View>
       </View>
 
@@ -558,7 +560,7 @@ export default function NetworkingView() {
               color: item.color,
               route: item.route
             }))}
-            title="Quick Access"
+            title={t({ id: 'networking.quickAccess', message: 'Quick Access' })}
             showScrollArrows={true}
             cardWidth={160}
             cardSpacing={12}
@@ -569,13 +571,16 @@ export default function NetworkingView() {
 
       {/* Recent Activity Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <Text style={styles.sectionTitle}>{t({ id: 'networking.recentActivity.title', message: 'Recent Activity' })}</Text>
         <View style={styles.activityCard}>
           <MaterialIcons name="history" size={24} color={colors.primary} />
           <View style={styles.activityContent}>
-            <Text style={styles.activityTitle}>Your Networking Journey</Text>
+            <Text style={styles.activityTitle}>{t({ id: 'networking.recentActivity.journey', message: 'Your Networking Journey' })}</Text>
             <Text style={styles.activityDescription}>
-              You've sent {statsState.data.totalRequests} meeting requests and have {statsState.data.pendingRequests} pending responses.
+              {t({ 
+                id: 'networking.recentActivity.description', 
+                message: 'You\'ve sent {totalRequests} meeting requests and have {pendingRequests} pending responses.' 
+              }).replace('{totalRequests}', String(statsState.data.totalRequests)).replace('{pendingRequests}', String(statsState.data.pendingRequests))}
             </Text>
           </View>
         </View>
@@ -596,7 +601,7 @@ export default function NetworkingView() {
               style={styles.headerIcon}
             />
             <View style={styles.tipsHeaderText}>
-              <Text style={styles.tipsSectionTitle}>Networking Tips</Text>
+              <Text style={styles.tipsSectionTitle}>{t({ id: 'networking.tips.title', message: 'Networking Tips' })}</Text>
               <Animated.View 
                 style={[
                   styles.tipTextRow,
@@ -611,7 +616,7 @@ export default function NetworkingView() {
                 />
                 <Text style={styles.tipsSummary}>
                   {tipsExpanded 
-                    ? '5 helpful tips for better networking' 
+                    ? t({ id: 'networking.tips.summary', message: '5 helpful tips for better networking' })
                     : `${networkingTips[currentTipIndex]?.title}: ${networkingTips[currentTipIndex]?.description}`
                   }
                 </Text>

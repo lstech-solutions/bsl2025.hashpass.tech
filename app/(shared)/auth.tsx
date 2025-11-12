@@ -306,14 +306,34 @@ export default function AuthScreen() {
             body: JSON.stringify({ email: email.trim() }),
           });
 
-          const data = await response.json();
+          // Check if response is JSON before parsing
+          const contentType = response.headers.get('content-type');
+          let data;
+          
+          if (contentType && contentType.includes('application/json')) {
+            try {
+              data = await response.json();
+            } catch (jsonError: any) {
+              console.error('Error parsing JSON response:', jsonError);
+              throw new Error('Invalid response from server. Please try again.');
+            }
+          } else {
+            // If not JSON, read as text to see what we got
+            const text = await response.text();
+            console.error('Non-JSON response received:', text.substring(0, 200));
+            
+            if (response.status === 404) {
+              throw new Error('API endpoint not found. Please check your connection or contact support.');
+            }
+            throw new Error('Server error. Please try again or contact support.');
+          }
 
           if (!response.ok) {
             // Handle rate limit errors specifically
-            if (response.status === 429 || data.code === 'over_email_send_rate_limit') {
+            if (response.status === 429 || data?.code === 'over_email_send_rate_limit') {
               throw new Error('Too many emails sent. Please wait a few minutes before requesting another code.');
             }
-            throw new Error(data.error || data.message || 'Failed to send OTP code');
+            throw new Error(data?.error || data?.message || `Failed to send OTP code (${response.status})`);
           }
 
           setOtpSent(true);

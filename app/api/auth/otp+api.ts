@@ -7,8 +7,23 @@ import nodemailer from 'nodemailer';
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { email } = body;
+    // Handle JSON parsing errors
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError: any) {
+      console.error('Error parsing request body:', parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          code: 'invalid_json',
+          message: 'Please ensure the request body contains valid JSON with an email field.'
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { email } = body || {};
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return new Response(

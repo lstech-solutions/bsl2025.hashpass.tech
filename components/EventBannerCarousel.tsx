@@ -43,9 +43,9 @@ export default function EventBannerCarousel({
   // Get available events
   const availableEvents = getAvailableEvents();
 
-  // Build slides: first download slide, then event banners
+  // Build slides: event banners only (download slide temporarily hidden)
   const slides: CarouselSlide[] = [
-    { type: 'download' },
+    // { type: 'download' }, // Temporarily hidden
     ...availableEvents.map(event => ({ type: 'event' as const, event })),
   ];
 
@@ -106,8 +106,8 @@ export default function EventBannerCarousel({
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Mobile App Download Slide */}
-        <View style={styles.slide}>
+        {/* Mobile App Download Slide - Temporarily hidden */}
+        {/* <View style={styles.slide}>
           <View style={styles.downloadSection}>
             <Text style={styles.downloadTitle}>📱 Download Our Mobile App</Text>
             <Text style={styles.downloadSubtitle}>Get the best experience with our native mobile app</Text>
@@ -153,7 +153,7 @@ export default function EventBannerCarousel({
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </View> */}
 
         {/* Event Banner Slides */}
         {slides

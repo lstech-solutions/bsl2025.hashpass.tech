@@ -116,8 +116,9 @@ export default function SpeakerAvatar({
       // Reset fade animation when URL changes
       fadeAnim.setValue(0);
       
-      // Shorter timeout for local optimized (should be instant), longer for S3
-      const timeoutDuration = urlSource === 'local' ? 5000 : 15000;
+      // For local optimized, use a very short timeout (2 seconds) since it should be instant
+      // For S3, use longer timeout (15 seconds) to handle slow connections
+      const timeoutDuration = urlSource === 'local' ? 2000 : 15000;
       const timeoutId = setTimeout(() => {
         console.warn(`[SpeakerAvatar] ⏱️ Image load timeout (${timeoutDuration}ms) for ${name} from ${urlSource}:`, avatarUrl);
         // Mark URL as failed
@@ -125,14 +126,15 @@ export default function SpeakerAvatar({
           failedUrlsRef.current.add(avatarUrl);
         }
         
-        // If local optimized failed, try S3 fallback
+        // If local optimized failed, try S3 fallback immediately
         if (urlSource === 'local' && s3Url && s3Url !== avatarUrl) {
-          console.log(`[SpeakerAvatar] Local optimized timeout, falling back to S3 for ${name}:`, s3Url);
+          console.log(`[SpeakerAvatar] Local optimized timeout (likely 404), falling back to S3 for ${name}:`, s3Url);
           setCurrentAvatarUrl(s3Url);
           setUrlSource('s3');
           // Reset error state to allow S3 to try
           setImageError(false);
           setImageLoading(true);
+          setImageTimeout(false);
           // Don't set error yet - try S3 first
         } else {
           // S3 also failed or no fallback - show initials
@@ -213,6 +215,7 @@ export default function SpeakerAvatar({
               statusCode: statusCode,
               source: urlSource,
               hasS3Fallback: !!(s3Url && s3Url !== avatarUrl),
+              errorObject: error,
             });
             
             // Mark URL as failed
@@ -220,20 +223,22 @@ export default function SpeakerAvatar({
               failedUrlsRef.current.add(avatarUrl);
             }
             
-            // If local optimized failed, try S3 fallback
+            // If local optimized failed (404 or any error), try S3 fallback immediately
             if (urlSource === 'local' && s3Url && s3Url !== avatarUrl) {
-              console.log(`[SpeakerAvatar] Local optimized failed, falling back to S3 for ${name}:`, s3Url);
+              console.log(`[SpeakerAvatar] Local optimized failed (status: ${statusCode}), falling back to S3 for ${name}:`, s3Url);
               setCurrentAvatarUrl(s3Url);
               setUrlSource('s3');
               // Reset error state to allow S3 to try
               setImageError(false);
               setImageLoading(true);
+              setImageTimeout(false);
               // Don't set error yet - try S3 first
             } else {
               // S3 also failed or no fallback - show initials
               console.warn(`[SpeakerAvatar] All image sources failed for ${name}, showing initials`);
               setImageError(true);
               setImageLoading(false);
+              setImageTimeout(true);
             }
           }}
           onLoad={() => {

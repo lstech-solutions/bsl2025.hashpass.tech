@@ -228,12 +228,19 @@ export async function markEmailAsSent(
   messageId?: string
 ): Promise<{ success: boolean; error?: string; trackingId?: string }> {
   try {
-    const { data, error } = await supabaseServer.rpc('mark_email_as_sent', {
+    // Build parameters object - only include message_id if it's provided
+    const params: any = {
       p_user_id: userId,
       p_email_type: emailType,
-      p_locale: locale,
-      p_message_id: messageId || null
-    } as any);
+      p_locale: locale
+    };
+    
+    // Only add message_id if it's provided (not null/undefined)
+    if (messageId) {
+      params.p_message_id = messageId;
+    }
+    
+    const { data, error } = await supabaseServer.rpc('mark_email_as_sent', params);
     
     if (error) {
       console.error('Error marking email as sent:', error);

@@ -46,16 +46,33 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = supabaseServer();
+    const supabase = supabaseServer;
     const results: {
       userOnboarding?: { success: boolean; alreadySent?: boolean; error?: string };
       speakerOnboarding?: { success: boolean; alreadySent?: boolean; error?: string; isSpeaker?: boolean };
     } = {};
 
-    // 1. Send user onboarding email to all users
-    console.log(`📧 Sending user onboarding email to ${email}...`);
-    const userOnboardingResult = await sendUserOnboardingEmail(email, locale || 'en', userId);
-    results.userOnboarding = userOnboardingResult;
+    // Check if user onboarding email has already been sent
+    let userOnboardingAlreadySent = false;
+    try {
+      const { data: userOnboardingCheck } = await supabase.rpc('has_email_been_sent', {
+        p_user_id: userId,
+        p_email_type: 'userOnboarding'
+      } as any);
+      userOnboardingAlreadySent = userOnboardingCheck === true;
+    } catch (err) {
+      console.warn('⚠️ Error checking user onboarding email status:', err);
+    }
+
+    // 1. Send user onboarding email to all users (only if not already sent)
+    if (userOnboardingAlreadySent) {
+      console.log(`ℹ️ User onboarding email already sent to user ${userId}, skipping`);
+      results.userOnboarding = { success: true, alreadySent: true };
+    } else {
+      console.log(`📧 Sending user onboarding email to ${email}...`);
+      const userOnboardingResult = await sendUserOnboardingEmail(email, locale || 'en', userId);
+      results.userOnboarding = userOnboardingResult;
+    }
 
     // 2. Check if user is a speaker
     const { data: speakerData, error: speakerError } = await supabase
@@ -65,15 +82,37 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     const isSpeaker = !speakerError && speakerData !== null;
+    const speakerName = (speakerData as any)?.name;
 
-    // 3. Send speaker onboarding email if user is a speaker
+    // 3. Send speaker onboarding email if user is a speaker (only if not already sent)
     if (isSpeaker) {
-      console.log(`🎤 User ${userId} is a speaker (${speakerData?.name}), sending speaker onboarding email...`);
-      const speakerOnboardingResult = await sendSpeakerOnboardingEmail(email, locale || 'en', userId);
-      results.speakerOnboarding = {
-        ...speakerOnboardingResult,
-        isSpeaker: true
-      };
+      // Check if speaker onboarding email has already been sent
+      let speakerOnboardingAlreadySent = false;
+      try {
+        const { data: speakerOnboardingCheck } = await supabase.rpc('has_email_been_sent', {
+          p_user_id: userId,
+          p_email_type: 'speakerOnboarding'
+        } as any);
+        speakerOnboardingAlreadySent = speakerOnboardingCheck === true;
+      } catch (err) {
+        console.warn('⚠️ Error checking speaker onboarding email status:', err);
+      }
+
+      if (speakerOnboardingAlreadySent) {
+        console.log(`ℹ️ Speaker onboarding email already sent to user ${userId}, skipping`);
+        results.speakerOnboarding = {
+          success: true,
+          isSpeaker: true,
+          alreadySent: true
+        };
+      } else {
+        console.log(`🎤 User ${userId} is a speaker (${speakerName}), sending speaker onboarding email...`);
+        const speakerOnboardingResult = await sendSpeakerOnboardingEmail(email, locale || 'en', userId);
+        results.speakerOnboarding = {
+          ...speakerOnboardingResult,
+          isSpeaker: true
+        };
+      }
     } else {
       console.log(`ℹ️ User ${userId} is not a speaker, skipping speaker onboarding email`);
       results.speakerOnboarding = {

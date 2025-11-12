@@ -486,5 +486,76 @@
     "viewFullDetails": "Ver Detalles Completos",
     "flipBack": "Volver",
     "qrCodeModalTitle": "Tu Código QR del Pase"
+  },
+  "networking": {
+    "title": "Centro de Networking",
+    "subtitle": "Conecta con ponentes y asistentes",
+    "tutorialResetMessage": "El tutorial de networking comenzará automáticamente cuando visites el centro de networking.",
+    "stats": {
+      "title": "Tus Estadísticas de Networking",
+      "totalRequests": "Solicitudes Totales",
+      "pending": "Pendientes",
+      "accepted": "Aceptadas",
+      "declined": "Rechazadas",
+      "cancelled": "Canceladas",
+      "scheduled": "Programadas",
+      "blocked": "Bloqueados"
+    },
+    "quickAccess": "Acceso Rápido",
+    "quickAccessItems": {
+      "findSpeakers": {
+        "title": "Buscar Ponentes",
+        "subtitle": "Explorar todos los ponentes"
+      },
+      "yourRequest": {
+        "title": "Tus Solicitudes",
+        "subtitle": "Ver solicitudes enviadas y recibidas"
+      },
+      "myMeetings": {
+        "title": "Mis Reuniones",
+        "subtitle": "Tus reuniones aceptadas/creadas"
+      },
+      "mySchedule": {
+        "title": "Mi Agenda",
+        "subtitle": "Ver y gestionar tu agenda"
+      },
+      "blockedUsers": {
+        "title": "Usuarios Bloqueados",
+        "subtitle": "Gestionar usuarios bloqueados"
+      },
+      "analytics": {
+        "title": "Analíticas",
+        "subtitle": "Ver estadísticas de networking"
+      }
+    },
+    "tips": {
+      "title": "Consejos de Networking",
+      "beSpecific": {
+        "title": "Sé Específico",
+        "description": "Incluye intenciones claras en tus solicitudes de reunión"
+      },
+      "followUp": {
+        "title": "Hacer Seguimiento",
+        "description": "Envía mensajes de seguimiento para solicitudes pendientes"
+      },
+      "networkSmart": {
+        "title": "Networking Inteligente",
+        "description": "Enfócate en conexiones de calidad sobre cantidad"
+      },
+      "beProfessional": {
+        "title": "Sé Profesional",
+        "description": "Mantén siempre un tono profesional en tus mensajes"
+      },
+      "bePatient": {
+        "title": "Sé Paciente",
+        "description": "Da tiempo a los ponentes para responder a tus solicitudes"
+      },
+      "summary": "5 consejos útiles para un mejor networking"
+    },
+    "recentActivity": {
+      "title": "Actividad Reciente",
+      "journey": "Tu Viaje de Networking",
+      "description": "Has enviado {totalRequests} solicitudes de reunión y tienes {pendingRequests} respuestas pendientes."
+    }
   }
 }

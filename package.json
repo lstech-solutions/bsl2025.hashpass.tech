@@ -1,7 +1,7 @@
 {
   "name": "hashpass.tech",
   "main": "expo-router/entry",
-  "version": "1.6.23",
+  "version": "1.6.29",
   "scripts": {
     "start": "NODE_OPTIONS='--max-old-space-size=4096' expo start",
     "start:reset": "NODE_OPTIONS='--max-old-space-size=4096' expo start --clear",
@@ -10,7 +10,7 @@
     "web": "NODE_OPTIONS='--max-old-space-size=4096' expo start --web --clear",
     "test": "jest --watchAll",
     "dev": "NODE_OPTIONS='--max-old-space-size=4096' expo start --web --clear",
-    "build:web": "npm run prebuild && node scripts/update-sw-version.mjs && expo export -p web && npm run postbuild:web && (npm run build:storybook || echo 'Storybook build skipped') && npx workbox-cli generateSW workbox-config.js",
+    "build:web": "npm run prebuild && node scripts/update-sw-version.mjs && expo export -p web && npm run postbuild:web && (npm run build:storybook || echo 'Storybook build skipped') && (npx workbox-cli generateSW workbox-config.js || echo 'Workbox generation failed, continuing without service worker')",
     "build:storybook": "storybook build -o storybook-static || echo 'Storybook not available, skipping build'",
     "postbuild:web": "if [ -d dist/server/_expo ]; then mkdir -p dist/client/_expo && cp -r dist/server/_expo/* dist/client/_expo/; fi && if [ -d dist/server/static ]; then mkdir -p dist/client/static && cp -r dist/server/static/* dist/client/static/; fi && if [ -d storybook-static ]; then mkdir -p dist/client/storybook && cp -r storybook-static/* dist/client/storybook/; else echo 'Storybook static directory not found, skipping copy'; fi && mkdir -p dist/client/config && cp config/versions.json dist/client/config/versions.json && cp public/sw.js dist/client/sw.js",
     "prebuild": "rm -rf dist",
@@ -74,7 +74,10 @@
     "@supabase/supabase-js": "^2.76.1",
     "@tailwindcss/typography": "^0.5.13",
     "@types/nodemailer": "^6.4.17",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
     "ajv": "^8.12.0",
+    "autoprefixer": "^10.4.21",
     "babel-plugin-macros": "^3.1.0",
     "babel-plugin-module-resolver": "^5.0.2",
     "bs58": "^6.0.0",
@@ -101,6 +104,7 @@
     "expo-symbols": "~0.4.4",
     "expo-system-ui": "~5.0.7",
     "expo-web-browser": "~14.1.6",
+    "html5-qrcode": "^2.3.8",
     "i18n-js": "^4.5.1",
     "lightningcss": "^1.29.2",
     "lucide-react": "^0.548.0",
@@ -109,6 +113,7 @@
     "nativewind": "^4.1.23",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.5",
+    "postcss": "^8.5.6",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.2",
@@ -124,11 +129,9 @@
     "react-native-webview": "13.13.5",
     "react-native-worklets": "^0.6.0",
     "siwe": "^3.0.0",
+    "tailwindcss": "^3.4.17",
     "twrnc": "^4.9.1",
-    "workbox-cli": "^7.1.0",
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17"
+    "workbox-cli": "^7.1.0"
   },
   "engines": {
     "node": "22.18.0"

@@ -20,6 +20,8 @@ import PWAPrompt from '../components/PWAPrompt';
 import * as SplashScreen from 'expo-splash-screen';
 import { I18nProvider } from '../providers/I18nProvider';
 import { CopilotProvider } from 'react-native-copilot';
+import { checkVersionOnStart, clearAuthCache } from '../lib/version-checker';
+import { Platform } from 'react-native';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -65,6 +67,16 @@ function ThemedContent() {
   const { isLoggedIn, isLoading } = useAuth();
   const [isReady, setIsReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+
+  // Check version on first load (web only)
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Check version immediately
+      checkVersionOnStart().catch((error) => {
+        console.error('Version check failed:', error);
+      });
+    }
+  }, []);
 
   // Check if we're in the auth flow
   const isAuthFlow = (segments[0] === '(shared)' && segments[1] === 'auth') || pathname.startsWith('/(shared)/auth');
@@ -138,6 +150,7 @@ function ThemedContent() {
       >
         {/* Always register routes to avoid linking mismatches */}
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/index" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/auth" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/auth/callback" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/privacy" options={{ headerShown: false }} />

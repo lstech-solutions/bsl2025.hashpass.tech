@@ -52,30 +52,70 @@ async function getCurrentVersion(): Promise<string> {
 
 /**
  * Fetch latest version from API (always fresh, no cache)
+ * Returns version info including comparison data
  */
-async function fetchLatestVersion(): Promise<string | null> {
+async function fetchLatestVersion(): Promise<{ version: string | null; needsUpdate: boolean }> {
   try {
     const timestamp = Date.now();
+    const currentVersion = await getCurrentVersion();
+    
     const response = await apiClient.get('/config/versions', {
       skipEventSegment: true,
-      params: { t: timestamp.toString() },
+      params: { 
+        t: timestamp.toString(),
+        clientVersion: currentVersion, // Send client version to backend
+      },
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',
+        'X-Client-Version': currentVersion, // Also send in header
       }
     });
 
     if (!response.success) {
       console.warn('[VersionChecker] Failed to fetch version:', response.error);
-      return null;
+      return { version: null, needsUpdate: false };
     }
 
-    return response.data?.currentVersion || null;
+    const backendVersion = response.data?.currentVersion || null;
+    const versionInfo = response.data?.versionInfo;
+    
+    // Use versionInfo.needsUpdate if available, otherwise compare manually
+    let needsUpdate = false;
+    if (versionInfo?.needsUpdate !== null && versionInfo?.needsUpdate !== undefined) {
+      needsUpdate = versionInfo.needsUpdate;
+    } else if (backendVersion && currentVersion) {
+      // Manual comparison if versionInfo not available
+      needsUpdate = compareVersions(currentVersion, backendVersion) < 0;
+    }
+
+    return { version: backendVersion, needsUpdate };
   } catch (error) {
     console.error('[VersionChecker] Error fetching version:', error);
-    return null;
+    return { version: null, needsUpdate: false };
   }
+}
+
+/**
+ * Compare two semantic versions
+ * Returns: -1 if v1 < v2, 0 if v1 === v2, 1 if v1 > v2
+ */
+function compareVersions(v1: string, v2: string): number {
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+  
+  const maxLength = Math.max(parts1.length, parts2.length);
+  
+  for (let i = 0; i < maxLength; i++) {
+    const part1 = parts1[i] || 0;
+    const part2 = parts2[i] || 0;
+    
+    if (part1 < part2) return -1;
+    if (part1 > part2) return 1;
+  }
+  
+  return 0;
 }
 
 /**
@@ -150,27 +190,36 @@ export async function checkVersionAndClearCache(forceCheck: boolean = false): Pr
     localStorage.setItem(VERSION_STORAGE_KEY, Date.now().toString());
 
     const currentVersion = await getCurrentVersion();
-    const latestVersion = await fetchLatestVersion();
+    const { version: latestVersion, needsUpdate } = await fetchLatestVersion();
 
     if (!latestVersion) {
       console.warn('[VersionChecker] Could not fetch latest version');
       return false;
     }
 
-    console.log('[VersionChecker] Current:', currentVersion, 'Latest:', latestVersion);
+    console.log('[VersionChecker] Current:', currentVersion, 'Backend:', latestVersion);
 
+    // Only clear cache and reload if backend is newer (needsUpdate = true)
+    // If frontend is newer, that's OK - don't reload
     if (currentVersion !== latestVersion) {
-      console.warn('[VersionChecker] ⚠️ Version mismatch detected! Clearing cache...');
-      await clearAllCaches();
-      
-      // Reload page after cache clear
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          window.location.reload();
-        }
-      }, 1000);
-      
-      return true;
+      if (needsUpdate) {
+        // Backend is newer - frontend should update
+        console.warn('[VersionChecker] ⚠️ Backend is newer! Clearing cache and reloading...');
+        await clearAllCaches();
+        
+        // Reload page after cache clear
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.location.reload();
+          }
+        }, 1000);
+        
+        return true;
+      } else {
+        // Frontend is newer - this is OK, no action needed
+        console.log('[VersionChecker] ℹ️ Frontend is newer than backend - this is OK, continuing...');
+        return false;
+      }
     }
 
     console.log('[VersionChecker] ✅ Version check passed');

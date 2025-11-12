@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
 import { useEvent } from '../../../contexts/EventContext';
 import { useTheme } from '../../../hooks/useTheme';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import EventBanner from '../../../components/EventBanner';
 import UnifiedSearchAndFilter from '../../../components/UnifiedSearchAndFilter';
 import { apiClient } from '@/lib/api-client';
@@ -85,21 +85,23 @@ export default function BSL2025AgendaScreen() {
   const { event } = useEvent();
   const { isDark, colors } = useTheme();
   const router = useRouter();
+  const params = useLocalSearchParams<{ session?: string; scrollTo?: string }>();
   const styles = getStyles(isDark, colors);
   const { user } = useAuth();
   const { showSuccess, showError, showWarning } = useToastHelpers();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const sessionItemRefs = useRef<{ [key: string]: View | null }>({});
+  const handledSessionRef = useRef<string | null>(null); // Track which session we've already handled
 
   const [agendaByDay, setAgendaByDay] = useState<{ [key: string]: AgendaItem[] }>({});
-  const [activeTab, setActiveTab] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<string>('Day 1 - November 12'); // Default to Day 1
   const [agenda, setAgenda] = useState<AgendaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<AgendaType | 'all'>('all');
   const [usingJsonFallback, setUsingJsonFallback] = useState(false);
   const [serviceStatus, setServiceStatus] = useState<'running' | 'stopped' | 'unknown'>('unknown');
-  const [nextUpdateCountdown, setNextUpdateCountdown] = useState<number | null>(null);
   const [isEventPeriod, setIsEventPeriod] = useState(false);
   const [filteredAgenda, setFilteredAgenda] = useState<AgendaItem[]>([]);
   const [showNotLiveDetails, setShowNotLiveDetails] = useState(false);
@@ -134,12 +136,6 @@ export default function BSL2025AgendaScreen() {
     return '';
   };
 
-  const formatCountdown = (ms: number) => {
-    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
 
   // Filters for UnifiedSearchAndFilter
   const filterGroups = [
@@ -224,7 +220,6 @@ export default function BSL2025AgendaScreen() {
             console.log('✅ Loaded live agenda from database:', agendaData.length, 'items');
             setAgenda(agendaData);
             setIsLive(true);
-            setLastUpdated(new Date().toISOString());
             setServiceStatus('running');
             return;
           }
@@ -257,7 +252,6 @@ export default function BSL2025AgendaScreen() {
               console.log('✅ Loaded agenda with eventId:', agendaItems.length, 'items');
               setAgenda(agendaItems);
               setIsLive(true);
-              setLastUpdated(statusData.lastUpdated || new Date().toISOString());
               setServiceStatus('running');
               return;
             }
@@ -275,10 +269,9 @@ export default function BSL2025AgendaScreen() {
         // Use fallback data
         const fallbackAgenda = event?.agenda || EVENTS.bsl2025.agenda || [];
         console.log('📄 Setting fallback agenda:', fallbackAgenda.length, 'items');
-        setAgenda(fallbackAgenda);
-        setIsLive(false);
-        setLastUpdated(null);
-        setUsingJsonFallback(true);
+              setAgenda(fallbackAgenda);
+              setIsLive(false);
+              setUsingJsonFallback(true);
         setServiceStatus('stopped');
       } catch (error) {
         console.error('❌ Error loading agenda:', error);
@@ -314,51 +307,37 @@ export default function BSL2025AgendaScreen() {
     checkEventPeriod();
   }, []);
 
-  // Countdown timer for next update (every 5 minutes) - only during event period
+  // Auto-refresh agenda every 5 minutes during event period (silent, no UI)
   useEffect(() => {
     if (!isLive || !isEventPeriod) return;
 
     const updateInterval = 5 * 60 * 1000; // 5 minutes in milliseconds
-    let countdown = updateInterval;
 
-    const timer = setInterval(() => {
-      countdown -= 1000;
-      setNextUpdateCountdown(countdown);
-
-      if (countdown <= 0) {
-        countdown = updateInterval;
-        // Trigger a refresh
-        const refreshAgenda = async () => {
-          try {
-            // Use apiClient to ensure correct base URL from env vars
-            const response = await apiClient.request('agenda', {
-              params: { eventId: 'bsl2025' }
-            });
-            // apiClient returns { data, success, error }
-            if (response.success && response.data) {
-              let agendaData: any[] = [];
-              // Handle different response formats
-              if (Array.isArray(response.data)) {
-                agendaData = response.data;
-              } else if (response.data.data && Array.isArray(response.data.data)) {
-                agendaData = response.data.data;
-              } else if (response.data && typeof response.data === 'object') {
-                agendaData = [];
-              }
-              if (agendaData.length > 0) {
-                setAgenda(agendaData);
-                setLastUpdated(new Date().toISOString());
-              }
+    const refreshTimer = setInterval(() => {
+      const refreshAgenda = async () => {
+        try {
+          const response = await apiClient.request('agenda', {
+            params: { eventId: 'bsl2025' }
+          });
+          if (response.success && response.data) {
+            let agendaData: any[] = [];
+            if (Array.isArray(response.data)) {
+              agendaData = response.data;
+            } else if (response.data.data && Array.isArray(response.data.data)) {
+              agendaData = response.data.data;
             }
-          } catch (error) {
-            console.error('Auto-refresh failed:', error);
+            if (agendaData.length > 0) {
+              setAgenda(agendaData);
+            }
           }
-        };
-        refreshAgenda();
-      }
-    }, 1000);
+        } catch (error) {
+          console.error('Auto-refresh failed:', error);
+        }
+      };
+      refreshAgenda();
+    }, updateInterval);
 
-    return () => clearInterval(timer);
+    return () => clearInterval(refreshTimer);
   }, [isLive, isEventPeriod]);
 
   // Group agenda by day
@@ -519,21 +498,146 @@ export default function BSL2025AgendaScreen() {
     console.log('📅 Final grouped data:', Object.keys(sortedGrouped).map(key => `${key}: ${sortedGrouped[key].length} items`));
     setAgendaByDay(sortedGrouped);
     
-    // Set first tab as active (Day 1)
-    const firstTab = 'Day 1 - November 12';
-    if (sortedGrouped[firstTab]) {
-      console.log('📅 Setting active tab to:', firstTab);
-      setActiveTab(firstTab);
-    } else {
-      // Fallback to first available tab
+    // Set first tab as active (Day 1) - only if:
+    // 1. We're not navigating from banner (no params.session)
+    // 2. Current activeTab is empty/default OR current activeTab doesn't exist in the new grouped data
+    // This prevents overriding user's manual tab selection
+    if (!params.session) {
       const availableTabs = Object.keys(sortedGrouped);
-      console.log('📅 Available tabs:', availableTabs);
-      if (availableTabs.length > 0) {
-        console.log('📅 Setting active tab to first available:', availableTabs[0]);
-        setActiveTab(availableTabs[0]);
+      const currentTabExists = activeTab && availableTabs.includes(activeTab);
+      
+      // Only set tab if current tab doesn't exist or is empty/default
+      if (!currentTabExists) {
+        const firstTab = 'Day 1 - November 12';
+        if (sortedGrouped[firstTab]) {
+          console.log('📅 Setting active tab to:', firstTab);
+          setActiveTab(firstTab);
+        } else if (availableTabs.length > 0) {
+          // Fallback: prioritize Day 1, then Day 2, then Day 3, otherwise first available
+          const day1Tab = availableTabs.find(tab => tab.includes('Day 1'));
+          const day2Tab = availableTabs.find(tab => tab.includes('Day 2'));
+          const day3Tab = availableTabs.find(tab => tab.includes('Day 3'));
+          const tabToSelect = day1Tab || day2Tab || day3Tab || availableTabs[0];
+          console.log('📅 Setting active tab to:', tabToSelect);
+          setActiveTab(tabToSelect);
+        }
       }
     }
-  }, [agenda, loading]);
+  }, [agenda, loading, params.session]);
+
+  // Effect to handle scrolling to a specific session when clicking from banner
+  useEffect(() => {
+    // Only run if we have both session and scrollTo params
+    if (!params.session || !params.scrollTo || Object.keys(agendaByDay).length === 0) {
+      handledSessionRef.current = null; // Reset when params are cleared
+      return;
+    }
+
+    const sessionId = params.session;
+    
+    // Skip if we've already handled this exact session and we're on the correct tab
+    if (handledSessionRef.current === sessionId) {
+      return;
+    }
+    
+    // Find which day contains this session
+    let sessionDayKey: string | null = null;
+    for (const dayKey in agendaByDay) {
+      const dayItems = agendaByDay[dayKey];
+      if (dayItems.some(item => String(item.id) === String(sessionId))) {
+        sessionDayKey = dayKey;
+        break;
+      }
+    }
+
+    if (!sessionDayKey) {
+      console.warn(`Session with ID ${sessionId} not found in agenda`);
+      return;
+    }
+
+    // Set the active tab to the session's day if it's different
+    if (activeTab !== sessionDayKey) {
+      console.log(`Setting active tab to ${sessionDayKey} for session ${sessionId}`);
+      setActiveTab(sessionDayKey);
+      // Don't mark as handled yet - wait until we're on the correct tab
+      // Return early - the effect will run again when activeTab changes
+      return;
+    }
+
+    // We're on the correct tab, mark as handling and proceed to scroll
+    handledSessionRef.current = sessionId;
+
+    // Wait for layout to render after tab is set
+    const scrollTimeout = setTimeout(() => {
+      const sessionRef = sessionItemRefs.current[sessionId];
+      if (sessionRef && scrollViewRef.current) {
+        // Use measureLayout to get the position of the session item
+        sessionRef.measureLayout(
+          scrollViewRef.current as any,
+          (x, y, width, height) => {
+            console.log(`Scrolling to session ${sessionId} at y: ${y}`);
+            // Scroll with some offset for better visibility
+            scrollViewRef.current?.scrollTo({ 
+              y: Math.max(0, y - 100), // Offset by 100px from top
+              animated: true 
+            });
+            
+            // Clear URL parameters after scrolling to prevent re-triggering
+            setTimeout(() => {
+              router.replace('/events/bsl2025/agenda', { scroll: false });
+            }, 500);
+          },
+          (error) => {
+            console.error('Error measuring session layout:', error);
+            // Fallback: try scrolling after a longer delay
+            setTimeout(() => {
+              const retryRef = sessionItemRefs.current[sessionId];
+              if (retryRef && scrollViewRef.current) {
+                retryRef.measureLayout(
+                  scrollViewRef.current as any,
+                  (x, y, width, height) => {
+                    scrollViewRef.current?.scrollTo({ 
+                      y: Math.max(0, y - 100),
+                      animated: true 
+                    });
+                    // Clear URL parameters after scrolling
+                    setTimeout(() => {
+                      router.replace('/events/bsl2025/agenda', { scroll: false });
+                    }, 500);
+                  },
+                  () => {}
+                );
+              }
+            }, 1000);
+          }
+        );
+      } else {
+        console.warn(`Session ref not found for ID: ${sessionId}, retrying...`);
+        // Retry after a short delay if ref not found yet
+        setTimeout(() => {
+          const retryRef = sessionItemRefs.current[sessionId];
+          if (retryRef && scrollViewRef.current) {
+            retryRef.measureLayout(
+              scrollViewRef.current as any,
+              (x, y, width, height) => {
+                scrollViewRef.current?.scrollTo({ 
+                  y: Math.max(0, y - 100),
+                  animated: true 
+                });
+                // Clear URL parameters after scrolling
+                setTimeout(() => {
+                  router.replace('/events/bsl2025/agenda', { scroll: false });
+                }, 500);
+              },
+              () => {}
+            );
+          }
+        }, 500);
+      }
+    }, 400); // Wait for tab content to render
+
+    return () => clearTimeout(scrollTimeout);
+  }, [params.session, params.scrollTo, agendaByDay, activeTab, router]);
 
   // Function to clean session titles by removing type prefixes
   const cleanSessionTitle = (title: string) => {
@@ -746,11 +850,127 @@ export default function BSL2025AgendaScreen() {
     }
   };
 
+  // Helper function to get the event's date based on day field or ISO time
+  const getEventDate = (item: AgendaItem): Date | null => {
+    // First try to get the day from the item's day field
+    const day = (item as any).day;
+    if (day) {
+      let eventDate: Date | null = null;
+      
+      // Map day to actual date
+      if (day.includes('Día 1') || day === '1') {
+        eventDate = new Date(2025, 10, 12); // November 12, 2025 (month is 0-indexed)
+      } else if (day.includes('Día 2') || day === '2') {
+        eventDate = new Date(2025, 10, 13); // November 13, 2025
+      } else if (day.includes('Día 3') || day === '3') {
+        eventDate = new Date(2025, 10, 14); // November 14, 2025
+      }
+      
+      if (eventDate) {
+        return eventDate;
+      }
+    }
+    
+    // Fallback: try to parse from ISO time format
+    if (item.time) {
+      try {
+        const startTime = parseEventISO(item.time);
+        if (!isNaN(startTime.getTime())) {
+          // Return the date part (year, month, day) of the start time
+          return new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate());
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    
+    return null;
+  };
+
+  // Helper function to check if an agenda item has passed
+  const isEventPast = (item: AgendaItem): boolean => {
+    if (!item.time) return false;
+    
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Get the event's date
+    const eventDate = getEventDate(item);
+    if (!eventDate) {
+      // If we can't determine the date, fall back to time-only comparison
+      // This handles the case where day info is missing
+      let endTime: Date | null = null;
+      
+      // Try to parse time range format "HH:MM - HH:MM"
+      const timeMatch = item.time.trim().match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
+      if (timeMatch) {
+        const endHour = parseInt(timeMatch[3], 10);
+        const endMin = parseInt(timeMatch[4], 10);
+        endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), endHour, endMin);
+      } else {
+        // Try ISO format
+        try {
+          const startTime = parseEventISO(item.time);
+          if (!isNaN(startTime.getTime())) {
+            const duration = (item as any).duration_minutes || 60;
+            endTime = new Date(startTime.getTime() + duration * 60 * 1000);
+          }
+        } catch {
+          return false;
+        }
+      }
+      
+      if (!endTime) return false;
+      return now > endTime;
+    }
+    
+    // Compare dates first (year, month, day only)
+    const eventDayOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+    const todayDayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    // If event is on a past day, it's definitely past
+    if (eventDayOnly < todayDayOnly) {
+      return true;
+    }
+    
+    // If event is on a future day, it's not past
+    if (eventDayOnly > todayDayOnly) {
+      return false;
+    }
+    
+    // If event is today, check if the end time has passed
+    let endTime: Date | null = null;
+    
+    // Try to parse time range format "HH:MM - HH:MM"
+    const timeMatch = item.time.trim().match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
+    if (timeMatch) {
+      const endHour = parseInt(timeMatch[3], 10);
+      const endMin = parseInt(timeMatch[4], 10);
+      // Use the event's date, not today
+      endTime = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), endHour, endMin);
+    } else {
+      // Try ISO format
+      try {
+        const startTime = parseEventISO(item.time);
+        if (!isNaN(startTime.getTime())) {
+          const duration = (item as any).duration_minutes || 60;
+          endTime = new Date(startTime.getTime() + duration * 60 * 1000);
+        }
+      } catch {
+        return false;
+      }
+    }
+    
+    if (!endTime) return false;
+    return now > endTime;
+  };
+
   // Render a single agenda card
   const renderAgendaItem = (item: AgendaItem) => {
     const userStatus = userAgendaStatus[item.id] || 'tentative';
     const isConfirmed = userStatus === 'confirmed';
     const isFavorite = favoriteStatus[item.id] || false;
+    const isPast = isEventPast(item);
     
     // Parse start time from item
     const startTime = parseEventISO((item as any).time || '');
@@ -765,12 +985,32 @@ export default function BSL2025AgendaScreen() {
     const typeColor = getAgendaTypeColor(item.type);
     
     return (
-      <View key={item.id} style={styles.agendaItem}>
-        <View style={[styles.agendaItemHeader, { backgroundColor: typeColor }]}>
+      <View 
+        key={item.id} 
+        ref={(ref) => {
+          sessionItemRefs.current[item.id] = ref;
+        }}
+        style={[
+          styles.agendaItem,
+          isPast && styles.agendaItemPast
+        ]}
+      >
+        <View style={[
+          styles.agendaItemHeader, 
+          { backgroundColor: typeColor },
+          isPast && styles.agendaItemHeaderPast
+        ]}>
           <View style={styles.timeContainer}>
             <Text style={[styles.agendaTime, { color: '#FFFFFF' }]}>{formatTimeRange(item)}</Text>
-            <View style={[styles.agendaTypeBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
-              <Text style={[styles.agendaTypeText, { color: '#FFFFFF' }]}>{item.type.toUpperCase()}</Text>
+            <View style={styles.badgeContainer}>
+              {isPast && (
+                <View style={styles.pastBadge}>
+                  <Text style={styles.pastBadgeText}>PAST</Text>
+                </View>
+              )}
+              <View style={[styles.agendaTypeBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
+                <Text style={[styles.agendaTypeText, { color: '#FFFFFF' }]}>{item.type.toUpperCase()}</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -934,35 +1174,6 @@ export default function BSL2025AgendaScreen() {
             </View>
           </View>
         )}
-
-
-      {/* Live Status Details - Only during event period */}
-      {isLive && isEventPeriod && agenda.length > 0 && (
-        <View style={styles.liveStatusDetails}>
-          <View style={styles.liveStatusRow}>
-            <MaterialIcons name="update" size={14} color={colors.success.main} />
-            <Text style={styles.liveStatusDetailText}>
-              Auto-updating every 5 minutes during event
-            </Text>
-          </View>
-          {nextUpdateCountdown && (
-            <View style={styles.liveStatusRow}>
-              <MaterialIcons name="timer" size={14} color={colors.text.secondary} />
-              <Text style={styles.liveStatusDetailText}>
-                Next update in {formatCountdown(nextUpdateCountdown)}
-              </Text>
-            </View>
-          )}
-          {lastUpdated && (
-            <View style={styles.liveStatusRow}>
-              <MaterialIcons name="access-time" size={14} color={colors.text.secondary} />
-              <Text style={styles.liveStatusDetailText}>
-                Last updated: {new Date(lastUpdated).toLocaleTimeString()}
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
 
 
       {/* Unified Search and Filter Section */}
@@ -1190,6 +1401,29 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: '#fff',
     letterSpacing: 0.5,
   },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pastBadge: {
+    backgroundColor: 'rgba(128, 128, 128, 0.8)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  pastBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  agendaItemPast: {
+    opacity: 0.6,
+  },
+  agendaItemHeaderPast: {
+    opacity: 0.7,
+  },
   agendaItemContent: {
     padding: 16,
   },
@@ -1320,24 +1554,6 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     letterSpacing: 0.5,
-  },
-  liveStatusDetails: {
-    backgroundColor: isDark ? 'rgba(76, 175, 80, 0.1)' : 'rgba(76, 175, 80, 0.1)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.success.main,
-  },
-  liveStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  liveStatusDetailText: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    marginLeft: 6,
-    fontWeight: '500',
   },
   serviceWarningContainer: {
     flexDirection: 'row',

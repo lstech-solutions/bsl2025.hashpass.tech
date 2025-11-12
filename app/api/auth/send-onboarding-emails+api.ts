@@ -1,5 +1,5 @@
 import { supabaseServer } from '@/lib/supabase-server';
-import { sendUserOnboardingEmail, sendSpeakerOnboardingEmail } from '@/lib/email';
+import { sendUserOnboardingEmail, sendSpeakerOnboardingEmail, detectUserLocale } from '@/lib/email';
 
 /**
  * API endpoint to send onboarding emails to a newly registered user
@@ -52,6 +52,24 @@ export async function POST(request: Request) {
       speakerOnboarding?: { success: boolean; alreadySent?: boolean; error?: string; isSpeaker?: boolean };
     } = {};
 
+    // Detect user locale from database if not provided
+    let detectedLocale = locale;
+    if (!detectedLocale) {
+      console.log(`[send-onboarding-emails API] No locale provided, detecting for user ${userId}`);
+      detectedLocale = await detectUserLocale(userId);
+    } else {
+      console.log(`[send-onboarding-emails API] Using provided locale: ${detectedLocale} for user ${userId}`);
+    }
+    
+    // Validate locale is supported
+    const SUPPORTED_LOCALES = ['en', 'es', 'ko', 'fr', 'pt', 'de'];
+    if (!SUPPORTED_LOCALES.includes(detectedLocale)) {
+      console.warn(`[send-onboarding-emails API] Invalid locale '${detectedLocale}', defaulting to 'en'`);
+      detectedLocale = 'en';
+    }
+    
+    console.log(`[send-onboarding-emails API] Sending onboarding emails to ${email} (userId: ${userId}) with locale: ${detectedLocale}`);
+
     // Check if user onboarding email has already been sent (with message_id) - database-level check
     let userOnboardingAlreadySent = false;
     try {
@@ -72,8 +90,8 @@ export async function POST(request: Request) {
 
     // 1. Send user onboarding email to all users (only if not already sent)
     if (!userOnboardingAlreadySent) {
-      console.log(`📧 Sending user onboarding email to ${email}...`);
-      const userOnboardingResult = await sendUserOnboardingEmail(email, locale || 'en', userId);
+      console.log(`📧 Sending user onboarding email to ${email} with locale: ${detectedLocale}...`);
+      const userOnboardingResult = await sendUserOnboardingEmail(email, detectedLocale, userId);
       results.userOnboarding = userOnboardingResult;
     } else if (!results.userOnboarding) {
       // Ensure result is set if check passed but result wasn't set
@@ -112,8 +130,8 @@ export async function POST(request: Request) {
           alreadySent: true
         };
       } else {
-        console.log(`🎤 User ${userId} is a speaker (${speakerName}), sending speaker onboarding email...`);
-        const speakerOnboardingResult = await sendSpeakerOnboardingEmail(email, locale || 'en', userId);
+        console.log(`🎤 User ${userId} is a speaker (${speakerName}), sending speaker onboarding email with locale: ${detectedLocale}...`);
+        const speakerOnboardingResult = await sendSpeakerOnboardingEmail(email, detectedLocale, userId);
         results.speakerOnboarding = {
           ...speakerOnboardingResult,
           isSpeaker: true

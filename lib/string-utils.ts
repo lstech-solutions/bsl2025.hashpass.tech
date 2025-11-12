@@ -46,29 +46,40 @@ export function getSpeakerAvatarUrl(
     return s3Url;
   }
 
-  // Try to get S3 URL from environment/config (server-side only)
-  // On client-side, process.env may not be available, so we'll use the baseUrl fallback
+  // Default S3 bucket configuration (hashpass-assets)
+  const defaultS3Bucket = 'hashpass-assets';
+  const defaultAwsRegion = 'us-east-2';
+
+  // Try to get S3 URL from environment/config
+  // Works on both server-side and client-side (with EXPO_PUBLIC_ prefix)
+  let s3Bucket = '';
+  let cdnUrl = '';
+  let awsRegion = defaultAwsRegion;
+
   if (typeof process !== 'undefined' && process.env) {
-    const s3Bucket = process.env.AWS_S3_BUCKET_NAME || process.env.EXPO_PUBLIC_AWS_S3_BUCKET_NAME || '';
-    const cdnUrl = process.env.AWS_S3_CDN_URL || process.env.AWS_S3_BUCKET_URL || process.env.EXPO_PUBLIC_AWS_S3_CDN_URL || '';
-    const awsRegion = process.env.AWS_REGION || process.env.EXPO_PUBLIC_AWS_REGION || 'us-east-1';
-    
-    if (s3Bucket) {
-      const filename = speakerNameToFilename(name);
-      const s3Key = `speakers/avatars/foto-${filename}.png`;
-      
-      // Use CDN URL if available, otherwise use S3 bucket URL
-      if (cdnUrl && !cdnUrl.startsWith('s3://') && !cdnUrl.startsWith('arn:')) {
-        return `${cdnUrl}/${s3Key}`.replace(/\/+/g, '/').replace(':/', '://');
-      } else if (s3Bucket) {
-        return `https://${s3Bucket}.s3.${awsRegion}.amazonaws.com/${s3Key}`;
-      }
-    }
+    s3Bucket = process.env.AWS_S3_BUCKET_NAME || process.env.EXPO_PUBLIC_AWS_S3_BUCKET_NAME || '';
+    cdnUrl = process.env.AWS_S3_CDN_URL || process.env.AWS_S3_BUCKET_URL || process.env.EXPO_PUBLIC_AWS_S3_CDN_URL || '';
+    awsRegion = process.env.AWS_REGION || process.env.EXPO_PUBLIC_AWS_REGION || defaultAwsRegion;
+  }
+
+  // Use default bucket if not in env (we know it's hashpass-assets)
+  if (!s3Bucket) {
+    s3Bucket = defaultS3Bucket;
+  }
+
+  // Generate S3 URL
+  const filename = speakerNameToFilename(name);
+  const s3Key = `speakers/avatars/foto-${filename}.png`;
+  
+  // Use CDN URL if available, otherwise use S3 bucket URL
+  if (cdnUrl && !cdnUrl.startsWith('s3://') && !cdnUrl.startsWith('arn:')) {
+    return `${cdnUrl}/${s3Key}`.replace(/\/+/g, '/').replace(':/', '://');
+  } else if (s3Bucket) {
+    return `https://${s3Bucket}.s3.${awsRegion}.amazonaws.com/${s3Key}`;
   }
 
   // Fallback to original blockchainsummit.la URL
-  // This will be used if S3 is not configured or on client-side
-  const filename = speakerNameToFilename(name);
+  // This will be used if S3 is not configured
   return `${baseUrl}/foto-${filename}.png`;
 }
 

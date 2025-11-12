@@ -122,8 +122,8 @@ export default function SpeakerListWithDividers({
                   </View>
                   <View style={styles.speakerInfo}>
                     <Text style={styles.speakerName}>{speaker.name}</Text>
-                    <Text style={styles.speakerTitle}>{speaker.title}</Text>
-                    <Text style={styles.speakerCompany}>{speaker.company}</Text>
+                    {speaker.title && <Text style={styles.speakerTitle}>{speaker.title}</Text>}
+                    {speaker.company && <Text style={styles.speakerCompany}>{speaker.company}</Text>}
                   </View>
                   <MaterialIcons name="chevron-right" size={20} color="#666" />
                 </TouchableOpacity>

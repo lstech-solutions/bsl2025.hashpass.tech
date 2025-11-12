@@ -11,6 +11,7 @@ interface Speaker {
   company: string | null;
   bio?: string;
   image?: string;
+  isActive?: boolean;
 }
 
 interface SpeakerSearchAndSortProps {
@@ -19,6 +20,7 @@ interface SpeakerSearchAndSortProps {
   onGroupedSpeakers: (groupedSpeakers: { [key: string]: Speaker[] }) => void;
   onSearchChange: (query: string) => void;
   onSortChange: (sortBy: string) => void;
+  onActiveFilterChange?: (showActiveOnly: boolean) => void;
 }
 
 type SortOption = 'name' | 'company' | 'title';
@@ -28,14 +30,21 @@ export default function SpeakerSearchAndSort({
   onFilteredSpeakers, 
   onGroupedSpeakers,
   onSearchChange, 
-  onSortChange 
+  onSortChange,
+  onActiveFilterChange
 }: SpeakerSearchAndSortProps) {
   const { isDark, colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('name');
+  const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [showFiltersDropdown, setShowFiltersDropdown] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const styles = getStyles(isDark, colors);
+  
+  // Calculate active speakers count
+  const activeSpeakersCount = useMemo(() => {
+    return speakers.filter(s => s.isActive).length;
+  }, [speakers]);
 
   const sortOptions: { key: SortOption; label: string; icon: string }[] = [
     { key: 'name', label: 'Name (A-Z)', icon: 'sort-by-alpha' },
@@ -44,11 +53,16 @@ export default function SpeakerSearchAndSort({
   ];
 
   // Memoized helper functions to prevent unnecessary recalculations
-  const filterSpeakers = useCallback((speakers: Speaker[], query: string): Speaker[] => {
-    if (!query.trim()) return speakers;
+  // First filter by active status, then by search query
+  const filterSpeakers = useCallback((speakers: Speaker[], query: string, activeOnly: boolean): Speaker[] => {
+    // First apply active filter
+    let filtered = activeOnly ? speakers.filter(s => s.isActive) : speakers;
+    
+    // Then apply search query filter
+    if (!query.trim()) return filtered;
     
     const lowercaseQuery = query.toLowerCase();
-    return speakers.filter(speaker => 
+    return filtered.filter(speaker => 
       speaker.name.toLowerCase().includes(lowercaseQuery) ||
       (speaker.title && speaker.title.toLowerCase().includes(lowercaseQuery)) ||
       (speaker.company && speaker.company.toLowerCase().includes(lowercaseQuery)) ||
@@ -126,8 +140,8 @@ export default function SpeakerSearchAndSort({
 
   // Memoize filtered and sorted speakers to prevent unnecessary recalculations
   const filteredSpeakers = useMemo(() => {
-    return filterSpeakers(speakers, searchQuery);
-  }, [speakers, searchQuery, filterSpeakers]);
+    return filterSpeakers(speakers, searchQuery, showActiveOnly);
+  }, [speakers, searchQuery, showActiveOnly, filterSpeakers]);
 
   const sortedSpeakers = useMemo(() => {
     return sortSpeakers(filteredSpeakers, sortBy, searchQuery);
@@ -155,6 +169,12 @@ export default function SpeakerSearchAndSort({
     if (onSortChange) onSortChange(newSortBy);
     setShowFiltersDropdown(false);
   }, [onSortChange]);
+
+  const handleActiveFilterToggle = useCallback(() => {
+    const newValue = !showActiveOnly;
+    setShowActiveOnly(newValue);
+    if (onActiveFilterChange) onActiveFilterChange(newValue);
+  }, [showActiveOnly, onActiveFilterChange]);
 
   return (
     <View style={styles.container}>
@@ -192,6 +212,36 @@ export default function SpeakerSearchAndSort({
       {/* Filters Dropdown */}
       {showFiltersDropdown && (
         <View style={styles.filtersDropdown}>
+          {/* Active Filter Toggle - Inside dropdown */}
+          {activeSpeakersCount > 0 && (
+            <>
+              <Text style={styles.filtersTitle}>Filter:</Text>
+              <TouchableOpacity
+                style={[
+                  styles.filterOption,
+                  showActiveOnly && styles.filterOptionSelected
+                ]}
+                onPress={handleActiveFilterToggle}
+              >
+                <MaterialIcons 
+                  name={showActiveOnly ? "check-circle" : "radio-button-unchecked"} 
+                  size={20} 
+                  color={showActiveOnly ? '#34A853' : colors.text.primary} 
+                />
+                <Text style={[
+                  styles.filterOptionText,
+                  showActiveOnly && styles.filterOptionTextSelectedActive
+                ]}>
+                  Show Active Only ({activeSpeakersCount})
+                </Text>
+                {showActiveOnly && (
+                  <MaterialIcons name="check" size={20} color="#34A853" />
+                )}
+              </TouchableOpacity>
+              <View style={styles.filterDivider} />
+            </>
+          )}
+          
           <Text style={styles.filtersTitle}>Sort by:</Text>
           {sortOptions.map((option) => (
             <TouchableOpacity
@@ -316,5 +366,14 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   filterOptionTextSelected: {
     color: '#007AFF',
     fontWeight: '600',
+  },
+  filterOptionTextSelectedActive: {
+    color: '#34A853',
+    fontWeight: '600',
+  },
+  filterDivider: {
+    height: 1,
+    backgroundColor: colors.divider,
+    marginVertical: 12,
   },
 });

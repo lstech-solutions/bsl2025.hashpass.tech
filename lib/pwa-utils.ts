@@ -114,15 +114,32 @@ export const isPWAInstalled = (): boolean => {
 
   // Check localStorage for installation flag (set after successful install)
   // This is a fallback method - if flag exists, app was installed at some point
+  // Trust this flag even if not in standalone mode (user might be viewing in browser tab)
   try {
     const installFlag = localStorage.getItem('pwa-installed');
     if (installFlag === 'true') {
-      // If flag exists, app is likely installed
-      // Even if not in standalone mode right now, it means user installed it
+      console.log('✅ PWA installation detected via localStorage flag');
+      // If flag exists, app is installed - trust this even if not in standalone mode
       return true;
     }
   } catch (e) {
     // localStorage might not be available
+  }
+
+  // Additional check: If we're in a PWA context but not detected by other methods
+  // Check if service worker is active (indicates PWA setup)
+  if ('serviceWorker' in navigator) {
+    try {
+      // Check if there's an active service worker registration
+      const registration = navigator.serviceWorker.controller;
+      if (registration) {
+        // Service worker is controlling the page - likely a PWA
+        // But this alone isn't definitive, so we'll use it as a hint
+        // Combined with localStorage flag, this is more reliable
+      }
+    } catch (e) {
+      // Service worker check failed
+    }
   }
 
   return false;

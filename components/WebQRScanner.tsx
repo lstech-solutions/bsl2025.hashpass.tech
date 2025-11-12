@@ -37,6 +37,9 @@ export default function WebQRScanner({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [scanLinePosition, setScanLinePosition] = useState(20); // Percentage from top
+  const lastScanTimeRef = useRef<number>(0);
+  const lastScanTextRef = useRef<string>('');
+  const isProcessingScanRef = useRef<boolean>(false);
 
   const styles = getStyles(isDark, colors);
 
@@ -70,6 +73,11 @@ export default function WebQRScanner({
     if (scannerInstanceRef.current) {
       try {
         console.log('🛑 Stopping scanner...');
+        // Reset scan tracking
+        lastScanTimeRef.current = 0;
+        lastScanTextRef.current = '';
+        isProcessingScanRef.current = false;
+        
         // Stop scanning first
         await scannerInstanceRef.current.stop().catch((e: any) => {
           // Ignore stop errors - scanner might already be stopped
@@ -113,18 +121,48 @@ export default function WebQRScanner({
       await new Promise(resolve => setTimeout(resolve, 800));
     }
 
+    // Reset scan tracking
+    lastScanTimeRef.current = 0;
+    lastScanTextRef.current = '';
+    isProcessingScanRef.current = false;
+
     setIsLoading(true);
     setError(null);
 
     try {
-      // Check permissions first
-      const hasPerm = await checkCameraPermission();
-      setHasPermission(hasPerm);
-
-      if (!hasPerm) {
-        setIsLoading(false);
-        return;
+      // Check permissions first - use query API if available (less intrusive)
+      let hasPerm = false;
+      
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          hasPerm = permissionStatus.state === 'granted';
+          setHasPermission(hasPerm);
+          console.log('📷 Camera permission status (query):', permissionStatus.state);
+          
+          // If not granted but can prompt, don't request here - let html5-qrcode handle it
+          // html5-qrcode will request permission when it starts
+          if (!hasPerm && permissionStatus.state !== 'prompt') {
+            // Permission denied or blocked
+            setIsLoading(false);
+            setError('Camera permission denied. Please allow camera access in browser settings.');
+            setHasPermission(false);
+            return;
+          }
+        } catch (permErr) {
+          // Permissions API not available or not supported, fall back to direct check
+          console.log('⚠️ Permissions API not available, html5-qrcode will request permission');
+          // Don't check here - let html5-qrcode request permission when it starts
+          hasPerm = true; // Assume we can try (html5-qrcode will handle the actual request)
+        }
+      } else {
+        // Permissions API not available, let html5-qrcode handle permission request
+        console.log('⚠️ Permissions API not available, html5-qrcode will request permission');
+        hasPerm = true; // Assume we can try (html5-qrcode will handle the actual request)
       }
+
+      // Don't return early - let html5-qrcode handle permission request
+      // It will show proper error messages if permission is denied
 
       // Load html5-qrcode library
       const { Html5Qrcode } = await import('html5-qrcode');
@@ -276,11 +314,11 @@ export default function WebQRScanner({
       await html5Qrcode.start(
         cameraId,
         {
-          fps: 30, // Increased FPS for faster detection - matches QR refresh rate better
+          fps: 20, // Balanced FPS - not too fast to miss detection, not too slow
           qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-            // Larger scanning area - 80% of the smaller dimension for better coverage
+            // Larger scanning area - 85% of the smaller dimension for maximum coverage
             const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const calculatedSize = Math.floor(minEdge * 0.8);
+            const calculatedSize = Math.floor(minEdge * 0.85);
             const size = Math.max(250, calculatedSize); // Minimum 250px
             console.log(`📐 QR box size: ${size}x${size} (viewport: ${viewfinderWidth}x${viewfinderHeight})`);
             return { width: size, height: size };
@@ -300,22 +338,50 @@ export default function WebQRScanner({
         },
         (decodedText: string, decodedResult: any) => {
           // Success - QR code detected
-          console.log('✅✅✅ QR Code detected! ✅✅✅');
-          console.log('📝 Raw QR text:', decodedText);
-          console.log('📦 Decoded result:', decodedResult);
-          console.log('📏 QR text length:', decodedText.length);
+          const now = Date.now();
+          const timeSinceLastScan = now - lastScanTimeRef.current;
+          const trimmedText = decodedText?.trim() || '';
           
           // Validate the decoded text is not empty
-          if (!decodedText || decodedText.trim().length === 0) {
+          if (!decodedText || trimmedText.length === 0) {
             console.warn('⚠️ Empty QR code detected, ignoring...');
             return;
           }
           
-          // Log the first 100 characters to help debug
-          console.log('📄 QR preview:', decodedText.substring(0, 100));
+          // Debounce: Ignore duplicate scans within 2 seconds
+          if (timeSinceLastScan < 2000 && lastScanTextRef.current === trimmedText) {
+            console.log('⏭️ Duplicate scan ignored (debounced)');
+            return;
+          }
+          
+          // Prevent concurrent processing
+          if (isProcessingScanRef.current) {
+            console.log('⏭️ Scan already being processed, ignoring...');
+            return;
+          }
+          
+          console.log('✅✅✅ QR Code detected! ✅✅✅');
+          console.log('📝 Raw QR text:', trimmedText);
+          console.log('📦 Decoded result:', decodedResult);
+          console.log('📏 QR text length:', trimmedText.length);
+          console.log('📄 QR preview:', trimmedText.substring(0, 200));
+          
+          // Update refs to prevent duplicates
+          lastScanTimeRef.current = now;
+          lastScanTextRef.current = trimmedText;
+          isProcessingScanRef.current = true;
           
           // Call success callback - scanner keeps running for continuous scanning
-          onScanSuccess(decodedText);
+          try {
+            onScanSuccess(trimmedText);
+            // Reset processing flag after a delay to allow for async processing
+            setTimeout(() => {
+              isProcessingScanRef.current = false;
+            }, 1000);
+          } catch (err) {
+            console.error('❌ Error in onScanSuccess callback:', err);
+            isProcessingScanRef.current = false;
+          }
         },
         (errorMessage: string) => {
           // This is called frequently when no QR code is detected - this is normal
@@ -328,6 +394,19 @@ export default function WebQRScanner({
             errorMessage.includes('QR code parse error, error =') ||
             errorMessage.includes('QR code not found');
           
+          // Check for permission errors
+          if (errorMessage.includes('Permission') || errorMessage.includes('NotAllowedError') || errorMessage.includes('PermissionDeniedError')) {
+            console.error('❌ Camera permission error:', errorMessage);
+            setError('Camera permission denied. Please allow camera access.');
+            setHasPermission(false);
+            setIsLoading(false);
+            setIsScanning(false);
+            if (onError) {
+              onError(new Error(errorMessage));
+            }
+            return;
+          }
+          
           if (!isNormalError) {
             console.warn('⚠️ QR scan error:', errorMessage);
           }
@@ -336,10 +415,12 @@ export default function WebQRScanner({
 
       setIsScanning(true);
       setIsLoading(false);
+      setHasPermission(true); // Permission granted since scanner started successfully
+      setError(null); // Clear any previous errors
       console.log('✅ QR Scanner started successfully');
       console.log('📹 Camera:', cameraId);
-      console.log('🔍 Scanning continuously at 30fps with 80% viewport coverage...');
-      console.log('💡 Optimized for fast QR detection with flexible camera constraints');
+      console.log('🔍 Scanning continuously at 20fps with 85% viewport coverage...');
+      console.log('💡 Optimized for reliable QR detection with debouncing');
     } catch (err: any) {
       console.error('Error initializing scanner:', err);
       

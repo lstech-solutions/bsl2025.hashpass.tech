@@ -25,6 +25,9 @@ const PWAPrompt = () => {
       } else if (status.installed && !status.isStandaloneMode) {
         // App is installed but user is viewing in browser - show "Open App"
         setShowPrompt(true);
+      } else if (status.installed) {
+        // App is installed - don't show install button
+        setShowPrompt(false);
       }
     };
 

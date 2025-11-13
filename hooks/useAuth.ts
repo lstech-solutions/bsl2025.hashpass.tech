@@ -16,7 +16,7 @@ export const useAuth = () => {
     if (isInitializedRef.current) return;
     isInitializedRef.current = true;
 
-    // Get initial session
+    // Get initial session - trust Supabase's session (like the working version)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setIsLoggedIn(!!session?.user);
@@ -24,6 +24,7 @@ export const useAuth = () => {
     });
 
     // Throttle auth state changes to prevent rapid updates (reduced from 500ms to 100ms for faster response)
+    // Simple approach - trust Supabase's session (like the working version)
     const throttledAuthChange = throttle((_event: string, session: Session | null) => {
       setUser(session?.user ?? null);
       setIsLoggedIn(!!session?.user);

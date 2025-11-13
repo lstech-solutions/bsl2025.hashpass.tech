@@ -81,3 +81,4 @@ GRANT EXECUTE ON FUNCTION check_user_balance_status(UUID) TO authenticated;
 COMMENT ON FUNCTION test_reward_system IS 'Test function to manually add a reward and verify the balance updates correctly';
 COMMENT ON FUNCTION check_user_balance_status IS 'Debug function to check if a user has a balance record and transaction history';
 
+

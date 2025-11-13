@@ -13,6 +13,7 @@ import type { RootStackParamList } from '@/types/navigation';
 import { useTheme } from '../../../hooks/useTheme';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { useAuth } from '../../../hooks/useAuth';
+import { supabase } from '../../../lib/supabase';
 import { useLanguage } from '../../../providers/LanguageProvider';
 import { isAdmin } from '../../../lib/admin-utils';
 import { ScrollProvider, useScroll } from '../../../contexts/ScrollContext';
@@ -590,7 +591,38 @@ function CustomDrawerContent() {
 export default function DashboardLayout() {
   const { colors, isDark } = useTheme();
   const isMobile = useIsMobile();
+  const { user, isLoggedIn, isLoading: authLoading } = useAuth();
+  const router = useRouter();
   const styles = getStyles(isDark, colors, isMobile);
+
+  // Verify session is valid before allowing dashboard access
+  React.useEffect(() => {
+    if (!authLoading) {
+      const verifySession = async () => {
+        try {
+          const { data: { user: verifiedUser }, error } = await supabase.auth.getUser();
+          
+          if (error || !verifiedUser) {
+            console.warn('⚠️ Invalid session in dashboard, redirecting to auth');
+            router.replace('/(shared)/auth' as any);
+            return;
+          }
+
+          // Double-check user matches
+          if (!user || user.id !== verifiedUser.id) {
+            console.warn('⚠️ User mismatch in dashboard, redirecting to auth');
+            router.replace('/(shared)/auth' as any);
+            return;
+          }
+        } catch (error) {
+          console.error('❌ Error verifying session in dashboard:', error);
+          router.replace('/(shared)/auth' as any);
+        }
+      };
+
+      verifySession();
+    }
+  }, [authLoading, user, router]);
 
   // Header component for the drawer screens
   const Header = () => {

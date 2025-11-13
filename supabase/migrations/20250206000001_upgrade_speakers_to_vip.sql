@@ -273,3 +273,4 @@ END $$;
 COMMENT ON FUNCTION upgrade_speaker_to_vip IS 'Upgrades a speaker user to VIP status by ensuring they have speaker role and VIP pass with correct limits.';
 COMMENT ON FUNCTION upgrade_all_speakers_to_vip IS 'Upgrades all speakers with linked user_id to VIP status. Processes all speakers in bsl_speakers table that have a user_id.';
 
+

@@ -1,7 +1,7 @@
 // Version-aware Service Worker for HashPass
 // Automatically clears cache when version changes
 
-const APP_VERSION = '1.6.59'; // This will be updated during build
+const APP_VERSION = '1.6.70'; // This will be updated during build
 const CACHE_NAME = `hashpass-v${APP_VERSION}`;
 const VERSION_CHECK_URL = '/api/config/versions';
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
@@ -53,6 +53,40 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // NEVER cache authentication-related URLs - always fetch fresh
+  // This prevents PWA from getting stuck on auth callback pages
+  const isAuthUrl = url.pathname.includes('/auth/') || 
+                    url.pathname.includes('/callback') ||
+                    url.searchParams.has('token_hash') ||
+                    url.searchParams.has('token') ||
+                    url.searchParams.has('code') ||
+                    url.searchParams.has('access_token') ||
+                    url.searchParams.has('refresh_token') ||
+                    url.pathname.includes('magiclink') ||
+                    url.pathname.includes('otp');
+
+  if (isAuthUrl) {
+    console.log('[SW] Auth URL detected, bypassing cache:', url.pathname);
+    // Always fetch fresh, never use cache for auth URLs
+    event.respondWith(
+      fetch(request, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      }).catch(() => {
+        // Even if network fails, don't use cache for auth
+        return new Response('Authentication requires network connection', {
+          status: 503,
+          statusText: 'Service Unavailable'
+        });
+      })
+    );
+    return;
+  }
 
   // Skip version check requests - always fetch fresh
   if (url.pathname.includes('versions.json') || url.pathname.includes('version')) {

@@ -220,6 +220,12 @@ export default function NetworkingView() {
 
     const maxRetries = 3;
     const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff, max 5s
+    const REQUEST_TIMEOUT = 15000; // 15 second timeout for mobile networks
+
+    // Create timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout - network may be slow')), REQUEST_TIMEOUT);
+    });
 
     try {
       // Only show loading state on initial load or manual refresh, not on real-time updates
@@ -235,10 +241,16 @@ export default function NetworkingView() {
       console.log(`🔄 Loading networking stats (attempt ${retryCount + 1}/${maxRetries + 1}) for user:`, user.id, silent ? '(silent update)' : '');
 
       // Use the RPC function for better performance and reliability
-      const { data: statsData, error: statsError } = await supabase
+      // Add timeout to prevent stale loading states on slow mobile networks
+      const statsPromise = supabase
         .rpc('get_user_meeting_request_counts', {
           p_user_id: user.id
         });
+
+      const { data: statsData, error: statsError } = await Promise.race([
+        statsPromise,
+        timeoutPromise
+      ]) as any;
 
       if (statsError) {
         console.error('❌ Stats RPC error:', statsError);
@@ -336,9 +348,40 @@ export default function NetworkingView() {
   }, [user, showError]);
 
   useEffect(() => {
+    let isMounted = true;
+    let timeoutId: NodeJS.Timeout | null = null;
+
     if (user) {
       loadNetworkingStats();
+      
+      // Safety timeout: if loading takes more than 20 seconds, show error
+      timeoutId = setTimeout(() => {
+        if (isMounted) {
+          setStatsState(prev => {
+            if (prev.loading) {
+              console.warn('⚠️ Loading timeout reached, showing error state');
+              return {
+                ...prev,
+                loading: false,
+                error: 'Loading took too long. Please check your connection and try again.',
+                retryCount: 0
+              };
+            }
+            return prev;
+          });
+        }
+      }, 20000); // 20 second safety timeout
+    } else {
+      // If no user, set loading to false immediately
+      setStatsState(prev => ({ ...prev, loading: false }));
     }
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [user, loadNetworkingStats]);
 
   // Refresh stats when screen comes into focus
@@ -498,14 +541,14 @@ export default function NetworkingView() {
           title: 'Networking',
         }} 
       />
-      {statsState.loading ? (
+      {statsState.loading && !statsState.data.totalRequests && !statsState.data.pendingRequests ? (
         <LoadingScreen
           icon="network-check"
           message="Loading networking stats..."
           retryCount={statsState.retryCount}
           fullScreen={true}
         />
-      ) : statsState.error ? (
+      ) : statsState.error && !statsState.data.totalRequests && !statsState.data.pendingRequests ? (
         <View style={styles.errorContainer}>
           <MaterialIcons name="error-outline" size={48} color="#F44336" />
           <Text style={styles.errorTitle}>Failed to Load Stats</Text>

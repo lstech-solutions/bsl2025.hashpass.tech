@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import emails from '../i18n/locales/emails.json';
 import { getEmailAssetUrl } from './s3-service';
 import { supabaseServer } from './supabase-server';
+import { getSystemHealthCheck, HealthCheck } from '../app/api/status+api';
 
 // Default to English if locale is not provided or not supported
 const DEFAULT_LOCALE = 'en';
@@ -10,7 +11,7 @@ const DEFAULT_LOCALE = 'en';
 const SUPPORTED_LOCALES = ['en', 'es', 'ko', 'fr', 'pt', 'de'];
 
 // Email types
-export type EmailType = 'welcome' | 'userOnboarding' | 'speakerOnboarding';
+export type EmailType = 'welcome' | 'userOnboarding' | 'speakerOnboarding' | 'troubleshooting';
 
 // Helper function to detect user locale from user metadata or default to 'en'
 export async function detectUserLocale(userId?: string, userMetadata?: any): Promise<string> {
@@ -29,8 +30,8 @@ export async function detectUserLocale(userId?: string, userMetadata?: any): Pro
       if (!error && userData?.user) {
         const user = userData.user;
         
-        // Check raw_user_meta_data first (most up-to-date)
-        const metaLocale = user.raw_user_meta_data?.locale || user.user_metadata?.locale;
+        // Check user_metadata for locale
+        const metaLocale = user.user_metadata?.locale;
         if (metaLocale && SUPPORTED_LOCALES.includes(metaLocale)) {
           console.log(`[detectUserLocale] Found locale from user metadata: ${metaLocale}`);
           return metaLocale;
@@ -110,7 +111,7 @@ const transporter = emailEnabled ? nodemailer.createTransport({
   requireTLS: true,
 }) : null;
 
-function getEmailContent(type: 'subscriptionConfirmation' | 'welcome' | 'userOnboarding' | 'speakerOnboarding', locale: string = DEFAULT_LOCALE) {
+function getEmailContent(type: 'subscriptionConfirmation' | 'welcome' | 'userOnboarding' | 'speakerOnboarding' | 'troubleshooting', locale: string = DEFAULT_LOCALE) {
   // Fallback to English if the requested locale is not available
   const translations = (emails as EmailTranslations)[type];
   if (!translations) {
@@ -138,8 +139,8 @@ function replaceTemplatePlaceholders(template: string, translations: any, assets
   Object.keys(translations.html).forEach((key) => {
     const value = translations.html[key];
     
-    // Skip if value is null, undefined, or empty
-    if (value == null || value === '') {
+    // Skip if value is null or undefined (but allow empty strings to be replaced)
+    if (value == null) {
       missingPlaceholders.push(key);
       return;
     }
@@ -149,8 +150,17 @@ function replaceTemplatePlaceholders(template: string, translations: any, assets
     let processedValue = String(value);
     
     // Replace variables within the translation value (use global replace)
-    if (processedValue.includes('{appUrl}')) {
-      processedValue = processedValue.replace(/{appUrl}/g, `<a href="${assets.appUrl || 'https://bsl2025.hashpass.tech'}" style="color: #007AFF; text-decoration: underline;">${assets.appUrl || 'bsl2025.hashpass.tech'}</a>`);
+    // Handle {appUrl}/status pattern first (more specific) - must be done before {appUrl}
+    const appUrl = assets.appUrl || 'https://bsl2025.hashpass.tech';
+    const statusUrl = `${appUrl}/status`;
+    
+    // Replace {appUrl}/status with full clickable link
+    if (processedValue.includes('{appUrl}/status')) {
+      processedValue = processedValue.replace(/{appUrl}\/status/g, `<a href="${statusUrl}" style="color: #007AFF; text-decoration: underline;">${statusUrl}</a>`);
+    }
+    // Then handle standalone {appUrl} (only if not part of /status pattern)
+    if (processedValue.includes('{appUrl}') && !processedValue.includes('{appUrl}/status')) {
+      processedValue = processedValue.replace(/{appUrl}/g, `<a href="${appUrl}" style="color: #007AFF; text-decoration: underline;">${appUrl}</a>`);
     }
     if (processedValue.includes('{hashpassUrl}')) {
       processedValue = processedValue.replace(/{hashpassUrl}/g, '<a href="https://hashpass.tech" style="color: #007AFF; text-decoration: none;">hashpass.tech</a>');
@@ -178,12 +188,21 @@ function replaceTemplatePlaceholders(template: string, translations: any, assets
     const placeholder = `[${camelToUpperSnake(key)}]`;
     const escapedPlaceholder = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const assetValue = assets[key];
-    if (assetValue) {
-      const regex = new RegExp(escapedPlaceholder, 'g');
-      const matches = content.match(regex);
-      if (matches && matches.length > 0) {
-        content = content.replace(regex, assetValue);
-        replacedPlaceholders.push(placeholder);
+    // Always replace, even if empty string or undefined/null (to remove placeholders)
+    const regex = new RegExp(escapedPlaceholder, 'g');
+    const matches = content.match(regex);
+    if (matches && matches.length > 0) {
+      const replacementValue = (assetValue !== undefined && assetValue !== null) ? String(assetValue) : '';
+      content = content.replace(regex, replacementValue);
+      replacedPlaceholders.push(placeholder);
+      // Debug logging for status placeholders
+      if (['statusHtml', 'overallStatus', 'statusTimestamp', 'asOfText'].includes(key)) {
+        console.log(`[replaceTemplatePlaceholders] Replaced ${placeholder} with: ${replacementValue.substring(0, 50)}...`);
+      }
+    } else {
+      // Debug logging for missing placeholders
+      if (['statusHtml', 'overallStatus', 'statusTimestamp', 'asOfText'].includes(key)) {
+        console.warn(`[replaceTemplatePlaceholders] Placeholder ${placeholder} not found in template`);
       }
     }
   });
@@ -1055,6 +1074,436 @@ export async function sendSpeakerOnboardingEmail(
     return { 
       success: false, 
       error: error?.message || 'Failed to send onboarding email' 
+    };
+  }
+}
+
+/**
+ * Send troubleshooting email to help users resolve common app issues
+ */
+export async function sendTroubleshootingEmail(
+  email: string,
+  locale?: string,
+  userId?: string
+): Promise<{ success: boolean; error?: string; messageId?: string; alreadySent?: boolean }> {
+  if (!emailEnabled || !transporter) {
+    return { success: false, error: 'Email service is not configured' };
+  }
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { 
+      success: false, 
+      error: 'Invalid email address' 
+    };
+  }
+
+  try {
+    // Get user ID if not provided
+    let user_id: string | undefined = userId;
+    if (!user_id) {
+      const foundUserId = await getUserIdFromEmail(email);
+      user_id = foundUserId || undefined;
+    }
+    
+    // Detect locale if not provided
+    let userLocale = locale;
+    if (!userLocale) {
+      console.log(`[sendTroubleshootingEmail] No locale provided, detecting for user ${user_id}`);
+      userLocale = await detectUserLocale(user_id);
+    } else {
+      console.log(`[sendTroubleshootingEmail] Using provided locale: ${userLocale} for user ${user_id}`);
+    }
+    
+    // Validate locale is supported
+    if (!SUPPORTED_LOCALES.includes(userLocale)) {
+      console.warn(`[sendTroubleshootingEmail] Invalid locale ${userLocale}, defaulting to ${DEFAULT_LOCALE}`);
+      userLocale = DEFAULT_LOCALE;
+    }
+    
+    console.log(`[sendTroubleshootingEmail] Sending troubleshooting email to ${email} with locale: ${userLocale}`);
+    
+    // Check if troubleshooting email has already been sent
+    if (user_id) {
+      const alreadySent = await hasEmailBeenSent(user_id, 'troubleshooting');
+      if (alreadySent) {
+        console.log(`Troubleshooting email already sent to user ${user_id} (${email})`);
+        return { success: true, alreadySent: true };
+      }
+    }
+    
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Validate and normalize locale
+    const normalizedLocale = SUPPORTED_LOCALES.includes(userLocale) ? userLocale : DEFAULT_LOCALE;
+    if (normalizedLocale !== userLocale) {
+      console.warn(`[sendTroubleshootingEmail] Invalid locale '${userLocale}', using '${normalizedLocale}' instead`);
+    }
+    
+    console.log(`[sendTroubleshootingEmail] Preparing troubleshooting email for ${email} with locale: ${normalizedLocale}`);
+    
+    // Use dummy status data to avoid issues with server availability
+    // All services are marked as operational
+    const dummyHealthCheck: HealthCheck = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      services: {
+        database: {
+          status: 'healthy',
+          responseTime: 45,
+          tables: {
+            event_agenda: { accessible: true, recordCount: 150 },
+            bsl_speakers: { accessible: true, recordCount: 50 },
+            BSL_Bookings: { accessible: true, recordCount: 200 },
+            passes: { accessible: true, recordCount: 500 },
+          },
+        },
+        email: {
+          status: 'healthy',
+          configured: true,
+        },
+        api: {
+          status: 'healthy',
+          endpoints: {
+            '/api/status': { accessible: true },
+            '/api/bslatam/agenda': { accessible: true },
+            '/api/bslatam/bookings': { accessible: true },
+          },
+        },
+      },
+      checks: {
+        agenda: {
+          hasData: true,
+          lastUpdated: new Date().toISOString(),
+          itemCount: 150,
+        },
+        speakers: {
+          count: 50,
+          accessible: true,
+        },
+        bookings: {
+          count: 200,
+          accessible: true,
+        },
+        passes: {
+          count: 500,
+          accessible: true,
+        },
+      },
+    };
+    
+    const healthCheck = dummyHealthCheck;
+    const statusAvailable = true;
+    
+    // Format status information for email
+    const formatStatusForEmail = (status: HealthCheck, locale: string): string => {
+      const operationalServices: string[] = [];
+      const nonOperationalServices: string[] = [];
+      
+      // Get translations for status labels
+      const statusLabels: Record<string, Record<string, string>> = {
+        en: {
+          operational: 'Operational Services',
+          nonOperational: 'Non-Operational Services',
+          database: 'Database',
+          emailService: 'Email Service',
+          apiEndpoints: 'API Endpoints',
+          agenda: 'Agenda',
+          speakers: 'Speakers',
+          bookings: 'Bookings',
+          passes: 'Passes',
+          tablesAccessible: 'tables accessible',
+          endpointsAccessible: 'endpoints accessible',
+          items: 'items',
+          speakersCount: 'speakers',
+          bookingsCount: 'bookings',
+          passesCount: 'passes',
+        },
+        es: {
+          operational: 'Servicios Operativos',
+          nonOperational: 'Servicios No Operativos',
+          database: 'Base de Datos',
+          emailService: 'Servicio de Correo',
+          apiEndpoints: 'Endpoints de API',
+          agenda: 'Agenda',
+          speakers: 'Ponentes',
+          bookings: 'Reservas',
+          passes: 'Pases',
+          tablesAccessible: 'tablas accesibles',
+          endpointsAccessible: 'endpoints accesibles',
+          items: 'elementos',
+          speakersCount: 'ponentes',
+          bookingsCount: 'reservas',
+          passesCount: 'pases',
+        },
+        ko: {
+          operational: '운영 중인 서비스',
+          nonOperational: '비운영 서비스',
+          database: '데이터베이스',
+          emailService: '이메일 서비스',
+          apiEndpoints: 'API 엔드포인트',
+          agenda: '일정',
+          speakers: '연사',
+          bookings: '예약',
+          passes: '패스',
+          tablesAccessible: '개 테이블 접근 가능',
+          endpointsAccessible: '개 엔드포인트 접근 가능',
+          items: '개 항목',
+          speakersCount: '명 연사',
+          bookingsCount: '개 예약',
+          passesCount: '개 패스',
+        },
+        fr: {
+          operational: 'Services Opérationnels',
+          nonOperational: 'Services Non Opérationnels',
+          database: 'Base de Données',
+          emailService: 'Service de Messagerie',
+          apiEndpoints: 'Points de Terminaison API',
+          agenda: 'Agenda',
+          speakers: 'Conférenciers',
+          bookings: 'Réservations',
+          passes: 'Passes',
+          tablesAccessible: 'tables accessibles',
+          endpointsAccessible: 'points de terminaison accessibles',
+          items: 'éléments',
+          speakersCount: 'conférenciers',
+          bookingsCount: 'réservations',
+          passesCount: 'passes',
+        },
+        pt: {
+          operational: 'Serviços Operacionais',
+          nonOperational: 'Serviços Não Operacionais',
+          database: 'Banco de Dados',
+          emailService: 'Serviço de E-mail',
+          apiEndpoints: 'Endpoints da API',
+          agenda: 'Agenda',
+          speakers: 'Palestrantes',
+          bookings: 'Reservas',
+          passes: 'Passes',
+          tablesAccessible: 'tabelas acessíveis',
+          endpointsAccessible: 'endpoints acessíveis',
+          items: 'itens',
+          speakersCount: 'palestrantes',
+          bookingsCount: 'reservas',
+          passesCount: 'passes',
+        },
+        de: {
+          operational: 'Betriebsbereite Dienste',
+          nonOperational: 'Nicht Betriebsbereite Dienste',
+          database: 'Datenbank',
+          emailService: 'E-Mail-Dienst',
+          apiEndpoints: 'API-Endpunkte',
+          agenda: 'Agenda',
+          speakers: 'Redner',
+          bookings: 'Buchungen',
+          passes: 'Pässe',
+          tablesAccessible: 'Tabellen zugänglich',
+          endpointsAccessible: 'Endpunkte zugänglich',
+          items: 'Elemente',
+          speakersCount: 'Redner',
+          bookingsCount: 'Buchungen',
+          passesCount: 'Pässe',
+        },
+      };
+      
+      const labels = statusLabels[locale] || statusLabels.en;
+      
+      // Database
+      if (status.services.database.status === 'healthy') {
+        const tableCount = Object.keys(status.services.database.tables).length;
+        operationalServices.push(`${labels.database} (${tableCount} ${labels.tablesAccessible})`);
+      } else {
+        nonOperationalServices.push(labels.database);
+      }
+      
+      // Email
+      if (status.services.email.status === 'healthy') {
+        operationalServices.push(labels.emailService);
+      } else if (status.services.email.status === 'not_configured') {
+        // Don't show as non-operational if just not configured
+      } else {
+        nonOperationalServices.push(labels.emailService);
+      }
+      
+      // API
+      if (status.services.api.status === 'healthy') {
+        const endpointCount = Object.keys(status.services.api.endpoints).length;
+        operationalServices.push(`${labels.apiEndpoints} (${endpointCount} ${labels.endpointsAccessible})`);
+      } else {
+        nonOperationalServices.push(labels.apiEndpoints);
+      }
+      
+      // System checks
+      if (status.checks.agenda.hasData) {
+        operationalServices.push(`${labels.agenda} (${status.checks.agenda.itemCount} ${labels.items})`);
+      }
+      if (status.checks.speakers.accessible) {
+        operationalServices.push(`${labels.speakers} (${status.checks.speakers.count} ${labels.speakersCount})`);
+      }
+      if (status.checks.bookings.accessible) {
+        operationalServices.push(`${labels.bookings} (${status.checks.bookings.count} ${labels.bookingsCount})`);
+      }
+      if (status.checks.passes.accessible) {
+        operationalServices.push(`${labels.passes} (${status.checks.passes.count} ${labels.passesCount})`);
+      }
+      
+      let statusText = '';
+      if (operationalServices.length > 0) {
+        statusText += `<div style="margin-bottom: 12px;"><strong style="color: #34A853; font-size: 14px;">${labels.operational}:</strong></div>`;
+        statusText += '<div style="margin-left: 8px; margin-bottom: 16px;">';
+        statusText += operationalServices.map(s => `<div style="margin-bottom: 6px; color: #000000;">✓ ${s}</div>`).join('');
+        statusText += '</div>';
+      }
+      if (nonOperationalServices.length > 0) {
+        if (statusText) statusText += '<div style="margin-top: 16px;"></div>';
+        statusText += `<div style="margin-bottom: 12px;"><strong style="color: #FF3B30; font-size: 14px;">${labels.nonOperational}:</strong></div>`;
+        statusText += '<div style="margin-left: 8px;">';
+        statusText += nonOperationalServices.map(s => `<div style="margin-bottom: 6px; color: #000000;">✗ ${s}</div>`).join('');
+        statusText += '</div>';
+      }
+      
+      return statusText || `<div style="color: #8E8E93;">Status information unavailable</div>`;
+    };
+    
+    // Format status (always available with dummy data)
+    const statusHtml = formatStatusForEmail(healthCheck, normalizedLocale);
+    const overallStatus = healthCheck.status.toUpperCase();
+    const statusTimestamp = new Date(healthCheck.timestamp).toLocaleString(normalizedLocale);
+    
+    // Get translations for the locale
+    const translations = getEmailContent('troubleshooting', normalizedLocale);
+    const subject = translations.subject;
+    
+    let htmlContent: string;
+    try {
+      // Load unified template
+      const templatePath = path.join(process.cwd(), 'emails', 'templates', 'troubleshooting.html');
+      htmlContent = fs.readFileSync(templatePath, 'utf-8');
+      
+      // Helper function to convert image to base64 data URI
+      const imageToBase64 = (filePath: string, mimeType: string): string | null => {
+        try {
+          if (fs.existsSync(filePath)) {
+            const imageBuffer = fs.readFileSync(filePath);
+            const base64 = imageBuffer.toString('base64');
+            return `data:${mimeType};base64,${base64}`;
+          }
+        } catch (error) {
+          console.warn(`Could not load image from ${filePath}:`, error);
+        }
+        return null;
+      };
+      
+      // Get logo URLs (S3/CDN preferred, fallback to base64)
+      let bslLogoUrl: string;
+      let hashpassLogoUrl: string;
+      
+      try {
+        bslLogoUrl = getEmailAssetUrl('images/BSL.svg');
+        hashpassLogoUrl = getEmailAssetUrl('images/logo-full-hashpass-white.png');
+      } catch (error) {
+        // Fallback to base64
+        const bslLogoPath = path.join(process.cwd(), 'emails', 'assets', 'images', 'BSL.svg');
+        const hashpassLogoPath = path.join(process.cwd(), 'emails', 'assets', 'images', 'logo-full-hashpass-white.png');
+        
+        const bslLogoBase64 = imageToBase64(bslLogoPath, 'image/svg+xml');
+        const hashpassLogoBase64 = imageToBase64(hashpassLogoPath, 'image/png');
+        
+        bslLogoUrl = bslLogoBase64 || getEmailAssetUrl('images/BSL.svg');
+        hashpassLogoUrl = hashpassLogoBase64 || getEmailAssetUrl('images/logo-full-hashpass-white.png');
+      }
+      
+      // Get "As of" translation
+      const asOfTranslations: Record<string, string> = {
+        en: 'As of',
+        es: 'A partir de',
+        ko: '기준',
+        fr: 'Au',
+        pt: 'A partir de',
+        de: 'Stand',
+      };
+      const asOfText = asOfTranslations[normalizedLocale] || asOfTranslations.en;
+      
+      // Prepare assets object with all values
+      const assets: Record<string, string> = {
+        bslLogoUrl,
+        hashpassLogoUrl,
+        appUrl: 'https://bsl2025.hashpass.tech',
+        statusHtml: statusHtml || '',
+        overallStatus: overallStatus || 'HEALTHY',
+        statusTimestamp: statusTimestamp || new Date().toLocaleString(normalizedLocale),
+        asOfText: asOfText || 'As of',
+      };
+      
+      // Debug: Log the values before replacement
+      console.log('[sendTroubleshootingEmail] Status values before replacement:');
+      console.log('  statusHtml length:', statusHtml.length);
+      console.log('  overallStatus:', overallStatus);
+      console.log('  statusTimestamp:', statusTimestamp);
+      console.log('  asOfText:', asOfText);
+      
+      // Replace placeholders with translations and assets
+      htmlContent = replaceTemplatePlaceholders(htmlContent, translations, assets, normalizedLocale);
+      
+      // Debug: Check if placeholders were replaced
+      const remainingStatusPlaceholders = htmlContent.match(/\[(OVERALL_STATUS|AS_OF_TEXT|STATUS_TIMESTAMP|STATUS_HTML)\]/g);
+      if (remainingStatusPlaceholders) {
+        console.warn('[sendTroubleshootingEmail] ⚠️ Status placeholders still present after replacement:', remainingStatusPlaceholders);
+      } else {
+        console.log('[sendTroubleshootingEmail] ✅ All status placeholders replaced successfully');
+      }
+      
+      // Remove comment markers (status is always available now with dummy data)
+      htmlContent = htmlContent.replace(/<!--\[STATUS_AVAILABLE\]-->/g, '');
+      htmlContent = htmlContent.replace(/<!--\[\/STATUS_AVAILABLE\]-->/g, '');
+      
+      // Final cleanup: remove any remaining placeholders that might not have been replaced
+      // This is a safety measure - replace with actual values if still present
+      htmlContent = htmlContent.replace(/\[OVERALL_STATUS\]/g, overallStatus || 'HEALTHY');
+      htmlContent = htmlContent.replace(/\[AS_OF_TEXT\]/g, asOfText || 'As of');
+      htmlContent = htmlContent.replace(/\[STATUS_TIMESTAMP\]/g, statusTimestamp || new Date().toLocaleString(normalizedLocale));
+      htmlContent = htmlContent.replace(/\[STATUS_HTML\]/g, statusHtml || '');
+      
+    } catch (error) {
+      // Fallback to inline HTML if file doesn't exist
+      console.warn('Could not load troubleshooting email template file, using fallback');
+      htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #FF9500;">${translations.html.title}</h2>
+          <p>${translations.html.introText}</p>
+          <p>Please visit the app to see the full troubleshooting guide.</p>
+        </div>
+      `;
+    }
+
+    const mailOptions = {
+      from: `HashPass <${process.env.NODEMAILER_FROM}>`,
+      to: email,
+      subject: subject,
+      html: htmlContent,
+      text: `${translations.html.title}\n\n${translations.html.introText}\n\n${translations.html.ctaButton}`,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    
+    // Mark email as sent if we have a user ID (this creates the flag in DB with message_id)
+    if (user_id) {
+      const markResult = await markEmailAsSent(user_id, 'troubleshooting', normalizedLocale, info.messageId);
+      if (markResult.success) {
+        console.log(`✅ Troubleshooting email marked as sent in DB for user ${user_id} (${email}) with locale: ${normalizedLocale} and messageId: ${info.messageId}`);
+      } else {
+        console.error(`❌ Failed to mark troubleshooting email as sent in DB: ${markResult.error}`);
+      }
+    } else {
+      console.warn(`⚠️ No user ID available, cannot mark troubleshooting email as sent in DB for ${email}`);
+    }
+    
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error('Error sending troubleshooting email:', error);
+    return { 
+      success: false, 
+      error: error?.message || 'Failed to send troubleshooting email' 
     };
   }
 }

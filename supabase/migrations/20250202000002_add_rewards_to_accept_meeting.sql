@@ -262,3 +262,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 COMMENT ON FUNCTION accept_meeting_request IS 'Accepts a meeting request with slot selection. Sets status to confirmed, ensures duration_minutes is correctly set (15 minutes default), and automatically rewards both speaker and requester with 1 LUKAS each.';
 
+

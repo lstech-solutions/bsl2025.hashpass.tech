@@ -69,16 +69,6 @@ export default function AuthCallback() {
         throw new Error('Session not established after multiple verification attempts');
     };
 
-    useEffect(() => {
-        // Prevent duplicate processing
-        if (isProcessingRef.current || hasNavigatedRef.current) {
-            console.log('⏭️ Auth callback already processing or navigated, skipping');
-            return;
-        }
-        
-        handleAuthCallback();
-    }, []);
-
     const handleAuthCallback = async () => {
         // Set processing flag immediately
         if (isProcessingRef.current) {
@@ -234,6 +224,58 @@ export default function AuthCallback() {
             isProcessingRef.current = false;
         }
     };
+
+    useEffect(() => {
+        // Clear any cached auth state when opening directly in PWA
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            // Clear localStorage auth cache
+            try {
+                const authKeys = Object.keys(localStorage).filter(key => 
+                    key.includes('supabase') || key.includes('auth') || key.includes('session')
+                );
+                authKeys.forEach(key => {
+                    console.log('🗑️ Clearing cached auth key:', key);
+                    localStorage.removeItem(key);
+                });
+            } catch (e) {
+                console.warn('Failed to clear auth cache:', e);
+            }
+
+            // Clear service worker cache for this URL
+            if ('caches' in window) {
+                caches.keys().then(cacheNames => {
+                    cacheNames.forEach(cacheName => {
+                        caches.open(cacheName).then(cache => {
+                            cache.delete(window.location.href).catch(() => {});
+                        });
+                    });
+                }).catch(() => {});
+            }
+        }
+
+        // Prevent duplicate processing
+        if (isProcessingRef.current || hasNavigatedRef.current) {
+            console.log('⏭️ Auth callback already processing or navigated, skipping');
+            return;
+        }
+        
+        // Set a timeout to prevent infinite processing (30 seconds)
+        const timeoutId = setTimeout(() => {
+            if (isProcessingRef.current && !hasNavigatedRef.current) {
+                console.error('⏱️ Auth callback timeout - processing took too long');
+                isProcessingRef.current = false;
+                setStatus('error');
+                setMessage('❌ Authentication timeout. Please try again.');
+                setTimeout(() => {
+                    router.replace('/');
+                }, 3000);
+            }
+        }, 30000); // 30 second timeout
+
+        handleAuthCallback().finally(() => {
+            clearTimeout(timeoutId);
+        });
+    }, [router]);
 
     const styles = createStyles();
 

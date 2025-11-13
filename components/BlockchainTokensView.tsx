@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Dimensions, StyleSheet, Modal } from 'react-native';
-import { Coins, ArrowRightLeft, ExternalLink, TrendingUp, Shield, ChevronLeft, ChevronRight, Info, X } from 'lucide-react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Dimensions, StyleSheet, Modal, ActivityIndicator } from 'react-native';
+import { Coins, ArrowRightLeft, ExternalLink, TrendingUp, Shield, ChevronLeft, ChevronRight, Info, X, RefreshCw } from 'lucide-react-native';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from '../i18n/i18n';
 import { useAuth } from '../hooks/useAuth';
@@ -22,7 +22,7 @@ const BlockchainTokensView = () => {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation('wallet');
   const { user } = useAuth();
-  const { showInfo } = useToastHelpers();
+  const { showInfo, showSuccess } = useToastHelpers();
   const screenWidth = Dimensions.get('window').width;
   const paddingHorizontal = screenWidth < 400 ? 16 : 24;
   // Calculate card width: screen width - padding (2x) - margins (32) = responsive width
@@ -39,14 +39,61 @@ const BlockchainTokensView = () => {
   const [contentWidth, setContentWidth] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
-  // LUKAS balance state
+  // Balance state for each token
   const [lukasBalance, setLukasBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  const [refreshingToken, setRefreshingToken] = useState<string | null>(null);
   
   // Modal state
   const [showLukasModal, setShowLukasModal] = useState(false);
 
-  // Fetch LUKAS balance
+  // Fetch balance for a specific token
+  const fetchTokenBalance = useCallback(async (tokenSymbol: string, forceRefresh: boolean = false) => {
+    if (!user?.id) {
+      if (tokenSymbol === 'LUKAS') {
+        setLukasBalance(0);
+        setIsLoadingBalance(false);
+      }
+      return;
+    }
+
+    try {
+      if (tokenSymbol === 'LUKAS') {
+        if (forceRefresh) {
+          setRefreshingToken('LUKAS');
+        } else {
+          setIsLoadingBalance(true);
+        }
+        
+        console.log('💰 Fetching LUKAS balance for user:', user.id, 'forceRefresh:', forceRefresh);
+        
+        // Force a fresh fetch - get balance directly from database
+        const balance = await lukasRewardService.getUserBalance(user.id, 'LUKAS');
+        console.log('💰 Fetched LUKAS balance:', balance);
+        
+        // Update state immediately
+        setLukasBalance(balance);
+        setIsLoadingBalance(false);
+        
+        if (forceRefresh) {
+          showSuccess('Balance Updated', `Your ${tokenSymbol} balance has been refreshed`);
+        }
+      }
+      // Add other tokens here when they're supported
+    } catch (error) {
+      console.error(`❌ Error fetching ${tokenSymbol} balance:`, error);
+      if (tokenSymbol === 'LUKAS') {
+        setLukasBalance(0);
+        setIsLoadingBalance(false);
+      }
+    } finally {
+      if (tokenSymbol === 'LUKAS' && forceRefresh) {
+        setRefreshingToken(null);
+      }
+    }
+  }, [user?.id, showSuccess]);
+
+  // Initial fetch and subscription setup
   useEffect(() => {
     if (!user?.id) {
       setLukasBalance(0);
@@ -54,56 +101,42 @@ const BlockchainTokensView = () => {
       return;
     }
 
-    const fetchBalance = async () => {
-      try {
-        setIsLoadingBalance(true);
-        console.log('💰 Fetching LUKAS balance for user:', user.id);
-        const balance = await lukasRewardService.getUserBalance(user.id, 'LUKAS');
-        console.log('💰 Fetched LUKAS balance:', balance);
-        setLukasBalance(balance);
-      } catch (error) {
-        console.error('❌ Error fetching LUKAS balance:', error);
-        setLukasBalance(0);
-      } finally {
-        setIsLoadingBalance(false);
-      }
-    };
+    // Initial fetch
+    fetchTokenBalance('LUKAS', false);
 
-    fetchBalance();
-
-    // Subscribe to balance changes
+    // Subscribe to balance changes (real-time updates)
     const unsubscribe = lukasRewardService.subscribeToBalance(
       user.id,
       'LUKAS',
       (balance) => {
         console.log('💰 Balance subscription callback:', balance);
-        if (balance) {
-          const newBalance = parseFloat(balance.balance.toString());
-          console.log('💰 Updating balance to:', newBalance);
-          setLukasBalance(newBalance);
-        } else {
-          console.log('💰 Balance is null, setting to 0');
-          setLukasBalance(0);
+        // Only update if not currently manually refreshing
+        if (refreshingToken !== 'LUKAS') {
+          if (balance) {
+            const newBalance = parseFloat(balance.balance.toString());
+            console.log('💰 Updating balance from subscription to:', newBalance);
+            setLukasBalance(newBalance);
+            setIsLoadingBalance(false);
+          } else {
+            console.log('💰 Balance is null, setting to 0');
+            setLukasBalance(0);
+            setIsLoadingBalance(false);
+          }
         }
       }
     );
 
-    // Also set up a periodic refresh as a fallback (every 5 seconds)
-    const refreshInterval = setInterval(() => {
-      fetchBalance();
-    }, 5000);
-
     return () => {
       if (unsubscribe) unsubscribe();
-      clearInterval(refreshInterval);
     };
-  }, [user?.id]);
+  }, [user?.id, fetchTokenBalance, refreshingToken]);
 
-  const tokens: Token[] = [
+  // Memoize tokens array to update when balance changes
+  const tokens: Token[] = React.useMemo(() => [
     {
       symbol: 'LUKAS',
       name: 'LUKAS Token',
-      balance: isLoadingBalance ? '...' : lukasBalance.toFixed(2),
+      balance: isLoadingBalance && !refreshingToken ? '...' : lukasBalance.toFixed(2),
       usdValue: '0.00',
       network: 'Native',
       description: 'Native token of HashPass ecosystem',
@@ -130,7 +163,7 @@ const BlockchainTokensView = () => {
       color: '#3b82f6',
       icon: '🔷',
     },
-  ];
+  ], [lukasBalance, isLoadingBalance, refreshingToken]);
 
   const handleScroll = (event: any) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
@@ -311,20 +344,58 @@ const BlockchainTokensView = () => {
                   {token.name}
                 </Text>
               </View>
+              {/* Reload Balance Button */}
+              <TouchableOpacity
+                onPress={() => {
+                  console.log(`🔄 Refreshing ${token.symbol} balance...`);
+                  fetchTokenBalance(token.symbol, true);
+                }}
+                style={{
+                  padding: 8,
+                  borderRadius: 8,
+                  backgroundColor: colors.background.default,
+                  borderWidth: 1,
+                  borderColor: colors.divider,
+                }}
+                disabled={refreshingToken === token.symbol}
+              >
+                {refreshingToken === token.symbol ? (
+                  <ActivityIndicator size="small" color={token.color} />
+                ) : (
+                  <RefreshCw size={16} color={token.color} />
+                )}
+              </TouchableOpacity>
             </View>
 
             {/* Balance */}
             <View style={{ marginBottom: 16 }}>
-              <Text
-                style={{
-                  fontSize: 32,
-                  fontWeight: '800',
-                  color: token.color,
-                  marginBottom: 4,
-                }}
-              >
-                {token.balance}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                {token.symbol === 'LUKAS' && (isLoadingBalance || refreshingToken === 'LUKAS') ? (
+                  <>
+                    <Text
+                      style={{
+                        fontSize: 32,
+                        fontWeight: '800',
+                        color: token.color,
+                        marginRight: 8,
+                      }}
+                    >
+                      ...
+                    </Text>
+                    <ActivityIndicator size="small" color={token.color} />
+                  </>
+                ) : (
+                  <Text
+                    style={{
+                      fontSize: 32,
+                      fontWeight: '800',
+                      color: token.color,
+                    }}
+                  >
+                    {token.balance}
+                  </Text>
+                )}
+              </View>
               <Text
                 style={{
                   fontSize: 14,

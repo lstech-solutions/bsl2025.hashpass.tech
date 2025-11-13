@@ -57,7 +57,11 @@ const transporter = nodemailer.createTransport({
 
 // Test mode - only process specific user
 const TEST_MODE = process.argv.includes('--test');
-const TEST_USER_EMAIL = 'edward@hashpass.app';
+// Test with different users based on flag
+// Use --test-en for English test, --test for Spanish test
+const TEST_USER_EMAIL = process.argv.includes('--test-en') 
+  ? 'edward@hashpass.tech'  // English user
+  : 'mamesam1@eafit.edu.co'; // Spanish user (default)
 const TEST_SPEAKER_NAMES = ['Edward Calderon']; // Can add more for testing
 
 // Helper function to shuffle array
@@ -132,9 +136,34 @@ async function createMeetingRequest(requesterId, requesterName, requesterEmail, 
   }
 }
 
+// Email translations
+const emailTranslations = {
+  es: {
+    title: 'Recomendaciones de Speakers - BSL 2025',
+    greeting: (name) => `¡Hola ${name}!`,
+    subtitle: 'Hemos preparado recomendaciones especiales para ti',
+    intro1: 'Basado en tu perfil y preferencias, hemos seleccionado <strong>3 speakers destacados</strong> que creemos que serían excelentes conexiones para ti durante el BSL 2025.',
+    intro2: 'Ya hemos enviado solicitudes de reunión a estos speakers en tu nombre. ¡Revisa tu perfil para ver el estado de tus solicitudes!',
+    viewProfile: 'Ver Perfil',
+    viewAllRequests: 'Ver Todas Mis Solicitudes',
+    footer: 'Este es un email automático del sistema de matchmaking de BSL 2025.'
+  },
+  en: {
+    title: 'Speaker Recommendations - BSL 2025',
+    greeting: (name) => `Hello ${name}!`,
+    subtitle: 'We\'ve prepared special recommendations for you',
+    intro1: 'Based on your profile and preferences, we\'ve selected <strong>3 outstanding speakers</strong> that we believe would be excellent connections for you during BSL 2025.',
+    intro2: 'We\'ve already sent meeting requests to these speakers on your behalf. Check your profile to see the status of your requests!',
+    viewProfile: 'View Profile',
+    viewAllRequests: 'View All My Requests',
+    footer: 'This is an automated email from the BSL 2025 matchmaking system.'
+  }
+};
+
 // Generate email HTML for recommended matches
 function generateRecommendationEmail(userName, speakers, locale = 'es') {
   const appUrl = 'https://bsl2025.hashpass.tech';
+  const translations = emailTranslations[locale] || emailTranslations.es;
   
   const emailContent = `
 <!DOCTYPE html>
@@ -142,7 +171,7 @@ function generateRecommendationEmail(userName, speakers, locale = 'es') {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Recomendaciones de Speakers - BSL 2025</title>
+  <title>${translations.title}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f7;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f7; padding: 40px 20px;">
@@ -152,8 +181,8 @@ function generateRecommendationEmail(userName, speakers, locale = 'es') {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">¡Hola ${userName}!</h1>
-              <p style="color: #ffffff; margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">Hemos preparado recomendaciones especiales para ti</p>
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">${translations.greeting(userName)}</h1>
+              <p style="color: #ffffff; margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">${translations.subtitle}</p>
             </td>
           </tr>
           
@@ -161,11 +190,11 @@ function generateRecommendationEmail(userName, speakers, locale = 'es') {
           <tr>
             <td style="padding: 40px 30px;">
               <p style="color: #1d1d1f; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                Basado en tu perfil y preferencias, hemos seleccionado <strong>3 speakers destacados</strong> que creemos que serían excelentes conexiones para ti durante el BSL 2025.
+                ${translations.intro1}
               </p>
               
               <p style="color: #1d1d1f; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
-                Ya hemos enviado solicitudes de reunión a estos speakers en tu nombre. ¡Revisa tu perfil para ver el estado de tus solicitudes!
+                ${translations.intro2}
               </p>
               
               ${speakers.map((speaker, index) => `
@@ -189,7 +218,7 @@ function generateRecommendationEmail(userName, speakers, locale = 'es') {
                           ${speaker.title ? `<p style="color: #86868b; margin: 0 0 10px 0; font-size: 14px;">${speaker.title}</p>` : ''}
                           ${speaker.company ? `<p style="color: #86868b; margin: 0 0 10px 0; font-size: 14px;">${speaker.company}</p>` : ''}
                           ${speaker.bio ? `<p style="color: #1d1d1f; margin: 10px 0 0 0; font-size: 14px; line-height: 1.5;">${speaker.bio.substring(0, 150)}${speaker.bio.length > 150 ? '...' : ''}</p>` : ''}
-                          <a href="${appUrl}/events/bsl2025/speakers/${speaker.id}" style="display: inline-block; margin-top: 10px; padding: 10px 20px; background-color: #007AFF; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500;">Ver Perfil</a>
+                          <a href="${appUrl}/events/bsl2025/speakers/${speaker.id}" style="display: inline-block; margin-top: 10px; padding: 10px 20px; background-color: #007AFF; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500;">${translations.viewProfile}</a>
                         </td>
                       </tr>
                     </table>
@@ -202,7 +231,7 @@ function generateRecommendationEmail(userName, speakers, locale = 'es') {
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 30px;">
                 <tr>
                   <td align="center">
-                    <a href="${appUrl}/events/bsl2025/networking" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600;">Ver Todas Mis Solicitudes</a>
+                    <a href="${appUrl}/events/bsl2025/networking" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600;">${translations.viewAllRequests}</a>
                   </td>
                 </tr>
               </table>
@@ -213,7 +242,7 @@ function generateRecommendationEmail(userName, speakers, locale = 'es') {
           <tr>
             <td style="padding: 30px; background-color: #f5f5f7; text-align: center; border-top: 1px solid #e5e5e7;">
               <p style="color: #86868b; font-size: 12px; margin: 0 0 10px 0;">
-                Este es un email automático del sistema de matchmaking de BSL 2025.
+                ${translations.footer}
               </p>
               <p style="color: #86868b; font-size: 12px; margin: 0;">
                 <a href="${appUrl}" style="color: #007AFF; text-decoration: none;">HashPass</a> | 
@@ -235,15 +264,22 @@ function generateRecommendationEmail(userName, speakers, locale = 'es') {
 // Send recommendation email
 async function sendRecommendationEmail(email, userName, speakers, locale = 'es') {
   try {
-    const subject = '🎯 Recomendaciones de Speakers para ti - BSL 2025';
+    const translations = emailTranslations[locale] || emailTranslations.es;
+    const subject = locale === 'en' 
+      ? '🎯 Speaker Recommendations for You - BSL 2025'
+      : '🎯 Recomendaciones de Speakers para ti - BSL 2025';
     const htmlContent = generateRecommendationEmail(userName, speakers, locale);
+    
+    const textContent = locale === 'en'
+      ? `Hello ${userName},\n\nWe've selected 3 outstanding speakers for you:\n\n${speakers.map((s, i) => `${i + 1}. ${s.name}${s.title ? ` - ${s.title}` : ''}`).join('\n')}\n\nVisit your profile to see more details: https://bsl2025.hashpass.tech/events/bsl2025/networking`
+      : `Hola ${userName},\n\nHemos seleccionado 3 speakers destacados para ti:\n\n${speakers.map((s, i) => `${i + 1}. ${s.name}${s.title ? ` - ${s.title}` : ''}`).join('\n')}\n\nVisita tu perfil para ver más detalles: https://bsl2025.hashpass.tech/events/bsl2025/networking`;
     
     const mailOptions = {
       from: `HashPass <${process.env.NODEMAILER_FROM}>`,
       to: email,
       subject: subject,
       html: htmlContent,
-      text: `Hola ${userName},\n\nHemos seleccionado 3 speakers destacados para ti:\n\n${speakers.map((s, i) => `${i + 1}. ${s.name}${s.title ? ` - ${s.title}` : ''}`).join('\n')}\n\nVisita tu perfil para ver más detalles: https://bsl2025.hashpass.tech/events/bsl2025/networking`,
+      text: textContent,
     };
 
     const info = await transporter.sendMail(mailOptions);
@@ -340,7 +376,8 @@ async function main() {
           id: user.id,
           email: user.email,
           name: user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0],
-          passType: passes[0].pass_type || 'general'
+          passType: passes[0].pass_type || 'general',
+          user_metadata: user.user_metadata || {}
         });
       }
     }
@@ -435,12 +472,32 @@ async function main() {
           continue;
         }
         
+        // Get full user data to access metadata properly
+        const { data: fullUserData } = await supabase.auth.admin.getUserById(user.id);
+        const fullUser = fullUserData?.user;
+        
+        // Detect user locale - check multiple sources
+        let userLocale = 'es'; // Default to Spanish
+        if (fullUser) {
+          userLocale = fullUser.raw_user_meta_data?.locale || 
+                      fullUser.user_metadata?.locale || 
+                      fullUser.app_metadata?.locale || 
+                      'es';
+        }
+        
+        // Validate locale is supported
+        if (!['en', 'es'].includes(userLocale)) {
+          userLocale = 'es'; // Default to Spanish if unsupported
+        }
+        
+        console.log(`   🌐 Using locale: ${userLocale}`);
+        
         // Send recommendation email
         const emailResult = await sendRecommendationEmail(
           user.email,
           user.name,
           meetingRequests.map(mr => mr.speaker),
-          'es' // Default to Spanish, can be made dynamic
+          userLocale
         );
         
         if (emailResult.success) {

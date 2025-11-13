@@ -4,7 +4,7 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Platform, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import * as Linking from 'expo-linking';
 import ThemeAndLanguageSwitcher from '../../components/ThemeAndLanguageSwitcher';
@@ -26,7 +26,23 @@ export default function AuthScreen() {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation('auth');
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { showError, showSuccess, showWarning, showInfo } = useToastHelpers();
+  
+  // Get returnTo parameter from URL
+  const returnTo = params.returnTo as string | undefined;
+  
+  // Helper function to get redirect path after authentication
+  const getRedirectPath = () => {
+    if (returnTo) {
+      try {
+        return decodeURIComponent(returnTo);
+      } catch (e) {
+        console.warn('Failed to decode returnTo parameter:', e);
+      }
+    }
+    return '/(shared)/dashboard/explore';
+  };
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -68,7 +84,7 @@ export default function AuthScreen() {
           console.log(`🔐 Found existing session on mount for user: ${session.user.id}`);
           // Navigate immediately if user is already authenticated
           hasNavigatedRef.current = true;
-          router.replace('/(shared)/dashboard/explore');
+          router.replace(getRedirectPath());
         }
       } catch (error) {
         console.warn('⚠️ Error checking existing session:', error);
@@ -110,7 +126,7 @@ export default function AuthScreen() {
             console.log('🔄 INITIAL_SESSION detected - user already authenticated, navigating to dashboard');
             if (!hasNavigatedRef.current) {
               hasNavigatedRef.current = true;
-              router.replace('/(shared)/dashboard/explore');
+              router.replace(getRedirectPath());
             }
             isProcessingRef.current = false;
             return;
@@ -129,14 +145,14 @@ export default function AuthScreen() {
               // Continue to dashboard even if pass creation fails
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
-              router.replace('/(shared)/dashboard/explore');
+              router.replace(getRedirectPath());
               }
             } else if (passId) {
               console.log('✅ Default pass created successfully:', passId);
               // Navigate immediately, don't wait
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
-              router.replace('/(shared)/dashboard/explore');
+              router.replace(getRedirectPath());
               }
             } else {
               console.warn('⚠️ Pass creation returned null - pass may already exist or creation failed silently');
@@ -157,7 +173,7 @@ export default function AuthScreen() {
               }
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
-              router.replace('/(shared)/dashboard/explore');
+              router.replace(getRedirectPath());
               }
             }
 
@@ -262,7 +278,7 @@ export default function AuthScreen() {
             // Continue to dashboard even if pass creation fails
             if (!hasNavigatedRef.current) {
               hasNavigatedRef.current = true;
-            router.replace('/(shared)/dashboard/explore');
+            router.replace(getRedirectPath());
             }
           } finally {
             isProcessingRef.current = false;
@@ -270,7 +286,7 @@ export default function AuthScreen() {
         } else {
           if (!hasNavigatedRef.current) {
             hasNavigatedRef.current = true;
-          router.replace('/(shared)/dashboard/explore');
+          router.replace(getRedirectPath());
         }
       }
       }
@@ -486,7 +502,7 @@ export default function AuthScreen() {
           setLoading(false);
           
           // Navigate to dashboard - user is already authenticated
-          router.replace('/(shared)/dashboard/explore');
+          router.replace(getRedirectPath());
           return;
         } else {
           throw new Error('No session created after verification');
@@ -540,7 +556,7 @@ export default function AuthScreen() {
           setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
           // Navigate immediately, no delay
-          router.replace('/(shared)/dashboard/explore');
+          router.replace(getRedirectPath());
           return;
         }
       }
@@ -568,7 +584,7 @@ export default function AuthScreen() {
                 setLoading(false);
                 showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
                 // Navigate immediately, no delay
-                router.replace('/(shared)/dashboard/explore');
+                router.replace(getRedirectPath());
                 return;
               }
             }
@@ -592,7 +608,7 @@ export default function AuthScreen() {
       if (session) {
         setLoading(false);
         showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
-        router.replace('/(shared)/dashboard/explore');
+        router.replace(getRedirectPath());
         return;
       }
       
@@ -634,7 +650,7 @@ export default function AuthScreen() {
           setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
           // Navigate immediately, no delay
-          router.replace('/(shared)/dashboard/explore');
+          router.replace(getRedirectPath());
           return;
         }
       }
@@ -662,7 +678,7 @@ export default function AuthScreen() {
                 setLoading(false);
                 showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
                 // Navigate immediately, no delay
-                router.replace('/(shared)/dashboard/explore');
+                router.replace(getRedirectPath());
                 return;
               }
             }
@@ -686,7 +702,7 @@ export default function AuthScreen() {
       if (session) {
         setLoading(false);
         showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
-        router.replace('/(shared)/dashboard/explore');
+        router.replace(getRedirectPath());
         return;
       }
       

@@ -49,7 +49,7 @@ export default function SpeakerDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isDark, colors } = useTheme();
   const { event } = useEvent();
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const router = useRouter();
   const { showSuccess, showError, showWarning, showInfo } = useToastHelpers();
   
@@ -792,10 +792,18 @@ export default function SpeakerDetail() {
     console.log('User:', user?.id);
     console.log('Speaker:', speaker?.id);
     
-    if (!user) {
-      console.log('❌ No user found');
-      showWarning('Login Required', 'Please log in to request a meeting');
-      return;
+    // Check for active session
+    if (!isLoggedIn || !user) {
+      console.log('❌ No active session found');
+      // Check session directly to be sure
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        showWarning('Login Required', 'Please log in to request a meeting');
+        // Redirect to auth page with return URL
+        const currentPath = `/events/bsl2025/speakers/${id}`;
+        router.push(`/(shared)/auth?returnTo=${encodeURIComponent(currentPath)}`);
+        return;
+      }
     }
 
     if (!speaker) {

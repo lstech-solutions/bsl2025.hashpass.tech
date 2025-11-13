@@ -6,6 +6,7 @@ import { useTranslation } from '../i18n/i18n';
 import { useAuth } from '../hooks/useAuth';
 import { lukasRewardService } from '../lib/lukas-reward-service';
 import { useToastHelpers } from '../contexts/ToastContext';
+import { useBalance } from '../contexts/BalanceContext';
 
 interface Token {
   symbol: string;
@@ -20,9 +21,24 @@ interface Token {
 
 const BlockchainTokensView = () => {
   const { colors, isDark } = useTheme();
-  const { t } = useTranslation('wallet');
+  const { t: translate } = useTranslation('wallet');
   const { user } = useAuth();
   const { showInfo, showSuccess } = useToastHelpers();
+  const { refreshBalance } = useBalance();
+  
+  // Helper function to translate with fallback
+  const t = (key: string, fallback?: string) => {
+    try {
+      const translated = translate(key, {});
+      // If translation returns the key itself (not found), use the fallback
+      if (!translated || translated === key || translated.startsWith('wallet.')) {
+        return fallback || key;
+      }
+      return translated;
+    } catch {
+      return fallback || key;
+    }
+  };
   const screenWidth = Dimensions.get('window').width;
   const paddingHorizontal = screenWidth < 400 ? 16 : 24;
   // Calculate card width: screen width - padding (2x) - margins (32) = responsive width
@@ -93,6 +109,23 @@ const BlockchainTokensView = () => {
     }
   }, [user?.id, showSuccess]);
 
+  // Listen for balance refresh events from other components
+  const handleBalanceRefresh = useCallback(() => {
+    console.log('💰 Balance refresh event received, refreshing...');
+    // Force a fresh fetch from the database
+    fetchTokenBalance('LUKAS', true);
+  }, [fetchTokenBalance]);
+
+  // Subscribe to custom refresh events
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('balance:refresh', handleBalanceRefresh);
+      return () => {
+        window.removeEventListener('balance:refresh', handleBalanceRefresh);
+      };
+    }
+  }, [handleBalanceRefresh]);
+
   // Initial fetch and subscription setup
   useEffect(() => {
     if (!user?.id) {
@@ -110,18 +143,17 @@ const BlockchainTokensView = () => {
       'LUKAS',
       (balance) => {
         console.log('💰 Balance subscription callback:', balance);
-        // Only update if not currently manually refreshing
-        if (refreshingToken !== 'LUKAS') {
-          if (balance) {
-            const newBalance = parseFloat(balance.balance.toString());
-            console.log('💰 Updating balance from subscription to:', newBalance);
-            setLukasBalance(newBalance);
-            setIsLoadingBalance(false);
-          } else {
-            console.log('💰 Balance is null, setting to 0');
-            setLukasBalance(0);
-            setIsLoadingBalance(false);
-          }
+        // Always update from subscription - it's the source of truth
+        // The refreshingToken check was preventing updates during manual refresh
+        if (balance) {
+          const newBalance = parseFloat(balance.balance.toString());
+          console.log('💰 Updating balance from subscription to:', newBalance);
+          setLukasBalance(newBalance);
+          setIsLoadingBalance(false);
+        } else {
+          console.log('💰 Balance is null, setting to 0');
+          setLukasBalance(0);
+          setIsLoadingBalance(false);
         }
       }
     );
@@ -129,7 +161,7 @@ const BlockchainTokensView = () => {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [user?.id, fetchTokenBalance, refreshingToken]);
+  }, [user?.id, fetchTokenBalance]);
 
   // Memoize tokens array to update when balance changes
   const tokens: Token[] = React.useMemo(() => [
@@ -438,6 +470,31 @@ const BlockchainTokensView = () => {
               {token.description}
             </Text>
 
+            {/* Withdrawal Disclaimer for LUKAS */}
+            {token.symbol === 'LUKAS' && (
+              <View
+                style={{
+                  backgroundColor: isDark ? '#78350f' : '#fef3c7',
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 16,
+                  borderWidth: 1,
+                  borderColor: isDark ? '#92400e' : '#fbbf24',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: isDark ? '#fbbf24' : '#92400e',
+                    lineHeight: 18,
+                    fontWeight: '600',
+                  }}
+                >
+                  {t('tokens.withdrawalDisclaimer', '💡 Withdrawal available when balance is over 5 LUKAS')}
+                </Text>
+              </View>
+            )}
+
             {/* Actions */}
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
@@ -621,6 +678,39 @@ const BlockchainTokensView = () => {
                   }}
                 >
                   {t('tokens.lukasInfo.features', '• Earn LUKAS by accepting and scheduling meetings\n• Will be monetized in HashHouse\n• Swappable to other crypto tokens')}
+                </Text>
+              </View>
+
+              {/* Withdrawal Disclaimer */}
+              <View
+                style={{
+                  backgroundColor: '#fef3c7',
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 20,
+                  borderWidth: 1,
+                  borderColor: '#fbbf24',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color: '#92400e',
+                    lineHeight: 20,
+                    fontWeight: '600',
+                    marginBottom: 4,
+                  }}
+                >
+                  ⚠️ Withdrawal Notice
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color: '#92400e',
+                    lineHeight: 20,
+                  }}
+                >
+                  {t('tokens.lukasInfo.withdrawalDisclaimer', 'You can withdraw LUKAS tokens when your balance is over 5 LUKAS.')}
                 </Text>
               </View>
 

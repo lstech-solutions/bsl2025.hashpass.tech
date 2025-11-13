@@ -12,6 +12,7 @@ import { EventProvider } from '../contexts/EventContext';
 import { ToastProvider } from '../contexts/ToastContext';
 import { ScrollProvider } from '../contexts/ScrollContext';
 import { NotificationProvider } from '../contexts/NotificationContext';
+import { BalanceProvider } from '../contexts/BalanceContext';
 import { useTheme, useThemeProvider } from '../hooks/useTheme';
 import { StatusBar } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
@@ -42,13 +43,15 @@ export default function RootLayout() {
             <LanguageProvider>
               <I18nProvider>
                 <NotificationProvider>
-                  <ToastProvider>
-                    <ScrollProvider>
-                      <CopilotProvider overlay="view">
-                        <ThemedContent />
-                      </CopilotProvider>
-                    </ScrollProvider>
-                  </ToastProvider>
+                  <BalanceProvider>
+                    <ToastProvider>
+                      <ScrollProvider>
+                        <CopilotProvider overlay="view">
+                          <ThemedContent />
+                        </CopilotProvider>
+                      </ScrollProvider>
+                    </ToastProvider>
+                  </BalanceProvider>
                 </NotificationProvider>
               </I18nProvider>
             </LanguageProvider>

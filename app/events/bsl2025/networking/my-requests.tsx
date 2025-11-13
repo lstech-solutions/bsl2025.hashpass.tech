@@ -29,6 +29,7 @@ import { useNotifications } from '../../../../contexts/NotificationContext';
 import { useRealtimeMeetingRequests, RequestWithDirection } from '../../../../hooks/useRealtimeMeetingRequests';
 import { lukasRewardService } from '../../../../lib/lukas-reward-service';
 import { useBalance } from '../../../../contexts/BalanceContext';
+import { useTranslation } from '../../../../i18n/i18n';
 
 const CopilotView = walkthroughable(View);
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
@@ -47,6 +48,8 @@ export default function MyRequestsView() {
   const { showSuccess, showError } = useToastHelpers();
   const { notifications, refreshNotifications } = useNotifications();
   const { refreshBalance } = useBalance();
+  const { t } = useTranslation('networking');
+  const { t: tCommon } = useTranslation('common');
   const styles = getStyles(isDark, colors);
 
   const [requests, setRequests] = useState<MeetingRequestWithDirection[]>([]);
@@ -391,7 +394,7 @@ export default function MyRequestsView() {
       }
 
       if (data?.success) {
-        showSuccess('Request Cancelled', 'Your meeting request has been cancelled. Your request limit has been restored, but boost points are not refunded.');
+        showSuccess(t('requestView.requestCancelled'), t('requestView.requestCancelledMessage'));
         
         // Force reload to ensure UI is updated
         setTimeout(async () => {
@@ -1133,7 +1136,7 @@ export default function MyRequestsView() {
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Request Details</Text>
+          <Text style={styles.modalTitle}>{t('requestView.title')}</Text>
           <TouchableOpacity
             style={styles.closeButton}
             onPress={() => setShowDetailModal(false)}
@@ -1149,7 +1152,7 @@ export default function MyRequestsView() {
           >
             {/* Speaker Info */}
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>Speaker</Text>
+              <Text style={styles.detailLabel}>{t('requestView.speaker')}</Text>
               <View style={styles.speakerDetail}>
                 <SpeakerAvatar
                   name={selectedRequest.speaker_name}
@@ -1161,14 +1164,14 @@ export default function MyRequestsView() {
                   <Text style={styles.speakerDetailName}>
                     {selectedRequest.speaker_name}
                   </Text>
-                  <Text style={styles.speakerDetailTitle}>Speaker</Text>
+                  <Text style={styles.speakerDetailTitle}>{t('requestView.speaker')}</Text>
                 </View>
               </View>
             </View>
 
             {/* Requester Info */}
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>Requester</Text>
+              <Text style={styles.detailLabel}>{t('requestView.requester')}</Text>
               <View style={styles.speakerDetail}>
                 <SpeakerAvatar
                   name={(selectedRequest as any).requester_full_name || selectedRequest.requester_name}
@@ -1197,7 +1200,7 @@ export default function MyRequestsView() {
                       </View>
                     )}
                   </View>
-                  <Text style={styles.speakerDetailTitle}>Requester</Text>
+                  <Text style={styles.speakerDetailTitle}>{t('requestView.requester')}</Text>
                   {selectedRequest.requester_title && (
                     <Text style={[styles.speakerDetailTitle, { marginTop: 4 }]}>
                       {selectedRequest.requester_title}
@@ -1215,79 +1218,79 @@ export default function MyRequestsView() {
             {/* Expiration Countdown Timer */}
             {selectedRequest.expires_at && expirationCountdown && (
               <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Expires In</Text>
+                <Text style={styles.detailLabel}>{t('requestView.expiresIn')}</Text>
                 <View style={styles.countdownContainer}>
                   <View style={styles.countdownUnit}>
                     <Text style={styles.countdownValue}>
                       {String(expirationCountdown.hours).padStart(2, '0')}
                     </Text>
-                    <Text style={styles.countdownLabel}>HRS</Text>
+                    <Text style={styles.countdownLabel}>{t('requestView.hours')}</Text>
                   </View>
                   <Text style={styles.countdownSeparator}>:</Text>
                   <View style={styles.countdownUnit}>
                     <Text style={styles.countdownValue}>
                       {String(expirationCountdown.minutes).padStart(2, '0')}
                     </Text>
-                    <Text style={styles.countdownLabel}>MIN</Text>
+                    <Text style={styles.countdownLabel}>{t('requestView.minutes')}</Text>
                   </View>
                   <Text style={styles.countdownSeparator}>:</Text>
                   <View style={styles.countdownUnit}>
                     <Text style={styles.countdownValue}>
                       {String(expirationCountdown.seconds).padStart(2, '0')}
                     </Text>
-                    <Text style={styles.countdownLabel}>SEC</Text>
+                    <Text style={styles.countdownLabel}>{t('requestView.seconds')}</Text>
                   </View>
                 </View>
               </View>
             )}
 
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>Status</Text>
+              <Text style={styles.detailLabel}>{t('requestView.status')}</Text>
               <View style={[styles.statusDetail, { backgroundColor: getStatusColor(selectedRequest.status) }]}>
                 <MaterialIcons name={getStatusIcon(selectedRequest.status) as any} size={20} color="white" />
                 <Text style={styles.statusDetailText}>
-                  {selectedRequest.status === 'pending' ? 'PENDING' : selectedRequest.status.toUpperCase()}
+                  {selectedRequest.status === 'pending' ? t('requestView.pending') : selectedRequest.status.toUpperCase()}
                 </Text>
               </View>
             </View>
 
             {selectedRequest.message && (
               <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Message</Text>
+                <Text style={styles.detailLabel}>{t('requestView.message')}</Text>
                 <Text style={styles.detailValue}>{selectedRequest.message}</Text>
               </View>
             )}
 
             {selectedRequest.note && (
               <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Intentions</Text>
+                <Text style={styles.detailLabel}>{t('requestView.intentions')}</Text>
                 <Text style={styles.detailValue}>{selectedRequest.note}</Text>
               </View>
             )}
 
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>Meeting Details</Text>
+              <Text style={styles.detailLabel}>{t('requestView.meetingDetailsLabel')}</Text>
               <View style={styles.meetingDetails}>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailRowLabel}>Duration:</Text>
-                  <Text style={styles.detailRowValue}>{selectedRequest.duration_minutes} minutes</Text>
+                  <Text style={styles.detailRowLabel}>{t('requestView.duration')}</Text>
+                  <Text style={styles.detailRowValue}>{selectedRequest.duration_minutes} {t('requestView.minutesLabel')}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailRowLabel}>Type:</Text>
+                  <Text style={styles.detailRowLabel}>{t('requestView.type')}</Text>
                   <Text style={styles.detailRowValue}>{selectedRequest.meeting_type}</Text>
                 </View>
                 {selectedRequest.boost_amount && selectedRequest.boost_amount > 0 && (
                   <View style={styles.detailRow}>
                     <View style={styles.detailRowLabelContainer}>
                       <MaterialIcons name="bolt" size={16} color="#FFC107" />
-                      <Text style={styles.detailRowLabel}>Boost:</Text>
+                      <Text style={styles.detailRowLabel}>{t('requestView.boost')}</Text>
                     </View>
                     <Text style={styles.detailRowValue}>{selectedRequest.boost_amount} BOOST</Text>
                   </View>
                 )}
                 {selectedRequest.expires_at && (
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailRowLabel}>Expires:</Text>
+                    <Text style={styles.detailRowLabel}>{t('requestView.expires')}</Text>
                     <Text style={[
                       styles.detailRowValue,
                       new Date(selectedRequest.expires_at) < new Date() && styles.expiredText
@@ -1300,22 +1303,22 @@ export default function MyRequestsView() {
             </View>
 
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>Timeline</Text>
+              <Text style={styles.detailLabel}>{t('requestView.timeline')}</Text>
               <View style={styles.timeline}>
                 <View style={styles.timelineItem}>
                   <Text style={styles.timelineDate}>{formatDate(selectedRequest.created_at)}</Text>
-                  <Text style={styles.timelineText}>Request sent</Text>
+                  <Text style={styles.timelineText}>{t('requestView.requestSent')}</Text>
                 </View>
                 {selectedRequest.expires_at && (
                   <View style={styles.timelineItem}>
                     <Text style={styles.timelineDate}>{formatDate(selectedRequest.expires_at)}</Text>
-                    <Text style={styles.timelineText}>Expires</Text>
+                    <Text style={styles.timelineText}>{t('requestView.expiresLabel')}</Text>
                   </View>
                 )}
                 {selectedRequest.updated_at !== selectedRequest.created_at && (
                   <View style={styles.timelineItem}>
                     <Text style={styles.timelineDate}>{formatDate(selectedRequest.updated_at)}</Text>
-                    <Text style={styles.timelineText}>Status updated</Text>
+                    <Text style={styles.timelineText}>{t('requestView.statusUpdated')}</Text>
                   </View>
                 )}
               </View>
@@ -1323,7 +1326,7 @@ export default function MyRequestsView() {
 
             {selectedRequest.speaker_response && (
               <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Response</Text>
+                <Text style={styles.detailLabel}>{t('requestView.response')}</Text>
                 <Text style={styles.detailValue}>{selectedRequest.speaker_response}</Text>
                 {selectedRequest.speaker_response_at && (
                   <Text style={styles.responseDate}>
@@ -1336,7 +1339,7 @@ export default function MyRequestsView() {
             {/* Link to Meeting if Accepted */}
             {selectedRequest.status === 'accepted' && selectedRequest.meeting_id && (
               <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Meeting</Text>
+                <Text style={styles.detailLabel}>{t('requestView.meeting')}</Text>
                 <TouchableOpacity
                   style={[styles.meetingLinkButton, { backgroundColor: colors.primary }]}
                   onPress={() => {
@@ -1357,7 +1360,7 @@ export default function MyRequestsView() {
                   }}
                 >
                   <MaterialIcons name="event" size={20} color="white" />
-                  <Text style={styles.meetingLinkButtonText}>View Meeting Details</Text>
+                  <Text style={styles.meetingLinkButtonText}>{t('requestView.viewMeetingDetails')}</Text>
                   <MaterialIcons name="chevron-right" size={20} color="white" />
                 </TouchableOpacity>
               </View>
@@ -1372,7 +1375,7 @@ export default function MyRequestsView() {
                     onPress={() => handleCancelRequest(selectedRequest)}
                   >
                     <MaterialIcons name="cancel" size={20} color="white" />
-                    <Text style={styles.cancelButtonText}>Cancel Request</Text>
+                    <Text style={styles.cancelButtonText}>{t('requestView.cancelRequest')}</Text>
                   </TouchableOpacity>
                 ) : (
                   <View style={styles.actionButtonsContainer}>
@@ -1383,7 +1386,7 @@ export default function MyRequestsView() {
                     >
                       <MaterialIcons name="check-circle" size={20} color="white" />
                       <Text style={styles.actionButtonText}>
-                        {loadingSlots ? 'Loading slots...' : 'Accept'}
+                        {loadingSlots ? tCommon('loading.loadingSlots') : t('requestView.accept')}
                       </Text>
                     </TouchableOpacity>
                     
@@ -1392,7 +1395,7 @@ export default function MyRequestsView() {
                       onPress={() => setShowHoldModal(true)}
                     >
                       <MaterialIcons name="schedule" size={20} color="white" />
-                      <Text style={styles.actionButtonText}>Hold Request</Text>
+                      <Text style={styles.actionButtonText}>{t('requestView.holdRequest')}</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity
@@ -1400,7 +1403,7 @@ export default function MyRequestsView() {
                       onPress={() => handleDeclineRequest(selectedRequest)}
                     >
                       <MaterialIcons name="cancel" size={20} color="white" />
-                      <Text style={styles.actionButtonText}>Decline</Text>
+                      <Text style={styles.actionButtonText}>{t('requestView.decline')}</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity
@@ -1408,7 +1411,7 @@ export default function MyRequestsView() {
                       onPress={() => handleBlockUser(selectedRequest)}
                     >
                       <MaterialIcons name="block" size={20} color="white" />
-                      <Text style={styles.actionButtonText}>Block User</Text>
+                      <Text style={styles.actionButtonText}>{t('requestView.blockUser')}</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -1427,14 +1430,14 @@ export default function MyRequestsView() {
       >
         <View style={styles.holdModalOverlay}>
           <View style={styles.holdModalContent}>
-            <Text style={styles.holdModalTitle}>Hold Request</Text>
+            <Text style={styles.holdModalTitle}>{t('requestView.holdModalTitle')}</Text>
             <Text style={styles.holdModalDescription}>
-              Extend the expiration time of this request by spending your boost points.
+              {t('requestView.holdModalDescription')}
             </Text>
             
             <View style={styles.holdSliderContainer}>
               <Text style={styles.holdSliderLabel}>
-                Hold Duration: {holdTime} {holdTime === 1 ? 'hour' : 'hours'}
+                {t('requestView.holdDuration')} {holdTime} {holdTime === 1 ? t('requestView.hour') : t('requestView.hours')}
               </Text>
               <View style={styles.holdSliderTrack}>
                 <View style={[styles.holdSliderFill, { width: `${(holdTime / 6) * 100}%` }]} />
@@ -1463,8 +1466,8 @@ export default function MyRequestsView() {
             </View>
 
             <View style={styles.holdCostContainer}>
-              <Text style={styles.holdCostLabel}>Cost:</Text>
-              <Text style={styles.holdCostValue}>{holdTime * 50} boost points</Text>
+              <Text style={styles.holdCostLabel}>{t('requestView.cost')}</Text>
+              <Text style={styles.holdCostValue}>{holdTime * 50} {t('requestView.boostPoints')}</Text>
             </View>
 
             <View style={styles.holdModalButtons}>
@@ -1472,18 +1475,18 @@ export default function MyRequestsView() {
                 style={[styles.holdModalButton, styles.holdModalButtonCancel]}
                 onPress={() => setShowHoldModal(false)}
               >
-                <Text style={styles.holdModalButtonCancelText}>Cancel</Text>
+                <Text style={styles.holdModalButtonCancelText}>{t('meetingRequestModal.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.holdModalButton, styles.holdModalButtonConfirm]}
                 onPress={() => {
                   // TODO: Implement hold request function
                   setShowHoldModal(false);
-                  showSuccess('Request Held', `Request held for ${holdTime} hour(s)`);
+                  showSuccess(t('requestView.requestHeld'), t('requestView.requestHeldMessage', { hours: holdTime }));
                 }}
               >
                 <MaterialIcons name="check" size={20} color="white" />
-                <Text style={styles.holdModalButtonConfirmText}>Confirm Hold</Text>
+                <Text style={styles.holdModalButtonConfirmText}>{t('requestView.confirmHold')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1496,7 +1499,7 @@ export default function MyRequestsView() {
     return (
       <LoadingScreen
         icon="send"
-        message="Loading your requests..."
+        message={tCommon('loading.loadingRequests')}
         fullScreen={true}
       />
     );
@@ -1509,7 +1512,7 @@ export default function MyRequestsView() {
     <View style={styles.container}>
       <Stack.Screen 
         options={{ 
-          title: 'Your Request',
+          title: t('requestView.yourRequest'),
           headerBackTitle: 'Back',
           headerRight: () => (
             <TouchableOpacity

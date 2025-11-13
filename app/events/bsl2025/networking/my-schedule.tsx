@@ -24,6 +24,7 @@ import { useAuth } from '../../../../hooks/useAuth';
 import { supabase } from '../../../../lib/supabase';
 import { apiClient } from '../../../../lib/api-client';
 import { useToastHelpers } from '../../../../contexts/ToastContext';
+import { useTranslation } from '../../../../i18n/i18n';
 import { Meeting, TimeSlot, DaySchedule } from '@/types/networking';
 import ScheduleConfirmationModal from '../../../../components/ScheduleConfirmationModal';
 import * as Haptics from 'expo-haptics';
@@ -68,10 +69,11 @@ const MySchedule = () => {
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
   const { showError, showSuccess, showWarning } = useToastHelpers();
+  const { t } = useTranslation('networking');
   const navigation = useNavigation();
   useLayoutEffect(() => {
-    navigation.setOptions({ title: 'My Schedule' } as any);
-  }, [navigation]);
+    navigation.setOptions({ title: t('mySchedule.title') } as any);
+  }, [navigation, t]);
   const [selectedDate, setSelectedDate] = useState<Date>(BSL_2025_DATES.start);
   const [expandedHours, setExpandedHours] = useState<{[key: string]: boolean}>({});
   const [dbMeetings, setDbMeetings] = useState<Meeting[]>([]);
@@ -223,7 +225,7 @@ const MySchedule = () => {
             endTime: end.toISOString(),
             participants: Array.isArray(it.speakers) ? it.speakers : [],
             status: userStatus === 'confirmed' ? 'confirmed' : 'tentative',
-            location: it.location || 'TBD',
+            location: it.location || t('mySchedule.messages.tbd'),
             type: it.type || 'keynote',
             duration,
             isAgendaEvent: true, // Mark as agenda event
@@ -302,7 +304,7 @@ const MySchedule = () => {
         setMeetings(allMeetings);
       } catch (e) {
         console.error('Error loading meetings:', e);
-        showError('Error', 'Failed to load meetings');
+        showError(t('mySchedule.errors.title'), t('mySchedule.errors.failedToLoadMeetings'));
         setMeetings([]);
       } finally {
         setLoadingMeetings(false);
@@ -426,13 +428,13 @@ const MySchedule = () => {
       const userStatus = userMeetingStatus[m.id] || 'unconfirmed';
       return {
         id: m.id,
-        title: m.title || `Meeting with ${m.speaker_name || m.requester_name || 'User'}`,
+        title: m.title || t('mySchedule.messages.meetingWith', { name: m.speaker_name || m.requester_name || t('mySchedule.messages.user') }),
         description: m.notes || m.message,
         startTime: meetingStartTime,
         endTime: m.end_time || (meetingStartTime ? addMinutes(parseEventISO(meetingStartTime), m.duration_minutes ?? 15).toISOString() : ''),
         participants: m.speaker_name ? [m.speaker_name] : [],
         status: userStatus as 'confirmed' | 'unconfirmed',
-        location: m.location || m.meeting_location || 'TBD',
+        location: m.location || m.meeting_location || t('mySchedule.messages.tbd'),
         type: 'meeting' as const,
         duration: m.duration_minutes || 15,
         isAgendaEvent: false,
@@ -623,7 +625,7 @@ const MySchedule = () => {
         setConfirmationModal({ visible: false, meeting: null, slotStartTime: null });
       } catch (error) {
         console.error('Error toggling free slot status:', error);
-        showError('Error', `Failed to ${newStatus === 'interested' ? 'mark as interested' : 'clear status'}`);
+        showError(t('mySchedule.errors.title'), newStatus === 'interested' ? t('mySchedule.errors.failedToMarkInterested') : t('mySchedule.errors.failedToClearStatus'));
       } finally {
         setIsConfirming(false);
       }
@@ -724,7 +726,7 @@ const MySchedule = () => {
       setConfirmationModal({ visible: false, meeting: null, slotStartTime: null });
     } catch (error) {
       console.error('Error toggling confirmation:', error);
-      showError('Error', `Failed to ${newStatus === 'confirmed' ? 'confirm' : 'unconfirm'} event`);
+      showError(t('mySchedule.errors.title'), newStatus === 'confirmed' ? t('mySchedule.errors.failedToConfirm') : t('mySchedule.errors.failedToUnconfirm'));
     } finally {
       setIsConfirming(false);
     }
@@ -794,7 +796,7 @@ const MySchedule = () => {
       setConfirmationModal({ visible: false, meeting: null, slotStartTime: null });
     } catch (error) {
       console.error('Error toggling free slot blocked status:', error);
-      showError('Error', `Failed to ${newStatus === 'blocked' ? 'block' : 'unblock'} slot`);
+      showError(t('mySchedule.errors.title'), newStatus === 'blocked' ? t('mySchedule.errors.failedToBlock') : t('mySchedule.errors.failedToUnblock'));
     } finally {
       setIsConfirming(false);
     }
@@ -852,13 +854,13 @@ const MySchedule = () => {
       
       // Show appropriate message based on action
       if (newFavorite) {
-        showSuccess('Added to favorites');
+        showSuccess(t('mySchedule.messages.addedToFavorites'));
       } else {
-        showWarning('Removed from favorites');
+        showWarning(t('mySchedule.messages.removedFromFavorites'));
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      showError('Error', `Failed to ${newFavorite ? 'add to' : 'remove from'} favorites`);
+      showError(t('mySchedule.errors.title'), newFavorite ? t('mySchedule.errors.failedToAddToFavorites') : t('mySchedule.errors.failedToRemoveFromFavorites'));
     }
   };
 
@@ -942,7 +944,7 @@ const MySchedule = () => {
                   color: isConfirmed ? colors.success.main : colors.text.secondary,
                   fontSize: 13 
                 }}>
-                  {isConfirmed ? 'Confirmed attendance' : 'Tap to confirm attendance'}
+                  {isConfirmed ? t('mySchedule.messages.confirmedAttendance') : t('mySchedule.messages.tapToConfirmAttendance')}
                 </Text>
               </View>
                   {/* Favorite button for agenda events (confirmed or tentative) */}
@@ -989,8 +991,8 @@ const MySchedule = () => {
                 visible: true,
                 meeting: {
                   id: `free-slot-${slotKey}`,
-                  title: 'Free Slot',
-                  location: 'Available',
+                  title: t('mySchedule.freeSlot.freeSlotAvailable'),
+                  location: t('mySchedule.messages.available'),
                   startTime: slot.startTime.toISOString(),
                   endTime: slot.endTime.toISOString(),
                   status: freeSlotStatus as any,
@@ -1054,9 +1056,9 @@ const MySchedule = () => {
                            '#FF9800',
                     fontSize: 8,
                   }]}>
-                    {freeSlotStatus === 'interested' ? 'INT' :
-                     freeSlotStatus === 'blocked' ? 'BLK' :
-                     'TEN'}
+                    {freeSlotStatus === 'interested' ? t('mySchedule.status.interestedShort') :
+                     freeSlotStatus === 'blocked' ? t('mySchedule.status.blockedShort') :
+                     t('mySchedule.status.tentativeShort')}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -1077,8 +1079,8 @@ const MySchedule = () => {
         visible: true,
         meeting: {
           id: `free-slot-${slotKey}`,
-          title: 'Free Slot',
-          location: 'Available',
+          title: t('mySchedule.freeSlot.freeSlotAvailable'),
+          location: t('mySchedule.messages.available'),
           startTime: slot.startTime.toISOString(),
           endTime: slot.endTime.toISOString(),
           status: freeSlotStatus as any,
@@ -1138,9 +1140,9 @@ const MySchedule = () => {
                    freeSlotStatus === 'blocked' ? colors.error.main :
                    '#FF9800'
           }]}>
-            {freeSlotStatus === 'interested' ? 'Interested' :
-             freeSlotStatus === 'blocked' ? 'Blocked' :
-             'Tentative'}
+            {freeSlotStatus === 'interested' ? t('mySchedule.status.interested') :
+             freeSlotStatus === 'blocked' ? t('mySchedule.status.blocked') :
+             t('mySchedule.status.tentative')}
           </Text>
         )}
       </TouchableOpacity>
@@ -1253,7 +1255,7 @@ const MySchedule = () => {
           ]}>
             <View style={styles.calendarHeader}>
               <Text style={[styles.calendarTitle, { color: colors.text.primary }]}>
-                Schedule Overview
+                {t('mySchedule.scheduleOverview')}
               </Text>
             </View>
             <View style={styles.calendarWeek}>
@@ -1356,19 +1358,19 @@ const MySchedule = () => {
           <View style={styles.calendarLegend}>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#4CAF50' }]} />
-              <Text style={[styles.legendText, { color: colors.text.secondary }]}>Confirmed</Text>
+              <Text style={[styles.legendText, { color: colors.text.secondary }]}>{t('mySchedule.status.confirmed')}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#FF9800' }]} />
-              <Text style={[styles.legendText, { color: colors.text.secondary }]}>Tentative</Text>
+              <Text style={[styles.legendText, { color: colors.text.secondary }]}>{t('mySchedule.status.tentative')}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#F44336' }]} />
-              <Text style={[styles.legendText, { color: colors.text.secondary }]}>Interested</Text>
+              <Text style={[styles.legendText, { color: colors.text.secondary }]}>{t('mySchedule.status.interested')}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: colors.error.main }]} />
-              <Text style={[styles.legendText, { color: colors.text.secondary }]}>Blocked</Text>
+              <Text style={[styles.legendText, { color: colors.text.secondary }]}>{t('mySchedule.status.blocked')}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[
@@ -1385,7 +1387,7 @@ const MySchedule = () => {
                   {dayStats.reduce((sum, day) => sum + day.total, 0)}
                 </Text>
               </View>
-              <Text style={[styles.legendText, { color: colors.text.secondary }]}>Scheduled Slots</Text>
+              <Text style={[styles.legendText, { color: colors.text.secondary }]}>{t('mySchedule.scheduledSlots')}</Text>
             </View>
           </View>
           </CopilotView>
@@ -1405,7 +1407,7 @@ const MySchedule = () => {
       {confirmationModal.meeting && confirmationModal.slotStartTime && (
         <ScheduleConfirmationModal
           visible={confirmationModal.visible}
-          title={confirmationModal.meeting.title || 'Untitled Event'}
+          title={confirmationModal.meeting.title || t('agenda.messages.untitledEvent')}
           location={confirmationModal.meeting.location}
           startTime={confirmationModal.slotStartTime}
           isConfirmed={(confirmationModal.meeting as any).isFreeSlot
@@ -1460,7 +1462,7 @@ const MySchedule = () => {
                   color={colors.primary}
                 />
                 <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
-                  Schedule Summary
+                  {t('mySchedule.scheduleSummary')}
                 </Text>
                 <Text style={[styles.modalSubtitle, { color: colors.text.secondary }]}>
                   {format(daySummaryModal.dayStat.date, 'EEEE, MMMM d, yyyy')}
@@ -1475,7 +1477,7 @@ const MySchedule = () => {
                     <View style={styles.summaryLabelContainer}>
                       <View style={[styles.summaryDot, { backgroundColor: '#4CAF50' }]} />
                       <Text style={[styles.summaryLabel, { color: colors.text.primary }]}>
-                        Confirmed
+                        {t('mySchedule.status.confirmed')}
                       </Text>
                     </View>
                     <View style={styles.summaryBarContainer}>
@@ -1499,7 +1501,7 @@ const MySchedule = () => {
                     <View style={styles.summaryLabelContainer}>
                       <View style={[styles.summaryDot, { backgroundColor: '#FF9800' }]} />
                       <Text style={[styles.summaryLabel, { color: colors.text.primary }]}>
-                        Tentative
+                        {t('mySchedule.status.tentative')}
                       </Text>
                     </View>
                     <View style={[
@@ -1528,7 +1530,7 @@ const MySchedule = () => {
                     <View style={styles.summaryLabelContainer}>
                       <View style={[styles.summaryDot, { backgroundColor: '#F44336' }]} />
                       <Text style={[styles.summaryLabel, { color: colors.text.primary }]}>
-                        Interested
+                        {t('mySchedule.status.interested')}
                       </Text>
                     </View>
                     <View style={[
@@ -1557,7 +1559,7 @@ const MySchedule = () => {
                     <View style={styles.summaryLabelContainer}>
                       <View style={[styles.summaryDot, { backgroundColor: colors.error.main }]} />
                       <Text style={[styles.summaryLabel, { color: colors.text.primary }]}>
-                        Blocked
+                        {t('mySchedule.status.blocked')}
                       </Text>
                     </View>
                     <View style={[
@@ -1603,7 +1605,7 @@ const MySchedule = () => {
                 return (
                   <View style={styles.timelineContainer}>
                     <Text style={[styles.timelineTitle, { color: colors.text.primary }]}>
-                      Day Plan Route
+                      {t('mySchedule.dayPlanRoute')}
                     </Text>
                     <ScrollView 
                       style={styles.timelineScrollView}
@@ -1642,7 +1644,7 @@ const MySchedule = () => {
                               ]}>
                                 <View style={styles.timelineHeader}>
                                   <Text style={[styles.timelineEventTitle, { color: colors.text.primary }]} numberOfLines={2}>
-                                    {meeting.title || 'Untitled Event'}
+                                    {meeting.title || t('agenda.messages.untitledEvent')}
                                   </Text>
                                   <View style={[
                                     styles.timelineStatusBadge,
@@ -1652,7 +1654,7 @@ const MySchedule = () => {
                                       styles.timelineStatusText,
                                       { color: statusColor }
                                     ]}>
-                                      {isConfirmed ? 'CONFIRMED' : 'TENTATIVE'}
+                                      {isConfirmed ? t('mySchedule.status.confirmed') : t('mySchedule.status.tentative')}
                                     </Text>
                                   </View>
                                 </View>
@@ -1671,8 +1673,8 @@ const MySchedule = () => {
                           // Free slot with status
                           const statusColor = freeSlotStatus === 'interested' ? '#F44336' : 
                                            freeSlotStatus === 'blocked' ? colors.error.main : '#FF9800';
-                          const statusLabel = freeSlotStatus === 'interested' ? 'INTERESTED' :
-                                            freeSlotStatus === 'blocked' ? 'BLOCKED' : 'TENTATIVE';
+                          const statusLabel = freeSlotStatus === 'interested' ? t('mySchedule.status.interested') :
+                                            freeSlotStatus === 'blocked' ? t('mySchedule.status.blocked') : t('mySchedule.status.tentative');
                           
                           return (
                             <View key={`${slot.startTime.toISOString()}-${index}`} style={styles.timelineItem}>
@@ -1693,7 +1695,7 @@ const MySchedule = () => {
                               ]}>
                                 <View style={styles.timelineHeader}>
                                   <Text style={[styles.timelineEventTitle, { color: colors.text.primary }]}>
-                                    Free Slot
+                                    {t('mySchedule.freeSlot.freeSlotAvailable')}
                                   </Text>
                                   <View style={[
                                     styles.timelineStatusBadge,
@@ -1727,7 +1729,7 @@ const MySchedule = () => {
                 }
               ]}>
                 <Text style={[styles.summaryTotalLabel, { color: colors.text.primary }]}>
-                  Total Scheduled Slots
+                  {t('mySchedule.totalScheduledSlots')}
                 </Text>
                 <View style={[
                   styles.summaryTotalBadge,

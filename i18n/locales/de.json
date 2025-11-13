@@ -459,7 +459,66 @@
       },
       "mySchedule": {
         "title": "Mein Zeitplan",
-        "subtitle": "Zeitplan anzeigen und verwalten"
+        "subtitle": "Zeitplan anzeigen und verwalten",
+        "scheduledSlots": "Geplante Zeitslots",
+        "dayPlanRoute": "Tagesplan-Route",
+        "totalScheduledSlots": "Gesamte Geplante Zeitslots",
+        "freeSlot": {
+          "markFreeSlot": "Freien Slot Markieren",
+          "unblockSlot": "Slot Entsperren",
+          "removeInterest": "Interesse Entfernen",
+          "freeSlotAvailable": "Freier Slot Verfügbar",
+          "blockedMessage": "Dieser Slot ist blockiert. Entsperren, um ihn wieder verfügbar zu machen?",
+          "interestedMessage": "Dieser Slot ist als interessiert markiert. Entfernen, um ihn wieder verfügbar zu machen?",
+          "availableMessage": "Markieren Sie diesen Slot als interessiert oder blockiert, um Ihre Verfügbarkeit zu verfolgen. Diese Informationen sind für jeden sichtbar, der Ihren öffentlichen Zeitplan einsehen kann, und helfen ihnen zu verstehen, wann Sie blockiert oder interessiert sind, Menschen zu treffen.",
+          "block": "Blockieren",
+          "interested": "Interessiert",
+          "unblocking": "Entsperren...",
+          "removing": "Entfernen...",
+          "unblock": "Entsperren",
+          "remove": "Entfernen"
+        },
+        "errors": {
+          "title": "Fehler",
+          "failedToLoadMeetings": "Fehler beim Laden der Meetings",
+          "failedToMarkInterested": "Fehler beim Markieren als interessiert",
+          "failedToClearStatus": "Fehler beim Löschen des Status",
+          "failedToConfirm": "Fehler beim Bestätigen des Ereignisses",
+          "failedToUnconfirm": "Fehler beim Aufheben der Bestätigung des Ereignisses",
+          "failedToBlock": "Fehler beim Blockieren des Slots",
+          "failedToUnblock": "Fehler beim Entsperren des Slots",
+          "failedToAddToFavorites": "Fehler beim Hinzufügen zu Favoriten",
+          "failedToRemoveFromFavorites": "Fehler beim Entfernen aus Favoriten"
+        },
+        "messages": {
+          "addedToFavorites": "Zu Favoriten hinzugefügt",
+          "removedFromFavorites": "Aus Favoriten entfernt",
+          "confirmedAttendance": "Teilnahme bestätigt",
+          "tapToConfirmAttendance": "Tippen Sie, um die Teilnahme zu bestätigen",
+          "meetingWith": "Meeting mit {name}",
+          "user": "Benutzer",
+          "tbd": "Zu bestimmen",
+          "available": "Verfügbar"
+        },
+        "status": {
+          "interested": "Interessiert",
+          "blocked": "Blockiert",
+          "tentative": "Vorläufig",
+          "confirmed": "Bestätigt",
+          "interestedShort": "INT",
+          "blockedShort": "BLK",
+          "tentativeShort": "TEN"
+        },
+        "scheduleOverview": "Zeitplan-Übersicht",
+        "scheduleSummary": "Zeitplan-Zusammenfassung",
+        "confirmAttendance": "Teilnahme Bestätigen",
+        "unconfirmAttendance": "Teilnahme Aufheben",
+        "confirming": "Wird bestätigt...",
+        "unconfirming": "Wird aufgehoben...",
+        "confirm": "Bestätigen",
+        "unconfirm": "Aufheben",
+        "confirmMessage": "Die Bestätigung Ihrer Teilnahme fügt dieses Ereignis zu Ihrem Zeitplan hinzu.",
+        "unconfirmMessage": "Sind Sie sicher, dass Sie Ihre Teilnahme aufheben möchten? Dies entfernt dieses Ereignis aus Ihrem bestätigten Zeitplan."
       },
       "blockedUsers": {
         "title": "Blockierte Benutzer",
@@ -498,6 +557,112 @@
       "title": "Aktuelle Aktivität",
       "journey": "Ihre Networking-Reise",
       "description": "Sie haben {totalRequests} Meeting-Anfragen gesendet und haben {pendingRequests} ausstehende Antworten."
+    }
+  },
+  "notifications": {
+    "center": {
+      "title": "Benachrichtigungen",
+      "all": "Alle",
+      "archive": "Archiv",
+      "markAllRead": "Alle als gelesen markieren",
+      "markRead": "Als gelesen markieren",
+      "markUnread": "Als ungelesen markieren",
+      "delete": "Löschen",
+      "deleteTitle": "Benachrichtigung löschen",
+      "deleteMessage": "Möchten Sie diese Benachrichtigung wirklich löschen?",
+      "cancel": "Abbrechen",
+      "noNotifications": "Keine Benachrichtigungen",
+      "noNotificationsMessage": "Sie sind auf dem neuesten Stand! Neue Benachrichtigungen erscheinen hier.",
+      "noArchivedNotifications": "Keine archivierten Benachrichtigungen",
+      "noArchivedNotificationsMessage": "Archivierte Benachrichtigungen erscheinen hier.",
+      "loading": "Benachrichtigungen werden geladen...",
+      "searchPlaceholder": "Benachrichtigungen suchen...",
+      "viewAll": "Alle Benachrichtigungen anzeigen",
+      "goToCenter": "Zum Benachrichtigungszentrum gehen",
+      "noNewNotifications": "Keine neuen Benachrichtigungen",
+      "justNow": "Gerade eben",
+      "minutesAgo": "vor {minutes}Min",
+      "hoursAgo": "vor {hours}Std",
+      "daysAgo": "vor {days}T",
+      "urgent": "DRINGEND",
+      "filters": {
+        "readStatus": "Lesestatus",
+        "all": "Alle",
+        "unread": "Ungelesen",
+        "read": "Gelesen",
+        "type": "Typ",
+        "allTypes": "Alle Typen",
+        "meetingRequest": "Meeting-Anfrage",
+        "meetingAccepted": "Meeting angenommen",
+        "meetingDeclined": "Meeting abgelehnt",
+        "meetingExpired": "Meeting abgelaufen",
+        "reminder": "Erinnerung",
+        "boostReceived": "Boost erhalten",
+        "systemAlert": "Systemwarnung",
+        "chatMessage": "Chat-Nachricht",
+        "priority": "Priorität",
+        "urgentOnly": "Nur dringende"
+      }
+    },
+    "types": {
+      "meeting_request": {
+        "title": "Anfrage gesendet ✓",
+        "message": "Ihre Meeting-Anfrage an {speakerName} wurde erfolgreich gesendet.",
+        "messageWithExpiry": "Ihre Meeting-Anfrage an {speakerName} wurde erfolgreich gesendet. Läuft in {hours} Stunden ab.",
+        "speakerTitle": "📋 Meeting-Anfrage",
+        "speakerMessage": "{requesterName} möchte sich mit Ihnen treffen",
+        "speakerVipTitle": "🔥 VIP Meeting-Anfrage",
+        "speakerVipMessage": "{requesterName} (VIP) möchte sich mit Ihnen treffen",
+        "speakerBusinessTitle": "💼 Geschäfts-Meeting-Anfrage",
+        "speakerBusinessMessage": "{requesterName} (Geschäftlich) möchte sich mit Ihnen treffen",
+        "boostedMessage": " (Mit ${boostAmount} VOI geboostet)"
+      },
+      "meeting_accepted": {
+        "title": "Meeting-Anfrage angenommen! 🎉",
+        "message": "{speakerName} hat Ihre Meeting-Anfrage angenommen",
+        "messageWithSchedule": "Ihre Meeting-Anfrage wurde angenommen. Meeting für {scheduleTime} geplant. Sie haben 1 LUKAS verdient! 💎",
+        "speakerTitle": "Anfrage angenommen",
+        "speakerMessage": "Sie haben die Meeting-Anfrage von {requesterName} angenommen",
+        "speakerScheduledTitle": "Meeting geplant! 🎉",
+        "speakerScheduledMessage": "Ihr Meeting mit {requesterName} wurde geplant",
+        "speakerScheduledWithReward": "Sie haben eine Meeting-Anfrage angenommen. Meeting für {scheduleTime} geplant. Sie haben 1 LUKAS verdient! 💎"
+      },
+      "meeting_declined": {
+        "title": "Meeting-Anfrage abgelehnt",
+        "message": "{speakerName} hat Ihre Meeting-Anfrage abgelehnt",
+        "speakerTitle": "Anfrage abgelehnt",
+        "speakerMessage": "Sie haben die Meeting-Anfrage von {requesterName} abgelehnt"
+      },
+      "meeting_expired": {
+        "title": "Meeting-Anfrage abgelaufen",
+        "message": "Ihre Meeting-Anfrage an {speakerName} ist abgelaufen"
+      },
+      "meeting_cancelled": {
+        "title": "Meeting-Anfrage storniert",
+        "message": "Ihre Meeting-Anfrage wurde storniert",
+        "speakerTitle": "Meeting-Anfrage storniert",
+        "speakerMessage": "Die Meeting-Anfrage von {requesterName} wurde storniert"
+      },
+      "meeting_reminder": {
+        "title": "Meeting-Erinnerung",
+        "message": "Sie haben bald ein Meeting mit {name} geplant"
+      },
+      "boost_received": {
+        "title": "Boost erhalten",
+        "message": "Sie haben einen Boost von ${amount} VOI erhalten"
+      },
+      "system_alert": {
+        "title": "Systemwarnung",
+        "message": "{message}"
+      },
+      "chat_message": {
+        "title": "Neue Chat-Nachricht",
+        "message": "{senderName} hat Ihnen eine Nachricht gesendet",
+        "titleFrom": "Neue Nachricht von {senderName}",
+        "messageFrom": "Sie haben eine neue Nachricht von {senderName}",
+        "titleMeeting": "{meetingTitle}",
+        "messageMeeting": "Neue Nachricht in {meetingTitle}"
+      }
     }
   }
 }

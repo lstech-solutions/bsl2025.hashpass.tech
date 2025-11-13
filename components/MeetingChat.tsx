@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -36,7 +36,7 @@ interface MeetingChatProps {
 
 export default function MeetingChat({ meetingId, onClose }: MeetingChatProps) {
   const { isDark, colors } = useTheme();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { showError } = useToastHelpers();
   const styles = getStyles(isDark, colors);
 
@@ -48,43 +48,17 @@ export default function MeetingChat({ meetingId, onClose }: MeetingChatProps) {
     avatar?: string;
   } | null>(null);
 
-  useEffect(() => {
-    loadMeetingInfo();
-  }, [meetingId]);
-
-  // Update last seen when chat is viewed
-  useEffect(() => {
-    const updateLastSeen = async () => {
-      if (!user?.id || !meetingId) return;
-      
-      try {
-        const { error } = await supabase.rpc('update_chat_last_seen', {
-          p_user_id: user.id,
-          p_meeting_id: meetingId,
-        });
-        
-        if (error) {
-          console.error('Error updating chat last seen:', error);
-        }
-      } catch (error) {
-        console.error('Error updating chat last seen:', error);
-      }
-    };
-
-    // Update immediately when component mounts
-    updateLastSeen();
-    
-    // Update every 30 seconds while chat is open
-    const interval = setInterval(updateLastSeen, 30000);
-    
-    return () => clearInterval(interval);
-  }, [user?.id, meetingId]);
-
-  const loadMeetingInfo = async () => {
-    if (!user?.id) {
+  const loadMeetingInfo = useCallback(async () => {
+    // Only check authentication after auth has finished loading
+    if (!authLoading && !user?.id) {
       console.error('No user ID available for loading meeting info');
       showError('Error', 'User not authenticated');
       setLoading(false);
+      return;
+    }
+
+    // If auth is still loading, wait
+    if (authLoading) {
       return;
     }
 
@@ -166,9 +140,45 @@ export default function MeetingChat({ meetingId, onClose }: MeetingChatProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading, user?.id, meetingId, showError]);
 
-  if (loading) {
+  useEffect(() => {
+    // Wait for auth to finish loading before checking authentication
+    if (!authLoading) {
+      loadMeetingInfo();
+    }
+  }, [meetingId, authLoading, loadMeetingInfo]);
+
+  // Update last seen when chat is viewed
+  useEffect(() => {
+    const updateLastSeen = async () => {
+      if (!user?.id || !meetingId) return;
+      
+      try {
+        const { error } = await supabase.rpc('update_chat_last_seen', {
+          p_user_id: user.id,
+          p_meeting_id: meetingId,
+        });
+        
+        if (error) {
+          console.error('Error updating chat last seen:', error);
+        }
+      } catch (error) {
+        console.error('Error updating chat last seen:', error);
+      }
+    };
+
+    // Update immediately when component mounts
+    updateLastSeen();
+    
+    // Update every 30 seconds while chat is open
+    const interval = setInterval(updateLastSeen, 30000);
+    
+    return () => clearInterval(interval);
+  }, [user?.id, meetingId]);
+
+  // Show loading state while auth is loading or meeting info is loading
+  if (authLoading || loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />

@@ -96,7 +96,16 @@
     "profile": "프로필"
   },
   "common": {
-    "back": "뒤로"
+    "back": "뒤로",
+    "loading": {
+      "default": "로딩 중...",
+      "retrying": "재시도 중... ({retryCount}/3)",
+      "retryHint": "예상보다 시간이 더 걸리고 있습니다. 잠시만 기다려주세요...",
+      "loadingRequests": "요청 로딩 중...",
+      "loadingSlots": "시간대 로딩 중...",
+      "loadingData": "데이터 로딩 중...",
+      "pleaseWait": "잠시만 기다려주세요..."
+    }
   },
   "auth": {
     "title": "환영합니다",
@@ -470,6 +479,69 @@
         "subtitle": "네트워킹 통계 보기"
       }
     },
+    "mySchedule": {
+      "title": "내 일정",
+      "subtitle": "일정 보기 및 관리",
+      "scheduledSlots": "예약된 시간대",
+      "dayPlanRoute": "일일 계획 경로",
+      "totalScheduledSlots": "총 예약된 시간대",
+      "freeSlot": {
+        "markFreeSlot": "빈 시간대 표시",
+        "unblockSlot": "시간대 차단 해제",
+        "removeInterest": "관심 제거",
+        "freeSlotAvailable": "사용 가능한 빈 시간대",
+        "blockedMessage": "이 시간대는 차단되었습니다. 다시 사용 가능하게 하려면 차단을 해제하시겠습니까?",
+        "interestedMessage": "이 시간대는 관심으로 표시되었습니다. 다시 사용 가능하게 하려면 제거하시겠습니까?",
+        "availableMessage": "가용성을 추적하기 위해 이 시간대를 관심 또는 차단으로 표시하세요. 이 정보는 공개 일정을 보는 모든 사람에게 표시되어, 언제 차단되었거나 사람들과 만나고 싶은지 이해하는 데 도움이 됩니다.",
+        "block": "차단",
+        "interested": "관심",
+        "unblocking": "차단 해제 중...",
+        "removing": "제거 중...",
+        "unblock": "차단 해제",
+        "remove": "제거"
+      },
+      "errors": {
+        "title": "오류",
+        "failedToLoadMeetings": "미팅 로드 실패",
+        "failedToMarkInterested": "관심으로 표시 실패",
+        "failedToClearStatus": "상태 지우기 실패",
+        "failedToConfirm": "이벤트 확인 실패",
+        "failedToUnconfirm": "이벤트 확인 취소 실패",
+        "failedToBlock": "시간대 차단 실패",
+        "failedToUnblock": "시간대 차단 해제 실패",
+        "failedToAddToFavorites": "즐겨찾기에 추가 실패",
+        "failedToRemoveFromFavorites": "즐겨찾기에서 제거 실패"
+      },
+      "messages": {
+        "addedToFavorites": "즐겨찾기에 추가됨",
+        "removedFromFavorites": "즐겨찾기에서 제거됨",
+        "confirmedAttendance": "출석 확인됨",
+        "tapToConfirmAttendance": "출석 확인하려면 탭하세요",
+        "meetingWith": "{name}와(과)의 미팅",
+        "user": "사용자",
+        "tbd": "미정",
+        "available": "사용 가능"
+      },
+      "status": {
+        "interested": "관심",
+        "blocked": "차단됨",
+        "tentative": "임시",
+        "confirmed": "확인됨",
+        "interestedShort": "INT",
+        "blockedShort": "BLK",
+        "tentativeShort": "TEN"
+      },
+      "scheduleOverview": "일정 개요",
+      "scheduleSummary": "일정 요약",
+      "confirmAttendance": "출석 확인",
+      "unconfirmAttendance": "출석 확인 취소",
+      "confirming": "확인 중...",
+      "unconfirming": "확인 취소 중...",
+      "confirm": "확인",
+      "unconfirm": "확인 취소",
+      "confirmMessage": "출석을 확인하면 이 이벤트가 일정에 추가됩니다.",
+      "unconfirmMessage": "출석 확인을 취소하시겠습니까? 이렇게 하면 확인된 일정에서 이 이벤트가 제거됩니다."
+    },
     "tips": {
       "title": "네트워킹 팁",
       "beSpecific": {
@@ -498,6 +570,320 @@
       "title": "최근 활동",
       "journey": "네트워킹 여정",
       "description": "{totalRequests}개의 미팅 요청을 보냈고 {pendingRequests}개의 응답이 대기 중입니다."
+    },
+    "meetingRequestModal": {
+      "title": "{speakerName}와 미팅 요청",
+      "messageLabel": "메시지 (선택사항)",
+      "messageHint": "💡 메시지를 포함하면 승인 확률이 3배 증가합니다",
+      "messagePlaceholder": "연사에게 왜 만나고 싶은지 알려주세요 (선택사항이지만 권장)...",
+      "intentionLabel": "미팅 의도 (선택사항)",
+      "intentionHint": "💡 미팅에 대해 최대 3개의 의도를 선택하세요 (또는 \"특정 의도 없음\" 선택)",
+      "intentions": {
+        "coffee": "커피를 마시며 대화하기",
+        "pitch": "스타트업 아이디어를 제안하고 싶습니다",
+        "consultation": "5분 빠른 상담",
+        "networking": "일반적인 네트워킹 및 연결",
+        "collaboration": "잠재적 협업 탐색",
+        "advice": "내 경력/프로젝트에 대한 조언 구하기",
+        "fun": "재미있고 흥미로운 대화를 위해",
+        "learning": "당신의 경험에서 배우기",
+        "none": "특정 의도 없음"
+      },
+      "cancel": "취소",
+      "sending": "전송 중...",
+      "sendRequest": "요청 보내기",
+      "cancelTitle": "미팅 요청을 취소하시겠습니까?",
+      "cancelMessage": "이 미팅 요청을 취소하시겠습니까?",
+      "cancelWarning": "취소 후 요청 할당량은 복원되지 않습니다.",
+      "cancelling": "요청 취소 중...",
+      "confirmCancel": "예, 요청 취소"
+    },
+    "requestView": {
+      "title": "요청 세부정보",
+      "yourRequest": "내 요청",
+      "yourMeetingDetails": "내 미팅 세부정보",
+      "meetingDetails": "미팅 세부정보",
+      "yourMessage": "내 메시지",
+      "message": "메시지",
+      "speaker": "연사",
+      "requester": "요청자",
+      "expiresIn": "만료까지",
+      "hours": "시간",
+      "minutes": "분",
+      "seconds": "초",
+      "status": "상태",
+      "intentions": "의도",
+      "meetingDetailsLabel": "미팅 세부정보",
+      "duration": "소요 시간:",
+      "type": "유형:",
+      "boost": "부스트:",
+      "expires": "만료:",
+      "timeline": "타임라인",
+      "requestSent": "요청 전송됨",
+      "expiresLabel": "만료",
+      "statusUpdated": "상태 업데이트됨",
+      "response": "응답",
+      "meeting": "미팅",
+      "viewMeetingDetails": "미팅 세부정보 보기",
+      "cancelRequest": "요청 취소",
+      "accept": "수락",
+      "decline": "거절",
+      "holdRequest": "요청 보류",
+      "blockUser": "사용자 차단",
+      "minutesLabel": "분",
+      "requestCancelled": "요청 취소됨",
+      "requestCancelledMessage": "미팅 요청이 취소되었습니다. 요청 한도는 복원되었지만 부스트 포인트는 환불되지 않습니다.",
+      "yourMeetingRequestApproved": "내 미팅 요청 승인됨",
+      "meetingRequestApproved": "미팅 요청 승인됨",
+      "yourMeetingRequestDeclined": "내 미팅 요청 거절됨",
+      "meetingRequestDeclined": "미팅 요청 거절됨",
+      "yourMeetingRequestPending": "내 미팅 요청 대기 중",
+      "meetingRequestPending": "미팅 요청 대기 중",
+      "requestInformation": "요청 정보",
+      "requestId": "요청 ID:",
+      "meetingType": "미팅 유형:",
+      "sent": "전송됨:",
+      "holdModalTitle": "요청 보류",
+      "holdModalDescription": "부스트 포인트를 사용하여 이 요청의 만료 시간을 연장하세요.",
+      "holdDuration": "보류 기간:",
+      "hour": "시간",
+      "hours": "시간",
+      "cost": "비용:",
+      "boostPoints": "부스트 포인트",
+      "confirmHold": "보류 확인",
+      "requestHeld": "요청 보류됨",
+      "requestHeldMessage": "요청이 {hours}시간 동안 보류되었습니다",
+      "pending": "대기 중"
+    },
+    "speakerView": {
+      "connect": "연결",
+      "linkedin": "LinkedIn",
+      "twitter": "Twitter",
+      "matchmakingNetworking": "매칭 및 네트워킹",
+      "matchmakingDescription": "매칭 기능으로 비즈니스 기회를 놓치지 마세요: 연사나 다른 참가자와 미팅을 조직하고 일대일 미팅 캘린더를 관리하세요",
+      "yourRequestStatus": "요청 상태",
+      "ticketType": "티켓 유형:",
+      "requestsUsed": "사용된 요청:",
+      "remaining": "남은 요청:",
+      "nextRequest": "다음 요청:",
+      "requestLimitReached": "요청 한도에 도달했습니다. 추가 요청을 위해 $VOI 부스트를 사용하세요.",
+      "pleaseWaitNextRequest": "다음 요청을 보내기 전에 잠시 기다려주세요.",
+      "loadingSpeakerDetails": "연사 세부정보 로딩 중...",
+      "online": "온라인",
+      "active": "활성",
+      "inactive": "비활성",
+      "speakerDashboard": "연사 대시보드",
+      "manageMeetingRequests": "미팅 요청 관리",
+      "about": "소개",
+      "yourMeetingRequests": "내 미팅 요청",
+      "yourMeetingRequestsPlural": "내 미팅 요청들",
+      "scrollToSeeAll": "모든 요청을 보려면 스크롤하세요",
+      "approved": "✅ 승인됨",
+      "declined": "❌ 거절됨",
+      "pendingStatus": "⏳ 대기 중",
+      "requestHistory": "요청 기록",
+      "cancelled": "취소됨",
+      "whatsNext": "다음은 무엇인가요?",
+      "waitingForResponse": "미팅 요청이 {speakerName}의 응답을 기다리고 있습니다. 응답이 오면 알림을 받게 됩니다. 언제든지 이 요청을 취소할 수 있습니다.",
+      "greatNews": "좋은 소식입니다! 🎉",
+      "requestApproved": "{speakerName}이(가) 미팅 요청을 승인했습니다! 미팅 세부정보와 다음 단계는 알림을 확인하세요.",
+      "requestDeclinedTitle": "요청 거절됨",
+      "requestDeclinedMessage": "{speakerName}이(가) 이 미팅 요청을 거절했습니다. 다른 연사에게 미팅을 요청해 볼 수 있습니다.",
+      "cancelRequest": "요청 취소",
+      "openingLinkedIn": "{speakerName}의 LinkedIn 프로필 열기 중...",
+      "speakerDashboardOnly": "이 기능은 연사 본인만 사용할 수 있습니다."
+    },
+    "meetings": {
+      "title": "내 미팅",
+      "loading": "미팅 로딩 중...",
+      "all": "전체",
+      "incoming": "예정",
+      "passed": "지난",
+      "notScheduled": "예정되지 않음",
+      "meetingWith": "미팅",
+      "tbd": "미정",
+      "noMeetings": "아직 미팅이 없습니다",
+      "error": "오류",
+      "failedToLoad": "미팅을 불러오지 못했습니다",
+      "detail": {
+        "title": "미팅 세부정보",
+        "loading": "미팅 세부정보 로딩 중...",
+        "notFound": "미팅을 찾을 수 없습니다",
+        "failedToLoad": "미팅 세부정보를 불러오지 못했습니다",
+        "speaker": "연사",
+        "requester": "요청자",
+        "status": "상태",
+        "message": "메시지",
+        "noMessage": "메시지가 제공되지 않았습니다",
+        "intentions": "의도",
+        "meetingDetails": "미팅 세부정보",
+        "scheduled": "예정:",
+        "duration": "소요 시간:",
+        "location": "위치:",
+        "minutes": "분",
+        "timeline": "타임라인",
+        "meetingScheduled": "미팅 예정됨",
+        "joinMeeting": "미팅 참가",
+        "messageButton": "메시지",
+        "chatWith": "채팅"
+      }
+    }
+  },
+  "agenda": {
+    "title": "이벤트 일정",
+    "subtitle": "컨퍼런스 일정 • {count}개 세션",
+    "date": "2025년 11월 12-14일 • 메데인, 콜롬비아",
+    "loading": "일정 불러오는 중...",
+    "filter": {
+      "type": "유형",
+      "speakers": "연사",
+      "keynote": "기조 연설",
+      "panel": "패널",
+      "break": "휴식",
+      "meal": "식사",
+      "registration": "등록"
+    },
+    "search": {
+      "placeholder": "세션, 연사 또는 키워드 검색..."
+    },
+    "tabs": {
+      "sessions": "세션"
+    },
+    "noResults": {
+      "title": "필터와 일치하는 세션이 없습니다",
+      "subtitle": "검색 또는 필터를 조정해보세요"
+    },
+    "empty": {
+      "title": "일정을 사용할 수 없습니다",
+      "subtitle": "이벤트 일정은 나중에 다시 확인해주세요",
+      "noLiveData": "라이브 일정 데이터 없음"
+    },
+    "badges": {
+      "past": "지난"
+    },
+    "locations": {
+      "mainStage": "메인 스테이지",
+      "registrationArea": "등록 구역"
+    },
+    "messages": {
+      "untitledEvent": "제목 없는 이벤트",
+      "eventConfirmed": "이벤트 확인됨",
+      "eventConfirmedMessage": "이 이벤트가 일정에 추가되었습니다",
+      "eventUnconfirmed": "이벤트 미확인",
+      "eventUnconfirmedMessage": "이 이벤트가 확인된 일정에서 제거되었습니다",
+      "error": "오류",
+      "confirmError": "이벤트 확인 실패",
+      "unconfirmError": "이벤트 미확인 처리 실패",
+      "addedToFavorites": "즐겨찾기에 추가됨",
+      "removedFromFavorites": "즐겨찾기에서 제거됨",
+      "addToFavoritesError": "즐겨찾기에 추가 실패",
+      "removeFromFavoritesError": "즐겨찾기에서 제거 실패"
+    }
+  },
+  "notifications": {
+    "center": {
+      "title": "알림",
+      "all": "전체",
+      "archive": "보관함",
+      "markAllRead": "모두 읽음으로 표시",
+      "markRead": "읽음으로 표시",
+      "markUnread": "읽지 않음으로 표시",
+      "delete": "삭제",
+      "deleteTitle": "알림 삭제",
+      "deleteMessage": "이 알림을 삭제하시겠습니까?",
+      "cancel": "취소",
+      "noNotifications": "알림 없음",
+      "noNotificationsMessage": "모든 알림을 확인했습니다! 새로운 알림이 여기에 표시됩니다.",
+      "noArchivedNotifications": "보관된 알림 없음",
+      "noArchivedNotificationsMessage": "보관된 알림이 여기에 표시됩니다.",
+      "loading": "알림 로딩 중...",
+      "searchPlaceholder": "알림 검색...",
+      "viewAll": "모든 알림 보기",
+      "goToCenter": "알림 센터로 이동",
+      "noNewNotifications": "새로운 알림 없음",
+      "justNow": "방금 전",
+      "minutesAgo": "{minutes}분 전",
+      "hoursAgo": "{hours}시간 전",
+      "daysAgo": "{days}일 전",
+      "urgent": "긴급",
+      "filters": {
+        "readStatus": "읽음 상태",
+        "all": "전체",
+        "unread": "읽지 않음",
+        "read": "읽음",
+        "type": "유형",
+        "allTypes": "모든 유형",
+        "meetingRequest": "미팅 요청",
+        "meetingAccepted": "미팅 수락됨",
+        "meetingDeclined": "미팅 거절됨",
+        "meetingExpired": "미팅 만료됨",
+        "reminder": "알림",
+        "boostReceived": "부스트 받음",
+        "systemAlert": "시스템 알림",
+        "chatMessage": "채팅 메시지",
+        "priority": "우선순위",
+        "urgentOnly": "긴급만"
+      }
+    },
+    "types": {
+      "meeting_request": {
+        "title": "요청 전송됨 ✓",
+        "message": "{speakerName}님에게 미팅 요청이 성공적으로 전송되었습니다.",
+        "messageWithExpiry": "{speakerName}님에게 미팅 요청이 성공적으로 전송되었습니다. {hours}시간 후 만료됩니다.",
+        "speakerTitle": "📋 미팅 요청",
+        "speakerMessage": "{requesterName}님이 미팅을 요청했습니다",
+        "speakerVipTitle": "🔥 VIP 미팅 요청",
+        "speakerVipMessage": "{requesterName}님(VIP)이 미팅을 요청했습니다",
+        "speakerBusinessTitle": "💼 비즈니스 미팅 요청",
+        "speakerBusinessMessage": "{requesterName}님(비즈니스)이 미팅을 요청했습니다",
+        "boostedMessage": " (${boostAmount} VOI로 부스트됨)"
+      },
+      "meeting_accepted": {
+        "title": "미팅 요청 수락됨! 🎉",
+        "message": "{speakerName}님이 미팅 요청을 수락했습니다",
+        "messageWithSchedule": "미팅 요청이 수락되었습니다. {scheduleTime}에 미팅이 예약되었습니다. 1 LUKAS를 획득했습니다! 💎",
+        "speakerTitle": "요청 수락됨",
+        "speakerMessage": "{requesterName}님의 미팅 요청을 수락했습니다",
+        "speakerScheduledTitle": "미팅 예약됨! 🎉",
+        "speakerScheduledMessage": "{requesterName}님과의 미팅이 예약되었습니다",
+        "speakerScheduledWithReward": "미팅 요청을 수락했습니다. {scheduleTime}에 미팅이 예약되었습니다. 1 LUKAS를 획득했습니다! 💎"
+      },
+      "meeting_declined": {
+        "title": "미팅 요청 거절됨",
+        "message": "{speakerName}님이 미팅 요청을 거절했습니다",
+        "speakerTitle": "요청 거절됨",
+        "speakerMessage": "{requesterName}님의 미팅 요청을 거절했습니다"
+      },
+      "meeting_expired": {
+        "title": "미팅 요청 만료됨",
+        "message": "{speakerName}님에게 보낸 미팅 요청이 만료되었습니다"
+      },
+      "meeting_cancelled": {
+        "title": "미팅 요청 취소됨",
+        "message": "미팅 요청이 취소되었습니다",
+        "speakerTitle": "미팅 요청 취소됨",
+        "speakerMessage": "{requesterName}님의 미팅 요청이 취소되었습니다"
+      },
+      "meeting_reminder": {
+        "title": "미팅 알림",
+        "message": "{name}님과 곧 예정된 미팅이 있습니다"
+      },
+      "boost_received": {
+        "title": "부스트 받음",
+        "message": "${amount} VOI 부스트를 받았습니다"
+      },
+      "system_alert": {
+        "title": "시스템 알림",
+        "message": "{message}"
+      },
+      "chat_message": {
+        "title": "새 채팅 메시지",
+        "message": "{senderName}님이 메시지를 보냈습니다",
+        "titleFrom": "{senderName}님의 새 메시지",
+        "messageFrom": "{senderName}님으로부터 새 메시지가 있습니다",
+        "titleMeeting": "{meetingTitle}",
+        "messageMeeting": "{meetingTitle}에 새 메시지가 있습니다"
+      }
     }
   }
 }

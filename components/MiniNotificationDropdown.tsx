@@ -6,6 +6,7 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from '../i18n/i18n';
 
 interface MiniNotificationDropdownProps {
   onNotificationPress?: () => void;
@@ -16,6 +17,7 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
   const { notifications, unreadCount } = useNotifications();
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation('notifications');
   const [isOpen, setIsOpen] = useState(false);
   const [lastSeenUnreadCount, setLastSeenUnreadCount] = useState(0);
   const styles = getStyles(isDark, colors);
@@ -117,16 +119,16 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
     if (diffInSeconds < 60) {
-      return 'Just now';
+      return t('center.justNow');
     } else if (diffInSeconds < 3600) {
       const minutes = Math.floor(diffInSeconds / 60);
-      return `${minutes}m ago`;
+      return t('center.minutesAgo', { minutes });
     } else if (diffInSeconds < 86400) {
       const hours = Math.floor(diffInSeconds / 3600);
-      return `${hours}h ago`;
+      return t('center.hoursAgo', { hours });
     } else {
       const days = Math.floor(diffInSeconds / 86400);
-      return `${days}d ago`;
+      return t('center.daysAgo', { days });
     }
   };
 
@@ -188,7 +190,7 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
           />
           <View style={styles.dropdown}>
             <View style={styles.dropdownHeader}>
-              <Text style={styles.dropdownTitle}>Notifications</Text>
+              <Text style={styles.dropdownTitle}>{t('center.title')}</Text>
               {unreadCount > 0 && (
                 <View style={styles.headerBadge}>
                   <Text style={styles.headerBadgeText}>{unreadCount}</Text>
@@ -209,7 +211,7 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
               {recentNotifications.length === 0 ? (
                 <View style={styles.emptyState}>
                   <MaterialIcons name="notifications-none" size={48} color={colors.text.secondary} />
-                  <Text style={styles.emptyText}>No new notifications</Text>
+                  <Text style={styles.emptyText}>{t('center.noNewNotifications')}</Text>
                 </View>
               ) : (
                 recentNotifications.map((notification) => (
@@ -253,7 +255,7 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
               }}
             >
               <Text style={styles.viewAllText}>
-                {recentNotifications.length > 0 ? 'View All Notifications' : 'Go to Notification Center'}
+                {recentNotifications.length > 0 ? t('center.viewAll') : t('center.goToCenter')}
               </Text>
               <MaterialIcons name="arrow-forward" size={16} color={colors.primary} />
             </TouchableOpacity>

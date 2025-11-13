@@ -85,7 +85,7 @@ export default function BSL2025Layout() {
         }}
       />
       <Stack.Screen 
-        name="networking/schedule" 
+        name="networking/my-schedule" 
         options={{
           title: 'My Schedule',
           headerBackTitle: 'Networking',

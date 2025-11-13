@@ -600,99 +600,200 @@ export default function AuthScreen() {
     }
 
     setLoading(true);
+    const maxVerificationAttempts = 3;
+
     try {
       // Use our custom API endpoint first since we're using custom 6-digit codes
       // This avoids the race condition where Supabase's direct verification fails
       // because it doesn't recognize our custom codes
-      const verifyResult = await apiClient.post('/auth/otp/verify', { 
-        email: email.trim(), 
-        code: otpCode 
-      }, { skipEventSegment: true });
+      let verifyResult;
+      let apiError: any = null;
 
-      if (!verifyResult.success) {
-        throw new Error(verifyResult.error || 'Verification failed');
+      // Retry API call with exponential backoff
+      for (let attempt = 1; attempt <= maxVerificationAttempts; attempt++) {
+        try {
+          verifyResult = await apiClient.post('/auth/otp/verify', { 
+            email: email.trim(), 
+            code: otpCode 
+          }, { skipEventSegment: true });
+
+          if (verifyResult.success) {
+            break;
+          } else {
+            apiError = new Error(verifyResult.error || 'Verification failed');
+            if (attempt < maxVerificationAttempts) {
+              const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+              console.log(`⚠️ API verification failed, retrying in ${delay}ms... (attempt ${attempt}/${maxVerificationAttempts})`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            }
+            throw apiError;
+          }
+        } catch (networkError: any) {
+          apiError = networkError;
+          if (attempt < maxVerificationAttempts) {
+            const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+            console.log(`⚠️ Network error during verification, retrying in ${delay}ms... (attempt ${attempt}/${maxVerificationAttempts})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          throw new Error(networkError?.message || 'Network error. Please check your connection and try again.');
+        }
       }
 
-      if (verifyResult.data?.token_hash) {
-        // Verify the token_hash using client-side Supabase
-        // Only token_hash and type should be provided (no email)
-        const { data: verifyResultData, error: verifyErr } = await supabase.auth.verifyOtp({
-          token_hash: verifyResult.data.token_hash,
-          type: 'magiclink',
-        });
+      if (!verifyResult || !verifyResult.success) {
+        throw apiError || new Error('Verification failed after multiple attempts');
+      }
 
-        let session = verifyResultData?.session;
+      if (!verifyResult.data?.token_hash) {
+        throw new Error('No token_hash received from verification');
+      }
 
-        if (verifyErr || !session) {
-          // Try with type 'email'
-          const { data: emailVerifyResult, error: emailVerifyErr } = await supabase.auth.verifyOtp({
-            token_hash: verifyResult.data.token_hash,
-            type: 'email',
-          });
+      // Verify the token_hash using client-side Supabase with retry logic
+      let session: Session | null = null;
+      let verifyError: any = null;
 
-          if (emailVerifyErr || !emailVerifyResult?.session) {
-            throw new Error(emailVerifyErr?.message || 'Verification failed');
+      // Try multiple OTP types and retry attempts
+      const otpTypes = ['magiclink', 'email'] as const;
+      
+      for (const otpType of otpTypes) {
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            console.log(`🔄 Verifying OTP with type '${otpType}' (attempt ${attempt}/2)...`);
+            
+            const { data: verifyResultData, error: verifyErr } = await supabase.auth.verifyOtp({
+              token_hash: verifyResult.data.token_hash,
+              type: otpType,
+            });
+
+            if (!verifyErr && verifyResultData?.session) {
+              session = verifyResultData.session;
+              console.log(`✅ OTP verified successfully with type '${otpType}'`);
+              break;
+            } else if (verifyErr) {
+              verifyError = verifyErr;
+              console.warn(`⚠️ OTP verification failed with type '${otpType}':`, verifyErr.message);
+              
+              // If it's a network error, retry with delay
+              if (verifyErr.message?.includes('network') || verifyErr.message?.includes('fetch')) {
+                if (attempt < 2) {
+                  const delay = 1000 * attempt;
+                  console.log(`⏳ Retrying after ${delay}ms due to network issue...`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  continue;
+                }
+              }
+            }
+          } catch (err: any) {
+            verifyError = err;
+            console.error(`❌ Error verifying OTP with type '${otpType}':`, err);
+            if (attempt < 2) {
+              const delay = 1000 * attempt;
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            }
           }
-
-          session = emailVerifyResult.session;
         }
 
         if (session) {
-          // Session was created by verifyOtp - wait a bit for it to be fully established
-          // In production, there can be network latency before the session is available
-          console.log('✅ OTP verified, waiting for session to be fully established...');
+          break;
+        }
+      }
+
+      if (!session) {
+        // Provide more specific error message
+        const errorMsg = verifyError?.message || 'Session could not be established';
+        if (errorMsg.includes('expired') || errorMsg.includes('invalid')) {
+          throw new Error('This code has expired or is invalid. Please request a new code.');
+        } else if (errorMsg.includes('network') || errorMsg.includes('fetch')) {
+          throw new Error('Network error. Please check your connection and try again.');
+        } else {
+          throw new Error(`Verification failed: ${errorMsg}`);
+        }
+      }
+
+      // Use the robust session verification helper with retries
+      console.log('✅ OTP verified, verifying session establishment...');
+      
+      try {
+        // Use the existing retry helper with more attempts for OTP flow
+        const verifiedSession = await verifySessionWithRetries(5, 800);
+        
+        if (!verifiedSession) {
+          throw new Error('Session verification failed after multiple attempts');
+        }
+
+        // Final validation - ensure session is still valid
+        const { data: { session: finalSessionCheck }, error: finalError } = await supabase.auth.getSession();
+        if (finalError || !finalSessionCheck) {
+          console.warn('⚠️ Final session check failed, but session was verified earlier');
+          // Don't fail here - session was already verified by the helper
+        }
+
+        // Mark as navigated to prevent auth state change handler from also navigating
+        hasNavigatedRef.current = true;
+        setLoading(false);
+        
+        console.log('✅ Session fully established, navigating...');
+        
+        // Navigate after session is confirmed
+        router.replace(getRedirectPath());
+        return;
+      } catch (sessionError: any) {
+        console.error('❌ Session verification error:', sessionError);
+        
+        // Try one more time with a fresh session check
+        try {
+          console.log('🔄 Attempting final session recovery...');
+          await new Promise(resolve => setTimeout(resolve, 1500));
           
-          try {
-            // Wait a short delay for production environments where session establishment might be slower
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Verify the session is actually established and valid
-            const { data: { user }, error: userError } = await supabase.auth.getUser();
-            
-            if (userError || !user) {
-              console.warn('⚠️ Session not yet established, retrying...');
-              // Retry once more with a longer delay for production
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              
-              const { data: { user: retryUser }, error: retryError } = await supabase.auth.getUser();
-              if (retryError || !retryUser) {
-                throw new Error(retryError?.message || 'Session not established after verification');
-              }
-              
-              console.log('✅ Session established after retry');
-            } else {
-              console.log('✅ Session verified successfully');
-            }
-            
-            // Double-check session is still valid
-            const { data: { session: finalSession } } = await supabase.auth.getSession();
-            if (!finalSession) {
-              throw new Error('Session lost after verification');
-            }
-            
-            // Mark as navigated to prevent auth state change handler from also navigating
+          const { data: { session: recoverySession }, error: recoveryError } = await supabase.auth.getSession();
+          const { data: { user: recoveryUser } } = await supabase.auth.getUser();
+          
+          if (recoverySession && recoveryUser && !recoveryError) {
+            console.log('✅ Session recovered successfully');
             hasNavigatedRef.current = true;
             setLoading(false);
-            
-            // Navigate after session is confirmed
             router.replace(getRedirectPath());
             return;
-          } catch (sessionError: any) {
-            console.error('Session verification error:', sessionError);
-            setLoading(false);
-            showError('Session Error', 'Session could not be established. Please try again.');
-            return;
           }
-        } else {
-          throw new Error('No session created after verification');
+        } catch (recoveryError: any) {
+          console.error('❌ Session recovery failed:', recoveryError);
         }
-      } else {
-        throw new Error('No token_hash received from verification');
+        
+        setLoading(false);
+        
+        // Provide more helpful error message
+        const errorMessage = sessionError?.message || 'Session could not be established';
+        if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+          showError(
+            'Connection Error', 
+            'Unable to establish session due to network issues. Please check your internet connection and try again.'
+          );
+        } else {
+          showError(
+            'Session Error', 
+            'Session could not be established. This may be due to network latency. Please try again, or request a new code if the problem persists.'
+          );
+        }
+        return;
       }
     } catch (error: any) {
-      console.error('OTP verification error:', error);
+      console.error('❌ OTP verification error:', error);
       setLoading(false);
-      showError('Verification Failed', error.message || 'Invalid code. Please try again.');
+      
+      // Provide more specific error messages
+      const errorMessage = error?.message || 'Verification failed';
+      
+      if (errorMessage.includes('expired') || errorMessage.includes('Invalid verification code')) {
+        showError('Code Expired', 'This code has expired or is invalid. Please request a new code.');
+      } else if (errorMessage.includes('already been used')) {
+        showError('Code Used', 'This code has already been used. Please request a new code.');
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('Connection')) {
+        showError('Connection Error', 'Unable to verify code due to network issues. Please check your internet connection and try again.');
+      } else {
+        showError('Verification Failed', errorMessage || 'Invalid code. Please try again or request a new code.');
+      }
     }
   };
 

@@ -9,12 +9,14 @@ import { useToastHelpers } from '@contexts/ToastContext';
 import LoadingScreen from '@components/LoadingScreen';
 import { Meeting } from '@/types/networking';
 import { Stack, useRouter } from 'expo-router';
+import { useTranslation } from '@/i18n/i18n';
 
 const MeetingsPage = () => {
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
   const { showError } = useToastHelpers();
   const router = useRouter();
+  const { t } = useTranslation('networking');
   const styles = getStyles(isDark, colors);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,7 +122,7 @@ const MeetingsPage = () => {
       setMeetings(allMeetings);
     } catch (e) {
       console.error('Error loading meetings:', e);
-      showError('Error', 'Failed to load meetings');
+      showError(t('meetings.error'), t('meetings.failedToLoad'));
       setMeetings([]);
     } finally {
       setLoading(false);
@@ -205,17 +207,17 @@ const MeetingsPage = () => {
     >
       <View style={styles.meetingTime}>
         <Text style={styles.timeText}>
-          {item.scheduled_at ? format(parseISO(item.scheduled_at), 'MMM d, h:mm a') : 'Not scheduled'}
+          {item.scheduled_at ? format(parseISO(item.scheduled_at), 'MMM d, h:mm a') : t('meetings.notScheduled')}
         </Text>
       </View>
       <View style={styles.meetingDetails}>
         <Text style={styles.meetingTitle}>
-          {user?.id === item.requester_id ? `Meeting with ${item.speaker_name}` : `Meeting with ${item.requester_name}`}
+          {user?.id === item.requester_id ? `${t('meetings.meetingWith')} ${item.speaker_name}` : `${t('meetings.meetingWith')} ${item.requester_name}`}
         </Text>
         {item.notes && <Text style={styles.meetingDescription} numberOfLines={2}>{item.notes}</Text>}
         <View style={styles.detailRow}>
           <MaterialIcons name="location-on" size={16} color={colors.text?.secondary || (isDark ? '#cccccc' : '#666666')} style={styles.icon} />
-          <Text style={styles.detailText}>{item.location || 'TBD'}</Text>
+          <Text style={styles.detailText}>{item.location || t('meetings.tbd')}</Text>
         </View>
       </View>
       <View style={[styles.statusIndicator, { 
@@ -230,7 +232,7 @@ const MeetingsPage = () => {
     <View style={styles.container}>
       <Stack.Screen 
         options={{ 
-          title: 'My Meetings',
+          title: t('meetings.title'),
           headerRight: () => (
             <TouchableOpacity style={styles.addButton} onPress={onRefresh}>
               <MaterialIcons name="refresh" size={24} color={colors.primary} />
@@ -241,7 +243,7 @@ const MeetingsPage = () => {
       {loading ? (
         <LoadingScreen
           icon="event"
-          message="Loading meetings..."
+          message={t('meetings.loading')}
           fullScreen={true}
         />
       ) : meetings.length > 0 ? (
@@ -249,15 +251,15 @@ const MeetingsPage = () => {
           <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingTop: 8, gap: 8 }}>
             <TouchableOpacity onPress={() => setFilter('all')} activeOpacity={0.8}
               style={{ backgroundColor: filter==='all' ? (isDark ? 'rgba(0,122,255,0.25)' : 'rgba(0,122,255,0.15)') : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'), paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: colors.divider }}>
-              <Text style={{ color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'), fontSize: 12 }}>All {counts.total}</Text>
+              <Text style={{ color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'), fontSize: 12 }}>{t('meetings.all')} {counts.total}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setFilter('incoming')} activeOpacity={0.8}
               style={{ backgroundColor: filter==='incoming' ? (isDark ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.2)') : (isDark ? 'rgba(76, 175, 80, 0.15)' : 'rgba(76, 175, 80, 0.12)'), paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: colors.divider }}>
-              <Text style={{ color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'), fontSize: 12 }}>Incoming {counts.upcoming}</Text>
+              <Text style={{ color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'), fontSize: 12 }}>{t('meetings.incoming')} {counts.upcoming}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setFilter('passed')} activeOpacity={0.8}
               style={{ backgroundColor: filter==='passed' ? (isDark ? 'rgba(158, 158, 158, 0.3)' : 'rgba(158, 158, 158, 0.2)') : (isDark ? 'rgba(158, 158, 158, 0.15)' : 'rgba(158, 158, 158, 0.12)'), paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: colors.divider }}>
-              <Text style={{ color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'), fontSize: 12 }}>Passed {counts.past}</Text>
+              <Text style={{ color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'), fontSize: 12 }}>{t('meetings.passed')} {counts.past}</Text>
             </TouchableOpacity>
           </View>
           <FlatList
@@ -271,7 +273,7 @@ const MeetingsPage = () => {
       ) : (
         <View style={styles.emptyState}>
           <MaterialIcons name="event-busy" size={48} color={colors.text?.secondary || (isDark ? '#cccccc' : '#666666')} />
-          <Text style={styles.emptyText}>No meetings yet</Text>
+          <Text style={styles.emptyText}>{t('meetings.noMeetings')}</Text>
         </View>
       )}
     </View>

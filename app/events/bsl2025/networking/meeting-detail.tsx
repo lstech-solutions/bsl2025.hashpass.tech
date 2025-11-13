@@ -9,6 +9,7 @@ import { useToastHelpers } from '@/contexts/ToastContext';
 import SpeakerAvatar from '@/components/SpeakerAvatar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { supabase } from '@/lib/supabase';
+import { useTranslation } from '@/i18n/i18n';
 
 // Helper function to generate user avatar URL
 const generateUserAvatarUrl = (name: string): string => {
@@ -21,6 +22,7 @@ export default function MeetingDetailScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { showError } = useToastHelpers();
+  const { t } = useTranslation('networking');
   const params = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [meeting, setMeeting] = useState<any>(null);
@@ -33,7 +35,7 @@ export default function MeetingDetailScreen() {
         setLoading(true);
         
         if (!params.meetingId) {
-          showError('Error', 'Meeting ID is required');
+          showError(t('meetings.detail.error'), t('meetings.detail.failedToLoad'));
           setLoading(false);
           return;
         }
@@ -128,7 +130,7 @@ export default function MeetingDetailScreen() {
         });
       } catch (error) {
         console.error('Error loading meeting details:', error);
-        showError('Error', 'Failed to load meeting details');
+        showError(t('meetings.detail.error'), t('meetings.detail.failedToLoad'));
       } finally {
         setLoading(false);
       }
@@ -201,7 +203,7 @@ export default function MeetingDetailScreen() {
     return (
       <LoadingScreen
         icon="info"
-        message="Loading meeting details..."
+        message={t('meetings.detail.loading')}
         fullScreen={true}
       />
     );
@@ -210,7 +212,7 @@ export default function MeetingDetailScreen() {
   if (!meeting) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Meeting not found</Text>
+        <Text style={styles.errorText}>{t('meetings.detail.notFound')}</Text>
       </View>
     );
   }
@@ -230,7 +232,7 @@ export default function MeetingDetailScreen() {
       />
       
       <View style={styles.modalHeader}>
-        <Text style={styles.modalTitle}>Meeting Details</Text>
+        <Text style={styles.modalTitle}>{t('meetings.detail.title')}</Text>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={handleBack}
@@ -243,7 +245,7 @@ export default function MeetingDetailScreen() {
       {meeting && (
         <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
           <View style={styles.detailSection}>
-            <Text style={styles.detailLabel}>Speaker</Text>
+            <Text style={styles.detailLabel}>{t('meetings.detail.speaker')}</Text>
             <View style={styles.speakerDetail}>
               <SpeakerAvatar
                 name={meeting.speaker_name}
@@ -253,7 +255,7 @@ export default function MeetingDetailScreen() {
               />
               <View style={styles.speakerDetailInfo}>
                 <Text style={styles.speakerDetailName}>{meeting.speaker_name}</Text>
-                <Text style={styles.speakerDetailTitle}>Speaker</Text>
+                <Text style={styles.speakerDetailTitle}>{t('meetings.detail.speaker')}</Text>
                 {meeting.speaker_company && (
                   <Text style={[styles.speakerDetailTitle, { marginTop: 2 }]}>
                     {meeting.speaker_company}
@@ -266,7 +268,7 @@ export default function MeetingDetailScreen() {
           {/* Requester Info */}
           {meeting.requester_name && (
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>Requester</Text>
+              <Text style={styles.detailLabel}>{t('meetings.detail.requester')}</Text>
               <View style={styles.speakerDetail}>
                 <SpeakerAvatar
                   name={meeting.requester_name}
@@ -276,7 +278,7 @@ export default function MeetingDetailScreen() {
                 />
                 <View style={styles.speakerDetailInfo}>
                   <Text style={styles.speakerDetailName}>{meeting.requester_name}</Text>
-                  <Text style={styles.speakerDetailTitle}>Requester</Text>
+                  <Text style={styles.speakerDetailTitle}>{t('meetings.detail.requester')}</Text>
                   {meeting.requester_title && (
                     <Text style={[styles.speakerDetailTitle, { marginTop: 2 }]}>
                       {meeting.requester_title}
@@ -293,7 +295,7 @@ export default function MeetingDetailScreen() {
           )}
 
           <View style={styles.detailSection}>
-            <Text style={styles.detailLabel}>Status</Text>
+            <Text style={styles.detailLabel}>{t('meetings.detail.status')}</Text>
             <View style={[styles.statusDetail, { backgroundColor: getStatusColor(meeting.status) }]}>
               <MaterialIcons name={getStatusIcon(meeting.status) as any} size={20} color="white" />
               <Text style={styles.statusDetailText}>
@@ -304,38 +306,38 @@ export default function MeetingDetailScreen() {
 
           {meeting.message && (
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>Message</Text>
+              <Text style={styles.detailLabel}>{t('meetings.detail.message')}</Text>
               <Text style={styles.detailValue}>
-                {meeting.message || 'No message provided'}
+                {meeting.message || t('meetings.detail.noMessage')}
               </Text>
             </View>
           )}
 
           {meeting.notes && (
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>Intentions</Text>
+              <Text style={styles.detailLabel}>{t('meetings.detail.intentions')}</Text>
               <Text style={styles.detailValue}>{meeting.notes}</Text>
             </View>
           )}
 
           <View style={styles.detailSection}>
-            <Text style={styles.detailLabel}>Meeting Details</Text>
+            <Text style={styles.detailLabel}>{t('meetings.detail.meetingDetails')}</Text>
             <View style={styles.meetingDetails}>
               {meeting.scheduled_at && (
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailRowLabel}>Scheduled:</Text>
+                  <Text style={styles.detailRowLabel}>{t('meetings.detail.scheduled')}</Text>
                   <Text style={styles.detailRowValue}>
                     {format(parseISO(meeting.scheduled_at), 'EEEE, MMMM d, yyyy \a\t h:mm a')}
                   </Text>
                 </View>
               )}
               <View style={styles.detailRow}>
-                <Text style={styles.detailRowLabel}>Duration:</Text>
-                <Text style={styles.detailRowValue}>{meeting.duration || 30} minutes</Text>
+                <Text style={styles.detailRowLabel}>{t('meetings.detail.duration')}</Text>
+                <Text style={styles.detailRowValue}>{meeting.duration || 30} {t('meetings.detail.minutes')}</Text>
               </View>
               {meeting.location && (
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailRowLabel}>Location:</Text>
+                  <Text style={styles.detailRowLabel}>{t('meetings.detail.location')}</Text>
                   <Text style={styles.detailRowValue}>{meeting.location}</Text>
                 </View>
               )}
@@ -344,12 +346,12 @@ export default function MeetingDetailScreen() {
 
           {meeting.scheduled_at && (
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>Timeline</Text>
+              <Text style={styles.detailLabel}>{t('meetings.detail.timeline')}</Text>
               <View style={styles.timeline}>
                 {meeting.scheduled_at && (
                   <View style={styles.timelineItem}>
                     <Text style={styles.timelineDate}>{formatDate(meeting.scheduled_at)}</Text>
-                    <Text style={styles.timelineText}>Meeting scheduled</Text>
+                    <Text style={styles.timelineText}>{t('meetings.detail.meetingScheduled')}</Text>
                   </View>
                 )}
               </View>
@@ -364,7 +366,7 @@ export default function MeetingDetailScreen() {
               }}
             >
               <MaterialIcons name="video-call" size={20} color="white" />
-              <Text style={styles.buttonText}>Join Meeting</Text>
+              <Text style={styles.buttonText}>{t('meetings.detail.joinMeeting')}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -374,7 +376,7 @@ export default function MeetingDetailScreen() {
                   pathname: "/events/bsl2025/networking/meeting-chat",
                   params: { 
                     meetingId: meeting.id,
-                    title: `Chat with ${isSpeaker ? meeting.requester_name : meeting.speaker_name}`,
+                    title: `${t('meetings.detail.chatWith')} ${isSpeaker ? meeting.requester_name : meeting.speaker_name}`,
                     speakerName: meeting.speaker_name,
                     speakerImage: meeting.speaker_image
                   }
@@ -382,7 +384,7 @@ export default function MeetingDetailScreen() {
               }}
             >
               <MaterialIcons name="chat" size={20} color={colors.primary} />
-              <Text style={[styles.buttonText, styles.secondaryButtonText]}>Message</Text>
+              <Text style={[styles.buttonText, styles.secondaryButtonText]}>{t('meetings.detail.messageButton')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

@@ -153,3 +153,4 @@ END $$;
 COMMENT ON FUNCTION backfill_meeting_rewards IS 'One-time function to backfill LUKAS rewards for all existing confirmed meetings. Rewards both speaker and requester with 1 LUKAS each. Skips meetings that already have rewards.';
 
 
+

@@ -5,10 +5,12 @@ import { createSessionFromUrl, supabase } from '../../../lib/supabase';
 import { Check, AlertCircle, Info } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Session } from '@supabase/supabase-js';
+import { useTranslation } from '../../../i18n/i18n';
 
 export default function AuthCallback() {
     const router = useRouter();
     const params = useLocalSearchParams();
+    const { t } = useTranslation('common');
     const [status, setStatus] = useState<'processing' | 'success' | 'warning' | 'error' | 'show_download'>('processing');
     const [message, setMessage] = useState('Processing authentication...');
     
@@ -470,7 +472,7 @@ export default function AuthCallback() {
 
                 {status !== 'processing' && (
                     <Text style={styles.redirectText}>
-                        Please wait...
+                        {t('loading.pleaseWait')}
                     </Text>
                 )}
             </View>

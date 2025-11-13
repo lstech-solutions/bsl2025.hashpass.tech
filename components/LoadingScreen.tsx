@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
+import { useTranslation } from '../i18n/i18n';
 
 export interface LoadingScreenProps {
   /**
@@ -59,7 +60,7 @@ export interface LoadingScreenProps {
  */
 const LoadingScreen: React.FC<LoadingScreenProps> = ({
   icon,
-  message = 'Loading...',
+  message,
   subtitle,
   showSpinner,
   spinnerSize = 'large',
@@ -69,6 +70,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
   fullScreen = false,
 }) => {
   const { isDark, colors } = useTheme();
+  const { t } = useTranslation('common');
   const styles = getStyles(isDark, colors, fullScreen);
   
   // Determine if we should show spinner (default: true if no icon)
@@ -77,10 +79,15 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
   // Determine icon color
   const finalIconColor = iconColor || colors.primary;
   
-  // Build display message
+  // Build display message with translations
+  const defaultMessage = t({ id: 'loading.default', message: 'Loading...' });
+  const finalMessage = message || defaultMessage;
+  
   const displayMessage = retryCount !== undefined && retryCount > 0
-    ? `Retrying... (${retryCount}/3)`
-    : message;
+    ? t({ id: 'loading.retrying', message: 'Retrying... ({retryCount}/3)' }, { retryCount })
+    : finalMessage;
+  
+  const retryHintText = t({ id: 'loading.retryHint', message: 'Taking longer than expected, please wait...' });
 
   return (
     <View style={styles.container}>
@@ -116,7 +123,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
         {/* Retry hint */}
         {retryCount !== undefined && retryCount > 0 && (
           <Text style={[styles.retryHint, { color: colors.text.secondary }]}>
-            Taking longer than expected, please wait...
+            {retryHintText}
           </Text>
         )}
       </View>

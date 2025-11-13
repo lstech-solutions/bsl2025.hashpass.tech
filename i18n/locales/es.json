@@ -96,7 +96,16 @@
     "profile": "Perfil"
   },
   "common": {
-    "back": "Atrás"
+    "back": "Atrás",
+    "loading": {
+      "default": "Cargando...",
+      "retrying": "Reintentando... ({retryCount}/3)",
+      "retryHint": "Está tomando más tiempo de lo esperado, por favor espera...",
+      "loadingRequests": "Cargando tus solicitudes...",
+      "loadingSlots": "Cargando horarios...",
+      "loadingData": "Cargando datos...",
+      "pleaseWait": "Por favor espera..."
+    }
   },
   "auth": {
     "title": "Bienvenido a",
@@ -539,6 +548,69 @@
         "subtitle": "Ver estadísticas de networking"
       }
     },
+    "mySchedule": {
+      "title": "Mi Agenda",
+      "subtitle": "Ver y gestionar tu agenda",
+      "scheduledSlots": "Espacios Programados",
+      "dayPlanRoute": "Ruta del Plan del Día",
+      "totalScheduledSlots": "Total de Espacios Programados",
+      "freeSlot": {
+        "markFreeSlot": "Marcar Espacio Libre",
+        "unblockSlot": "Desbloquear Espacio",
+        "removeInterest": "Quitar Interés",
+        "freeSlotAvailable": "Espacio Libre Disponible",
+        "blockedMessage": "Este espacio está bloqueado. ¿Desbloquearlo para hacerlo disponible nuevamente?",
+        "interestedMessage": "Este espacio está marcado como interesado. ¿Quitarlo para hacerlo disponible nuevamente?",
+        "availableMessage": "Marca este espacio como interesado o bloqueado para rastrear tu disponibilidad. Esta información será visible para cualquiera que vea tu agenda pública, ayudándoles a entender cuándo estás bloqueado o interesado en conocer personas.",
+        "block": "Bloquear",
+        "interested": "Interesado",
+        "unblocking": "Desbloqueando...",
+        "removing": "Quitando...",
+        "unblock": "Desbloquear",
+        "remove": "Quitar"
+      },
+      "errors": {
+        "title": "Error",
+        "failedToLoadMeetings": "Error al cargar reuniones",
+        "failedToMarkInterested": "Error al marcar como interesado",
+        "failedToClearStatus": "Error al limpiar estado",
+        "failedToConfirm": "Error al confirmar evento",
+        "failedToUnconfirm": "Error al desconfirmar evento",
+        "failedToBlock": "Error al bloquear espacio",
+        "failedToUnblock": "Error al desbloquear espacio",
+        "failedToAddToFavorites": "Error al agregar a favoritos",
+        "failedToRemoveFromFavorites": "Error al quitar de favoritos"
+      },
+      "messages": {
+        "addedToFavorites": "Agregado a favoritos",
+        "removedFromFavorites": "Quitado de favoritos",
+        "confirmedAttendance": "Asistencia confirmada",
+        "tapToConfirmAttendance": "Toca para confirmar asistencia",
+        "meetingWith": "Reunión con {name}",
+        "user": "Usuario",
+        "tbd": "Por determinar",
+        "available": "Disponible"
+      },
+      "status": {
+        "interested": "Interesado",
+        "blocked": "Bloqueado",
+        "tentative": "Tentativo",
+        "confirmed": "Confirmado",
+        "interestedShort": "INT",
+        "blockedShort": "BLK",
+        "tentativeShort": "TEN"
+      },
+      "scheduleOverview": "Resumen de Agenda",
+      "scheduleSummary": "Resumen de Agenda",
+      "confirmAttendance": "Confirmar Asistencia",
+      "unconfirmAttendance": "Desconfirmar Asistencia",
+      "confirming": "Confirmando...",
+      "unconfirming": "Desconfirmando...",
+      "confirm": "Confirmar",
+      "unconfirm": "Desconfirmar",
+      "confirmMessage": "Confirmar tu asistencia agregará este evento a tu agenda.",
+      "unconfirmMessage": "¿Estás seguro de que quieres desconfirmar tu asistencia? Esto eliminará este evento de tu agenda confirmada."
+    },
     "tips": {
       "title": "Consejos de Networking",
       "beSpecific": {
@@ -567,6 +639,320 @@
       "title": "Actividad Reciente",
       "journey": "Tu Viaje de Networking",
       "description": "Has enviado {totalRequests} solicitudes de reunión y tienes {pendingRequests} respuestas pendientes."
+    },
+    "meetingRequestModal": {
+      "title": "Solicitar Reunión con {speakerName}",
+      "messageLabel": "Mensaje (Opcional)",
+      "messageHint": "💡 Incluir un mensaje aumenta las posibilidades de aprobación en 3x",
+      "messagePlaceholder": "Cuéntale al ponente por qué te gustaría reunirte (opcional pero recomendado)...",
+      "intentionLabel": "Intención de la Reunión (Opcional)",
+      "intentionHint": "💡 Selecciona hasta 3 intenciones para la reunión (o elige \"Sin intención específica\")",
+      "intentions": {
+        "coffee": "Solo para tomar un café y charlar",
+        "pitch": "Quiero presentarte mi idea de startup",
+        "consultation": "Consulta rápida de 5 minutos",
+        "networking": "Networking general y conexión",
+        "collaboration": "Explorar posible colaboración",
+        "advice": "Buscar consejo sobre mi carrera/proyecto",
+        "fun": "Solo por diversión y conversación interesante",
+        "learning": "Aprender de tu experiencia",
+        "none": "Sin intención específica"
+      },
+      "cancel": "Cancelar",
+      "sending": "Enviando...",
+      "sendRequest": "Enviar Solicitud",
+      "cancelTitle": "¿Cancelar Solicitud de Reunión?",
+      "cancelMessage": "¿Estás seguro de que quieres cancelar esta solicitud de reunión?",
+      "cancelWarning": "Tu cuota de solicitudes NO se restaurará después de la cancelación.",
+      "cancelling": "Cancelando Solicitud...",
+      "confirmCancel": "Sí, Cancelar Solicitud"
+    },
+    "requestView": {
+      "title": "Detalles de la Solicitud",
+      "yourRequest": "Tu Solicitudes",
+      "yourMeetingDetails": "Detalles de Tu Reunión",
+      "meetingDetails": "Detalles de la Reunión",
+      "yourMessage": "Tu Mensaje",
+      "message": "Mensaje",
+      "speaker": "Ponente",
+      "requester": "Solicitante",
+      "expiresIn": "Expira En",
+      "hours": "HRS",
+      "minutes": "MIN",
+      "seconds": "SEG",
+      "status": "Estado",
+      "intentions": "Intenciones",
+      "meetingDetailsLabel": "Detalles de la Reunión",
+      "duration": "Duración:",
+      "type": "Tipo:",
+      "boost": "Impulso:",
+      "expires": "Expira:",
+      "timeline": "Cronología",
+      "requestSent": "Solicitud enviada",
+      "expiresLabel": "Expira",
+      "statusUpdated": "Estado actualizado",
+      "response": "Respuesta",
+      "meeting": "Reunión",
+      "viewMeetingDetails": "Ver Detalles de la Reunión",
+      "cancelRequest": "Cancelar Solicitud",
+      "accept": "Aceptar",
+      "decline": "Rechazar",
+      "holdRequest": "Mantener Solicitud",
+      "blockUser": "Bloquear Usuario",
+      "minutesLabel": "minutos",
+      "requestCancelled": "Solicitud Cancelada",
+      "requestCancelledMessage": "Tu solicitud de reunión ha sido cancelada. Tu límite de solicitudes ha sido restaurado, pero los puntos de impulso no se reembolsan.",
+      "yourMeetingRequestApproved": "Tu Solicitud de Reunión Aprobada",
+      "meetingRequestApproved": "Solicitud de Reunión Aprobada",
+      "yourMeetingRequestDeclined": "Tu Solicitud de Reunión Rechazada",
+      "meetingRequestDeclined": "Solicitud de Reunión Rechazada",
+      "yourMeetingRequestPending": "Tu Solicitud de Reunión Pendiente",
+      "meetingRequestPending": "Solicitud de Reunión Pendiente",
+      "requestInformation": "Información de la Solicitud",
+      "requestId": "ID de Solicitud:",
+      "meetingType": "Tipo de Reunión:",
+      "sent": "Enviado:",
+      "holdModalTitle": "Mantener Solicitud",
+      "holdModalDescription": "Extiende el tiempo de expiración de esta solicitud gastando tus puntos de impulso.",
+      "holdDuration": "Duración de Mantenimiento:",
+      "hour": "hora",
+      "hours": "horas",
+      "cost": "Costo:",
+      "boostPoints": "puntos de impulso",
+      "confirmHold": "Confirmar Mantenimiento",
+      "requestHeld": "Solicitud Mantenida",
+      "requestHeldMessage": "Solicitud mantenida por {hours} hora(s)",
+      "pending": "PENDIENTE"
+    },
+    "speakerView": {
+      "connect": "Conectar",
+      "linkedin": "LinkedIn",
+      "twitter": "Twitter",
+      "matchmakingNetworking": "Matchmaking y Networking",
+      "matchmakingDescription": "Con la funcionalidad de Matchmaking no pierdas oportunidades de negocios: organiza citas con expositores u otros participantes y gestiona tu calendario de reuniones one-to-one",
+      "yourRequestStatus": "Estado de Tu Solicitud",
+      "ticketType": "Tipo de Ticket:",
+      "requestsUsed": "Solicitudes Usadas:",
+      "remaining": "Restantes:",
+      "nextRequest": "Próxima Solicitud:",
+      "requestLimitReached": "Has alcanzado tu límite de solicitudes. Usa impulso $VOI para solicitudes adicionales.",
+      "pleaseWaitNextRequest": "Por favor espera antes de enviar tu próxima solicitud.",
+      "loadingSpeakerDetails": "Cargando detalles del ponente...",
+      "online": "En línea",
+      "active": "Activo",
+      "inactive": "Inactivo",
+      "speakerDashboard": "Panel del Ponente",
+      "manageMeetingRequests": "Gestiona tus solicitudes de reunión",
+      "about": "Acerca de",
+      "yourMeetingRequests": "Tu Solicitud de Reunión",
+      "yourMeetingRequestsPlural": "Tus Solicitudes de Reunión",
+      "scrollToSeeAll": "Desplázate para ver todas las solicitudes",
+      "approved": "✅ Aprobada",
+      "declined": "❌ Rechazada",
+      "pendingStatus": "⏳ Pendiente",
+      "requestHistory": "Historial de Solicitudes",
+      "cancelled": "Cancelada",
+      "whatsNext": "¿Qué sigue?",
+      "waitingForResponse": "Tu solicitud de reunión está esperando la respuesta de {speakerName}. Serás notificado cuando respondan. Puedes cancelar esta solicitud en cualquier momento.",
+      "greatNews": "¡Buenas noticias! 🎉",
+      "requestApproved": "¡{speakerName} ha aprobado tu solicitud de reunión! Revisa tus notificaciones para ver los detalles de la reunión y los próximos pasos.",
+      "requestDeclinedTitle": "Solicitud Rechazada",
+      "requestDeclinedMessage": "{speakerName} ha rechazado esta solicitud de reunión. Puedes intentar solicitar una reunión con otros ponentes.",
+      "cancelRequest": "Cancelar Solicitud",
+      "openingLinkedIn": "Abriendo el perfil de LinkedIn de {speakerName}...",
+      "speakerDashboardOnly": "Esta función solo está disponible para el ponente mismo."
+    },
+    "meetings": {
+      "title": "Mis Reuniones",
+      "loading": "Cargando reuniones...",
+      "all": "Todas",
+      "incoming": "Próximas",
+      "passed": "Pasadas",
+      "notScheduled": "No programada",
+      "meetingWith": "Reunión con",
+      "tbd": "Por definir",
+      "noMeetings": "Aún no hay reuniones",
+      "error": "Error",
+      "failedToLoad": "Error al cargar reuniones",
+      "detail": {
+        "title": "Detalles de la Reunión",
+        "loading": "Cargando detalles de la reunión...",
+        "notFound": "Reunión no encontrada",
+        "failedToLoad": "Error al cargar detalles de la reunión",
+        "speaker": "Ponente",
+        "requester": "Solicitante",
+        "status": "Estado",
+        "message": "Mensaje",
+        "noMessage": "No se proporcionó mensaje",
+        "intentions": "Intenciones",
+        "meetingDetails": "Detalles de la Reunión",
+        "scheduled": "Programada:",
+        "duration": "Duración:",
+        "location": "Ubicación:",
+        "minutes": "minutos",
+        "timeline": "Cronología",
+        "meetingScheduled": "Reunión programada",
+        "joinMeeting": "Unirse a la Reunión",
+        "messageButton": "Mensaje",
+        "chatWith": "Chatear con"
+      }
+    }
+  },
+  "agenda": {
+    "title": "Agenda del Evento",
+    "subtitle": "Programa de la Conferencia • {count} Sesiones",
+    "date": "12-14 de Noviembre, 2025 • Medellín, Colombia",
+    "loading": "Cargando agenda...",
+    "filter": {
+      "type": "Tipo",
+      "speakers": "Oradores",
+      "keynote": "Conferencia Principal",
+      "panel": "Panel",
+      "break": "Descanso",
+      "meal": "Comida",
+      "registration": "Registro"
+    },
+    "search": {
+      "placeholder": "Buscar sesiones, oradores o palabras clave..."
+    },
+    "tabs": {
+      "sessions": "sesiones"
+    },
+    "noResults": {
+      "title": "No hay sesiones que coincidan con tus filtros",
+      "subtitle": "Intenta ajustar tu búsqueda o filtros"
+    },
+    "empty": {
+      "title": "No hay agenda disponible",
+      "subtitle": "Vuelve más tarde para ver el programa del evento",
+      "noLiveData": "No hay datos de agenda en vivo"
+    },
+    "badges": {
+      "past": "PASADO"
+    },
+    "locations": {
+      "mainStage": "Escenario Principal",
+      "registrationArea": "Área de Registro"
+    },
+    "messages": {
+      "untitledEvent": "Evento Sin Título",
+      "eventConfirmed": "Evento confirmado",
+      "eventConfirmedMessage": "Este evento ha sido agregado a tu agenda",
+      "eventUnconfirmed": "Evento no confirmado",
+      "eventUnconfirmedMessage": "Este evento ha sido eliminado de tu agenda confirmada",
+      "error": "Error",
+      "confirmError": "Error al confirmar el evento",
+      "unconfirmError": "Error al desconfirmar el evento",
+      "addedToFavorites": "Agregado a favoritos",
+      "removedFromFavorites": "Eliminado de favoritos",
+      "addToFavoritesError": "Error al agregar a favoritos",
+      "removeFromFavoritesError": "Error al eliminar de favoritos"
+    }
+  },
+  "notifications": {
+    "center": {
+      "title": "Notificaciones",
+      "all": "Todas",
+      "archive": "Archivo",
+      "markAllRead": "Marcar todas como leídas",
+      "markRead": "Marcar como leída",
+      "markUnread": "Marcar como no leída",
+      "delete": "Eliminar",
+      "deleteTitle": "Eliminar notificación",
+      "deleteMessage": "¿Estás seguro de que quieres eliminar esta notificación?",
+      "cancel": "Cancelar",
+      "noNotifications": "Sin notificaciones",
+      "noNotificationsMessage": "¡Estás al día! Las nuevas notificaciones aparecerán aquí.",
+      "noArchivedNotifications": "Sin notificaciones archivadas",
+      "noArchivedNotificationsMessage": "Las notificaciones archivadas aparecerán aquí.",
+      "loading": "Cargando notificaciones...",
+      "searchPlaceholder": "Buscar notificaciones...",
+      "viewAll": "Ver todas las notificaciones",
+      "goToCenter": "Ir al centro de notificaciones",
+      "noNewNotifications": "No hay notificaciones nuevas",
+      "justNow": "Ahora mismo",
+      "minutesAgo": "hace {minutes}m",
+      "hoursAgo": "hace {hours}h",
+      "daysAgo": "hace {days}d",
+      "urgent": "URGENTE",
+      "filters": {
+        "readStatus": "Estado de lectura",
+        "all": "Todas",
+        "unread": "No leídas",
+        "read": "Leídas",
+        "type": "Tipo",
+        "allTypes": "Todos los tipos",
+        "meetingRequest": "Solicitud de reunión",
+        "meetingAccepted": "Reunión aceptada",
+        "meetingDeclined": "Reunión rechazada",
+        "meetingExpired": "Reunión expirada",
+        "reminder": "Recordatorio",
+        "boostReceived": "Impulso recibido",
+        "systemAlert": "Alerta del sistema",
+        "chatMessage": "Mensaje de chat",
+        "priority": "Prioridad",
+        "urgentOnly": "Solo urgentes"
+      }
+    },
+    "types": {
+      "meeting_request": {
+        "title": "Solicitud enviada ✓",
+        "message": "Tu solicitud de reunión con {speakerName} ha sido enviada exitosamente.",
+        "messageWithExpiry": "Tu solicitud de reunión con {speakerName} ha sido enviada exitosamente. Expira en {hours} horas.",
+        "speakerTitle": "📋 Solicitud de reunión",
+        "speakerMessage": "{requesterName} quiere reunirse contigo",
+        "speakerVipTitle": "🔥 Solicitud de reunión VIP",
+        "speakerVipMessage": "{requesterName} (VIP) quiere reunirse contigo",
+        "speakerBusinessTitle": "💼 Solicitud de reunión empresarial",
+        "speakerBusinessMessage": "{requesterName} (Empresarial) quiere reunirse contigo",
+        "boostedMessage": " (Impulsado con ${boostAmount} VOI)"
+      },
+      "meeting_accepted": {
+        "title": "¡Solicitud de reunión aceptada! 🎉",
+        "message": "{speakerName} ha aceptado tu solicitud de reunión",
+        "messageWithSchedule": "Tu solicitud de reunión ha sido aceptada. Reunión programada para {scheduleTime}. ¡Ganaste 1 LUKAS! 💎",
+        "speakerTitle": "Solicitud aceptada",
+        "speakerMessage": "Has aceptado la solicitud de reunión de {requesterName}",
+        "speakerScheduledTitle": "¡Reunión programada! 🎉",
+        "speakerScheduledMessage": "Tu reunión con {requesterName} ha sido programada",
+        "speakerScheduledWithReward": "Aceptaste una solicitud de reunión. Reunión programada para {scheduleTime}. ¡Ganaste 1 LUKAS! 💎"
+      },
+      "meeting_declined": {
+        "title": "Solicitud de reunión rechazada",
+        "message": "{speakerName} ha rechazado tu solicitud de reunión",
+        "speakerTitle": "Solicitud rechazada",
+        "speakerMessage": "Has rechazado la solicitud de reunión de {requesterName}"
+      },
+      "meeting_expired": {
+        "title": "Solicitud de reunión expirada",
+        "message": "Tu solicitud de reunión con {speakerName} ha expirado"
+      },
+      "meeting_cancelled": {
+        "title": "Solicitud de reunión cancelada",
+        "message": "Tu solicitud de reunión ha sido cancelada",
+        "speakerTitle": "Solicitud de reunión cancelada",
+        "speakerMessage": "La solicitud de reunión de {requesterName} ha sido cancelada"
+      },
+      "meeting_reminder": {
+        "title": "Recordatorio de reunión",
+        "message": "Tienes una reunión con {name} programada pronto"
+      },
+      "boost_received": {
+        "title": "Impulso recibido",
+        "message": "Recibiste un impulso de ${amount} VOI"
+      },
+      "system_alert": {
+        "title": "Alerta del sistema",
+        "message": "{message}"
+      },
+      "chat_message": {
+        "title": "Nuevo mensaje de chat",
+        "message": "{senderName} te envió un mensaje",
+        "titleFrom": "Nuevo mensaje de {senderName}",
+        "messageFrom": "Tienes un nuevo mensaje de {senderName}",
+        "titleMeeting": "{meetingTitle}",
+        "messageMeeting": "Nuevo mensaje en {meetingTitle}"
+      }
     }
   }
 }

@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   },
   toastItem: {
     marginBottom: 12,
-    width: '100%',
+    width: '95%',
     maxWidth: 400,
   },
   toast: {
@@ -437,8 +437,8 @@ const styles = StyleSheet.create({
   progressBarContainer: {
     position: 'absolute',
     bottom: 0,
-    left: 4, // More padding from left edge to better handle rounded corners
-    right: 4, // More padding from right edge to better handle rounded corners
+    left: 0, // Start from left edge to overlap with left border color
+    right: 14, // Padding on right to prevent reaching card border
     height: 2, // Thinner, more polished bar
     backgroundColor: 'transparent',
     overflow: 'hidden',

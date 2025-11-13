@@ -210,3 +210,4 @@ COMMENT ON FUNCTION add_reward IS 'Adds reward to user balance with improved err
 COMMENT ON FUNCTION trigger_reward_meeting_confirmed IS 'Trigger function that automatically rewards both speaker and requester with 1 LUKAS each when a meeting is created with status confirmed. Includes improved error handling and logging.';
 
 
+

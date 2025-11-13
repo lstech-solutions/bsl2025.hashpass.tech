@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from '../i18n/i18n';
+import { translateNotification } from '../lib/notification-translations';
 
 export interface Notification {
   id: string;
-  type: 'meeting_request' | 'meeting_accepted' | 'meeting_declined' | 'meeting_reminder' | 'meeting_expired' | 'boost_received' | 'system_alert' | 'chat_message';
+  type: 'meeting_request' | 'meeting_accepted' | 'meeting_declined' | 'meeting_reminder' | 'meeting_expired' | 'meeting_cancelled' | 'boost_received' | 'system_alert' | 'chat_message';
   title: string;
   message: string;
   is_read: boolean;
@@ -48,6 +50,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const unreadCount = notifications.filter(n => !n.is_read && !n.is_archived).length;
 
@@ -71,7 +74,17 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         return;
       }
 
-      setNotifications(data || []);
+      // Translate notifications
+      const translatedNotifications = (data || []).map(notification => {
+        const translated = translateNotification(notification, t);
+        return {
+          ...notification,
+          title: translated.title,
+          message: translated.message
+        };
+      });
+
+      setNotifications(translatedNotifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -260,8 +273,16 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
           console.log('New notification received:', payload);
           const newNotification = payload.new as Notification;
           
+          // Translate the new notification
+          const translated = translateNotification(newNotification, t);
+          const translatedNotification = {
+            ...newNotification,
+            title: translated.title,
+            message: translated.message
+          };
+          
           // Add to the beginning of the list
-          setNotifications(prev => [newNotification, ...prev]);
+          setNotifications(prev => [translatedNotification, ...prev]);
           
           // Show browser notification if permission granted
           if (Notification.permission === 'granted' && newNotification.is_urgent) {
@@ -336,7 +357,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchNotifications]);
+  }, [user, fetchNotifications, t]);
 
   // Auto-refresh notifications every 30 seconds as fallback
   useEffect(() => {

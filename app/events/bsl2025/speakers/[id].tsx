@@ -15,6 +15,7 @@ import PassesDisplay from '../../../../components/PassesDisplay';
 import { getSpeakerAvatarUrl, getSpeakerLinkedInUrl, getSpeakerTwitterUrl } from '../../../../lib/string-utils';
 import LoadingScreen from '../../../../components/LoadingScreen';
 import { CopilotStep, walkthroughable } from 'react-native-copilot';
+import { useTranslation } from '../../../../i18n/i18n';
 
 // Helper function to generate user avatar URL
 const generateUserAvatarUrl = (name: string): string => {
@@ -51,6 +52,7 @@ export default function SpeakerDetail() {
   const { isDark, colors } = useTheme();
   const { event } = useEvent();
   const { user, isLoggedIn } = useAuth();
+  const { t } = useTranslation('networking');
   const router = useRouter();
   const { showSuccess, showError, showWarning, showInfo } = useToastHelpers();
   const { refreshBalance } = useBalance();
@@ -1132,7 +1134,7 @@ export default function SpeakerDetail() {
   const handleLinkedIn = () => {
     if (speaker?.social?.linkedin) {
       // In a real app, you'd open the LinkedIn URL
-      Alert.alert('LinkedIn', `Opening ${speaker.name}'s LinkedIn profile...`);
+      Alert.alert(t('speakerView.linkedin'), t('speakerView.openingLinkedIn', { speakerName: speaker.name }));
     }
   };
 
@@ -1142,8 +1144,8 @@ export default function SpeakerDetail() {
       router.push('/events/bsl2025/speakers/dashboard');
     } else {
       Alert.alert(
-        'Speaker Dashboard',
-        'This feature is only available to the speaker themselves.',
+        t('speakerView.speakerDashboard'),
+        t('speakerView.speakerDashboardOnly'),
         [{ text: 'OK' }]
       );
     }
@@ -1153,7 +1155,7 @@ export default function SpeakerDetail() {
     return (
       <LoadingScreen
         icon="person"
-        message="Loading speaker details..."
+        message={t('speakerView.loadingSpeakerDetails')}
         fullScreen={true}
       />
     );
@@ -1184,7 +1186,7 @@ export default function SpeakerDetail() {
                 styles.statusBadgeText,
                 speaker.isActive ? styles.activeBadgeText : styles.inactiveBadgeText
               ]}>
-                {speaker.isActive ? (speaker.isOnline ? 'Online' : 'Active') : 'Inactive'}
+                {speaker.isActive ? (speaker.isOnline ? t('speakerView.online') : t('speakerView.active')) : t('speakerView.inactive')}
               </Text>
             </View>
           )}
@@ -1207,8 +1209,8 @@ export default function SpeakerDetail() {
             <View style={styles.dashboardButtonContent}>
               <MaterialIcons name="dashboard" size={24} color="white" />
               <View style={styles.dashboardButtonText}>
-                <Text style={styles.dashboardButtonTitle}>Speaker Dashboard</Text>
-                <Text style={styles.dashboardButtonSubtitle}>Manage your meeting requests</Text>
+              <Text style={styles.dashboardButtonTitle}>{t('speakerView.speakerDashboard')}</Text>
+              <Text style={styles.dashboardButtonSubtitle}>{t('speakerView.manageMeetingRequests')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color="white" />
             </View>
@@ -1221,7 +1223,7 @@ export default function SpeakerDetail() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MaterialIcons name="person" size={24} color={colors.primary} />
-            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.sectionTitle}>{t('speakerView.about')}</Text>
           </View>
           <Text style={styles.bioText}>{speaker.bio}</Text>
         </View>
@@ -1233,7 +1235,7 @@ export default function SpeakerDetail() {
             <View style={styles.sectionHeader}>
               <MaterialIcons name="assignment" size={24} color={colors.primary} />
               <Text style={styles.sectionTitle}>
-                Your Meeting Request{meetingRequests.length > 1 ? 's' : ''} ({meetingRequests.length})
+                {meetingRequests.length > 1 ? t('speakerView.yourMeetingRequestsPlural') : t('speakerView.yourMeetingRequests')} ({meetingRequests.length})
               </Text>
               <TouchableOpacity 
                 onPress={loadMeetingRequestStatus}
@@ -1252,7 +1254,7 @@ export default function SpeakerDetail() {
             {meetingRequests.length > 2 && (
               <View style={styles.scrollHint}>
                 <MaterialIcons name="keyboard-arrow-down" size={16} color={colors.text.secondary} />
-                <Text style={styles.scrollHintText}>Scroll to see all requests</Text>
+                <Text style={styles.scrollHintText}>{t('speakerView.scrollToSeeAll')}</Text>
               </View>
             )}
           
@@ -1289,9 +1291,9 @@ export default function SpeakerDetail() {
                              '#FF9500'
                     }
                   ]}>
-                    {request.status === 'approved' ? '✅ Approved' :
-                     request.status === 'declined' ? '❌ Declined' :
-                     '⏳ Pending'}
+                    {request.status === 'approved' ? t('speakerView.approved') :
+                     request.status === 'declined' ? t('speakerView.declined') :
+                     t('speakerView.pendingStatus')}
                   </Text>
                   <Text style={styles.simpleRequestDate}>
                     {new Date(request.created_at).toLocaleDateString()}
@@ -1322,7 +1324,7 @@ export default function SpeakerDetail() {
               
               {request.note && request.requester_id === user?.id && (
                 <View style={styles.simpleRequestIntentions}>
-                  <Text style={styles.simpleRequestIntentionsLabel}>Intentions:</Text>
+                  <Text style={styles.simpleRequestIntentionsLabel}>{t('requestView.intentions')}:</Text>
                   <Text style={styles.simpleRequestIntentionsText} numberOfLines={1}>
                     {request.note.split('; ').slice(0, 2).join(', ')}
                     {request.note.split('; ').length > 2 && '...'}
@@ -1340,7 +1342,7 @@ export default function SpeakerDetail() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MaterialIcons name="history" size={24} color={colors.text.secondary} />
-            <Text style={styles.sectionTitle}>Request History ({cancelledRequests.length})</Text>
+            <Text style={styles.sectionTitle}>{t('speakerView.requestHistory')} ({cancelledRequests.length})</Text>
           </View>
           
           {/* Scrollable container for cancelled requests */}
@@ -1355,7 +1357,7 @@ export default function SpeakerDetail() {
                 <View style={styles.cancelledRequestHeader}>
                   <View style={styles.cancelledRequestStatus}>
                     <MaterialIcons name="cancel" size={16} color={colors.error.main} />
-                    <Text style={styles.cancelledRequestStatusText}>Cancelled</Text>
+                    <Text style={styles.cancelledRequestStatusText}>{t('speakerView.cancelled')}</Text>
                   </View>
                   <Text style={styles.cancelledRequestDate}>
                     {new Date(request.created_at).toLocaleDateString()}
@@ -1415,19 +1417,19 @@ export default function SpeakerDetail() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MaterialIcons name="link" size={24} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Connect</Text>
+            <Text style={styles.sectionTitle}>{t('speakerView.connect')}</Text>
           </View>
           <View style={styles.socialLinks}>
             {speaker.social.linkedin && (
               <TouchableOpacity style={styles.socialButton} onPress={handleLinkedIn}>
                 <MaterialIcons name="link" size={24} color="#0077B5" />
-                <Text style={styles.socialButtonText}>LinkedIn</Text>
+                <Text style={styles.socialButtonText}>{t('speakerView.linkedin')}</Text>
               </TouchableOpacity>
             )}
             {speaker.social.twitter && (
               <TouchableOpacity style={styles.socialButton}>
                 <MaterialIcons name="chat" size={24} color="#1DA1F2" />
-                <Text style={styles.socialButtonText}>Twitter</Text>
+                <Text style={styles.socialButtonText}>{t('speakerView.twitter')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1438,10 +1440,10 @@ export default function SpeakerDetail() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <MaterialIcons name="people" size={24} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Matchmaking & Networking</Text>
+          <Text style={styles.sectionTitle}>{t('speakerView.matchmakingNetworking')}</Text>
         </View>
         <Text style={styles.sectionSubtitle}>
-          Con la funcionalidad de Matchmaking no pierdas oportunidades de negocios: organiza citas con expositores u otros participantes y gestiona tu calendario de reuniones one-to-one
+          {t('speakerView.matchmakingDescription')}
         </Text>
         
 
@@ -1449,12 +1451,12 @@ export default function SpeakerDetail() {
         <View style={styles.requestLimitsInfo}>
           <View style={styles.requestLimitsHeader}>
             <MaterialIcons name="schedule" size={20} color="#60A5FA" />
-            <Text style={styles.requestLimitsTitle}>Your Request Status</Text>
+            <Text style={styles.requestLimitsTitle}>{t('speakerView.yourRequestStatus')}</Text>
           </View>
           
           <View style={styles.requestLimitsContent}>
             <View style={styles.requestLimitsRow}>
-              <Text style={styles.requestLimitsLabel}>Ticket Type:</Text>
+              <Text style={styles.requestLimitsLabel}>{t('speakerView.ticketType')}</Text>
               <Text style={[styles.requestLimitsValue, { 
                 color: requestLimits?.ticketType === 'vip' ? '#FFD700' : 
                        requestLimits?.ticketType === 'business' ? '#60A5FA' : '#999'
@@ -1464,14 +1466,14 @@ export default function SpeakerDetail() {
             </View>
             
             <View style={styles.requestLimitsRow}>
-              <Text style={styles.requestLimitsLabel}>Requests Used:</Text>
+              <Text style={styles.requestLimitsLabel}>{t('speakerView.requestsUsed')}</Text>
               <Text style={styles.requestLimitsValue}>
                 {requestLimits ? `${requestLimits.totalRequests} / ${requestLimits.requestLimit === 999999 ? '∞' : requestLimits.requestLimit}` : '0 / 1'}
               </Text>
             </View>
             
             <View style={styles.requestLimitsRow}>
-              <Text style={styles.requestLimitsLabel}>Remaining:</Text>
+              <Text style={styles.requestLimitsLabel}>{t('speakerView.remaining')}</Text>
               <Text style={[styles.requestLimitsValue, { 
                 color: (requestLimits?.remainingRequests || 1) > 0 ? '#4CAF50' : '#F44336'
               }]}>
@@ -1481,7 +1483,7 @@ export default function SpeakerDetail() {
             
             {requestLimits?.nextRequestAllowedAt && (
               <View style={styles.requestLimitsRow}>
-                <Text style={styles.requestLimitsLabel}>Next Request:</Text>
+                <Text style={styles.requestLimitsLabel}>{t('speakerView.nextRequest')}</Text>
                 <Text style={styles.requestLimitsValue}>
                   {new Date(requestLimits.nextRequestAllowedAt).toLocaleTimeString()}
                 </Text>
@@ -1494,8 +1496,8 @@ export default function SpeakerDetail() {
               <MaterialIcons name="warning" size={16} color="#FF9800" />
               <Text style={styles.requestLimitsWarningText}>
                 {requestLimits.remainingRequests === 0 
-                  ? 'You have reached your request limit. Use $VOI boost for additional requests.'
-                  : 'Please wait before sending your next request.'
+                  ? t('speakerView.requestLimitReached')
+                  : t('speakerView.pleaseWaitNextRequest')
                 }
               </Text>
             </View>
@@ -1515,7 +1517,7 @@ export default function SpeakerDetail() {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Request Meeting with {speaker?.name}</Text>
+            <Text style={styles.modalTitle}>{t('meetingRequestModal.title', { speakerName: speaker?.name || '' })}</Text>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setShowMeetingModal(false)}
@@ -1527,12 +1529,12 @@ export default function SpeakerDetail() {
           <ScrollView style={styles.modalContent}>
             <View style={styles.inputGroup}>
               <View style={styles.inputLabelRow}>
-                <Text style={styles.inputLabel}>Message (Optional)</Text>
-                <Text style={styles.inputHint}>💡 Including a message increases approval chances by 3x</Text>
+                <Text style={styles.inputLabel}>{t('meetingRequestModal.messageLabel')}</Text>
+                <Text style={styles.inputHint}>{t('meetingRequestModal.messageHint')}</Text>
               </View>
               <TextInput
                 style={styles.textInput}
-                placeholder="Tell the speaker why you'd like to meet (optional but recommended)..."
+                placeholder={t('meetingRequestModal.messagePlaceholder')}
                 placeholderTextColor={colors.text.secondary}
                 value={meetingMessage}
                 onChangeText={setMeetingMessage}
@@ -1542,21 +1544,23 @@ export default function SpeakerDetail() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Meeting Intention (Optional)</Text>
-              <Text style={styles.inputHint}>💡 Select up to 3 intentions for the meeting (or choose "No specific intention")</Text>
+              <Text style={styles.inputLabel}>{t('meetingRequestModal.intentionLabel')}</Text>
+              <Text style={styles.inputHint}>{t('meetingRequestModal.intentionHint')}</Text>
               
               <View style={styles.intentionChecklist}>
                 {[
-                  { id: 'coffee', text: 'Just to grab a coffee and chat', emoji: '☕' },
-                  { id: 'pitch', text: 'I want to pitch you my startup idea', emoji: '💡' },
-                  { id: 'consultation', text: 'Quick 5-minute consultation', emoji: '🔍' },
-                  { id: 'networking', text: 'General networking and connection', emoji: '🤝' },
-                  { id: 'collaboration', text: 'Explore potential collaboration', emoji: '🚀' },
-                  { id: 'advice', text: 'Seek advice on my career/project', emoji: '💭' },
-                  { id: 'fun', text: 'Just for fun and interesting conversation', emoji: '😄' },
-                  { id: 'learning', text: 'Learn from your experience', emoji: '📚' },
-                  { id: 'none', text: 'No specific intention', emoji: '⚪' }
-                ].map((intention) => (
+                  { id: 'coffee', emoji: '☕' },
+                  { id: 'pitch', emoji: '💡' },
+                  { id: 'consultation', emoji: '🔍' },
+                  { id: 'networking', emoji: '🤝' },
+                  { id: 'collaboration', emoji: '🚀' },
+                  { id: 'advice', emoji: '💭' },
+                  { id: 'fun', emoji: '😄' },
+                  { id: 'learning', emoji: '📚' },
+                  { id: 'none', emoji: '⚪' }
+                ].map((intention) => {
+                  const text = t(`meetingRequestModal.intentions.${intention.id}`);
+                  return (
                   <TouchableOpacity
                     key={intention.id}
                     style={[
@@ -1590,14 +1594,15 @@ export default function SpeakerDetail() {
                         styles.intentionText,
                         selectedIntentions.includes(intention.id) && styles.intentionTextSelected
                       ]}>
-                        {intention.text}
+                        {text}
                       </Text>
                     </View>
                     {selectedIntentions.includes(intention.id) && (
                       <MaterialIcons name="check-circle" size={20} color="#007AFF" />
                     )}
                   </TouchableOpacity>
-                ))}
+                  );
+                })}
               </View>
             </View>
 
@@ -1608,7 +1613,7 @@ export default function SpeakerDetail() {
               style={styles.cancelButton}
               onPress={() => setShowMeetingModal(false)}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{t('meetingRequestModal.cancel')}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -1620,7 +1625,7 @@ export default function SpeakerDetail() {
               disabled={isRequestingMeeting}
             >
               <Text style={styles.submitButtonText}>
-                {isRequestingMeeting ? 'Sending...' : 'Send Request'}
+                {isRequestingMeeting ? t('meetingRequestModal.sending') : t('meetingRequestModal.sendRequest')}
               </Text>
             </TouchableOpacity>
       </View>
@@ -1646,17 +1651,17 @@ export default function SpeakerDetail() {
 
             <View style={styles.cancelModalHeader}>
               <MaterialIcons name="warning" size={24} color={colors.error.main} />
-              <Text style={styles.cancelModalTitle}>Cancel Meeting Request?</Text>
+              <Text style={styles.cancelModalTitle}>{t('meetingRequestModal.cancelTitle')}</Text>
             </View>
             
             <Text style={styles.cancelModalMessage}>
-              Are you sure you want to cancel this meeting request?
+              {t('meetingRequestModal.cancelMessage')}
             </Text>
             
             <View style={styles.cancelModalWarningBox}>
               <MaterialIcons name="info" size={20} color={colors.error.main} />
               <Text style={styles.cancelModalWarning}>
-                Your request quota will NOT be restored after cancellation.
+                {t('meetingRequestModal.cancelWarning')}
               </Text>
             </View>
 
@@ -1674,7 +1679,7 @@ export default function SpeakerDetail() {
                 color="white" 
               />
               <Text style={styles.cancelModalConfirmText}>
-                {isCancellingRequest ? 'Cancelling Request...' : 'Yes, Cancel Request'}
+                {isCancellingRequest ? t('meetingRequestModal.cancelling') : t('meetingRequestModal.confirmCancel')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1698,8 +1703,8 @@ export default function SpeakerDetail() {
             </TouchableOpacity>
             <Text style={styles.modalTitle}>
               {selectedRequestDetail?.requester_id === user?.id 
-                ? 'Your Meeting Details' 
-                : 'Meeting Details'}
+                ? t('requestView.yourMeetingDetails')
+                : t('requestView.meetingDetails')}
             </Text>
             <View style={styles.modalHeaderSpacer} />
           </View>
@@ -1737,19 +1742,19 @@ export default function SpeakerDetail() {
                     }
                   ]}>
                     {selectedRequestDetail.requester_id === user?.id
-                      ? (selectedRequestDetail.status === 'approved' ? 'Your Meeting Request Approved' :
-                         selectedRequestDetail.status === 'declined' ? 'Your Meeting Request Declined' :
-                         'Your Meeting Request Pending')
-                      : (selectedRequestDetail.status === 'approved' ? 'Meeting Request Approved' :
-                         selectedRequestDetail.status === 'declined' ? 'Meeting Request Declined' :
-                         'Meeting Request Pending')}
+                      ? (selectedRequestDetail.status === 'approved' ? t('requestView.yourMeetingRequestApproved') :
+                         selectedRequestDetail.status === 'declined' ? t('requestView.yourMeetingRequestDeclined') :
+                         t('requestView.yourMeetingRequestPending'))
+                      : (selectedRequestDetail.status === 'approved' ? t('requestView.meetingRequestApproved') :
+                         selectedRequestDetail.status === 'declined' ? t('requestView.meetingRequestDeclined') :
+                         t('requestView.meetingRequestPending'))}
                   </Text>
                 </View>
               </View>
 
               {/* Speaker Information */}
               <View style={styles.detailInfoSection}>
-                <Text style={styles.detailSectionTitle}>Speaker</Text>
+                <Text style={styles.detailSectionTitle}>{t('requestView.speaker')}</Text>
                 <View style={styles.speakerDetailCard}>
                   <SpeakerAvatar
                     name={selectedRequestDetail.speaker_name}
@@ -1771,32 +1776,32 @@ export default function SpeakerDetail() {
 
               {/* Request Information */}
               <View style={styles.detailInfoSection}>
-                <Text style={styles.detailSectionTitle}>Request Information</Text>
+                <Text style={styles.detailSectionTitle}>{t('requestView.requestInformation')}</Text>
                 
                 <View style={styles.detailInfoRow}>
-                  <Text style={styles.detailInfoLabel}>Request ID:</Text>
+                  <Text style={styles.detailInfoLabel}>{t('requestView.requestId')}</Text>
                   <Text style={styles.detailInfoValue}>{selectedRequestDetail.id}</Text>
                 </View>
                 
                 <View style={styles.detailInfoRow}>
-                  <Text style={styles.detailInfoLabel}>Meeting Type:</Text>
+                  <Text style={styles.detailInfoLabel}>{t('requestView.meetingType')}</Text>
                   <Text style={styles.detailInfoValue}>{selectedRequestDetail.meeting_type}</Text>
                 </View>
                 
                 <View style={styles.detailInfoRow}>
-                  <Text style={styles.detailInfoLabel}>Duration:</Text>
-                  <Text style={styles.detailInfoValue}>{selectedRequestDetail.duration_minutes} minutes</Text>
+                  <Text style={styles.detailInfoLabel}>{t('requestView.duration')}</Text>
+                  <Text style={styles.detailInfoValue}>{selectedRequestDetail.duration_minutes} {t('requestView.minutesLabel')}</Text>
                 </View>
                 
                 <View style={styles.detailInfoRow}>
-                  <Text style={styles.detailInfoLabel}>Sent:</Text>
+                  <Text style={styles.detailInfoLabel}>{t('requestView.sent')}</Text>
                   <Text style={styles.detailInfoValue}>
                     {new Date(selectedRequestDetail.created_at).toLocaleString()}
                   </Text>
                 </View>
                 
                 <View style={styles.detailInfoRow}>
-                  <Text style={styles.detailInfoLabel}>Expires:</Text>
+                  <Text style={styles.detailInfoLabel}>{t('requestView.expires')}</Text>
                   <Text style={styles.detailInfoValue}>
                     {new Date(selectedRequestDetail.expires_at).toLocaleString()}
                   </Text>
@@ -1807,7 +1812,7 @@ export default function SpeakerDetail() {
               {selectedRequestDetail.message && (
                 <View style={styles.detailInfoSection}>
                   <Text style={styles.detailSectionTitle}>
-                    {selectedRequestDetail.requester_id === user?.id ? 'Your Message' : 'Message'}
+                    {selectedRequestDetail.requester_id === user?.id ? t('requestView.yourMessage') : t('requestView.message')}
                   </Text>
                   <Text style={styles.detailMessage}>{selectedRequestDetail.message}</Text>
                 </View>
@@ -1816,7 +1821,7 @@ export default function SpeakerDetail() {
               {/* Note/Intentions - Show for both requester and speaker */}
               {selectedRequestDetail.note && (
                 <View style={styles.detailInfoSection}>
-                  <Text style={styles.detailSectionTitle}>Meeting Intentions</Text>
+                  <Text style={styles.detailSectionTitle}>{t('requestView.intentions')}</Text>
                   <View style={styles.detailIntentionsContainer}>
                     {selectedRequestDetail.note.split('; ').map((intention: string, index: number) => (
                       <View key={index} style={styles.detailIntentionItem}>
@@ -1830,30 +1835,27 @@ export default function SpeakerDetail() {
               {/* Status-specific content */}
               {selectedRequestDetail.status === 'pending' && (
                 <View style={styles.detailInfoSection}>
-                  <Text style={styles.detailSectionTitle}>What's Next?</Text>
+                  <Text style={styles.detailSectionTitle}>{t('speakerView.whatsNext')}</Text>
                   <Text style={styles.detailMessage}>
-                    Your meeting request is waiting for {selectedRequestDetail.speaker_name}'s response. 
-                    You will be notified when they reply. You can cancel this request at any time.
+                    {t('speakerView.waitingForResponse', { speakerName: selectedRequestDetail.speaker_name })}
                   </Text>
                 </View>
               )}
 
               {selectedRequestDetail.status === 'approved' && (
                 <View style={styles.detailInfoSection}>
-                  <Text style={styles.detailSectionTitle}>Great News! 🎉</Text>
+                  <Text style={styles.detailSectionTitle}>{t('speakerView.greatNews')}</Text>
                   <Text style={styles.detailMessage}>
-                    {selectedRequestDetail.speaker_name} has approved your meeting request! 
-                    Check your notifications for meeting details and next steps.
+                    {t('speakerView.requestApproved', { speakerName: selectedRequestDetail.speaker_name })}
                   </Text>
                 </View>
               )}
 
               {selectedRequestDetail.status === 'declined' && (
                 <View style={styles.detailInfoSection}>
-                  <Text style={styles.detailSectionTitle}>Request Declined</Text>
+                  <Text style={styles.detailSectionTitle}>{t('speakerView.requestDeclinedTitle')}</Text>
                   <Text style={styles.detailMessage}>
-                    {selectedRequestDetail.speaker_name} has declined this meeting request. 
-                    You can try requesting a meeting with other speakers.
+                    {t('speakerView.requestDeclinedMessage', { speakerName: selectedRequestDetail.speaker_name })}
                   </Text>
                 </View>
               )}
@@ -1872,7 +1874,7 @@ export default function SpeakerDetail() {
                         }}
                       >
                         <MaterialIcons name="close" size={20} color="white" />
-                        <Text style={styles.detailCancelButtonText}>Cancel Request</Text>
+                        <Text style={styles.detailCancelButtonText}>{t('speakerView.cancelRequest')}</Text>
                       </TouchableOpacity>
                     </View>
                   ) : isCurrentUserSpeaker ? (
@@ -1883,7 +1885,7 @@ export default function SpeakerDetail() {
                         onPress={() => handleAcceptRequest(selectedRequestDetail)}
                       >
                         <MaterialIcons name="check-circle" size={20} color="white" />
-                        <Text style={styles.detailActionButtonText}>Accept</Text>
+                        <Text style={styles.detailActionButtonText}>{t('requestView.accept')}</Text>
                       </TouchableOpacity>
                       
                       <TouchableOpacity
@@ -1891,7 +1893,7 @@ export default function SpeakerDetail() {
                         onPress={() => handleDeclineRequest(selectedRequestDetail)}
                       >
                         <MaterialIcons name="cancel" size={20} color="white" />
-                        <Text style={styles.detailActionButtonText}>Decline</Text>
+                        <Text style={styles.detailActionButtonText}>{t('requestView.decline')}</Text>
                       </TouchableOpacity>
                       
                       <TouchableOpacity
@@ -1899,7 +1901,7 @@ export default function SpeakerDetail() {
                         onPress={() => handleBlockUser(selectedRequestDetail)}
                       >
                         <MaterialIcons name="block" size={20} color="white" />
-                        <Text style={styles.detailActionButtonText}>Block User</Text>
+                        <Text style={styles.detailActionButtonText}>{t('requestView.blockUser')}</Text>
                       </TouchableOpacity>
                     </View>
                   ) : null}

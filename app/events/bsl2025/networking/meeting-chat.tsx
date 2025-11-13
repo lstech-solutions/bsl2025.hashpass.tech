@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import MeetingChat from '@/components/MeetingChat';
 import LoadingScreen from '@/components/LoadingScreen';
 import { supabase } from '@/lib/supabase';
+import { useTranslation } from '@/i18n/i18n';
 
 export default function MeetingChatPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function MeetingChatPage() {
   }>();
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { t } = useTranslation('common');
   const [loading, setLoading] = useState(true);
   const [meetingInfo, setMeetingInfo] = useState<any>(null);
   const [chatTitle, setChatTitle] = useState<string>('Chat');
@@ -86,13 +88,13 @@ export default function MeetingChatPage() {
       <View style={[styles.container, { backgroundColor: colors.background?.default }]}>
         <Stack.Screen 
           options={{ 
-            title: 'Loading...',
+            title: t('loading.default'),
             headerBackTitle: 'Speaker Dashboard',
           }} 
         />
         <LoadingScreen
           icon="chat"
-          message="Loading meeting chat..."
+          message={t('loading.loadingData')}
           fullScreen={true}
         />
       </View>

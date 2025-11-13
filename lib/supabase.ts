@@ -157,11 +157,42 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Supabase URL or Anon Key is missing. Please check your .env file.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: storage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: Platform.OS === 'web',
-  },
-});
+// Initialize Supabase client
+// Use try-catch to handle rootState.routeNames error gracefully
+// But keep detectSessionInUrl enabled for OAuth to work (like the working version)
+let supabaseClient: ReturnType<typeof createClient> | null = null;
+
+const initializeSupabase = () => {
+  if (!supabaseClient) {
+    try {
+      supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          storage: storage,
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: Platform.OS === 'web', // Enable for OAuth (like working version)
+        },
+      });
+    } catch (error) {
+      // If initialization fails due to navigation state error, retry without detectSessionInUrl
+      console.warn('⚠️ Supabase init error, retrying without detectSessionInUrl:', error);
+      try {
+        supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+          auth: {
+            storage: storage,
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: false, // Fallback if navigation state not ready
+          },
+        });
+      } catch (retryError) {
+        console.error('Error creating Supabase client:', retryError);
+        throw retryError;
+      }
+    }
+  }
+  return supabaseClient;
+};
+
+// Initialize immediately
+export const supabase = initializeSupabase();

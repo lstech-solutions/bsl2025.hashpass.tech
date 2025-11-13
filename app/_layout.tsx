@@ -16,6 +16,7 @@ import { BalanceProvider } from '../contexts/BalanceContext';
 import { useTheme, useThemeProvider } from '../hooks/useTheme';
 import { StatusBar } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 import "./global.css";
 import PWAPrompt from '../components/PWAPrompt';
 import VersionUpdateNotification from '../components/VersionUpdateNotification';
@@ -131,14 +132,42 @@ function ThemedContent() {
     }
   }, [isReady]);
 
-  // Handle auth redirection
+  // Handle auth redirection with session verification
   useEffect(() => {
     if (isReady && !isLoading) {
-      if (!isLoggedIn && !isAuthFlow && !isBSLPublic && !isHomePage && !isPublicPage) {
+      // Don't redirect if we're in the middle of an auth callback
+      const isAuthCallback = pathname === '/(shared)/auth/callback';
+      if (isAuthCallback) {
+        console.log('⏸️ In auth callback, skipping redirect check');
+        return;
+      }
+      
+      // Check if accessing protected dashboard routes
+      const isDashboardRoute = pathname.startsWith('/(shared)/dashboard');
+      
+      if (isDashboardRoute) {
+        // For dashboard routes, verify session is actually valid
+        // But give it a moment in case session is being established
+        const checkSession = async () => {
+          // Wait a bit for session to be established (especially for OAuth/magic link)
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          const { data: { user }, error } = await supabase.auth.getUser();
+          if (error || !user) {
+            console.warn('⚠️ Invalid session on dashboard route, redirecting to auth');
+            router.replace('/(shared)/auth' as any);
+          }
+        };
+        
+        checkSession().catch((error) => {
+          console.error('❌ Error verifying session on dashboard:', error);
+          // Don't redirect on error - might be temporary network issue
+        });
+      } else if (!isLoggedIn && !isAuthFlow && !isBSLPublic && !isHomePage && !isPublicPage) {
         router.replace('/(shared)/auth' as any);
       }
     }
-  }, [isLoggedIn, isAuthFlow, isBSLPublic, isHomePage, isPublicPage, isReady, isLoading, router]);
+  }, [isLoggedIn, isAuthFlow, isBSLPublic, isHomePage, isPublicPage, isReady, isLoading, router, pathname]);
 
   // Show loading state
   if (isLoading || !isReady || showSplash) {

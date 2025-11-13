@@ -326,3 +326,4 @@ COMMENT ON FUNCTION reward_meeting_accepted IS 'Rewards both speaker and request
 COMMENT ON FUNCTION add_reward IS 'Adds reward to user balance and creates transaction record';
 COMMENT ON FUNCTION get_user_balance IS 'Gets user balance for a specific token (defaults to LUKAS)';
 
+

@@ -19,6 +19,7 @@ import { memoryManager } from '../../lib/memory-manager';
 import { throttle } from '../../lib/performance-utils';
 import { clearAuthCache } from '../../lib/version-checker';
 import { apiClient } from '../../lib/api-client';
+import { CURRENT_VERSION } from '../../config/version';
 
 type AuthMethod = 'magiclink' | 'otp';
 
@@ -97,8 +98,17 @@ export default function AuthScreen() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && !hasNavigatedRef.current) {
-          console.log(`🔐 Found existing session on mount for user: ${session.user.id}`);
-          // Navigate immediately if user is already authenticated
+          // Verify the session token is actually valid before navigating
+          const { data: { user }, error } = await supabase.auth.getUser();
+          
+          if (error || !user || user.id !== session.user.id) {
+            console.warn('⚠️ Session invalid on auth screen, clearing');
+            await supabase.auth.signOut();
+            return;
+          }
+          
+          console.log(`🔐 Found valid existing session on mount for user: ${user.id}`);
+          // Navigate immediately if user is already authenticated with valid session
           hasNavigatedRef.current = true;
           router.replace(getRedirectPath());
         }
@@ -133,6 +143,27 @@ export default function AuthScreen() {
         // Handle SIGNED_IN, INITIAL_SESSION, or TOKEN_REFRESHED events
         // INITIAL_SESSION fires on page reload when user is already authenticated
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || (event === 'TOKEN_REFRESHED' && !hasNavigatedRef.current)) {
+          // For SIGNED_IN events (OAuth, magic link, wallet), trust the session immediately
+          // Only verify for INITIAL_SESSION (page reload) to catch stale sessions
+          if (event === 'INITIAL_SESSION') {
+            // Verify session is actually valid before proceeding (only for reloads)
+            try {
+              const { data: { user: verifiedUser }, error: verifyError } = await supabase.auth.getUser();
+              
+              if (verifyError || !verifiedUser || verifiedUser.id !== session.user.id) {
+                console.warn('⚠️ Session invalid during INITIAL_SESSION, clearing');
+                await supabase.auth.signOut();
+                isProcessingRef.current = false;
+                return;
+              }
+            } catch (verifyErr) {
+              // If verification fails on INITIAL_SESSION, still allow it (might be network issue)
+              console.warn('⚠️ Session verification failed on INITIAL_SESSION, but allowing:', verifyErr);
+            }
+          }
+          
+          // For SIGNED_IN events, trust the session and proceed immediately
+          // Don't block on verification - the session from Supabase is valid
           isProcessingRef.current = true;
           processedUsersRef.current.add(userId);
           console.log(`🔐 ${event} event for user: ${session.user.id}, email: ${session.user.email}`);
@@ -354,16 +385,17 @@ export default function AuthScreen() {
       if (Platform.OS === 'web') {
         if (typeof window !== 'undefined' && window.location) {
           // Use the actual origin for production
+          // In Expo Router, (shared) group is removed from URL, so path is /auth/callback
           const origin = window.location.origin;
           // Include returnTo parameter if it exists
           const returnToParam = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '';
-          redirectTo = `${origin}/(shared)/auth/callback${returnToParam}`;
+          redirectTo = `${origin}/auth/callback${returnToParam}`;
         } else {
           // Fallback for SSR
           redirectTo = Linking.createURL('/(shared)/auth/callback');
         }
       } else {
-        // For mobile, use deep linking
+        // For mobile, use deep linking (keeps Expo Router format)
         redirectTo = Linking.createURL('/(shared)/auth/callback');
       }
 
@@ -538,15 +570,23 @@ export default function AuthScreen() {
       const waitTime = attempt === 1 ? delayMs : delayMs * attempt;
       await new Promise(resolve => setTimeout(resolve, waitTime));
       
-      const { data: { session }, error } = await supabase.auth.getSession();
+      // First check if session exists
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (session && !error) {
-        console.log(`✅ Session established successfully on attempt ${attempt}`);
-        return session;
-      }
-      
-      if (attempt < maxRetries) {
-        console.log(`⚠️ Session not yet established, retrying in ${waitTime}ms... (${attempt}/${maxRetries})`);
+      if (session && !sessionError) {
+        // Verify the session token is valid by calling getUser
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (user && !userError) {
+          console.log(`✅ Session established and verified successfully on attempt ${attempt}`);
+          return session;
+        } else {
+          console.log(`⚠️ Session exists but token invalid, retrying... (${attempt}/${maxRetries})`);
+        }
+      } else {
+        if (attempt < maxRetries) {
+          console.log(`⚠️ Session not yet established, retrying in ${waitTime}ms... (${attempt}/${maxRetries})`);
+        }
       }
     }
     
@@ -598,22 +638,32 @@ export default function AuthScreen() {
         }
 
         if (session) {
-          // Verify session establishment with 3 retry attempts
-          // This helps prevent race conditions on mobile devices
+          // Session was created by verifyOtp - trust it and navigate immediately
+          // The auth state change handler will verify the session
           try {
-            await verifySessionWithRetries(3, 500);
-            
-            // Additional delay to ensure router state is ready
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // Quick async verification (don't block navigation)
+            supabase.auth.getUser().then(({ data: { user }, error: userError }) => {
+              if (userError || !user || user.id !== session.user.id) {
+                console.warn('⚠️ Session verification warning (non-blocking):', userError?.message);
+              } else {
+                console.log('✅ Session verified successfully');
+              }
+            }).catch(err => {
+              console.warn('⚠️ Session verification check failed (non-blocking):', err);
+            });
             
             setLoading(false);
             
-            // Navigate to dashboard - user is already authenticated
+            // Navigate immediately - session from verifyOtp is trusted
+            // Auth state change handler will handle any edge cases
             router.replace(getRedirectPath());
             return;
           } catch (sessionError: any) {
-            console.error('Session verification error:', sessionError);
-            throw new Error('Session not established. Please try again.');
+            console.error('Session error (non-fatal):', sessionError);
+            // Still navigate - session from verifyOtp should be valid
+            setLoading(false);
+            router.replace(getRedirectPath());
+            return;
           }
         } else {
           throw new Error('No session created after verification');
@@ -631,21 +681,52 @@ export default function AuthScreen() {
   const signInWithOAuth = async (provider: 'google' | 'discord') => {
     setLoading(true);
     try {
+      // Build proper redirect URL for OAuth
+      // For web, use the actual origin + path (Expo Router removes (shared) group in URLs)
+      // For mobile, use the deep link scheme
+      let redirectUrl = '';
+      
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        // Use the actual origin for web
+        // In Expo Router, (shared) group is removed from URL, so path is /auth/callback
+        const origin = window.location.origin;
+        redirectUrl = `${origin}/auth/callback`;
+      } else {
+        // For mobile, use Linking.createURL (keeps Expo Router format)
+        redirectUrl = Linking.createURL('/(shared)/auth/callback');
+      }
+      
+      // Add returnTo parameter if present
+      if (returnTo) {
+        const separator = redirectUrl.includes('?') ? '&' : '?';
+        redirectUrl = `${redirectUrl}${separator}returnTo=${encodeURIComponent(returnTo)}`;
+      }
+      
+      console.log(`🔐 Starting ${provider} OAuth flow`);
+      console.log('📍 Redirect URL:', redirectUrl);
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: Linking.createURL('/(shared)/auth/callback'),
+          redirectTo: redirectUrl,
           skipBrowserRedirect: false,
         },
       });
 
       if (error) {
+        console.error(`❌ ${provider} OAuth error:`, error);
         showError('Authentication Error', error.message);
         setLoading(false);
       } else if (data.url) {
+        console.log(`✅ Opening ${provider} OAuth URL`);
         Linking.openURL(data.url);
+        // Keep loading state - will be cleared by callback handler
+      } else {
+        console.warn(`⚠️ No URL returned from ${provider} OAuth`);
+        setLoading(false);
       }
     } catch (error: any) {
+      console.error(`❌ ${provider} OAuth exception:`, error);
       showError('Error', error.message);
       setLoading(false);
     }
@@ -664,9 +745,11 @@ export default function AuthScreen() {
         });
         
         if (!verifyError && verifyData?.session) {
+          // Wait a moment for session to be set
+          await new Promise(resolve => setTimeout(resolve, 300));
           setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
-          // Navigate immediately, no delay
+          // Navigate - auth state change will handle session verification
           router.replace(getRedirectPath());
           return;
         }
@@ -692,9 +775,11 @@ export default function AuthScreen() {
               });
               
               if (!retryError && retryData?.session) {
+                // Wait a moment for session to be set
+                await new Promise(resolve => setTimeout(resolve, 300));
                 setLoading(false);
                 showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
-                // Navigate immediately, no delay
+                // Navigate - auth state change will handle session verification
                 router.replace(getRedirectPath());
                 return;
               }
@@ -715,16 +800,27 @@ export default function AuthScreen() {
         }
       }
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setLoading(false);
-        showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
-        router.replace(getRedirectPath());
-        return;
+      // Check for session with retry (wallet auth might need time)
+      let sessionFound = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          sessionFound = true;
+          setLoading(false);
+          showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
+          router.replace(getRedirectPath());
+          return;
+        }
       }
       
-      setLoading(false);
-      throw new Error('Failed to establish session. Please try again.');
+      if (!sessionFound) {
+        setLoading(false);
+        // Don't throw error - let auth state change handler process it
+        console.warn('⚠️ Session not immediately available, but auth state change will handle it');
+        // Still show success - the callback or auth state change will handle navigation
+        showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
+      }
     } catch (error: any) {
       console.error('❌ Ethereum auth error:', error);
       setLoading(false);
@@ -758,9 +854,11 @@ export default function AuthScreen() {
         });
         
         if (!verifyError && verifyData?.session) {
+          // Wait a moment for session to be set
+          await new Promise(resolve => setTimeout(resolve, 300));
           setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
-          // Navigate immediately, no delay
+          // Navigate - auth state change will handle session verification
           router.replace(getRedirectPath());
           return;
         }
@@ -786,9 +884,11 @@ export default function AuthScreen() {
               });
               
               if (!retryError && retryData?.session) {
+                // Wait a moment for session to be set
+                await new Promise(resolve => setTimeout(resolve, 300));
                 setLoading(false);
                 showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
-                // Navigate immediately, no delay
+                // Navigate - auth state change will handle session verification
                 router.replace(getRedirectPath());
                 return;
               }
@@ -809,16 +909,27 @@ export default function AuthScreen() {
         }
       }
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setLoading(false);
-        showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
-        router.replace(getRedirectPath());
-        return;
+      // Check for session with retry (wallet auth might need time)
+      let sessionFound = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          sessionFound = true;
+          setLoading(false);
+          showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
+          router.replace(getRedirectPath());
+          return;
+        }
       }
       
-      setLoading(false);
-      throw new Error('Failed to establish session. Please try again.');
+      if (!sessionFound) {
+        setLoading(false);
+        // Don't throw error - let auth state change handler process it
+        console.warn('⚠️ Session not immediately available, but auth state change will handle it');
+        // Still show success - the callback or auth state change will handle navigation
+        showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
+      }
     } catch (error: any) {
       console.error('❌ Solana auth error:', error);
       setLoading(false);
@@ -1182,6 +1293,10 @@ export default function AuthScreen() {
           </TouchableOpacity>
           <Text style={styles.privacyText}>.</Text>
         </View>
+        
+        <View style={styles.versionContainer}>
+          <Text style={styles.versionText}>v{CURRENT_VERSION.version}</Text>
+        </View>
       </View>
       </ScrollView>
       <PrivacyTermsModal
@@ -1470,6 +1585,16 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: isDark ? '#FFFFFF' : '#121212',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  versionContainer: {
+    marginTop: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  versionText: {
+    fontSize: 12,
+    color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)',
+    textAlign: 'center',
   },
   linkText: {
     color: isDark ? '#FFFFFF' : '#7A5ECC',

@@ -34,7 +34,7 @@ export const EVENTS: Record<string, EventConfig> = {
         'verify-ticket': 'verify-ticket',
         'auto-match': 'auto-match',
         'agenda': 'agenda',
-        'agenda-status': 'agenda-status'
+        'status': 'status'
       }
     },
     routes: {

@@ -103,12 +103,37 @@ export default function ProfileScreen() {
     }
   };
 
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+  // Get user name - prefer full_name, then email username, then email, never show generic "User"
+  const userName = user?.user_metadata?.full_name || 
+                   (user?.email ? user.email.split('@')[0] : null) || 
+                   user?.email || 
+                   '';
+  
   const userEmail = user?.email || '';
-  const memberSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long' 
-  }) : 'Unknown';
+  
+  // Get member since date - use created_at from user
+  // Supabase user object should always have created_at, but we handle gracefully if missing
+  const getMemberSince = () => {
+    const createdAt = user?.created_at;
+    if (createdAt) {
+      try {
+        const date = new Date(createdAt);
+        // Check if date is valid
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long' 
+          });
+        }
+      } catch (e) {
+        console.warn('Error parsing created_at:', e);
+      }
+    }
+    // Return null instead of 'Unknown' - we'll conditionally render or show fallback
+    return null;
+  };
+  
+  const memberSince = getMemberSince();
 
   return (
     <View style={styles.container}>
@@ -133,13 +158,19 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
-          <Text style={styles.userName}>{userName}</Text>
-          <Text style={styles.userEmail}>{userEmail}</Text>
+          {userName ? (
+            <Text style={styles.userName}>{userName}</Text>
+          ) : null}
+          {userEmail ? (
+            <Text style={styles.userEmail}>{userEmail}</Text>
+          ) : null}
           
-          <View style={styles.memberBadge}>
-            <Ionicons name="calendar-outline" size={14} color={colors.primary} />
-            <Text style={styles.memberText}>Member since {memberSince}</Text>
-          </View>
+          {memberSince ? (
+            <View style={styles.memberBadge}>
+              <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+              <Text style={styles.memberText}>Member since {memberSince}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Profile Content */}
@@ -168,7 +199,7 @@ export default function ProfileScreen() {
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Full Name</Text>
                   <Text style={styles.infoValue}>
-                    {user?.user_metadata?.full_name || 'Not provided'}
+                    {user?.user_metadata?.full_name || (user?.email ? user.email.split('@')[0] : '') || 'Not provided'}
                   </Text>
                 </View>
               </View>
@@ -181,7 +212,9 @@ export default function ProfileScreen() {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Member Since</Text>
-                  <Text style={styles.infoValue}>{memberSince}</Text>
+                  <Text style={styles.infoValue}>
+                    {memberSince || (user?.created_at ? 'Recently' : 'Not available')}
+                  </Text>
                 </View>
               </View>
             </View>

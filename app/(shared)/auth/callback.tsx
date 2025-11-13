@@ -4,6 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { createSessionFromUrl, supabase } from '../../../lib/supabase';
 import { Check, AlertCircle, Info } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
+import type { Session } from '@supabase/supabase-js';
 
 export default function AuthCallback() {
     const router = useRouter();
@@ -44,15 +45,37 @@ export default function AuthCallback() {
     const isProcessingRef = useRef(false);
     const hasNavigatedRef = useRef(false);
 
-    useEffect(() => {
-        // Prevent duplicate processing
-        if (isProcessingRef.current || hasNavigatedRef.current) {
-            console.log('⏭️ Auth callback already processing or navigated, skipping');
-            return;
+    // Helper function to verify session establishment with retries
+    const verifySessionWithRetries = async (maxRetries: number = 3, delayMs: number = 500): Promise<Session> => {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            console.log(`🔄 Verifying session establishment (attempt ${attempt}/${maxRetries})...`);
+            
+            // Wait before checking (longer delay on first attempt)
+            const waitTime = attempt === 1 ? delayMs : delayMs * attempt;
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            
+            // First check if session exists
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (session && !sessionError) {
+                // Verify the session token is valid by calling getUser
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                
+                if (user && !userError) {
+                    console.log(`✅ Session established and verified successfully on attempt ${attempt}`);
+                    return session;
+                } else {
+                    console.log(`⚠️ Session exists but token invalid, retrying... (${attempt}/${maxRetries})`);
+                }
+            } else {
+                if (attempt < maxRetries) {
+                    console.log(`⚠️ Session not yet established, retrying in ${waitTime}ms... (${attempt}/${maxRetries})`);
+                }
+            }
         }
         
-        handleAuthCallback();
-    }, []);
+        throw new Error('Session not established after multiple verification attempts');
+    };
 
     const handleAuthCallback = async () => {
         // Set processing flag immediately
@@ -126,71 +149,125 @@ export default function AuthCallback() {
                 setStatus('success');
                 // Detect auth type from user metadata
                 const authProvider = session.user.user_metadata?.auth_provider || 
-                                   session.user.user_metadata?.wallet_type ? 'wallet' : 'OAuth';
+                                   (session.user.user_metadata?.wallet_type ? 'wallet' : 'OAuth');
                 const authType = authProvider === 'wallet' 
                     ? (session.user.user_metadata?.wallet_type === 'ethereum' ? 'Ethereum' : 'Solana')
-                    : (authProvider === 'email' ? 'Email' : 'Google');
+                    : (authProvider === 'email' ? 'Email' : (authProvider === 'google' ? 'Google' : 'Discord'));
                 setMessage(`✅ ${authType} authentication successful!`);
 
                 if (!hasNavigatedRef.current) {
                     hasNavigatedRef.current = true;
-                    // Wait a moment to ensure session is fully established (especially important for OTP links)
-                    await new Promise(resolve => setTimeout(resolve, 300));
                     
-                    // Double-check session is still valid before redirecting
-                    const { data: { session: verifySession } } = await supabase.auth.getSession();
-                    if (!verifySession) {
-                        console.warn('⚠️ Session lost after creation, retrying...');
-                        // Retry once
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        const { data: { session: retrySession } } = await supabase.auth.getSession();
-                        if (!retrySession) {
-                            throw new Error('Session not established after authentication');
-                        }
+                    // For OAuth, wait a brief moment for session to be fully established
+                    // Then navigate immediately
+                    try {
+                        // Small delay to ensure session is fully set
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                        // Quick async verification (don't block navigation)
+                        supabase.auth.getUser().then(({ data: { user }, error: userError }) => {
+                            if (userError || !user) {
+                                console.warn('⚠️ Session verification warning (non-blocking):', userError?.message);
+                            } else {
+                                console.log('✅ Session verified successfully');
+                            }
+                        }).catch(err => {
+                            console.warn('⚠️ Session verification check failed (non-blocking):', err);
+                        });
+                        
+                        // Navigate immediately - session from createSessionFromUrl is trusted
+                        // Auth state change handler will handle any edge cases
+                        const redirectPath = getRedirectPath();
+                        console.log('🔄 Redirecting to:', redirectPath);
+                        
+                        // Use replace to ensure navigation happens
+                        router.replace(redirectPath as any);
+                        
+                        // Also try push as fallback after a short delay
+                        setTimeout(() => {
+                            if (hasNavigatedRef.current) {
+                                router.push(redirectPath as any);
+                            }
+                        }, 500);
+                    } catch (sessionError: any) {
+                        console.error('Session error (non-fatal):', sessionError);
+                        // Still navigate - session from createSessionFromUrl should be valid
+                        const redirectPath = getRedirectPath();
+                        console.log('🔄 Fallback redirect to:', redirectPath);
+                        router.replace(redirectPath as any);
                     }
-                    
-                    // Navigate to the correct path (respects returnTo parameter)
-                    const redirectPath = getRedirectPath();
-                    console.log('🔄 Redirecting to:', redirectPath);
-                    router.replace(redirectPath);
                 }
             } else {
                 console.log('⚠️ No session created but no error - checking for existing session');
 
-                // Wait a bit for session to be established (important for OTP links)
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                const { data: { session: existingSession } } = await supabase.auth.getSession();
-
-                if (existingSession) {
-                    console.log('✅ Found existing session');
-                    setStatus('success');
-                    setMessage('✅ Authentication successful!');
-
-                    if (!hasNavigatedRef.current) {
-                        hasNavigatedRef.current = true;
-                        // Navigate to the correct path (respects returnTo parameter)
-                        const redirectPath = getRedirectPath();
-                        console.log('🔄 Redirecting to:', redirectPath);
-                        router.replace(redirectPath);
-                    }
-                } else {
-                    // Last retry - sometimes OTP links need more time
-                    console.log('🔄 Retrying session check...');
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    const { data: { session: retrySession } } = await supabase.auth.getSession();
-                    if (retrySession) {
-                        console.log('✅ Found session on retry');
+                // For OAuth, the session might be set by Supabase automatically
+                // Wait a moment and check again
+                try {
+                    // Wait a bit for OAuth session to be established
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Check for existing session
+                    const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession();
+                    
+                    if (existingSession && !sessionError && existingSession.user) {
+                        console.log('✅ Found existing session after wait:', existingSession.user.id);
                         setStatus('success');
                         setMessage('✅ Authentication successful!');
+
                         if (!hasNavigatedRef.current) {
                             hasNavigatedRef.current = true;
+                            // Navigate immediately - session exists
                             const redirectPath = getRedirectPath();
                             console.log('🔄 Redirecting to:', redirectPath);
-                            router.replace(redirectPath);
+                            router.replace(redirectPath as any);
+                            
+                            // Fallback navigation
+                            setTimeout(() => {
+                                router.push(redirectPath as any);
+                            }, 300);
                         }
                     } else {
-                        throw new Error('No session could be established');
+                        // No session found - wait a bit more and check again (OAuth can be slow)
+                        console.log('⚠️ No immediate session, waiting for OAuth to complete...');
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        const { data: { session: retrySession } } = await supabase.auth.getSession();
+                        if (retrySession && retrySession.user) {
+                            console.log('✅ Found session on retry:', retrySession.user.id);
+                            setStatus('success');
+                            setMessage('✅ Authentication successful!');
+                            
+                            if (!hasNavigatedRef.current) {
+                                hasNavigatedRef.current = true;
+                                const redirectPath = getRedirectPath();
+                                router.replace(redirectPath as any);
+                            }
+                        } else {
+                            // Still no session - let auth state change handler process it
+                            console.log('⚠️ No session found, but auth state change will handle it');
+                            setStatus('success');
+                            setMessage('✅ Authentication successful!');
+                            
+                            if (!hasNavigatedRef.current) {
+                                hasNavigatedRef.current = true;
+                                // Navigate anyway - auth state change will verify
+                                const redirectPath = getRedirectPath();
+                                console.log('🔄 Navigating to:', redirectPath);
+                                router.replace(redirectPath as any);
+                            }
+                        }
+                    }
+                } catch (sessionError: any) {
+                    console.error('Session check error (non-fatal):', sessionError);
+                    // Still navigate - auth state change handler will process it
+                    setStatus('success');
+                    setMessage('✅ Authentication successful!');
+                    
+                    if (!hasNavigatedRef.current) {
+                        hasNavigatedRef.current = true;
+                        const redirectPath = getRedirectPath();
+                        console.log('🔄 Fallback navigation to:', redirectPath);
+                        router.replace(redirectPath as any);
                     }
                 }
             }
@@ -227,6 +304,76 @@ export default function AuthCallback() {
             isProcessingRef.current = false;
         }
     };
+
+    useEffect(() => {
+        // Don't clear cache if we have auth params - session might be valid
+        const hasAuthParams = params.access_token || params.refresh_token || params.code || params.token_hash;
+        
+        // Only clear stale cache if there are no auth params
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && !hasAuthParams) {
+            // Only clear if we don't have auth params (not a fresh auth)
+            try {
+                const authKeys = Object.keys(localStorage).filter(key => 
+                    key.includes('supabase') || key.includes('auth') || key.includes('session')
+                );
+                // Don't clear if we have auth params - session might be valid
+                if (authKeys.length > 0 && !hasAuthParams) {
+                    console.log('🗑️ Clearing stale auth cache (no auth params detected)');
+                    authKeys.forEach(key => {
+                        localStorage.removeItem(key);
+                    });
+                }
+            } catch (e) {
+                console.warn('Failed to clear auth cache:', e);
+            }
+        }
+
+        // Prevent duplicate processing
+        if (isProcessingRef.current || hasNavigatedRef.current) {
+            console.log('⏭️ Auth callback already processing or navigated, skipping');
+            return;
+        }
+        
+        // Wait a moment for params to be fully loaded, then process
+        const processCallback = async () => {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            await handleAuthCallback();
+        };
+        
+        // Set a timeout to prevent infinite processing (30 seconds)
+        const timeoutId = setTimeout(() => {
+            if (isProcessingRef.current && !hasNavigatedRef.current) {
+                console.warn('⏱️ Auth callback timeout - checking for session before redirecting');
+                // Check one more time for session before giving up
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (session && session.user) {
+                        console.log('✅ Found session on timeout, navigating');
+                        const redirectPath = getRedirectPath();
+                        router.replace(redirectPath as any);
+                    } else {
+                        console.error('⏱️ Auth callback timeout - no session found');
+                        isProcessingRef.current = false;
+                        setStatus('error');
+                        setMessage('❌ Authentication timeout. Please try again.');
+                        setTimeout(() => {
+                            router.replace('/(shared)/auth' as any);
+                        }, 2000);
+                    }
+                }).catch(() => {
+                    isProcessingRef.current = false;
+                    setStatus('error');
+                    setMessage('❌ Authentication timeout. Please try again.');
+                    setTimeout(() => {
+                        router.replace('/(shared)/auth' as any);
+                    }, 2000);
+                });
+            }
+        }, 30000); // 30 second timeout
+
+        processCallback().finally(() => {
+            clearTimeout(timeoutId);
+        });
+    }, [router]);
 
     const styles = createStyles();
 

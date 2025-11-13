@@ -233,7 +233,7 @@ export default function BSL2025AgendaScreen() {
         // If we get here but no data, try with status endpoint
         console.log('ℹ️ No data in direct response, trying status endpoint...');
         try {
-          const statusResponse = await apiClient.request('agenda-status');
+          const statusResponse = await apiClient.request('status');
           // Handle status response format: { data: { hasData: true } }
           const statusData = statusResponse?.data || {};
           

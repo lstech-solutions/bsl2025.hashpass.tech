@@ -1,6 +1,12 @@
 {
   "apiRoutes": [
     {
+      "file": "_expo/functions/api/status+api.js",
+      "page": "/api/status",
+      "namedRegex": "^/api/status(?:/)?$",
+      "routeKeys": {}
+    },
+    {
       "file": "_expo/functions/api/auth/otp+api.js",
       "page": "/api/auth/otp",
       "namedRegex": "^/api/auth/otp(?:/)?$",
@@ -106,12 +112,6 @@
       "file": "_expo/functions/api/auth/wallet/challenge+api.js",
       "page": "/api/auth/wallet/challenge",
       "namedRegex": "^/api/auth/wallet/challenge(?:/)?$",
-      "routeKeys": {}
-    },
-    {
-      "file": "_expo/functions/api/bslatam/agenda-status+api.js",
-      "page": "/api/bslatam/agenda-status",
-      "namedRegex": "^/api/bslatam/agenda\\-status(?:/)?$",
       "routeKeys": {}
     },
     {

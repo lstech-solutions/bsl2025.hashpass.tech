@@ -144,9 +144,9 @@ redirects:
   - source: '/api/bslatam/agenda/'
     status: 200
     target: '/api/bslatam/agenda/index.js'
-  - source: '/api/bslatam/status/'
+  - source: '/api/status/'
     status: 200
-    target: '/api/bslatam/status/index.js'
+    target: '/api/status/index.js'
   - source: '/sw.js'
     status: 200
     target: '/sw.js'

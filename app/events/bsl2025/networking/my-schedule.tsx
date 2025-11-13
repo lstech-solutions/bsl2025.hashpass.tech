@@ -289,7 +289,7 @@ const MySchedule = () => {
           } else {
             // Combine and deduplicate by meeting id
             const existingIds = new Set(allMeetings.map(m => m.id));
-            const newMeetings = (speakerMeetings || []).filter(m => !existingIds.has(m.id));
+            const newMeetings = ((speakerMeetings || []) as any[]).filter((m: any) => !existingIds.has(m.id));
             allMeetings = [...allMeetings, ...newMeetings];
           }
         }
@@ -349,7 +349,7 @@ const MySchedule = () => {
         
         if (speakerMeetings) {
           const existingIds = new Set(allMeetings.map(m => m.id));
-          const newMeetings = speakerMeetings.filter(m => !existingIds.has(m.id));
+          const newMeetings = (speakerMeetings as any[]).filter((m: any) => !existingIds.has(m.id));
           allMeetings = [...allMeetings, ...newMeetings];
         }
       }
@@ -581,14 +581,14 @@ const MySchedule = () => {
 
         if (existing) {
           // Update existing entry (including when going back to available)
-          const { error } = await supabase
-            .from('user_agenda_status')
+          const { error } = await (supabase
+            .from('user_agenda_status') as any)
             .update({
               slot_status: newStatus,
               status: newStatus,
               updated_at: new Date().toISOString(),
             })
-            .eq('id', existing.id);
+            .eq('id', (existing as any).id);
           if (error) throw error;
           
           if (newStatus === 'available') {
@@ -605,8 +605,8 @@ const MySchedule = () => {
           }
         } else {
           // Insert new tracking entry
-          const { error } = await supabase
-            .from('user_agenda_status')
+          const { error } = await (supabase
+            .from('user_agenda_status') as any)
             .insert({
               user_id: user.id,
               slot_time: slotStartTime.toISOString(),
@@ -648,19 +648,19 @@ const MySchedule = () => {
           .maybeSingle();
 
         if (existing) {
-          const { error } = await supabase
-            .from('user_agenda_status')
+          const { error } = await (supabase
+            .from('user_agenda_status') as any)
             .update({
               status: newStatus,
               confirmed_at: newStatus === 'confirmed' ? new Date().toISOString() : null,
               updated_at: new Date().toISOString(),
             })
-            .eq('id', existing.id);
+            .eq('id', (existing as any).id);
           
           if (error) throw error;
         } else {
-          const { error } = await supabase
-            .from('user_agenda_status')
+          const { error } = await (supabase
+            .from('user_agenda_status') as any)
             .insert({
               user_id: user.id,
               agenda_id: meeting.id,
@@ -692,19 +692,19 @@ const MySchedule = () => {
           .maybeSingle();
 
         if (existing) {
-          const { error } = await supabase
-            .from('user_agenda_status')
+          const { error } = await (supabase
+            .from('user_agenda_status') as any)
             .update({
               status: newStatus,
               confirmed_at: newStatus === 'confirmed' ? new Date().toISOString() : null,
               updated_at: new Date().toISOString(),
             })
-            .eq('id', existing.id);
+            .eq('id', (existing as any).id);
           
           if (error) throw error;
         } else {
-          const { error } = await supabase
-            .from('user_agenda_status')
+          const { error } = await (supabase
+            .from('user_agenda_status') as any)
             .insert({
               user_id: user.id,
               meeting_id: meeting.id,
@@ -753,14 +753,14 @@ const MySchedule = () => {
 
       if (existing) {
         // Update existing entry (including when going back to available)
-        const { error } = await supabase
-          .from('user_agenda_status')
+        const { error } = await (supabase
+          .from('user_agenda_status') as any)
           .update({
             slot_status: newStatus,
             status: newStatus,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', existing.id);
+          .eq('id', (existing as any).id);
         if (error) throw error;
         
         if (newStatus === 'available') {
@@ -776,8 +776,8 @@ const MySchedule = () => {
           }));
         }
       } else {
-        const { error } = await supabase
-          .from('user_agenda_status')
+        const { error } = await (supabase
+          .from('user_agenda_status') as any)
           .insert({
             user_id: user.id,
             slot_time: slotStartTime.toISOString(),
@@ -824,19 +824,19 @@ const MySchedule = () => {
         .maybeSingle();
 
       if (existing) {
-        const { error } = await supabase
-          .from('user_agenda_status')
+        const { error } = await (supabase
+          .from('user_agenda_status') as any)
           .update({
             is_favorite: newFavorite,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', existing.id);
+          .eq('id', (existing as any).id);
         if (error) throw error;
       } else {
         // Create entry for tentative event with favorite status
         const currentStatus = userAgendaStatus[meeting.id] || 'tentative';
-        const { error } = await supabase
-          .from('user_agenda_status')
+        const { error } = await (supabase
+          .from('user_agenda_status') as any)
           .insert({
             user_id: user.id,
             agenda_id: meeting.id,

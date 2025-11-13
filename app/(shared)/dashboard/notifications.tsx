@@ -8,6 +8,7 @@ import UnifiedSearchAndFilter from '../../../components/UnifiedSearchAndFilter';
 import { useScroll } from '../../../contexts/ScrollContext';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
+import { useTranslation } from '../../../i18n/i18n';
 
 type TabType = 'all' | 'archive';
 
@@ -17,6 +18,7 @@ export default function NotificationsScreen() {
   const { notifications, unreadCount, isLoading, markAsRead, markAsUnread, markAllAsRead, archiveNotification, deleteNotification, refreshNotifications } = useNotifications();
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation('notifications');
   // Calculate nav bar height (StatusBar + header content)
   const navBarHeight = (StatusBar.currentHeight || 0) + 80;
   const styles = getStyles(isDark, colors, navBarHeight, headerHeight);
@@ -142,12 +144,12 @@ export default function NotificationsScreen() {
 
   const handleDeleteNotification = async (notificationId: string) => {
     Alert.alert(
-      'Delete Notification',
-      'Are you sure you want to delete this notification?',
+      t('center.deleteTitle'),
+      t('center.deleteMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('center.cancel'), style: 'cancel' },
         { 
-          text: 'Delete', 
+          text: t('center.delete'), 
           style: 'destructive',
           onPress: async () => {
             await deleteNotification(notificationId);
@@ -210,16 +212,16 @@ export default function NotificationsScreen() {
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
     if (diffInSeconds < 60) {
-      return 'Just now';
+      return t('center.justNow');
     } else if (diffInSeconds < 3600) {
       const minutes = Math.floor(diffInSeconds / 60);
-      return `${minutes}m ago`;
+      return t('center.minutesAgo', { minutes });
     } else if (diffInSeconds < 86400) {
       const hours = Math.floor(diffInSeconds / 3600);
-      return `${hours}h ago`;
+      return t('center.hoursAgo', { hours });
     } else {
       const days = Math.floor(diffInSeconds / 86400);
-      return `${days}d ago`;
+      return t('center.daysAgo', { days });
     }
   };
 
@@ -261,36 +263,37 @@ export default function NotificationsScreen() {
   const filterGroups = [
     {
       key: 'readStatus',
-      label: 'Read Status',
+      label: t('center.filters.readStatus'),
       type: 'single' as const,
       options: [
-        { key: 'all', label: 'All', icon: 'list' },
-        { key: 'unread', label: 'Unread', icon: 'mail' },
-        { key: 'read', label: 'Read', icon: 'drafts' },
+        { key: 'all', label: t('center.filters.all'), icon: 'list' },
+        { key: 'unread', label: t('center.filters.unread'), icon: 'mail' },
+        { key: 'read', label: t('center.filters.read'), icon: 'drafts' },
       ],
     },
     {
       key: 'type',
-      label: 'Type',
+      label: t('center.filters.type'),
       type: 'single' as const,
       options: [
-        { key: '', label: 'All Types', icon: 'apps' },
-        { key: 'meeting_request', label: 'Meeting Request', icon: 'event' },
-        { key: 'meeting_accepted', label: 'Meeting Accepted', icon: 'check-circle' },
-        { key: 'meeting_declined', label: 'Meeting Declined', icon: 'cancel' },
-        { key: 'meeting_expired', label: 'Meeting Expired', icon: 'schedule' },
-        { key: 'meeting_reminder', label: 'Reminder', icon: 'schedule' },
-        { key: 'boost_received', label: 'Boost Received', icon: 'trending-up' },
-        { key: 'system_alert', label: 'System Alert', icon: 'info' },
+        { key: '', label: t('center.filters.allTypes'), icon: 'apps' },
+        { key: 'meeting_request', label: t('center.filters.meetingRequest'), icon: 'event' },
+        { key: 'meeting_accepted', label: t('center.filters.meetingAccepted'), icon: 'check-circle' },
+        { key: 'meeting_declined', label: t('center.filters.meetingDeclined'), icon: 'cancel' },
+        { key: 'meeting_expired', label: t('center.filters.meetingExpired'), icon: 'schedule' },
+        { key: 'meeting_reminder', label: t('center.filters.reminder'), icon: 'schedule' },
+        { key: 'boost_received', label: t('center.filters.boostReceived'), icon: 'trending-up' },
+        { key: 'system_alert', label: t('center.filters.systemAlert'), icon: 'info' },
+        { key: 'chat_message', label: t('center.filters.chatMessage'), icon: 'chat' },
       ],
     },
     {
       key: 'urgent',
-      label: 'Priority',
+      label: t('center.filters.priority'),
       type: 'single' as const,
       options: [
-        { key: '', label: 'All', icon: 'star-border' },
-        { key: 'true', label: 'Urgent Only', icon: 'priority-high' },
+        { key: '', label: t('center.filters.all'), icon: 'star-border' },
+        { key: 'true', label: t('center.filters.urgentOnly'), icon: 'priority-high' },
       ],
     },
   ];
@@ -354,7 +357,7 @@ export default function NotificationsScreen() {
               <View style={styles.headerActions}>
                 {notification.is_urgent && (
                   <View style={styles.urgentBadge}>
-                    <Text style={styles.urgentText}>URGENT</Text>
+                    <Text style={styles.urgentText}>{t('center.urgent')}</Text>
                   </View>
                 )}
                 {activeTab === 'all' && !markingAsRead.has(notification.id) && (
@@ -411,12 +414,12 @@ export default function NotificationsScreen() {
               ) : notification.is_read ? (
                 <>
                   <MaterialIcons name="mark-email-unread" size={18} color="#007AFF" />
-                  <Text style={styles.toggleReadButtonText}>Mark Unread</Text>
+                  <Text style={styles.toggleReadButtonText}>{t('center.markUnread')}</Text>
                 </>
               ) : (
                 <>
                   <MaterialIcons name="drafts" size={18} color="#007AFF" />
-                  <Text style={styles.toggleReadButtonText}>Mark Read</Text>
+                  <Text style={styles.toggleReadButtonText}>{t('center.markRead')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -433,7 +436,7 @@ export default function NotificationsScreen() {
                 styles.archiveButtonText,
                 !notification.is_read && styles.archiveButtonTextActive
               ]}>
-                Archive
+                {t('center.archive')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -451,7 +454,7 @@ export default function NotificationsScreen() {
     return (
       <View style={styles.loadingContainer}>
         <MaterialIcons name="notifications" size={48} color={colors.text.secondary} />
-        <Text style={styles.loadingText}>Loading notifications...</Text>
+        <Text style={styles.loadingText}>{t('center.loading')}</Text>
       </View>
     );
   }
@@ -461,7 +464,7 @@ export default function NotificationsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>Notifications</Text>
+          <Text style={styles.headerTitle}>{t('center.title')}</Text>
           {unreadCount > 0 && activeTab === 'all' && (
             <View style={styles.unreadBadge}>
               <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
@@ -474,7 +477,7 @@ export default function NotificationsScreen() {
             style={styles.markAllButton}
             onPress={markAllAsRead}
           >
-            <Text style={styles.markAllText}>Mark All Read</Text>
+            <Text style={styles.markAllText}>{t('center.markAllRead')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -490,7 +493,7 @@ export default function NotificationsScreen() {
           }}
         >
           <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
-            All
+            {t('center.all')}
           </Text>
           {activeTab === 'all' && tabFilteredNotifications.filter(n => !n.is_read).length > 0 && (
             <View style={styles.tabBadge}>
@@ -509,7 +512,7 @@ export default function NotificationsScreen() {
           }}
         >
           <Text style={[styles.tabText, activeTab === 'archive' && styles.activeTabText]}>
-            Archive
+            {t('center.archive')}
           </Text>
           {activeTab === 'archive' && tabFilteredNotifications.length > 0 && (
             <View style={styles.tabBadge}>
@@ -526,7 +529,7 @@ export default function NotificationsScreen() {
         data={tabFilteredNotifications}
         onFilteredData={setFilteredNotifications}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Search notifications..."
+        searchPlaceholder={t('center.searchPlaceholder')}
         searchFields={['title', 'message', 'type']}
         filterGroups={filterGroups}
         showResultsCount={true}
@@ -542,12 +545,12 @@ export default function NotificationsScreen() {
             color={colors.text.secondary} 
           />
           <Text style={styles.emptyTitle}>
-            {activeTab === 'archive' ? 'No Archived Notifications' : 'No Notifications'}
+            {activeTab === 'archive' ? t('center.noArchivedNotifications') : t('center.noNotifications')}
           </Text>
           <Text style={styles.emptyMessage}>
             {activeTab === 'archive' 
-              ? 'Archived notifications will appear here.'
-              : "You're all caught up! New notifications will appear here."}
+              ? t('center.noArchivedNotificationsMessage')
+              : t('center.noNotificationsMessage')}
           </Text>
         </View>
       ) : (

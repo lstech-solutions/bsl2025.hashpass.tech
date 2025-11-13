@@ -82,3 +82,4 @@ COMMENT ON FUNCTION test_reward_system IS 'Test function to manually add a rewar
 COMMENT ON FUNCTION check_user_balance_status IS 'Debug function to check if a user has a balance record and transaction history';
 
 
+

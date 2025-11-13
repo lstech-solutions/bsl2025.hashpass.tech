@@ -248,3 +248,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 COMMENT ON FUNCTION get_speaker_available_slots IS 'Returns available time slots for a speaker with slot_status field. Infers free slots from event schedule (Nov 12-14, 8 AM - 7 PM, 15-min intervals). Prioritizes "interested" status slots. Returns slot_status to allow frontend differentiation.';
 
 
+

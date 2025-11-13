@@ -501,3 +501,4 @@ COMMENT ON FUNCTION trigger_reward_meeting_confirmed IS 'Trigger function that a
 COMMENT ON FUNCTION backfill_all_meeting_rewards IS 'Comprehensive backfill function that rewards all users with 1 LUKAS for each confirmed meeting they participated in. Can be run multiple times safely as it skips already rewarded meetings.';
 
 
+

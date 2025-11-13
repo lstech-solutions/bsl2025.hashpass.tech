@@ -168,27 +168,101 @@ export async function getSystemHealthCheck(eventId: string = 'bsl2025'): Promise
       healthCheck.status = 'degraded';
     }
 
-    // 3. Check BSL_Bookings table
+    // 3. Check bookings - count from BSL_Bookings, meeting_requests, and meetings tables
     try {
-      const { count: bookingsCount, error: bookingsError } = await supabase
-        .from('BSL_Bookings')
-        .select('id', { count: 'exact', head: true });
+      let totalBookingsCount = 0;
+      let bookingsAccessible = true;
+      const bookingErrors: string[] = [];
 
-      if (bookingsError) {
+      // Count from BSL_Bookings table
+      try {
+        const { count: bslBookingsCount, error: bslBookingsError } = await supabase
+          .from('BSL_Bookings')
+          .select('id', { count: 'exact', head: true });
+
+        if (bslBookingsError) {
+          bookingErrors.push(`BSL_Bookings: ${bslBookingsError.message}`);
+          healthCheck.services.database.tables.BSL_Bookings = {
+            accessible: false,
+            error: bslBookingsError.message,
+          };
+        } else {
+          totalBookingsCount += bslBookingsCount || 0;
+          healthCheck.services.database.tables.BSL_Bookings = {
+            accessible: true,
+            recordCount: bslBookingsCount || 0,
+          };
+        }
+      } catch (error: any) {
+        bookingErrors.push(`BSL_Bookings: ${error?.message || 'Unknown error'}`);
         healthCheck.services.database.tables.BSL_Bookings = {
           accessible: false,
-          error: bookingsError.message,
+          error: error?.message || 'Unknown error',
         };
-        healthCheck.checks.bookings.accessible = false;
-        healthCheck.status = 'degraded';
-      } else {
-        healthCheck.services.database.tables.BSL_Bookings = {
-          accessible: true,
-          recordCount: bookingsCount || 0,
-        };
-        healthCheck.checks.bookings.count = bookingsCount || 0;
-        healthCheck.checks.bookings.accessible = true;
       }
+
+      // Count from meeting_requests table (sent requests)
+      try {
+        const { count: meetingRequestsCount, error: meetingRequestsError } = await supabase
+          .from('meeting_requests')
+          .select('id', { count: 'exact', head: true });
+
+        if (meetingRequestsError) {
+          bookingErrors.push(`meeting_requests: ${meetingRequestsError.message}`);
+          healthCheck.services.database.tables.meeting_requests = {
+            accessible: false,
+            error: meetingRequestsError.message,
+          };
+        } else {
+          totalBookingsCount += meetingRequestsCount || 0;
+          healthCheck.services.database.tables.meeting_requests = {
+            accessible: true,
+            recordCount: meetingRequestsCount || 0,
+          };
+        }
+      } catch (error: any) {
+        bookingErrors.push(`meeting_requests: ${error?.message || 'Unknown error'}`);
+        healthCheck.services.database.tables.meeting_requests = {
+          accessible: false,
+          error: error?.message || 'Unknown error',
+        };
+      }
+
+      // Count from meetings table (accepted meetings)
+      try {
+        const { count: meetingsCount, error: meetingsError } = await supabase
+          .from('meetings')
+          .select('id', { count: 'exact', head: true });
+
+        if (meetingsError) {
+          bookingErrors.push(`meetings: ${meetingsError.message}`);
+          healthCheck.services.database.tables.meetings = {
+            accessible: false,
+            error: meetingsError.message,
+          };
+        } else {
+          totalBookingsCount += meetingsCount || 0;
+          healthCheck.services.database.tables.meetings = {
+            accessible: true,
+            recordCount: meetingsCount || 0,
+          };
+        }
+      } catch (error: any) {
+        bookingErrors.push(`meetings: ${error?.message || 'Unknown error'}`);
+        healthCheck.services.database.tables.meetings = {
+          accessible: false,
+          error: error?.message || 'Unknown error',
+        };
+      }
+
+      // Set bookings check status
+      if (bookingErrors.length > 0) {
+        bookingsAccessible = false;
+        healthCheck.status = 'degraded';
+      }
+
+      healthCheck.checks.bookings.count = totalBookingsCount;
+      healthCheck.checks.bookings.accessible = bookingsAccessible;
     } catch (error: any) {
       healthCheck.services.database.tables.BSL_Bookings = {
         accessible: false,

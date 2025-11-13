@@ -22,6 +22,7 @@ import ScheduleConfirmationModal from '../../../components/ScheduleConfirmationM
 import * as Haptics from 'expo-haptics';
 import { parseISO } from 'date-fns';
 import LoadingScreen from '../../../components/LoadingScreen';
+import { useTranslation } from '../../../i18n/i18n';
 
 const { width } = Dimensions.get('window');
 
@@ -89,6 +90,7 @@ export default function BSL2025AgendaScreen() {
   const styles = getStyles(isDark, colors);
   const { user } = useAuth();
   const { showSuccess, showError, showWarning } = useToastHelpers();
+  const { t } = useTranslation('agenda');
   const scrollViewRef = useRef<ScrollView>(null);
   const sessionItemRefs = useRef<{ [key: string]: View | null }>({});
   const handledSessionRef = useRef<string | null>(null); // Track which session we've already handled
@@ -138,24 +140,23 @@ export default function BSL2025AgendaScreen() {
     return '';
   };
 
-
   // Filters for UnifiedSearchAndFilter
   const filterGroups = [
     {
       key: 'type',
-      label: 'Type',
+      label: t('filter.type'),
       type: 'single' as const,
       options: [
-        { key: 'keynote', label: 'Keynote', icon: 'mic' },
-        { key: 'panel', label: 'Panel', icon: 'group' },
-        { key: 'break', label: 'Break', icon: 'free-breakfast' },
-        { key: 'meal', label: 'Meal', icon: 'restaurant' },
-        { key: 'registration', label: 'Registration', icon: 'person-add' },
+        { key: 'keynote', label: t('filter.keynote'), icon: 'mic' },
+        { key: 'panel', label: t('filter.panel'), icon: 'group' },
+        { key: 'break', label: t('filter.break'), icon: 'free-breakfast' },
+        { key: 'meal', label: t('filter.meal'), icon: 'restaurant' },
+        { key: 'registration', label: t('filter.registration'), icon: 'person-add' },
       ],
     },
     {
       key: 'speakers',
-      label: 'Speakers',
+      label: t('filter.speakers'),
       type: 'chips' as const,
       options: [],
     },
@@ -931,13 +932,13 @@ export default function BSL2025AgendaScreen() {
 
       setConfirmationModal({ visible: false, agendaItem: null, startTime: null });
       if (newStatus === 'confirmed') {
-        showSuccess('Event confirmed', 'This event has been added to your schedule');
+        showSuccess(t('messages.eventConfirmed'), t('messages.eventConfirmedMessage'));
       } else {
-        showWarning('Event unconfirmed', 'This event has been removed from your confirmed schedule');
+        showWarning(t('messages.eventUnconfirmed'), t('messages.eventUnconfirmedMessage'));
       }
     } catch (error) {
       console.error('Error toggling confirmation:', error);
-      showError('Error', `Failed to ${newStatus === 'confirmed' ? 'confirm' : 'unconfirm'} event`);
+      showError(t('messages.error'), newStatus === 'confirmed' ? t('messages.confirmError') : t('messages.unconfirmError'));
     } finally {
       setIsConfirming(false);
     }
@@ -989,13 +990,13 @@ export default function BSL2025AgendaScreen() {
       }));
       
       if (newFavorite) {
-        showSuccess('Added to favorites');
+        showSuccess(t('messages.addedToFavorites'));
       } else {
-        showWarning('Removed from favorites');
+        showWarning(t('messages.removedFromFavorites'));
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      showError('Error', `Failed to ${newFavorite ? 'add to' : 'remove from'} favorites`);
+      showError(t('messages.error'), newFavorite ? t('messages.addToFavoritesError') : t('messages.removeFromFavoritesError'));
     }
   };
 
@@ -1154,7 +1155,7 @@ export default function BSL2025AgendaScreen() {
             <View style={styles.badgeContainer}>
               {isPast && (
                 <View style={styles.pastBadge}>
-                  <Text style={styles.pastBadgeText}>PAST</Text>
+                  <Text style={styles.pastBadgeText}>{t('badges.past')}</Text>
                 </View>
               )}
               <View style={[styles.agendaTypeBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
@@ -1226,9 +1227,9 @@ export default function BSL2025AgendaScreen() {
           {(() => {
             let location = '';
             if (item.type === 'keynote') {
-              location = 'Main Stage';
+              location = t('locations.mainStage');
             } else if (item.type === 'registration') {
-              location = 'Registration Area';
+              location = t('locations.registrationArea');
             } else if (item.type === 'meal' || item.type === 'break') {
               return null;
             } else if (item.location) {
@@ -1253,7 +1254,7 @@ export default function BSL2025AgendaScreen() {
     return (
       <LoadingScreen
         icon="schedule"
-        message="Loading agenda..."
+        message={t('loading')}
         fullScreen={true}
       />
     );
@@ -1269,9 +1270,9 @@ export default function BSL2025AgendaScreen() {
       >
         {/* Event Header */}
         <EventBanner
-          title="Event Agenda"
-          subtitle={`Conference Schedule • ${agenda.length} Sessions`}
-          date="November 12-14, 2025 • Medellín, Colombia"
+          title={t('title')}
+          subtitle={t('subtitle', { count: agenda.length })}
+          date={t('date')}
           showCountdown={true}
           showLiveIndicator={isLive}
         />
@@ -1324,7 +1325,7 @@ export default function BSL2025AgendaScreen() {
                     styles.tabCount,
                     activeTab === dayKey && styles.activeTabCount
                   ]}>
-                    {agendaByDay[dayKey].length} sessions
+                    {agendaByDay[dayKey].length} {t('tabs.sessions')}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -1340,7 +1341,7 @@ export default function BSL2025AgendaScreen() {
           data={agenda}
           onFilteredData={setFilteredAgenda}
           onSearchChange={() => {}}
-          searchPlaceholder="Search sessions, speakers, or keywords..."
+          searchPlaceholder={t('search.placeholder')}
           searchFields={['title', 'description', 'type', 'speakers']}
           filterGroups={filterGroups}
           customFilterLogic={customAgendaFilterLogic}
@@ -1365,8 +1366,8 @@ export default function BSL2025AgendaScreen() {
                 return (
                   <View style={styles.noResultsContainer}>
                     <MaterialIcons name="search-off" size={48} color={colors.text.secondary} />
-                    <Text style={styles.noResultsText}>No sessions match your filters</Text>
-                    <Text style={styles.noResultsSubtext}>Try adjusting your search or filters</Text>
+                    <Text style={styles.noResultsText}>{t('noResults.title')}</Text>
+                    <Text style={styles.noResultsSubtext}>{t('noResults.subtitle')}</Text>
                   </View>
                 );
               }
@@ -1377,11 +1378,11 @@ export default function BSL2025AgendaScreen() {
         ) : (
           <View style={styles.noAgendaContainer}>
             <MaterialIcons name="event-busy" size={48} color={colors.text.secondary} />
-            <Text style={styles.noAgendaText}>No agenda available</Text>
-            <Text style={styles.noAgendaSubtext}>Check back later for the event schedule</Text>
+            <Text style={styles.noAgendaText}>{t('empty.title')}</Text>
+            <Text style={styles.noAgendaSubtext}>{t('empty.subtitle')}</Text>
             <View style={styles.noLiveIndicator}>
               <MaterialIcons name="schedule" size={16} color={colors.text.secondary} />
-              <Text style={styles.noLiveText}>No live agenda data</Text>
+              <Text style={styles.noLiveText}>{t('empty.noLiveData')}</Text>
             </View>
           </View>
         )}
@@ -1391,10 +1392,10 @@ export default function BSL2025AgendaScreen() {
       {confirmationModal.agendaItem && confirmationModal.startTime && (
         <ScheduleConfirmationModal
           visible={confirmationModal.visible}
-          title={confirmationModal.agendaItem.title || 'Untitled Event'}
+          title={confirmationModal.agendaItem.title || t('messages.untitledEvent')}
           location={confirmationModal.agendaItem.location || 
-            (confirmationModal.agendaItem.type === 'keynote' ? 'Main Stage' : 
-             confirmationModal.agendaItem.type === 'registration' ? 'Registration Area' : undefined)}
+            (confirmationModal.agendaItem.type === 'keynote' ? t('locations.mainStage') : 
+             confirmationModal.agendaItem.type === 'registration' ? t('locations.registrationArea') : undefined)}
           startTime={confirmationModal.startTime}
           isConfirmed={(userAgendaStatus[confirmationModal.agendaItem.id] || 'tentative') === 'confirmed'}
           onConfirm={() => handleToggleConfirmation(confirmationModal.agendaItem!, confirmationModal.startTime!)}

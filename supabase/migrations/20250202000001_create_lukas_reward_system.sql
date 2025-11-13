@@ -327,3 +327,4 @@ COMMENT ON FUNCTION add_reward IS 'Adds reward to user balance and creates trans
 COMMENT ON FUNCTION get_user_balance IS 'Gets user balance for a specific token (defaults to LUKAS)';
 
 
+

@@ -951,7 +951,7 @@ export default function AuthScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <OptimizedSplashCursor
         style={{
           position: 'absolute',
@@ -988,6 +988,9 @@ export default function AuthScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        bounces={false}
+        nestedScrollEnabled={false}
+        keyboardDismissMode="on-drag"
       >
         <View style={styles.content}>
           <View style={styles.overlay} pointerEvents="none" />
@@ -1312,18 +1315,24 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
+    backgroundColor: isDark ? colors.primaryDark : colors.background.paper,
   },
   scrollView: {
     flex: 1,
     width: '100%',
+    backgroundColor: isDark ? colors.primaryDark : colors.background.paper,
   },
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: Platform.OS === 'web' ? 40 : 20,
     paddingHorizontal: 20,
-    minHeight: '100%',
+    ...(Platform.OS === 'web' ? {
+      minHeight: '100%',
+    } : {
+      paddingBottom: 40,
+    }),
   },
   content: {
     alignItems: 'center',

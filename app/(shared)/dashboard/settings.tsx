@@ -75,20 +75,29 @@ export default function SettingsScreen() {
   };
 
 
+  // All available languages (all translations are available in the system)
+  const allAvailableLocales = [
+    { code: 'en', name: 'English', nativeName: 'English' },
+    { code: 'es', name: 'Spanish', nativeName: 'Español' },
+    { code: 'ko', name: 'Korean', nativeName: '한국어' },
+    { code: 'fr', name: 'French', nativeName: 'Français' },
+    { code: 'pt', name: 'Portuguese', nativeName: 'Português' },
+    { code: 'de', name: 'German', nativeName: 'Deutsch' },
+  ];
+
+  // Main languages shown in UI (only these 3 can be selected)
+  const mainLocales = ['en', 'es', 'ko'];
+
   const handleLanguageChange = async () => {
-    const locales = ['en', 'es', 'ko'];
-    const currentIndex = locales.indexOf(locale);
-    const nextIndex = (currentIndex + 1) % locales.length;
-    await setLocale(locales[nextIndex]);
+    // Only cycle through the 3 main languages in the UI
+    const currentIndex = mainLocales.indexOf(locale);
+    const nextIndex = (currentIndex + 1) % mainLocales.length;
+    await setLocale(mainLocales[nextIndex]);
   };
 
   const getLanguageName = (locale: string) => {
-    switch (locale) {
-      case 'en': return 'English';
-      case 'es': return 'Español';
-      case 'ko': return '한국어';
-      default: return 'English';
-    }
+    const lang = allAvailableLocales.find(l => l.code === locale);
+    return lang ? lang.nativeName : 'English';
   };
 
   const handleClearCache = async () => {

@@ -459,7 +459,66 @@
       },
       "mySchedule": {
         "title": "Mon Planning",
-        "subtitle": "Voir et gérer votre planning"
+        "subtitle": "Voir et gérer votre planning",
+        "scheduledSlots": "Créneaux Programmés",
+        "dayPlanRoute": "Itinéraire du Plan du Jour",
+        "totalScheduledSlots": "Total des Créneaux Programmés",
+        "freeSlot": {
+          "markFreeSlot": "Marquer un Créneau Libre",
+          "unblockSlot": "Débloquer le Créneau",
+          "removeInterest": "Retirer l'Intérêt",
+          "freeSlotAvailable": "Créneau Libre Disponible",
+          "blockedMessage": "Ce créneau est bloqué. Le débloquer pour le rendre à nouveau disponible ?",
+          "interestedMessage": "Ce créneau est marqué comme intéressant. Le retirer pour le rendre à nouveau disponible ?",
+          "availableMessage": "Marquez ce créneau comme intéressant ou bloqué pour suivre votre disponibilité. Ces informations seront visibles par quiconque consulte votre planning public, les aidant à comprendre quand vous êtes bloqué ou intéressé à rencontrer des gens.",
+          "block": "Bloquer",
+          "interested": "Intéressé",
+          "unblocking": "Déblocage...",
+          "removing": "Retrait...",
+          "unblock": "Débloquer",
+          "remove": "Retirer"
+        },
+        "errors": {
+          "title": "Erreur",
+          "failedToLoadMeetings": "Échec du chargement des réunions",
+          "failedToMarkInterested": "Échec du marquage comme intéressé",
+          "failedToClearStatus": "Échec de la suppression du statut",
+          "failedToConfirm": "Échec de la confirmation de l'événement",
+          "failedToUnconfirm": "Échec de la déconfirmation de l'événement",
+          "failedToBlock": "Échec du blocage du créneau",
+          "failedToUnblock": "Échec du déblocage du créneau",
+          "failedToAddToFavorites": "Échec de l'ajout aux favoris",
+          "failedToRemoveFromFavorites": "Échec de la suppression des favoris"
+        },
+        "messages": {
+          "addedToFavorites": "Ajouté aux favoris",
+          "removedFromFavorites": "Retiré des favoris",
+          "confirmedAttendance": "Présence confirmée",
+          "tapToConfirmAttendance": "Appuyez pour confirmer la présence",
+          "meetingWith": "Réunion avec {name}",
+          "user": "Utilisateur",
+          "tbd": "À déterminer",
+          "available": "Disponible"
+        },
+        "status": {
+          "interested": "Intéressé",
+          "blocked": "Bloqué",
+          "tentative": "Tentatif",
+          "confirmed": "Confirmé",
+          "interestedShort": "INT",
+          "blockedShort": "BLK",
+          "tentativeShort": "TEN"
+        },
+        "scheduleOverview": "Aperçu du Planning",
+        "scheduleSummary": "Résumé du Planning",
+        "confirmAttendance": "Confirmer la Présence",
+        "unconfirmAttendance": "Déconfirmer la Présence",
+        "confirming": "Confirmation...",
+        "unconfirming": "Déconfirmation...",
+        "confirm": "Confirmer",
+        "unconfirm": "Déconfirmer",
+        "confirmMessage": "Confirmer votre présence ajoutera cet événement à votre planning.",
+        "unconfirmMessage": "Êtes-vous sûr de vouloir déconfirmer votre présence ? Cela supprimera cet événement de votre planning confirmé."
       },
       "blockedUsers": {
         "title": "Utilisateurs Bloqués",
@@ -498,6 +557,112 @@
       "title": "Activité Récente",
       "journey": "Votre Parcours de Réseautage",
       "description": "Vous avez envoyé {totalRequests} demandes de réunion et avez {pendingRequests} réponses en attente."
+    }
+  },
+  "notifications": {
+    "center": {
+      "title": "Notifications",
+      "all": "Toutes",
+      "archive": "Archives",
+      "markAllRead": "Tout marquer comme lu",
+      "markRead": "Marquer comme lu",
+      "markUnread": "Marquer comme non lu",
+      "delete": "Supprimer",
+      "deleteTitle": "Supprimer la notification",
+      "deleteMessage": "Êtes-vous sûr de vouloir supprimer cette notification ?",
+      "cancel": "Annuler",
+      "noNotifications": "Aucune notification",
+      "noNotificationsMessage": "Vous êtes à jour ! Les nouvelles notifications apparaîtront ici.",
+      "noArchivedNotifications": "Aucune notification archivée",
+      "noArchivedNotificationsMessage": "Les notifications archivées apparaîtront ici.",
+      "loading": "Chargement des notifications...",
+      "searchPlaceholder": "Rechercher des notifications...",
+      "viewAll": "Voir toutes les notifications",
+      "goToCenter": "Aller au centre de notifications",
+      "noNewNotifications": "Aucune nouvelle notification",
+      "justNow": "À l'instant",
+      "minutesAgo": "il y a {minutes}min",
+      "hoursAgo": "il y a {hours}h",
+      "daysAgo": "il y a {days}j",
+      "urgent": "URGENT",
+      "filters": {
+        "readStatus": "Statut de lecture",
+        "all": "Toutes",
+        "unread": "Non lues",
+        "read": "Lues",
+        "type": "Type",
+        "allTypes": "Tous les types",
+        "meetingRequest": "Demande de réunion",
+        "meetingAccepted": "Réunion acceptée",
+        "meetingDeclined": "Réunion refusée",
+        "meetingExpired": "Réunion expirée",
+        "reminder": "Rappel",
+        "boostReceived": "Boost reçu",
+        "systemAlert": "Alerte système",
+        "chatMessage": "Message de chat",
+        "priority": "Priorité",
+        "urgentOnly": "Urgentes uniquement"
+      }
+    },
+    "types": {
+      "meeting_request": {
+        "title": "Demande envoyée ✓",
+        "message": "Votre demande de réunion avec {speakerName} a été envoyée avec succès.",
+        "messageWithExpiry": "Votre demande de réunion avec {speakerName} a été envoyée avec succès. Expire dans {hours} heures.",
+        "speakerTitle": "📋 Demande de réunion",
+        "speakerMessage": "{requesterName} souhaite vous rencontrer",
+        "speakerVipTitle": "🔥 Demande de réunion VIP",
+        "speakerVipMessage": "{requesterName} (VIP) souhaite vous rencontrer",
+        "speakerBusinessTitle": "💼 Demande de réunion professionnelle",
+        "speakerBusinessMessage": "{requesterName} (Professionnel) souhaite vous rencontrer",
+        "boostedMessage": " (Boosté avec ${boostAmount} VOI)"
+      },
+      "meeting_accepted": {
+        "title": "Demande de réunion acceptée ! 🎉",
+        "message": "{speakerName} a accepté votre demande de réunion",
+        "messageWithSchedule": "Votre demande de réunion a été acceptée. Réunion programmée pour {scheduleTime}. Vous avez gagné 1 LUKAS ! 💎",
+        "speakerTitle": "Demande acceptée",
+        "speakerMessage": "Vous avez accepté la demande de réunion de {requesterName}",
+        "speakerScheduledTitle": "Réunion programmée ! 🎉",
+        "speakerScheduledMessage": "Votre réunion avec {requesterName} a été programmée",
+        "speakerScheduledWithReward": "Vous avez accepté une demande de réunion. Réunion programmée pour {scheduleTime}. Vous avez gagné 1 LUKAS ! 💎"
+      },
+      "meeting_declined": {
+        "title": "Demande de réunion refusée",
+        "message": "{speakerName} a refusé votre demande de réunion",
+        "speakerTitle": "Demande refusée",
+        "speakerMessage": "Vous avez refusé la demande de réunion de {requesterName}"
+      },
+      "meeting_expired": {
+        "title": "Demande de réunion expirée",
+        "message": "Votre demande de réunion avec {speakerName} a expiré"
+      },
+      "meeting_cancelled": {
+        "title": "Demande de réunion annulée",
+        "message": "Votre demande de réunion a été annulée",
+        "speakerTitle": "Demande de réunion annulée",
+        "speakerMessage": "La demande de réunion de {requesterName} a été annulée"
+      },
+      "meeting_reminder": {
+        "title": "Rappel de réunion",
+        "message": "Vous avez une réunion avec {name} programmée bientôt"
+      },
+      "boost_received": {
+        "title": "Boost reçu",
+        "message": "Vous avez reçu un boost de ${amount} VOI"
+      },
+      "system_alert": {
+        "title": "Alerte système",
+        "message": "{message}"
+      },
+      "chat_message": {
+        "title": "Nouveau message de chat",
+        "message": "{senderName} vous a envoyé un message",
+        "titleFrom": "Nouveau message de {senderName}",
+        "messageFrom": "Vous avez un nouveau message de {senderName}",
+        "titleMeeting": "{meetingTitle}",
+        "messageMeeting": "Nouveau message dans {meetingTitle}"
+      }
     }
   }
 }

@@ -9,6 +9,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { format } from 'date-fns';
+import { useTranslation } from '../i18n/i18n';
 
 interface ScheduleConfirmationModalProps {
   visible: boolean;
@@ -44,6 +45,7 @@ export default function ScheduleConfirmationModal({
   onToggleBlocked,
 }: ScheduleConfirmationModalProps) {
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation('networking');
   
   // Handle free slot display differently
   if (isFreeSlot) {
@@ -81,13 +83,13 @@ export default function ScheduleConfirmationModal({
                 color={isBlocked ? colors.error.main : isInterested ? '#F44336' : colors.text.secondary}
               />
               <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
-                {isBlocked ? "Unblock Slot" : isInterested ? "Remove Interest" : "Mark Free Slot"}
+                {isBlocked ? t('mySchedule.freeSlot.unblockSlot') : isInterested ? t('mySchedule.freeSlot.removeInterest') : t('mySchedule.freeSlot.markFreeSlot')}
               </Text>
             </View>
 
             <View style={styles.eventDetails}>
               <Text style={[styles.eventTitle, { color: colors.text.primary }]}>
-                Free Slot Available
+                {t('mySchedule.freeSlot.freeSlotAvailable')}
               </Text>
               
               <View style={styles.eventInfoRow}>
@@ -127,10 +129,10 @@ export default function ScheduleConfirmationModal({
                 { color: isBlocked ? colors.error.main : isInterested ? '#F44336' : (colors.info || '#2196F3') }
               ]}>
                 {isBlocked
-                  ? "This slot is blocked. Unblock it to make it available again?"
+                  ? t('mySchedule.freeSlot.blockedMessage')
                   : isInterested
-                  ? "This slot is marked as interested. Remove it to make it available again?"
-                  : "Mark this slot as interested or blocked to track your availability. This information will be visible to anyone who views your public schedule, helping them understand when you're blocked or interested in meeting people."}
+                  ? t('mySchedule.freeSlot.interestedMessage')
+                  : t('mySchedule.freeSlot.availableMessage')}
               </Text>
             </View>
 
@@ -151,7 +153,7 @@ export default function ScheduleConfirmationModal({
                     disabled={isLoading}
                   >
                     <MaterialIcons name="block" size={20} color="#FFFFFF" />
-                    <Text style={styles.confirmButtonText}>Block</Text>
+                    <Text style={styles.confirmButtonText}>{t('mySchedule.freeSlot.block')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -166,7 +168,7 @@ export default function ScheduleConfirmationModal({
                     disabled={isLoading}
                   >
                     <MaterialIcons name="favorite" size={20} color="#FFFFFF" />
-                    <Text style={styles.confirmButtonText}>Interested</Text>
+                    <Text style={styles.confirmButtonText}>{t('mySchedule.freeSlot.interested')}</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -187,7 +189,7 @@ export default function ScheduleConfirmationModal({
                     <>
                       <MaterialIcons name="hourglass-empty" size={20} color="#FFFFFF" />
                       <Text style={styles.confirmButtonText}>
-                        {isBlocked ? "Unblocking..." : "Removing..."}
+                        {isBlocked ? t('mySchedule.freeSlot.unblocking') : t('mySchedule.freeSlot.removing')}
                       </Text>
                     </>
                   ) : (
@@ -198,7 +200,7 @@ export default function ScheduleConfirmationModal({
                         color="#FFFFFF"
                       />
                       <Text style={styles.confirmButtonText}>
-                        {isBlocked ? "Unblock" : "Remove"}
+                        {isBlocked ? t('mySchedule.freeSlot.unblock') : t('mySchedule.freeSlot.remove')}
                       </Text>
                     </>
                   )}
@@ -243,14 +245,26 @@ export default function ScheduleConfirmationModal({
               color={isConfirmed ? colors.error.main : colors.success.main}
             />
             <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
-              {isConfirmed ? "Unconfirm Attendance" : "Confirm Attendance"}
+              {isConfirmed ? t('mySchedule.unconfirmAttendance') : t('mySchedule.confirmAttendance')}
             </Text>
           </View>
 
           {/* Event Details */}
           <View style={styles.eventDetails}>
             <Text style={[styles.eventTitle, { color: colors.text.primary }]}>
-              {title}
+              {(() => {
+                // If title looks like a translation key, try to translate it
+                if (title?.startsWith('networking.')) {
+                  const key = title.replace('networking.', '');
+                  const translated = t(key);
+                  return translated !== `networking.${key}` ? translated : title;
+                }
+                if (title?.startsWith('agenda.')) {
+                  // For agenda keys, we'd need to use a different namespace or handle differently
+                  return title;
+                }
+                return title;
+              })()}
             </Text>
             
             <View style={styles.eventInfoRow}>
@@ -272,7 +286,15 @@ export default function ScheduleConfirmationModal({
                   color={colors.text.secondary}
                 />
                 <Text style={[styles.eventInfoText, { color: colors.text.secondary }]}>
-                  {location}
+                  {(() => {
+                    // If location looks like a translation key, try to translate it
+                    if (location?.startsWith('networking.')) {
+                      const key = location.replace('networking.', '');
+                      const translated = t(key);
+                      return translated !== `networking.${key}` ? translated : location;
+                    }
+                    return location;
+                  })()}
                 </Text>
               </View>
             )}
@@ -300,8 +322,8 @@ export default function ScheduleConfirmationModal({
               { color: isConfirmed ? colors.error.main : colors.success.main }
             ]}>
               {isConfirmed
-                ? "Are you sure you want to unconfirm your attendance? This will remove this event from your confirmed schedule."
-                : "Confirming your attendance will add this event to your schedule."}
+                ? t('mySchedule.unconfirmMessage')
+                : t('mySchedule.confirmMessage')}
             </Text>
           </View>
 
@@ -343,7 +365,7 @@ export default function ScheduleConfirmationModal({
                 <>
                   <MaterialIcons name="hourglass-empty" size={20} color="#FFFFFF" />
                   <Text style={styles.confirmButtonText}>
-                    {isConfirmed ? "Unconfirming..." : "Confirming..."}
+                    {isConfirmed ? t('mySchedule.unconfirming') : t('mySchedule.confirming')}
                   </Text>
                 </>
               ) : (
@@ -354,7 +376,7 @@ export default function ScheduleConfirmationModal({
                     color="#FFFFFF"
                   />
                   <Text style={styles.confirmButtonText}>
-                    {isConfirmed ? "Unconfirm" : "Confirm"}
+                    {isConfirmed ? t('mySchedule.unconfirm') : t('mySchedule.confirm')}
                   </Text>
                 </>
               )}

@@ -96,7 +96,16 @@
     "profile": "Profile"
   },
   "common": {
-    "back": "Back"
+    "back": "Back",
+    "loading": {
+      "default": "Loading...",
+      "retrying": "Retrying... ({retryCount}/3)",
+      "retryHint": "Taking longer than expected, please wait...",
+      "loadingRequests": "Loading your requests...",
+      "loadingSlots": "Loading slots...",
+      "loadingData": "Loading data...",
+      "pleaseWait": "Please wait..."
+    }
   },
   "auth": {
     "title": "Welcome to",
@@ -540,6 +549,69 @@
         "subtitle": "View networking statistics"
       }
     },
+    "mySchedule": {
+      "title": "My Schedule",
+      "subtitle": "View and manage your schedule",
+      "scheduledSlots": "Scheduled Slots",
+      "dayPlanRoute": "Day Plan Route",
+      "totalScheduledSlots": "Total Scheduled Slots",
+      "freeSlot": {
+        "markFreeSlot": "Mark Free Slot",
+        "unblockSlot": "Unblock Slot",
+        "removeInterest": "Remove Interest",
+        "freeSlotAvailable": "Free Slot Available",
+        "blockedMessage": "This slot is blocked. Unblock it to make it available again?",
+        "interestedMessage": "This slot is marked as interested. Remove it to make it available again?",
+        "availableMessage": "Mark this slot as interested or blocked to track your availability. This information will be visible to anyone who views your public schedule, helping them understand when you're blocked or interested in meeting people.",
+        "block": "Block",
+        "interested": "Interested",
+        "unblocking": "Unblocking...",
+        "removing": "Removing...",
+        "unblock": "Unblock",
+        "remove": "Remove"
+      },
+      "errors": {
+        "title": "Error",
+        "failedToLoadMeetings": "Failed to load meetings",
+        "failedToMarkInterested": "Failed to mark as interested",
+        "failedToClearStatus": "Failed to clear status",
+        "failedToConfirm": "Failed to confirm event",
+        "failedToUnconfirm": "Failed to unconfirm event",
+        "failedToBlock": "Failed to block slot",
+        "failedToUnblock": "Failed to unblock slot",
+        "failedToAddToFavorites": "Failed to add to favorites",
+        "failedToRemoveFromFavorites": "Failed to remove from favorites"
+      },
+      "messages": {
+        "addedToFavorites": "Added to favorites",
+        "removedFromFavorites": "Removed from favorites",
+        "confirmedAttendance": "Confirmed attendance",
+        "tapToConfirmAttendance": "Tap to confirm attendance",
+        "meetingWith": "Meeting with {name}",
+        "user": "User",
+        "tbd": "TBD",
+        "available": "Available"
+      },
+      "status": {
+        "interested": "Interested",
+        "blocked": "Blocked",
+        "tentative": "Tentative",
+        "confirmed": "Confirmed",
+        "interestedShort": "INT",
+        "blockedShort": "BLK",
+        "tentativeShort": "TEN"
+      },
+      "scheduleOverview": "Schedule Overview",
+      "scheduleSummary": "Schedule Summary",
+      "confirmAttendance": "Confirm Attendance",
+      "unconfirmAttendance": "Unconfirm Attendance",
+      "confirming": "Confirming...",
+      "unconfirming": "Unconfirming...",
+      "confirm": "Confirm",
+      "unconfirm": "Unconfirm",
+      "confirmMessage": "Confirming your attendance will add this event to your schedule.",
+      "unconfirmMessage": "Are you sure you want to unconfirm your attendance? This will remove this event from your confirmed schedule."
+    },
     "tips": {
       "title": "Networking Tips",
       "beSpecific": {
@@ -568,6 +640,320 @@
       "title": "Recent Activity",
       "journey": "Your Networking Journey",
       "description": "You've sent {totalRequests} meeting requests and have {pendingRequests} pending responses."
+    },
+    "meetingRequestModal": {
+      "title": "Request Meeting with {speakerName}",
+      "messageLabel": "Message (Optional)",
+      "messageHint": "💡 Including a message increases approval chances by 3x",
+      "messagePlaceholder": "Tell the speaker why you'd like to meet (optional but recommended)...",
+      "intentionLabel": "Meeting Intention (Optional)",
+      "intentionHint": "💡 Select up to 3 intentions for the meeting (or choose \"No specific intention\")",
+      "intentions": {
+        "coffee": "Just to grab a coffee and chat",
+        "pitch": "I want to pitch you my startup idea",
+        "consultation": "Quick 5-minute consultation",
+        "networking": "General networking and connection",
+        "collaboration": "Explore potential collaboration",
+        "advice": "Seek advice on my career/project",
+        "fun": "Just for fun and interesting conversation",
+        "learning": "Learn from your experience",
+        "none": "No specific intention"
+      },
+      "cancel": "Cancel",
+      "sending": "Sending...",
+      "sendRequest": "Send Request",
+      "cancelTitle": "Cancel Meeting Request?",
+      "cancelMessage": "Are you sure you want to cancel this meeting request?",
+      "cancelWarning": "Your request quota will NOT be restored after cancellation.",
+      "cancelling": "Cancelling Request...",
+      "confirmCancel": "Yes, Cancel Request"
+    },
+    "requestView": {
+      "title": "Request Details",
+      "yourRequest": "Your Request",
+      "yourMeetingDetails": "Your Meeting Details",
+      "meetingDetails": "Meeting Details",
+      "yourMessage": "Your Message",
+      "message": "Message",
+      "speaker": "Speaker",
+      "requester": "Requester",
+      "expiresIn": "Expires In",
+      "hours": "HRS",
+      "minutes": "MIN",
+      "seconds": "SEC",
+      "status": "Status",
+      "intentions": "Intentions",
+      "meetingDetailsLabel": "Meeting Details",
+      "duration": "Duration:",
+      "type": "Type:",
+      "boost": "Boost:",
+      "expires": "Expires:",
+      "timeline": "Timeline",
+      "requestSent": "Request sent",
+      "expiresLabel": "Expires",
+      "statusUpdated": "Status updated",
+      "response": "Response",
+      "meeting": "Meeting",
+      "viewMeetingDetails": "View Meeting Details",
+      "cancelRequest": "Cancel Request",
+      "accept": "Accept",
+      "decline": "Decline",
+      "holdRequest": "Hold Request",
+      "blockUser": "Block User",
+      "minutesLabel": "minutes",
+      "requestCancelled": "Request Cancelled",
+      "requestCancelledMessage": "Your meeting request has been cancelled. Your request limit has been restored, but boost points are not refunded.",
+      "yourMeetingRequestApproved": "Your Meeting Request Approved",
+      "meetingRequestApproved": "Meeting Request Approved",
+      "yourMeetingRequestDeclined": "Your Meeting Request Declined",
+      "meetingRequestDeclined": "Meeting Request Declined",
+      "yourMeetingRequestPending": "Your Meeting Request Pending",
+      "meetingRequestPending": "Meeting Request Pending",
+      "requestInformation": "Request Information",
+      "requestId": "Request ID:",
+      "meetingType": "Meeting Type:",
+      "sent": "Sent:",
+      "holdModalTitle": "Hold Request",
+      "holdModalDescription": "Extend the expiration time of this request by spending your boost points.",
+      "holdDuration": "Hold Duration:",
+      "hour": "hour",
+      "hours": "hours",
+      "cost": "Cost:",
+      "boostPoints": "boost points",
+      "confirmHold": "Confirm Hold",
+      "requestHeld": "Request Held",
+      "requestHeldMessage": "Request held for {hours} hour(s)",
+      "pending": "PENDING"
+    },
+    "speakerView": {
+      "connect": "Connect",
+      "linkedin": "LinkedIn",
+      "twitter": "Twitter",
+      "matchmakingNetworking": "Matchmaking & Networking",
+      "matchmakingDescription": "With the Matchmaking functionality, don't miss business opportunities: organize meetings with speakers or other participants and manage your one-to-one meeting calendar",
+      "yourRequestStatus": "Your Request Status",
+      "ticketType": "Ticket Type:",
+      "requestsUsed": "Requests Used:",
+      "remaining": "Remaining:",
+      "nextRequest": "Next Request:",
+      "requestLimitReached": "You have reached your request limit. Use $VOI boost for additional requests.",
+      "pleaseWaitNextRequest": "Please wait before sending your next request.",
+      "loadingSpeakerDetails": "Loading speaker details...",
+      "online": "Online",
+      "active": "Active",
+      "inactive": "Inactive",
+      "speakerDashboard": "Speaker Dashboard",
+      "manageMeetingRequests": "Manage your meeting requests",
+      "about": "About",
+      "yourMeetingRequests": "Your Meeting Request",
+      "yourMeetingRequestsPlural": "Your Meeting Requests",
+      "scrollToSeeAll": "Scroll to see all requests",
+      "approved": "✅ Approved",
+      "declined": "❌ Declined",
+      "pendingStatus": "⏳ Pending",
+      "requestHistory": "Request History",
+      "cancelled": "Cancelled",
+      "whatsNext": "What's Next?",
+      "waitingForResponse": "Your meeting request is waiting for {speakerName}'s response. You will be notified when they reply. You can cancel this request at any time.",
+      "greatNews": "Great News! 🎉",
+      "requestApproved": "{speakerName} has approved your meeting request! Check your notifications for meeting details and next steps.",
+      "requestDeclinedTitle": "Request Declined",
+      "requestDeclinedMessage": "{speakerName} has declined this meeting request. You can try requesting a meeting with other speakers.",
+      "cancelRequest": "Cancel Request",
+      "openingLinkedIn": "Opening {speakerName}'s LinkedIn profile...",
+      "speakerDashboardOnly": "This feature is only available to the speaker themselves."
+    },
+    "meetings": {
+      "title": "My Meetings",
+      "loading": "Loading meetings...",
+      "all": "All",
+      "incoming": "Incoming",
+      "passed": "Passed",
+      "notScheduled": "Not scheduled",
+      "meetingWith": "Meeting with",
+      "tbd": "TBD",
+      "noMeetings": "No meetings yet",
+      "error": "Error",
+      "failedToLoad": "Failed to load meetings",
+      "detail": {
+        "title": "Meeting Details",
+        "loading": "Loading meeting details...",
+        "notFound": "Meeting not found",
+        "failedToLoad": "Failed to load meeting details",
+        "speaker": "Speaker",
+        "requester": "Requester",
+        "status": "Status",
+        "message": "Message",
+        "noMessage": "No message provided",
+        "intentions": "Intentions",
+        "meetingDetails": "Meeting Details",
+        "scheduled": "Scheduled:",
+        "duration": "Duration:",
+        "location": "Location:",
+        "minutes": "minutes",
+        "timeline": "Timeline",
+        "meetingScheduled": "Meeting scheduled",
+        "joinMeeting": "Join Meeting",
+        "messageButton": "Message",
+        "chatWith": "Chat with"
+      }
+    }
+  },
+  "agenda": {
+    "title": "Event Agenda",
+    "subtitle": "Conference Schedule • {count} Sessions",
+    "date": "November 12-14, 2025 • Medellín, Colombia",
+    "loading": "Loading agenda...",
+    "filter": {
+      "type": "Type",
+      "speakers": "Speakers",
+      "keynote": "Keynote",
+      "panel": "Panel",
+      "break": "Break",
+      "meal": "Meal",
+      "registration": "Registration"
+    },
+    "search": {
+      "placeholder": "Search sessions, speakers, or keywords..."
+    },
+    "tabs": {
+      "sessions": "sessions"
+    },
+    "noResults": {
+      "title": "No sessions match your filters",
+      "subtitle": "Try adjusting your search or filters"
+    },
+    "empty": {
+      "title": "No agenda available",
+      "subtitle": "Check back later for the event schedule",
+      "noLiveData": "No live agenda data"
+    },
+    "badges": {
+      "past": "PAST"
+    },
+    "locations": {
+      "mainStage": "Main Stage",
+      "registrationArea": "Registration Area"
+    },
+    "messages": {
+      "untitledEvent": "Untitled Event",
+      "eventConfirmed": "Event confirmed",
+      "eventConfirmedMessage": "This event has been added to your schedule",
+      "eventUnconfirmed": "Event unconfirmed",
+      "eventUnconfirmedMessage": "This event has been removed from your confirmed schedule",
+      "error": "Error",
+      "confirmError": "Failed to confirm event",
+      "unconfirmError": "Failed to unconfirm event",
+      "addedToFavorites": "Added to favorites",
+      "removedFromFavorites": "Removed from favorites",
+      "addToFavoritesError": "Failed to add to favorites",
+      "removeFromFavoritesError": "Failed to remove from favorites"
+    }
+  },
+  "notifications": {
+    "center": {
+      "title": "Notifications",
+      "all": "All",
+      "archive": "Archive",
+      "markAllRead": "Mark All Read",
+      "markRead": "Mark Read",
+      "markUnread": "Mark Unread",
+      "delete": "Delete",
+      "deleteTitle": "Delete Notification",
+      "deleteMessage": "Are you sure you want to delete this notification?",
+      "cancel": "Cancel",
+      "noNotifications": "No Notifications",
+      "noNotificationsMessage": "You're all caught up! New notifications will appear here.",
+      "noArchivedNotifications": "No Archived Notifications",
+      "noArchivedNotificationsMessage": "Archived notifications will appear here.",
+      "loading": "Loading notifications...",
+      "searchPlaceholder": "Search notifications...",
+      "viewAll": "View All Notifications",
+      "goToCenter": "Go to Notification Center",
+      "noNewNotifications": "No new notifications",
+      "justNow": "Just now",
+      "minutesAgo": "{minutes}m ago",
+      "hoursAgo": "{hours}h ago",
+      "daysAgo": "{days}d ago",
+      "urgent": "URGENT",
+      "filters": {
+        "readStatus": "Read Status",
+        "all": "All",
+        "unread": "Unread",
+        "read": "Read",
+        "type": "Type",
+        "allTypes": "All Types",
+        "meetingRequest": "Meeting Request",
+        "meetingAccepted": "Meeting Accepted",
+        "meetingDeclined": "Meeting Declined",
+        "meetingExpired": "Meeting Expired",
+        "reminder": "Reminder",
+        "boostReceived": "Boost Received",
+        "systemAlert": "System Alert",
+        "chatMessage": "Chat Message",
+        "priority": "Priority",
+        "urgentOnly": "Urgent Only"
+      }
+    },
+    "types": {
+      "meeting_request": {
+        "title": "Request Sent ✓",
+        "message": "Your meeting request to {speakerName} has been sent successfully.",
+        "messageWithExpiry": "Your meeting request to {speakerName} has been sent successfully. Expires in {hours} hours.",
+        "speakerTitle": "📋 Meeting Request",
+        "speakerMessage": "{requesterName} wants to meet with you",
+        "speakerVipTitle": "🔥 VIP Meeting Request",
+        "speakerVipMessage": "{requesterName} (VIP) wants to meet with you",
+        "speakerBusinessTitle": "💼 Business Meeting Request",
+        "speakerBusinessMessage": "{requesterName} (Business) wants to meet with you",
+        "boostedMessage": " (Boosted with ${boostAmount} VOI)"
+      },
+      "meeting_accepted": {
+        "title": "Meeting Request Accepted! 🎉",
+        "message": "{speakerName} has accepted your meeting request",
+        "messageWithSchedule": "Your meeting request has been accepted. Meeting scheduled for {scheduleTime}. You earned 1 LUKAS! 💎",
+        "speakerTitle": "Request Accepted",
+        "speakerMessage": "You have accepted the meeting request from {requesterName}",
+        "speakerScheduledTitle": "Meeting Scheduled! 🎉",
+        "speakerScheduledMessage": "Your meeting with {requesterName} has been scheduled",
+        "speakerScheduledWithReward": "You accepted a meeting request. Meeting scheduled for {scheduleTime}. You earned 1 LUKAS! 💎"
+      },
+      "meeting_declined": {
+        "title": "Meeting Request Declined",
+        "message": "{speakerName} has declined your meeting request",
+        "speakerTitle": "Request Declined",
+        "speakerMessage": "You have declined the meeting request from {requesterName}"
+      },
+      "meeting_expired": {
+        "title": "Meeting Request Expired",
+        "message": "Your meeting request to {speakerName} has expired"
+      },
+      "meeting_cancelled": {
+        "title": "Meeting Request Cancelled",
+        "message": "Your meeting request has been cancelled",
+        "speakerTitle": "Meeting Request Cancelled",
+        "speakerMessage": "The meeting request from {requesterName} has been cancelled"
+      },
+      "meeting_reminder": {
+        "title": "Meeting Reminder",
+        "message": "You have a meeting with {name} scheduled soon"
+      },
+      "boost_received": {
+        "title": "Boost Received",
+        "message": "You received a boost of ${amount} VOI"
+      },
+      "system_alert": {
+        "title": "System Alert",
+        "message": "{message}"
+      },
+      "chat_message": {
+        "title": "New Chat Message",
+        "message": "{senderName} sent you a message",
+        "titleFrom": "New message from {senderName}",
+        "messageFrom": "You have a new message from {senderName}",
+        "titleMeeting": "{meetingTitle}",
+        "messageMeeting": "New message in {meetingTitle}"
+      }
     }
   }
 }

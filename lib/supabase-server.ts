@@ -28,10 +28,33 @@ function getSupabaseServer() {
   }
 
   if (!_supabaseServer) {
+    // Custom fetch function to ensure apikey header is always included
+    // This is necessary when using custom domains like auth.hashpass.co
+    const customFetch = (url: string, options: RequestInit = {}) => {
+      const headers = new Headers(options.headers);
+      
+      // Ensure apikey header is always present for Supabase API requests
+      // The Supabase client should add this automatically, but custom domains may not work correctly
+      if (!headers.has('apikey') && supabaseServiceKey) {
+        headers.set('apikey', supabaseServiceKey);
+      }
+      
+      return fetch(url, {
+        ...options,
+        headers
+      });
+    };
+
     _supabaseServer = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
+      },
+      global: {
+        headers: {
+          'apikey': supabaseServiceKey
+        },
+        fetch: customFetch
       }
     });
   }

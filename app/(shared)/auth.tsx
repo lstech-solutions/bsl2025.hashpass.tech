@@ -638,31 +638,49 @@ export default function AuthScreen() {
         }
 
         if (session) {
-          // Session was created by verifyOtp - trust it and navigate immediately
-          // The auth state change handler will verify the session
+          // Session was created by verifyOtp - wait a bit for it to be fully established
+          // In production, there can be network latency before the session is available
+          console.log('✅ OTP verified, waiting for session to be fully established...');
+          
           try {
-            // Quick async verification (don't block navigation)
-            supabase.auth.getUser().then(({ data: { user }, error: userError }) => {
-              if (userError || !user || user.id !== session.user.id) {
-                console.warn('⚠️ Session verification warning (non-blocking):', userError?.message);
-              } else {
-                console.log('✅ Session verified successfully');
-              }
-            }).catch(err => {
-              console.warn('⚠️ Session verification check failed (non-blocking):', err);
-            });
+            // Wait a short delay for production environments where session establishment might be slower
+            await new Promise(resolve => setTimeout(resolve, 500));
             
+            // Verify the session is actually established and valid
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            
+            if (userError || !user) {
+              console.warn('⚠️ Session not yet established, retrying...');
+              // Retry once more with a longer delay for production
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              const { data: { user: retryUser }, error: retryError } = await supabase.auth.getUser();
+              if (retryError || !retryUser) {
+                throw new Error(retryError?.message || 'Session not established after verification');
+              }
+              
+              console.log('✅ Session established after retry');
+            } else {
+              console.log('✅ Session verified successfully');
+            }
+            
+            // Double-check session is still valid
+            const { data: { session: finalSession } } = await supabase.auth.getSession();
+            if (!finalSession) {
+              throw new Error('Session lost after verification');
+            }
+            
+            // Mark as navigated to prevent auth state change handler from also navigating
+            hasNavigatedRef.current = true;
             setLoading(false);
             
-            // Navigate immediately - session from verifyOtp is trusted
-            // Auth state change handler will handle any edge cases
+            // Navigate after session is confirmed
             router.replace(getRedirectPath());
             return;
           } catch (sessionError: any) {
-            console.error('Session error (non-fatal):', sessionError);
-            // Still navigate - session from verifyOtp should be valid
+            console.error('Session verification error:', sessionError);
             setLoading(false);
-            router.replace(getRedirectPath());
+            showError('Session Error', 'Session could not be established. Please try again.');
             return;
           }
         } else {

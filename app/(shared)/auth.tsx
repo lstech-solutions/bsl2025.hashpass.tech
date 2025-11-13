@@ -470,9 +470,9 @@ export default function AuthScreen() {
         }
 
         if (session) {
-          // Wait a brief moment to ensure session is fully established
+          // Wait a moment to ensure session is fully established
           // This helps prevent race conditions on production
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 300));
           
           // Double-check session is still valid
           const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -480,9 +480,12 @@ export default function AuthScreen() {
             throw new Error('Session not established');
           }
 
+          // Additional delay to ensure router state is ready
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
           setLoading(false);
           
-          // Navigate immediately - user is already authenticated
+          // Navigate to dashboard - user is already authenticated
           router.replace('/(shared)/dashboard/explore');
           return;
         } else {

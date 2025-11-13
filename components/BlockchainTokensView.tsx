@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Dimensions, StyleSheet } from 'react-native';
-import { Coins, ArrowRightLeft, ExternalLink, TrendingUp, Shield, ChevronLeft, ChevronRight, Info } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, ScrollView, Dimensions, StyleSheet, Modal } from 'react-native';
+import { Coins, ArrowRightLeft, ExternalLink, TrendingUp, Shield, ChevronLeft, ChevronRight, Info, X } from 'lucide-react-native';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from '../i18n/i18n';
 import { useAuth } from '../hooks/useAuth';
 import { lukasRewardService } from '../lib/lukas-reward-service';
+import { useToastHelpers } from '../contexts/ToastContext';
 
 interface Token {
   symbol: string;
@@ -21,6 +22,7 @@ const BlockchainTokensView = () => {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation('wallet');
   const { user } = useAuth();
+  const { showInfo } = useToastHelpers();
   const screenWidth = Dimensions.get('window').width;
   const paddingHorizontal = screenWidth < 400 ? 16 : 24;
   // Calculate card width: screen width - padding (2x) - margins (32) = responsive width
@@ -40,6 +42,9 @@ const BlockchainTokensView = () => {
   // LUKAS balance state
   const [lukasBalance, setLukasBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  
+  // Modal state
+  const [showLukasModal, setShowLukasModal] = useState(false);
 
   // Fetch LUKAS balance
   useEffect(() => {
@@ -52,10 +57,12 @@ const BlockchainTokensView = () => {
     const fetchBalance = async () => {
       try {
         setIsLoadingBalance(true);
+        console.log('💰 Fetching LUKAS balance for user:', user.id);
         const balance = await lukasRewardService.getUserBalance(user.id, 'LUKAS');
+        console.log('💰 Fetched LUKAS balance:', balance);
         setLukasBalance(balance);
       } catch (error) {
-        console.error('Error fetching LUKAS balance:', error);
+        console.error('❌ Error fetching LUKAS balance:', error);
         setLukasBalance(0);
       } finally {
         setIsLoadingBalance(false);
@@ -69,16 +76,26 @@ const BlockchainTokensView = () => {
       user.id,
       'LUKAS',
       (balance) => {
+        console.log('💰 Balance subscription callback:', balance);
         if (balance) {
-          setLukasBalance(parseFloat(balance.balance.toString()));
+          const newBalance = parseFloat(balance.balance.toString());
+          console.log('💰 Updating balance to:', newBalance);
+          setLukasBalance(newBalance);
         } else {
+          console.log('💰 Balance is null, setting to 0');
           setLukasBalance(0);
         }
       }
     );
 
+    // Also set up a periodic refresh as a fallback (every 5 seconds)
+    const refreshInterval = setInterval(() => {
+      fetchBalance();
+    }, 5000);
+
     return () => {
       if (unsubscribe) unsubscribe();
+      clearInterval(refreshInterval);
     };
   }, [user?.id]);
 
@@ -214,54 +231,6 @@ const BlockchainTokensView = () => {
         </Text>
       </View>
 
-      {/* LUKAS Info Section */}
-      <View
-        style={{
-          marginBottom: 24,
-          backgroundColor: colors.background.paper,
-          borderRadius: 16,
-          padding: 20,
-          borderWidth: 1,
-          borderColor: '#8b5cf6',
-          borderLeftWidth: 4,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-          <Info size={20} color="#8b5cf6" />
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: '700',
-              color: '#8b5cf6',
-              marginLeft: 8,
-            }}
-          >
-            {t('tokens.lukasInfo.title', 'What is LUKAS?')}
-          </Text>
-        </View>
-        <Text
-          style={{
-            fontSize: 14,
-            color: colors.text.primary,
-            lineHeight: 20,
-            marginBottom: 8,
-          }}
-        >
-          {t('tokens.lukasInfo.description', 'LUKAS is the digital currency of the HashPass ecosystem designed to reward user interactions and engagement.')}
-        </Text>
-        <View style={{ marginTop: 8 }}>
-          <Text
-            style={{
-              fontSize: 13,
-              color: colors.text.secondary,
-              lineHeight: 18,
-              marginBottom: 4,
-            }}
-          >
-            {t('tokens.lukasInfo.features', '• Earn LUKAS by accepting and scheduling meetings\n• Will be monetized in HashHouse\n• Swappable to other crypto tokens')}
-          </Text>
-        </View>
-      </View>
 
       <View style={styles.scrollContainer}>
         {showLeftArrow && (
@@ -401,6 +370,12 @@ const BlockchainTokensView = () => {
             {/* Actions */}
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
+                onPress={() => {
+                  showInfo(
+                    t('tokens.swapAvailable.title', 'Swaps Available'),
+                    t('tokens.swapAvailable.message', 'Swaps are available IRL on Hash merchants')
+                  );
+                }}
                 style={{
                   flex: 1,
                   backgroundColor: token.color,
@@ -424,18 +399,35 @@ const BlockchainTokensView = () => {
                   </Text>
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: colors.divider,
-                  alignItems: 'center',
-                }}
-              >
-                <ExternalLink size={16} color={colors.text.primary} />
-              </TouchableOpacity>
+              {token.symbol === 'LUKAS' ? (
+                <TouchableOpacity
+                  onPress={() => setShowLukasModal(true)}
+                  style={{
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: token.color,
+                    backgroundColor: `${token.color}10`,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Info size={16} color={token.color} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={{
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: colors.divider,
+                    alignItems: 'center',
+                  }}
+                >
+                  <ExternalLink size={16} color={colors.text.primary} />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         ))}
@@ -449,6 +441,143 @@ const BlockchainTokensView = () => {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* LUKAS Info Modal */}
+      <Modal
+        visible={showLukasModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLukasModal(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: colors.background.paper,
+              borderRadius: 20,
+              padding: 24,
+              width: '100%',
+              maxWidth: 400,
+              borderWidth: 1,
+              borderColor: colors.divider,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 12,
+              elevation: 8,
+            }}
+          >
+            {/* Header */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: '#8b5cf620',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                }}
+              >
+                <Text style={{ fontSize: 24 }}>💎</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 20,
+                    fontWeight: '700',
+                    color: '#8b5cf6',
+                    marginBottom: 4,
+                  }}
+                >
+                  {t('tokens.lukasInfo.title', 'What is LUKAS?')}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: colors.text.secondary,
+                  }}
+                >
+                  LUKAS Token
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowLukasModal(false)}
+                style={{
+                  padding: 8,
+                  borderRadius: 8,
+                  backgroundColor: colors.background.default,
+                }}
+              >
+                <X size={20} color={colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Content */}
+            <View>
+              <Text
+                style={{
+                  fontSize: 15,
+                  color: colors.text.primary,
+                  lineHeight: 22,
+                  marginBottom: 20,
+                }}
+              >
+                {t('tokens.lukasInfo.description', 'LUKAS is the digital currency of the HashPass ecosystem designed to reward user interactions and engagement.')}
+              </Text>
+
+              <View
+                style={{
+                  backgroundColor: colors.background.default,
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 20,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: colors.text.secondary,
+                    lineHeight: 22,
+                  }}
+                >
+                  {t('tokens.lukasInfo.features', '• Earn LUKAS by accepting and scheduling meetings\n• Will be monetized in HashHouse\n• Swappable to other crypto tokens')}
+                </Text>
+              </View>
+
+              {/* Close Button */}
+              <TouchableOpacity
+                onPress={() => setShowLukasModal(false)}
+                style={{
+                  backgroundColor: '#8b5cf6',
+                  paddingVertical: 14,
+                  paddingHorizontal: 24,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    color: '#fff',
+                    fontSize: 16,
+                    fontWeight: '600',
+                  }}
+                >
+                  Got it
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

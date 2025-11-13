@@ -45,6 +45,38 @@ function namesMatch(name1, name2) {
     }
   }
   
+  // Check first name and last name match
+  const parts1 = normalized1.split(' ').filter(p => p.length > 0);
+  const parts2 = normalized2.split(' ').filter(p => p.length > 0);
+  
+  if (parts1.length >= 2 && parts2.length >= 2) {
+    const first1 = parts1[0];
+    const last1 = parts1[parts1.length - 1];
+    const first2 = parts2[0];
+    const last2 = parts2[parts2.length - 1];
+    
+    // First and last name match
+    if (first1 === first2 && last1 === last2) {
+      return true;
+    }
+    
+    // First name match with substantial last names (at least 3 chars)
+    if (first1 === first2 && last1.length >= 3 && last2.length >= 3) {
+      // Check if last names are similar (one contains the other)
+      if (last1.includes(last2) || last2.includes(last1)) {
+        return true;
+      }
+    }
+    
+    // Last name match with substantial first names (at least 3 chars)
+    if (last1 === last2 && first1.length >= 3 && first2.length >= 3) {
+      // Check if first names are similar (one contains the other)
+      if (first1.includes(first2) || first2.includes(first1)) {
+        return true;
+      }
+    }
+  }
+  
   return false;
 }
 

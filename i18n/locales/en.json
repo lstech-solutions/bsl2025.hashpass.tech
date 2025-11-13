@@ -33,6 +33,10 @@
       "swap": "Swap",
       "totalPortfolio": "Total Portfolio Value",
       "portfolioDesc": "Combined value of all your tokens",
+      "swapAvailable": {
+        "title": "Swaps Available",
+        "message": "Swaps are available IRL on Hash merchants"
+      },
       "lukasInfo": {
         "title": "What is LUKAS?",
         "description": "LUKAS is the digital currency of the HashPass ecosystem designed to reward user interactions and engagement.",

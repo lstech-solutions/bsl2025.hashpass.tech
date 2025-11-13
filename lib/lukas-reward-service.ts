@@ -34,20 +34,39 @@ class LukasRewardService {
    */
   async getUserBalance(userId: string, tokenSymbol: string = 'LUKAS'): Promise<number> {
     try {
-      // Use RPC function to get or create balance
+      console.log('💰 getUserBalance called for user:', userId, 'token:', tokenSymbol);
+      
+      // First try direct query (faster)
+      const { data: directData, error: directError } = await supabase
+        .from('user_balances')
+        .select('balance')
+        .eq('user_id', userId)
+        .eq('token_symbol', tokenSymbol)
+        .single();
+
+      if (!directError && directData) {
+        const balance = parseFloat(directData.balance.toString());
+        console.log('💰 Direct query balance:', balance);
+        return balance;
+      }
+
+      // Fallback to RPC function if direct query fails
+      console.log('💰 Direct query failed, trying RPC function');
       const { data, error } = await supabase.rpc('get_user_balance', {
         p_user_id: userId,
         p_token_symbol: tokenSymbol,
       });
 
       if (error) {
-        console.error('Error fetching user balance:', error);
+        console.error('❌ Error fetching user balance via RPC:', error);
         return 0;
       }
 
-      return parseFloat(data || '0');
+      const balance = parseFloat(data || '0');
+      console.log('💰 RPC function balance:', balance);
+      return balance;
     } catch (error) {
-      console.error('Error in getUserBalance:', error);
+      console.error('❌ Error in getUserBalance:', error);
       return 0;
     }
   }
@@ -111,6 +130,7 @@ class LukasRewardService {
 
   /**
    * Subscribe to balance changes for a user
+   * Listens for INSERT, UPDATE, and DELETE events on user_balances table
    */
   subscribeToBalance(
     userId: string,
@@ -122,18 +142,37 @@ class LukasRewardService {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: '*', // Listen to INSERT, UPDATE, DELETE
           schema: 'public',
           table: 'user_balances',
           filter: `user_id=eq.${userId}`,
         },
-        async () => {
-          // Refetch balance when it changes
-          const balance = await this.getUserBalanceDirect(userId, tokenSymbol);
-          callback(balance);
+        async (payload) => {
+          console.log('💰 Balance change detected:', payload.eventType, payload.new, payload.old);
+          
+          // Handle INSERT or UPDATE events
+          if (payload.new && (payload.new as any).token_symbol === tokenSymbol) {
+            // Refetch balance when it changes (INSERT or UPDATE)
+            const balance = await this.getUserBalanceDirect(userId, tokenSymbol);
+            console.log('💰 Updated balance:', balance);
+            callback(balance);
+          } else if (payload.old && (payload.old as any).token_symbol === tokenSymbol && !payload.new) {
+            // Balance was deleted (DELETE event)
+            console.log('💰 Balance deleted');
+            callback(null);
+          } else if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            // For INSERT/UPDATE, always refetch to ensure we have the latest data
+            const balance = await this.getUserBalanceDirect(userId, tokenSymbol);
+            if (balance && balance.token_symbol === tokenSymbol) {
+              console.log('💰 Refetched balance after', payload.eventType, ':', balance);
+              callback(balance);
+            }
+          }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('💰 Balance subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);

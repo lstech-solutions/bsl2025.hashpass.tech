@@ -1,8 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Dimensions, StyleSheet } from 'react-native';
-import { Coins, ArrowRightLeft, ExternalLink, TrendingUp, Shield, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { Coins, ArrowRightLeft, ExternalLink, TrendingUp, Shield, ChevronLeft, ChevronRight, Info } from 'lucide-react-native';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from '../i18n/i18n';
+import { useAuth } from '../hooks/useAuth';
+import { lukasRewardService } from '../lib/lukas-reward-service';
 
 interface Token {
   symbol: string;
@@ -18,6 +20,7 @@ interface Token {
 const BlockchainTokensView = () => {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation('wallet');
+  const { user } = useAuth();
   const screenWidth = Dimensions.get('window').width;
   const paddingHorizontal = screenWidth < 400 ? 16 : 24;
   // Calculate card width: screen width - padding (2x) - margins (32) = responsive width
@@ -34,11 +37,56 @@ const BlockchainTokensView = () => {
   const [contentWidth, setContentWidth] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
+  // LUKAS balance state
+  const [lukasBalance, setLukasBalance] = useState<number>(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+
+  // Fetch LUKAS balance
+  useEffect(() => {
+    if (!user?.id) {
+      setLukasBalance(0);
+      setIsLoadingBalance(false);
+      return;
+    }
+
+    const fetchBalance = async () => {
+      try {
+        setIsLoadingBalance(true);
+        const balance = await lukasRewardService.getUserBalance(user.id, 'LUKAS');
+        setLukasBalance(balance);
+      } catch (error) {
+        console.error('Error fetching LUKAS balance:', error);
+        setLukasBalance(0);
+      } finally {
+        setIsLoadingBalance(false);
+      }
+    };
+
+    fetchBalance();
+
+    // Subscribe to balance changes
+    const unsubscribe = lukasRewardService.subscribeToBalance(
+      user.id,
+      'LUKAS',
+      (balance) => {
+        if (balance) {
+          setLukasBalance(parseFloat(balance.balance.toString()));
+        } else {
+          setLukasBalance(0);
+        }
+      }
+    );
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [user?.id]);
+
   const tokens: Token[] = [
     {
       symbol: 'LUKAS',
       name: 'LUKAS Token',
-      balance: '0.00',
+      balance: isLoadingBalance ? '...' : lukasBalance.toFixed(2),
       usdValue: '0.00',
       network: 'Native',
       description: 'Native token of HashPass ecosystem',
@@ -164,6 +212,55 @@ const BlockchainTokensView = () => {
         >
           {t('tokens.portfolioDesc')}
         </Text>
+      </View>
+
+      {/* LUKAS Info Section */}
+      <View
+        style={{
+          marginBottom: 24,
+          backgroundColor: colors.background.paper,
+          borderRadius: 16,
+          padding: 20,
+          borderWidth: 1,
+          borderColor: '#8b5cf6',
+          borderLeftWidth: 4,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          <Info size={20} color="#8b5cf6" />
+          <Text
+            style={{
+              fontSize: 16,
+              fontWeight: '700',
+              color: '#8b5cf6',
+              marginLeft: 8,
+            }}
+          >
+            {t('tokens.lukasInfo.title', 'What is LUKAS?')}
+          </Text>
+        </View>
+        <Text
+          style={{
+            fontSize: 14,
+            color: colors.text.primary,
+            lineHeight: 20,
+            marginBottom: 8,
+          }}
+        >
+          {t('tokens.lukasInfo.description', 'LUKAS is the digital currency of the HashPass ecosystem designed to reward user interactions and engagement.')}
+        </Text>
+        <View style={{ marginTop: 8 }}>
+          <Text
+            style={{
+              fontSize: 13,
+              color: colors.text.secondary,
+              lineHeight: 18,
+              marginBottom: 4,
+            }}
+          >
+            {t('tokens.lukasInfo.features', '• Earn LUKAS by accepting and scheduling meetings\n• Will be monetized in HashHouse\n• Swappable to other crypto tokens')}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.scrollContainer}>

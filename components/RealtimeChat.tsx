@@ -445,15 +445,15 @@ export default function RealtimeChat({
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Header with participant info and last seen */}
-      {otherParticipantName && (
+      {/* Header with participant info and last seen - Avatar always visible for speaker */}
+      {(otherParticipantName || otherParticipantAvatar) && (
         <View style={styles.chatHeader}>
           <View style={styles.headerInfo}>
             <View style={styles.headerAvatarContainer}>
               <SpeakerAvatar
-                name={otherParticipantName}
+                name={otherParticipantName || 'User'}
                 imageUrl={otherParticipantAvatar || undefined}
-                size={36}
+                size={40}
                 showBorder={true}
               />
               {isOtherParticipantOnline && (
@@ -461,7 +461,9 @@ export default function RealtimeChat({
               )}
             </View>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.headerName}>{otherParticipantName}</Text>
+              {otherParticipantName && (
+                <Text style={styles.headerName}>{otherParticipantName}</Text>
+              )}
               {lastSeenText && (
                 <Text style={styles.headerLastSeen}>{lastSeenText}</Text>
               )}
@@ -565,14 +567,20 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   headerTextContainer: {
     flex: 1,
   },
-  headerName: {
-    fontSize: 16,
-    fontWeight: '600',
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
     marginBottom: 2,
   },
+  headerName: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    marginBottom: 2,
+  },
   headerLastSeen: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.text?.secondary || (isDark ? '#a0a0a0' : '#666666'),
   },
   loadingContainer: {

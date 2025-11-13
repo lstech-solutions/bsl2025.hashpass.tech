@@ -1599,8 +1599,8 @@ export default function SpeakerDetail() {
             </TouchableOpacity>
             <Text style={styles.modalTitle}>
               {selectedRequestDetail?.requester_id === user?.id 
-                ? 'Your Meeting Request Details' 
-                : 'Meeting Request Details'}
+                ? 'Your Meeting Details' 
+                : 'Meeting Details'}
             </Text>
             <View style={styles.modalHeaderSpacer} />
           </View>

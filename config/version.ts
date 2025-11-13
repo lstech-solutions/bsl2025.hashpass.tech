@@ -22,32 +22,51 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511130935, // Updated to current timestamp
+  buildNumber: 202511131200, // Updated to current timestamp
   releaseDate: '2025-11-13',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
-    'Added chat last seen tracking system - tracks when users view meeting chats',
-    'Added automatic notifications for incoming chat messages (only when user is not actively viewing)',
-    'Added chat header with participant info, avatar, and last seen status',
-    'Added online indicator (green dot) for active participants',
-    'Improved chat UI with better message bubble styling and spacing',
-    'Added empty state for chat when no messages exist'
+    'Added requester information display in meeting details (name, avatar, title, company)',
+    'Moved chat title to navigation bar for better UX',
+    'Improved meeting status display with proper status handling (confirmed, tentative, etc.)'
   ],
   bugfixes: [
-    'Fixed avatar display issues - corrected avatar assignment for own vs incoming messages',
-    'Fixed message positioning and alignment in chat bubbles',
-    'Fixed realtime notifications not appearing in notification center',
-    'Fixed missing useNotifications import causing runtime error',
-    'Improved message duplicate detection and removal',
-    'Enhanced message bubble styling with better borders and shadows'
+    'Fixed chat avatar always showing speaker avatar correctly',
+    'Fixed meeting detail title from "Meeting Request Details" to "Meeting Details"',
+    'Fixed meeting status showing "TENTATIVE" when meetings are actually "CONFIRMED"',
+    'Updated meetings in database from tentative to confirmed status for accepted requests',
+    'Fixed meeting status color and icon mapping for all meeting statuses',
+    'Fixed requester information not displaying in meeting details'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.61 release - Chat improvements with last seen tracking, notifications, and enhanced UI'
+  notes: 'Version 1.6.62 release - Meeting details improvements and chat UI fixes'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.62': {
+    version: '1.6.62',
+    buildNumber: 202511131200,
+    releaseDate: '2025-11-13',
+    releaseType: 'beta',
+    environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+    features: [
+      'Added requester information display in meeting details (name, avatar, title, company)',
+      'Moved chat title to navigation bar for better UX',
+      'Improved meeting status display with proper status handling (confirmed, tentative, etc.)'
+    ],
+    bugfixes: [
+      'Fixed chat avatar always showing speaker avatar correctly',
+      'Fixed meeting detail title from "Meeting Request Details" to "Meeting Details"',
+      'Fixed meeting status showing "TENTATIVE" when meetings are actually "CONFIRMED"',
+      'Updated meetings in database from tentative to confirmed status for accepted requests',
+      'Fixed meeting status color and icon mapping for all meeting statuses',
+      'Fixed requester information not displaying in meeting details'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.62 release - Meeting details improvements and chat UI fixes'
+  },
   '1.6.61': {
     version: '1.6.61',
     buildNumber: 202511130935,

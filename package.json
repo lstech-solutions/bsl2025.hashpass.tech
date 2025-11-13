@@ -1,7 +1,7 @@
 {
   "name": "hashpass.tech",
   "main": "expo-router/entry",
-  "version": "1.6.65",
+  "version": "1.6.67",
   "scripts": {
     "start": "NODE_OPTIONS='--max-old-space-size=4096' expo start",
     "start:reset": "NODE_OPTIONS='--max-old-space-size=4096' expo start --clear",
@@ -18,6 +18,8 @@
     "deploy": "npm run build:web && netlify deploy --prod",
     "seed:bslatam": "node ./scripts/seed-bslatam.mjs ./speakers.json",
     "test:e2e:bslatam": "node ./tests/bslatam/e2e.mjs",
+    "match:speakers": "node ./scripts/match-users-to-speakers-update-vip.mjs",
+    "grant:lukas": "node ./scripts/grant-1-luka-to-all-users.mjs",
     "amplify:push": "amplify push",
     "amplify:deploy": "amplify publish",
     "version:update": "node scripts/update-version.mjs",

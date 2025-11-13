@@ -28,6 +28,7 @@ import UnifiedSearchAndFilter from '../../../../components/UnifiedSearchAndFilte
 import { useNotifications } from '../../../../contexts/NotificationContext';
 import { useRealtimeMeetingRequests, RequestWithDirection } from '../../../../hooks/useRealtimeMeetingRequests';
 import { lukasRewardService } from '../../../../lib/lukas-reward-service';
+import { useBalance } from '../../../../contexts/BalanceContext';
 
 const CopilotView = walkthroughable(View);
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
@@ -45,6 +46,7 @@ export default function MyRequestsView() {
   const params = useLocalSearchParams();
   const { showSuccess, showError } = useToastHelpers();
   const { notifications, refreshNotifications } = useNotifications();
+  const { refreshBalance } = useBalance();
   const styles = getStyles(isDark, colors);
 
   const [requests, setRequests] = useState<MeetingRequestWithDirection[]>([]);
@@ -700,17 +702,27 @@ export default function MyRequestsView() {
         setShowSlotPicker(false);
         setShowSlotConfirmation(true);
         
-        // Refresh LUKAS balance after reward
-        if (user?.id) {
-          setTimeout(async () => {
+        // Refresh LUKAS balance after reward (for both speaker and requester)
+        // Wait for database trigger to complete, then refresh multiple times to ensure update
+        const refreshBalanceWithRetry = async (attempts = 3, delay = 2000) => {
+          for (let i = 0; i < attempts; i++) {
             try {
-              const newBalance = await lukasRewardService.getUserBalance(user.id, 'LUKAS');
-              console.log('💰 Updated LUKAS balance after meeting acceptance:', newBalance);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              await refreshBalance();
+              console.log(`💰 Balance refresh attempt ${i + 1}/${attempts} after meeting acceptance`);
+              
+              // Also trigger the event directly for immediate UI update
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('balance:refresh'));
+              }
             } catch (error) {
-              console.error('Error refreshing LUKAS balance:', error);
+              console.error(`Error refreshing LUKAS balance (attempt ${i + 1}):`, error);
             }
-          }, 1000);
-        }
+          }
+        };
+        
+        // Start refreshing after initial delay
+        refreshBalanceWithRetry();
         
         // Reload available slots to reflect the newly accepted meeting
         // This ensures slots are up-to-date if user opens slot picker again

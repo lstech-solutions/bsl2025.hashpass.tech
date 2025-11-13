@@ -138,7 +138,7 @@ class LukasRewardService {
     callback: (balance: UserBalance | null) => void
   ) {
     const channel = supabase
-      .channel(`user_balance_${userId}_${tokenSymbol}`)
+      .channel(`user_balance_${userId}_${tokenSymbol}_${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -150,31 +150,51 @@ class LukasRewardService {
         async (payload) => {
           console.log('💰 Balance change detected:', payload.eventType, payload.new, payload.old);
           
-          // Handle INSERT or UPDATE events
+          // Longer delay to ensure database transaction is fully committed
+          // This is especially important for triggers that run in the same transaction
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Always refetch balance for INSERT/UPDATE events to get the latest value
+          // This ensures we get the balance even if the payload doesn't have all the data
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            try {
+              const balance = await this.getUserBalanceDirect(userId, tokenSymbol);
+              if (balance && balance.token_symbol === tokenSymbol) {
+                console.log('💰 Refetched balance after', payload.eventType, ':', balance.balance);
+                callback(balance);
+                return;
+              }
+            } catch (error) {
+              console.error('❌ Error refetching balance:', error);
+            }
+          }
+          
+          // Fallback: Handle based on payload data
           if (payload.new && (payload.new as any).token_symbol === tokenSymbol) {
             // Refetch balance when it changes (INSERT or UPDATE)
             const balance = await this.getUserBalanceDirect(userId, tokenSymbol);
-            console.log('💰 Updated balance:', balance);
-            callback(balance);
+            console.log('💰 Updated balance from payload:', balance);
+            if (balance) {
+              callback(balance);
+            }
           } else if (payload.old && (payload.old as any).token_symbol === tokenSymbol && !payload.new) {
             // Balance was deleted (DELETE event)
             console.log('💰 Balance deleted');
             callback(null);
-          } else if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            // For INSERT/UPDATE, always refetch to ensure we have the latest data
-            const balance = await this.getUserBalanceDirect(userId, tokenSymbol);
-            if (balance && balance.token_symbol === tokenSymbol) {
-              console.log('💰 Refetched balance after', payload.eventType, ':', balance);
-              callback(balance);
-            }
           }
         }
       )
       .subscribe((status) => {
         console.log('💰 Balance subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Balance subscription active for user:', userId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Balance subscription error for user:', userId);
+        }
       });
 
     return () => {
+      console.log('🧹 Unsubscribing from balance changes for user:', userId);
       supabase.removeChannel(channel);
     };
   }

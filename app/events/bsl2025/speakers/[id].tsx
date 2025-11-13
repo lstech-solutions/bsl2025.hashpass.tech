@@ -7,6 +7,7 @@ import { useAuth } from '../../../../hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
 import { matchmakingService, CreateMeetingRequestData } from '../../../../lib/matchmaking';
 import { useToastHelpers } from '../../../../contexts/ToastContext';
+import { useBalance } from '../../../../contexts/BalanceContext';
 import { supabase } from '../../../../lib/supabase';
 import { passSystemService } from '../../../../lib/pass-system';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
@@ -52,6 +53,7 @@ export default function SpeakerDetail() {
   const { user, isLoggedIn } = useAuth();
   const router = useRouter();
   const { showSuccess, showError, showWarning, showInfo } = useToastHelpers();
+  const { refreshBalance } = useBalance();
   
   const styles = getStyles(isDark, colors);
 
@@ -107,7 +109,7 @@ export default function SpeakerDetail() {
         .maybeSingle();
       
       // Check if this speaker's user_id matches current user
-      if (!error && speakerData && speakerData.user_id === user.id) {
+      if (!error && speakerData && typeof speakerData === 'object' && 'user_id' in speakerData && speakerData.user_id === user.id) {
         setIsCurrentUserSpeaker(true);
       } else {
         setIsCurrentUserSpeaker(false);
@@ -208,7 +210,7 @@ export default function SpeakerDetail() {
 
       // Fallback to event config (JSON) - always available
       console.log('📋 Loading speaker from event config (JSON fallback)...');
-      const foundSpeaker = event.speakers?.find(s => s.id === id);
+      const foundSpeaker = event?.speakers?.find(s => s.id === id);
       
       if (foundSpeaker) {
         setSpeaker({
@@ -238,7 +240,7 @@ export default function SpeakerDetail() {
       console.error('❌ Error loading speaker:', error);
       // Even if there's an error, try the JSON fallback
       console.log('🔄 Attempting JSON fallback after error...');
-      const foundSpeaker = event.speakers?.find(s => s.id === id);
+      const foundSpeaker = event?.speakers?.find(s => s.id === id);
       if (foundSpeaker) {
         setSpeaker({
           id: foundSpeaker.id,
@@ -275,7 +277,7 @@ export default function SpeakerDetail() {
     
     // Load user request limits
     loadRequestLimits();
-  }, [id, event.speakers]);
+  }, [id, event?.speakers]);
 
   useEffect(() => {
     if (user && speaker) {
@@ -511,6 +513,28 @@ export default function SpeakerDetail() {
         showSuccess('Request Accepted', 'The meeting request has been accepted');
         setShowRequestDetailModal(false);
         await loadMeetingRequestStatus();
+        
+        // Refresh LUKAS balance after reward
+        // Wait for database trigger to complete, then refresh multiple times to ensure update
+        const refreshBalanceWithRetry = async (attempts = 3, delay = 2000) => {
+          for (let i = 0; i < attempts; i++) {
+            try {
+              await new Promise(resolve => setTimeout(resolve, delay));
+              await refreshBalance();
+              console.log(`💰 Balance refresh attempt ${i + 1}/${attempts} after meeting acceptance`);
+              
+              // Also trigger the event directly for immediate UI update
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('balance:refresh'));
+              }
+            } catch (error) {
+              console.error(`Error refreshing LUKAS balance (attempt ${i + 1}):`, error);
+            }
+          }
+        };
+        
+        // Start refreshing after initial delay
+        refreshBalanceWithRetry();
       } else {
         // Fallback for unexpected response format
         console.error('❌ Unexpected response format:', data);
@@ -792,28 +816,14 @@ export default function SpeakerDetail() {
     console.log('User:', user?.id);
     console.log('Speaker:', speaker?.id);
     
-    // Check for active session
-    if (!isLoggedIn || !user) {
-      console.log('❌ No active session found');
-      // Check session directly to be sure
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        showWarning('Login Required', 'Please log in to request a meeting');
-        // Redirect to auth page with return URL
-        const currentPath = `/events/bsl2025/speakers/${id}`;
-        router.push(`/(shared)/auth?returnTo=${encodeURIComponent(currentPath)}`);
-        return;
-      }
-    }
-
     if (!speaker) {
       console.log('❌ Missing speaker');
       showError('Missing Information', 'Missing speaker information');
       return;
     }
 
-    // Show the meeting request modal directly
-    // Pass validation is now handled by PassDisplay component
+    // Show the meeting request modal directly - authentication will be checked on submit
+    // This allows users to fill out the form (message and intentions) before being prompted to login
     console.log('🟡 Showing meeting request modal...');
     setShowMeetingModal(true);
     console.log('🟢 Modal should now be visible');
@@ -948,7 +958,59 @@ export default function SpeakerDetail() {
   };
 
   const submitMeetingRequest = async () => {
-    if (!user || !speaker) return;
+    if (!speaker) {
+      showError('Missing Information', 'Missing speaker information');
+      return;
+    }
+
+    // Check for authentication - prompt login if not authenticated
+    if (!isLoggedIn || !user) {
+      console.log('❌ No active session found, redirecting to login...');
+      // Check session directly to be sure
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // Close the modal and redirect to auth page with return URL
+        setShowMeetingModal(false);
+        const currentPath = `/events/bsl2025/speakers/${id}`;
+        router.replace(`/(shared)/auth?returnTo=${encodeURIComponent(currentPath)}`);
+        return;
+      }
+      // If we have a session but no user in context, redirect to login to refresh
+      if (!user) {
+        setShowMeetingModal(false);
+        const currentPath = `/events/bsl2025/speakers/${id}`;
+        router.replace(`/(shared)/auth?returnTo=${encodeURIComponent(currentPath)}`);
+        return;
+      }
+    }
+
+    // At this point, user must exist
+    if (!user) {
+      setShowMeetingModal(false);
+      const currentPath = `/events/bsl2025/speakers/${id}`;
+      router.replace(`/(shared)/auth?returnTo=${encodeURIComponent(currentPath)}`);
+      return;
+    }
+
+    // Check if user has a pass
+    try {
+      const passInfo = await passSystemService.getUserPassInfo(user.id);
+      if (!passInfo) {
+        console.log('❌ User has no pass, redirecting to login...');
+        // Close the modal and redirect to auth page
+        setShowMeetingModal(false);
+        const currentPath = `/events/bsl2025/speakers/${id}`;
+        router.replace(`/(shared)/auth?returnTo=${encodeURIComponent(currentPath)}`);
+        return;
+      }
+    } catch (error) {
+      console.error('❌ Error checking pass:', error);
+      // If error checking pass, close modal and redirect to login
+      setShowMeetingModal(false);
+      const currentPath = `/events/bsl2025/speakers/${id}`;
+      router.replace(`/(shared)/auth?returnTo=${encodeURIComponent(currentPath)}`);
+      return;
+    }
 
     setIsRequestingMeeting(true);
 

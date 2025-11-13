@@ -32,7 +32,18 @@
       "description": "$LUKAS, $COP, $VOI 토큰 관리",
       "swap": "교환",
       "totalPortfolio": "총 포트폴리오 가치",
-      "portfolioDesc": "모든 토큰의 합산 가치"
+      "portfolioDesc": "모든 토큰의 합산 가치",
+      "withdrawalDisclaimer": "💡 잔액이 5 LUKAS를 초과할 때 출금 가능",
+      "swapAvailable": {
+        "title": "교환 가능",
+        "message": "Hash 상인에서 직접 교환이 가능합니다"
+      },
+      "lukasInfo": {
+        "title": "LUKAS란 무엇인가요?",
+        "description": "LUKAS는 사용자 상호작용과 참여를 보상하기 위해 설계된 HashPass 생태계의 디지털 통화입니다.",
+        "features": "• 미팅 수락 및 일정 잡기로 LUKAS 획득\n• HashHouse에서 수익화 예정\n• 다른 암호화폐 토큰으로 교환 가능",
+        "withdrawalDisclaimer": "잔액이 5 LUKAS를 초과할 때 LUKAS 토큰을 출금할 수 있습니다."
+      }
     },
     "points": {
       "title": "Hash POINTS",

@@ -11,6 +11,35 @@ export default function AuthCallback() {
     const [status, setStatus] = useState<'processing' | 'success' | 'warning' | 'error' | 'show_download'>('processing');
     const [message, setMessage] = useState('Processing authentication...');
     
+    // Get returnTo parameter from URL for proper redirect
+    const getRedirectPath = () => {
+        // Check URL params first (from query string)
+        const returnTo = params.returnTo as string | undefined;
+        if (returnTo) {
+            try {
+                return decodeURIComponent(returnTo);
+            } catch (e) {
+                console.warn('Failed to decode returnTo parameter:', e);
+            }
+        }
+        
+        // Check if returnTo is in the URL hash or search params
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const returnToParam = urlParams.get('returnTo') || hashParams.get('returnTo');
+                if (returnToParam) {
+                    return decodeURIComponent(returnToParam);
+                }
+            } catch (e) {
+                console.warn('Failed to parse returnTo from URL:', e);
+            }
+        }
+        
+        return '/(shared)/dashboard/explore';
+    };
+    
     // Processing guard to prevent duplicate processing
     const isProcessingRef = useRef(false);
     const hasNavigatedRef = useRef(false);
@@ -42,24 +71,31 @@ export default function AuthCallback() {
             console.log('🔄 Auth callback started');
             console.log('📋 Callback params:', params);
 
-            // Get the current URL for processing - handle SSR safely
+            // Get the current URL for processing - handle SSR safely and production properly
             let currentUrl = '';
 
             if (Platform.OS === 'web') {
                 if (typeof window !== 'undefined' && window.location) {
+                    // Use the actual URL from the browser (works in production)
                     currentUrl = window.location.href;
+                    console.log('🌐 Using browser URL:', currentUrl.substring(0, 150));
                 } else {
                     // Fallback for SSR - construct URL from params
-                    const baseUrl = 'http://localhost:8081/auth/callback';
+                    // Try to get origin from environment or use a sensible default
+                    const origin = process.env.EXPO_PUBLIC_SITE_URL || 
+                                  (typeof window !== 'undefined' && window.location?.origin) ||
+                                  'http://localhost:8081';
+                    const baseUrl = `${origin}/(shared)/auth/callback`;
                     const searchParams = new URLSearchParams();
 
                     Object.entries(params).forEach(([key, value]) => {
-                        if (value) {
+                        if (value && key !== 'returnTo') { // Don't duplicate returnTo in URL construction
                             searchParams.append(key, Array.isArray(value) ? value[0] : value);
                         }
                     });
 
-                    currentUrl = `${baseUrl}?${searchParams.toString()}`;
+                    currentUrl = searchParams.toString() ? `${baseUrl}?${searchParams.toString()}` : baseUrl;
+                    console.log('🔧 Constructed URL from params:', currentUrl.substring(0, 150));
                 }
             } else {
                 // For mobile, construct URL from params
@@ -73,6 +109,7 @@ export default function AuthCallback() {
                 });
 
                 currentUrl = `${baseUrl}?${searchParams.toString()}`;
+                console.log('📱 Mobile URL:', currentUrl.substring(0, 150));
             }
 
             if (!currentUrl) {
@@ -92,17 +129,37 @@ export default function AuthCallback() {
                                    session.user.user_metadata?.wallet_type ? 'wallet' : 'OAuth';
                 const authType = authProvider === 'wallet' 
                     ? (session.user.user_metadata?.wallet_type === 'ethereum' ? 'Ethereum' : 'Solana')
-                    : 'Google';
+                    : (authProvider === 'email' ? 'Email' : 'Google');
                 setMessage(`✅ ${authType} authentication successful!`);
 
                 if (!hasNavigatedRef.current) {
                     hasNavigatedRef.current = true;
-                    // Navigate immediately, no delay
-                    router.replace('/(shared)/dashboard/explore');
+                    // Wait a moment to ensure session is fully established (especially important for OTP links)
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    // Double-check session is still valid before redirecting
+                    const { data: { session: verifySession } } = await supabase.auth.getSession();
+                    if (!verifySession) {
+                        console.warn('⚠️ Session lost after creation, retrying...');
+                        // Retry once
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        const { data: { session: retrySession } } = await supabase.auth.getSession();
+                        if (!retrySession) {
+                            throw new Error('Session not established after authentication');
+                        }
+                    }
+                    
+                    // Navigate to the correct path (respects returnTo parameter)
+                    const redirectPath = getRedirectPath();
+                    console.log('🔄 Redirecting to:', redirectPath);
+                    router.replace(redirectPath);
                 }
             } else {
                 console.log('⚠️ No session created but no error - checking for existing session');
 
+                // Wait a bit for session to be established (important for OTP links)
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
                 const { data: { session: existingSession } } = await supabase.auth.getSession();
 
                 if (existingSession) {
@@ -112,11 +169,29 @@ export default function AuthCallback() {
 
                     if (!hasNavigatedRef.current) {
                         hasNavigatedRef.current = true;
-                        // Navigate immediately, no delay
-                        router.replace('/(shared)/dashboard/explore');
+                        // Navigate to the correct path (respects returnTo parameter)
+                        const redirectPath = getRedirectPath();
+                        console.log('🔄 Redirecting to:', redirectPath);
+                        router.replace(redirectPath);
                     }
                 } else {
-                    throw new Error('No session could be established');
+                    // Last retry - sometimes OTP links need more time
+                    console.log('🔄 Retrying session check...');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    const { data: { session: retrySession } } = await supabase.auth.getSession();
+                    if (retrySession) {
+                        console.log('✅ Found session on retry');
+                        setStatus('success');
+                        setMessage('✅ Authentication successful!');
+                        if (!hasNavigatedRef.current) {
+                            hasNavigatedRef.current = true;
+                            const redirectPath = getRedirectPath();
+                            console.log('🔄 Redirecting to:', redirectPath);
+                            router.replace(redirectPath);
+                        }
+                    } else {
+                        throw new Error('No session could be established');
+                    }
                 }
             }
         } catch (error: any) {
@@ -130,8 +205,10 @@ export default function AuthCallback() {
 
                 if (!hasNavigatedRef.current) {
                     hasNavigatedRef.current = true;
-                    // Navigate immediately, no delay
-                    router.replace('/(shared)/dashboard/explore');
+                    // Navigate to the correct path (respects returnTo parameter)
+                    const redirectPath = getRedirectPath();
+                    console.log('🔄 Redirecting to:', redirectPath);
+                    router.replace(redirectPath);
                 }
                 return;
             }
@@ -154,7 +231,8 @@ export default function AuthCallback() {
     const styles = createStyles();
 
     const handleContinue = () => {
-        router.replace('/(shared)/dashboard/explore');
+        const redirectPath = getRedirectPath();
+        router.replace(redirectPath);
     };
 
     if (status === 'show_download') {

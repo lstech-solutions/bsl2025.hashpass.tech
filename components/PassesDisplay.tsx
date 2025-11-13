@@ -644,26 +644,26 @@ export default function PassesDisplay({
           </View>
         )}
 
-        {/* Request Button - Always show but disabled when no pass */}
+        {/* Request Button - Clickable to redirect to auth when no pass */}
         {showRequestButton && onRequestPress && (
           <TouchableOpacity
             style={{
-              backgroundColor: colors.divider,
+              backgroundColor: colors.primary,
               paddingVertical: 12,
               paddingHorizontal: 24,
               borderRadius: 8,
               alignItems: 'center',
-              opacity: 0.5,
               marginTop: 16
             }}
-            disabled={true}
+            onPress={onRequestPress}
+            activeOpacity={0.7}
           >
             <Text style={{ 
-              color: colors.text.secondary,
+              color: 'white',
               fontSize: 16,
               fontWeight: '600'
             }}>
-              {t({ id: 'passes.button.passRequired', message: 'Pass Required' })}
+              {t({ id: 'passes.button.requestMeeting', message: 'Request Meeting' })}
             </Text>
           </TouchableOpacity>
         )}

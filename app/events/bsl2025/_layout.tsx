@@ -107,7 +107,7 @@ export default function BSL2025Layout() {
       <Stack.Screen 
         name="networking/meeting-detail" 
         options={{
-          title: 'Meeting Request Details',
+          title: 'Meeting Details',
           headerShown: false,
           presentation: 'modal',
           animation: 'slide_from_bottom',

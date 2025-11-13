@@ -8,7 +8,7 @@ import {
   RefreshControl,
   Modal,
 } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
+import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../../../hooks/useTheme';
 import { useAuth } from '../../../../hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -27,6 +27,7 @@ import { CopilotStep, walkthroughable } from 'react-native-copilot';
 import UnifiedSearchAndFilter from '../../../../components/UnifiedSearchAndFilter';
 import { useNotifications } from '../../../../contexts/NotificationContext';
 import { useRealtimeMeetingRequests, RequestWithDirection } from '../../../../hooks/useRealtimeMeetingRequests';
+import { lukasRewardService } from '../../../../lib/lukas-reward-service';
 
 const CopilotView = walkthroughable(View);
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
@@ -41,6 +42,7 @@ export default function MyRequestsView() {
   const { isDark, colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { showSuccess, showError } = useToastHelpers();
   const { notifications, refreshNotifications } = useNotifications();
   const styles = getStyles(isDark, colors);
@@ -89,6 +91,30 @@ export default function MyRequestsView() {
 
     return () => clearTimeout(timeout);
   }, [user]);
+
+  // Auto-open detail modal when requestId is provided in params
+  useEffect(() => {
+    if (params.requestId && !loading && requests.length > 0) {
+      const requestId = params.requestId as string;
+      const request = requests.find(r => r.id === requestId);
+      
+      if (request) {
+        // Set the correct tab based on request direction
+        if (request._direction === 'incoming') {
+          setActiveTab('incoming');
+        } else {
+          setActiveTab('sent');
+        }
+        
+        // Open the detail modal
+        setSelectedRequest(request as MeetingRequest);
+        setShowDetailModal(true);
+        
+        // Clear the params to prevent reopening on re-render
+        // Note: We can't directly modify params, but this will only run once
+      }
+    }
+  }, [params.requestId, loading, requests]);
 
   // Real-time subscription handler callbacks
   const handleRequestInserted = useCallback((newRequest: MeetingRequestWithDirection) => {
@@ -381,6 +407,57 @@ export default function MyRequestsView() {
     }
   };
 
+  // Helper function to remove duplicates and sort slots prioritizing "interested" status
+  const sortSlotsByPriority = (slots: any[]) => {
+    // Remove duplicates based on slot_time, keeping the one with highest priority (interested > available > tentative)
+    const uniqueSlots = new Map<string, any>();
+    
+    slots.forEach(slot => {
+      const slotTime = slot.slot_time;
+      const existingSlot = uniqueSlots.get(slotTime);
+      
+      if (!existingSlot) {
+        uniqueSlots.set(slotTime, slot);
+      } else {
+        // If duplicate, keep the one with higher priority
+        const priority = {
+          'interested': 1,
+          'available': 2,
+          'tentative': 3
+        };
+        const existingPriority = priority[existingSlot.slot_status || 'available'] || 4;
+        const newPriority = priority[slot.slot_status || 'available'] || 4;
+        
+        if (newPriority < existingPriority) {
+          uniqueSlots.set(slotTime, slot);
+        }
+      }
+    });
+    
+    // Sort the unique slots
+    return Array.from(uniqueSlots.values()).sort((a, b) => {
+      const aStatus = a.slot_status || 'available';
+      const bStatus = b.slot_status || 'available';
+      
+      // Priority: interested > available > tentative
+      const priority = {
+        'interested': 1,
+        'available': 2,
+        'tentative': 3
+      };
+      
+      const aPriority = priority[aStatus] || 4;
+      const bPriority = priority[bStatus] || 4;
+      
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+      
+      // If same priority, sort by time
+      return new Date(a.slot_time).getTime() - new Date(b.slot_time).getTime();
+    });
+  };
+
   const loadAvailableSlots = async (
     speakerId: string, 
     durationMinutes: number = 15, 
@@ -452,14 +529,14 @@ export default function MyRequestsView() {
           }
           
           console.log('✅ Retry successful, received slots:', retryData?.length || 0);
-          setAvailableSlots(retryData || []);
+          setAvailableSlots(sortSlotsByPriority(retryData || []));
           if (showPicker) {
             setShowSlotPicker(true);
           }
           
           if (showPicker && (!retryData || retryData.length === 0)) {
             console.warn('⚠️ No slots returned after retry');
-            showError('No Available Slots', 'There are no available time slots. Please try again later.');
+            showError('No Available Slots', 'No available slots found. Please mark some time slots as available in your schedule.');
           }
           return;
         }
@@ -490,7 +567,7 @@ export default function MyRequestsView() {
           
           if (!retryError && retryData && retryData.length > 0) {
             console.log('✅ Found', retryData.length, 'slots without requester conflict check');
-            setAvailableSlots(retryData);
+            setAvailableSlots(sortSlotsByPriority(retryData));
             if (showPicker) {
               setShowSlotPicker(true);
             }
@@ -542,14 +619,15 @@ export default function MyRequestsView() {
         }
       }
 
-      setAvailableSlots(data || []);
+      // Sort slots to prioritize "interested" status
+      setAvailableSlots(sortSlotsByPriority(data || []));
       if (showPicker) {
         setShowSlotPicker(true);
       }
       
       // Show warning if no slots available (only if showing picker)
       if (showPicker && (!data || data.length === 0)) {
-        showError('No Available Slots', 'There are no available time slots. Please try again later.');
+        showError('No Available Slots', 'No available slots found. Please mark some time slots as available in your schedule.');
       }
     } catch (error: any) {
       console.error('❌ Error loading slots:', error);
@@ -622,6 +700,18 @@ export default function MyRequestsView() {
         setShowSlotPicker(false);
         setShowSlotConfirmation(true);
         
+        // Refresh LUKAS balance after reward
+        if (user?.id) {
+          setTimeout(async () => {
+            try {
+              const newBalance = await lukasRewardService.getUserBalance(user.id, 'LUKAS');
+              console.log('💰 Updated LUKAS balance after meeting acceptance:', newBalance);
+            } catch (error) {
+              console.error('Error refreshing LUKAS balance:', error);
+            }
+          }, 1000);
+        }
+        
         // Reload available slots to reflect the newly accepted meeting
         // This ensures slots are up-to-date if user opens slot picker again
         if (currentSlotContext) {
@@ -642,7 +732,7 @@ export default function MyRequestsView() {
           await loadMyRequests();
         }, 500);
         
-        showSuccess('Request Accepted', 'The meeting has been scheduled successfully');
+        showSuccess('Request Accepted! 🎉', 'The meeting has been scheduled successfully. You earned 1 LUKAS! 💎');
       } else {
         // Fallback for unexpected response format
         console.error('❌ Unexpected response format:', data);
@@ -1045,29 +1135,41 @@ export default function MyRequestsView() {
             style={styles.modalContent}
             contentContainerStyle={styles.modalContentContainer}
           >
+            {/* Speaker Info */}
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>
-                {(selectedRequest as any)._direction === 'incoming' ? 'Requester' : 'Speaker'}
-              </Text>
+              <Text style={styles.detailLabel}>Speaker</Text>
               <View style={styles.speakerDetail}>
                 <SpeakerAvatar
-                  name={(selectedRequest as any)._direction === 'incoming' 
-                    ? ((selectedRequest as any).requester_full_name || selectedRequest.requester_name)
-                    : selectedRequest.speaker_name}
-                  imageUrl={(selectedRequest as any)._direction === 'incoming'
-                    ? ((selectedRequest as any).requester_avatar)
-                    : (selectedRequest.speaker_image || null)}
+                  name={selectedRequest.speaker_name}
+                  imageUrl={selectedRequest.speaker_image || null}
+                  size={60}
+                  showBorder={true}
+                />
+                <View style={styles.speakerDetailInfo}>
+                  <Text style={styles.speakerDetailName}>
+                    {selectedRequest.speaker_name}
+                  </Text>
+                  <Text style={styles.speakerDetailTitle}>Speaker</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Requester Info */}
+            <View style={styles.detailSection}>
+              <Text style={styles.detailLabel}>Requester</Text>
+              <View style={styles.speakerDetail}>
+                <SpeakerAvatar
+                  name={(selectedRequest as any).requester_full_name || selectedRequest.requester_name}
+                  imageUrl={(selectedRequest as any).requester_avatar || null}
                   size={60}
                   showBorder={true}
                 />
                 <View style={styles.speakerDetailInfo}>
                   <View style={styles.nameRowWithBadge}>
                     <Text style={styles.speakerDetailName}>
-                      {(selectedRequest as any)._direction === 'incoming'
-                        ? ((selectedRequest as any).requester_full_name || selectedRequest.requester_name)
-                        : selectedRequest.speaker_name}
+                      {(selectedRequest as any).requester_full_name || selectedRequest.requester_name}
                     </Text>
-                    {(selectedRequest as any)._direction === 'incoming' && selectedRequest.requester_ticket_type && (
+                    {selectedRequest.requester_ticket_type && (
                       <View style={[
                         styles.ticketBadge,
                         selectedRequest.requester_ticket_type.toLowerCase() === 'vip' && styles.vipBadge
@@ -1083,9 +1185,17 @@ export default function MyRequestsView() {
                       </View>
                     )}
                   </View>
-                  <Text style={styles.speakerDetailTitle}>
-                    {(selectedRequest as any)._direction === 'incoming' ? 'Requester' : 'Speaker'}
-                  </Text>
+                  <Text style={styles.speakerDetailTitle}>Requester</Text>
+                  {selectedRequest.requester_title && (
+                    <Text style={[styles.speakerDetailTitle, { marginTop: 4 }]}>
+                      {selectedRequest.requester_title}
+                    </Text>
+                  )}
+                  {selectedRequest.requester_company && (
+                    <Text style={[styles.speakerDetailTitle, { marginTop: 2 }]}>
+                      {selectedRequest.requester_company}
+                    </Text>
+                  )}
                 </View>
               </View>
             </View>
@@ -1208,6 +1318,36 @@ export default function MyRequestsView() {
                     {formatDate(selectedRequest.speaker_response_at)}
                   </Text>
                 )}
+              </View>
+            )}
+
+            {/* Link to Meeting if Accepted */}
+            {selectedRequest.status === 'accepted' && selectedRequest.meeting_id && (
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>Meeting</Text>
+                <TouchableOpacity
+                  style={[styles.meetingLinkButton, { backgroundColor: colors.primary }]}
+                  onPress={() => {
+                    router.push({
+                      pathname: "/events/bsl2025/networking/meeting-detail" as any,
+                      params: {
+                        meetingId: selectedRequest.meeting_id,
+                        speakerName: selectedRequest.speaker_name,
+                        requesterName: (selectedRequest as any).requester_full_name || selectedRequest.requester_name,
+                        status: 'confirmed',
+                        scheduledAt: selectedRequest.meeting_scheduled_at || '',
+                        location: selectedRequest.location || 'TBD',
+                        duration: selectedRequest.duration_minutes || 15,
+                        isSpeaker: (selectedRequest as any)._direction === 'incoming' ? 'true' : 'false'
+                      }
+                    });
+                    setShowDetailModal(false);
+                  }}
+                >
+                  <MaterialIcons name="event" size={20} color="white" />
+                  <Text style={styles.meetingLinkButtonText}>View Meeting Details</Text>
+                  <MaterialIcons name="chevron-right" size={20} color="white" />
+                </TouchableOpacity>
               </View>
             )}
 
@@ -1565,6 +1705,7 @@ export default function MyRequestsView() {
                 {availableSlots.map((slot, index) => {
                   const slotDate = new Date(slot.slot_time);
                   const isSelected = selectedSlot === slot.slot_time;
+                  const isInterested = slot.slot_status === 'interested';
                   const formattedDate = slotDate.toLocaleDateString('en-US', {
                     weekday: 'short',
                     month: 'short',
@@ -1576,51 +1717,103 @@ export default function MyRequestsView() {
                     hour12: true
                   });
 
+                  // Pink color for interested slots
+                  const interestedPink = '#E91E63';
+                  const interestedPinkLight = '#E91E6315';
+
                   return (
                     <TouchableOpacity
-                      key={index}
+                      key={slot.slot_time || index}
                       style={[
                         styles.slotPickerItem,
                         isSelected && styles.slotPickerItemSelected,
+                        isInterested && styles.slotPickerItemInterested,
                         {
-                          backgroundColor: isSelected 
+                          backgroundColor: isSelected && isInterested
+                            ? interestedPinkLight // Keep interested background when selected
+                            : isSelected 
                             ? (colors.success?.main || '#4CAF50') + '15'
+                            : isInterested
+                            ? interestedPinkLight
                             : (colors.background?.default || (isDark ? '#2a2a2a' : '#f8f8f8')),
-                          borderColor: isSelected 
+                          borderColor: isSelected && isInterested
+                            ? interestedPink // Keep interested border when selected
+                            : isSelected 
                             ? (colors.success?.main || '#4CAF50')
+                            : isInterested
+                            ? interestedPink
                             : (colors.divider || (isDark ? '#404040' : '#e5e5e5')),
+                          borderWidth: isInterested ? 2 : (isSelected ? 2 : 1),
+                          // Make interested slots bigger
+                          marginBottom: isInterested ? 16 : 12,
+                          transform: isInterested ? [{ scale: 1.05 }] : [],
                         }
                       ]}
                       onPress={() => setSelectedSlot(slot.slot_time)}
                       activeOpacity={0.7}
                     >
-                      <View style={styles.slotPickerItemContent}>
+                      <View style={[
+                        styles.slotPickerItemContent,
+                        isInterested && { 
+                          padding: 20,
+                          paddingRight: 60 // Add extra padding for priority icon
+                        }
+                      ]}>
+                        {/* Priority Heart Icon for Interested Slots */}
+                        {isInterested && (
+                          <View style={[
+                            styles.slotPickerPriorityIcon,
+                            { backgroundColor: interestedPink }
+                          ]}>
+                            <MaterialIcons name="favorite" size={24} color="white" />
+                          </View>
+                        )}
                         <View style={styles.slotPickerItemLeft}>
                           <View style={[
                             styles.slotPickerTimeBadge,
-                            isSelected && {
+                            isSelected && isInterested && {
+                              backgroundColor: interestedPink, // Keep interested color when selected
+                            },
+                            isSelected && !isInterested && {
                               backgroundColor: colors.success?.main || '#4CAF50',
+                            },
+                            isInterested && !isSelected && {
+                              backgroundColor: interestedPink,
                             }
                           ]}>
                             <MaterialIcons 
-                              name="access-time" 
+                              name={isInterested ? "favorite" : "access-time"} 
                               size={16} 
-                              color={isSelected ? 'white' : (colors.text?.secondary || '#666666')} 
+                              color={(isSelected || isInterested) ? 'white' : (colors.text?.secondary || '#666666')} 
                             />
                             <Text style={[
                               styles.slotPickerTimeText,
-                              isSelected && styles.slotPickerTimeTextSelected
+                              (isSelected || isInterested) && styles.slotPickerTimeTextSelected
                             ]}>
                               {formattedTime}
                             </Text>
                           </View>
                           <View style={styles.slotPickerItemInfo}>
-                            <Text style={[
-                              styles.slotPickerDateText,
-                              isSelected && { color: colors.success?.main || '#4CAF50' }
-                            ]}>
-                              {formattedDate}
-                            </Text>
+                            <View style={styles.slotPickerItemInfoRow}>
+                              <Text style={[
+                                styles.slotPickerDateText,
+                                isSelected && !isInterested && { color: colors.success?.main || '#4CAF50' },
+                                isInterested && { color: interestedPink } // Always show interested color
+                              ]}>
+                                {formattedDate}
+                              </Text>
+                              {isInterested && (
+                                <View style={[
+                                  styles.slotPickerInterestedBadge,
+                                  { backgroundColor: interestedPink }
+                                ]}>
+                                  <MaterialIcons name="favorite" size={12} color="white" />
+                                  <Text style={styles.slotPickerInterestedBadgeText}>
+                                    Interested
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
                             <Text style={[
                               styles.slotPickerDurationText,
                               { color: colors.text?.secondary || (isDark ? '#B0B0B0' : '#666666') }
@@ -1632,7 +1825,7 @@ export default function MyRequestsView() {
                         {isSelected && (
                           <View style={[
                             styles.slotPickerCheckContainer,
-                            { backgroundColor: colors.success?.main || '#4CAF50' }
+                            { backgroundColor: isInterested ? interestedPink : (colors.success?.main || '#4CAF50') }
                           ]}>
                             <MaterialIcons name="check" size={20} color="white" />
                           </View>
@@ -2818,6 +3011,22 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
   },
+  meetingLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 12,
+    marginTop: 8,
+  },
+  meetingLinkButtonText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: '600',
+    flex: 1,
+  },
   // Slot Picker Modal Styles
   slotPickerModalContent: {
     width: '90%',
@@ -2928,11 +3137,34 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
+  slotPickerItemInterested: {
+    shadowColor: '#E91E63',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  slotPickerPriorityIcon: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#E91E63',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
+    zIndex: 10,
+  },
   slotPickerItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
+    position: 'relative',
   },
   slotPickerItemLeft: {
     flexDirection: 'row',
@@ -2959,6 +3191,26 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   slotPickerItemInfo: {
     flex: 1,
+  },
+  slotPickerItemInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  slotPickerInterestedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  slotPickerInterestedBadgeText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   slotPickerDateText: {
     fontSize: 16,

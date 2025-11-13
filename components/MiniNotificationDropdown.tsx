@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
@@ -17,7 +17,18 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
   const { user } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [lastSeenUnreadCount, setLastSeenUnreadCount] = useState(0);
   const styles = getStyles(isDark, colors);
+
+  // Track unread count when dropdown is opened to hide badge
+  useEffect(() => {
+    if (isOpen) {
+      setLastSeenUnreadCount(unreadCount);
+    }
+  }, [isOpen]);
+
+  // Calculate display badge count (only show if there are new notifications since last open)
+  const displayBadgeCount = unreadCount > lastSeenUnreadCount ? unreadCount - lastSeenUnreadCount : 0;
 
   // Get recent unread notifications (max 5)
   const recentNotifications = notifications
@@ -31,7 +42,16 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
     }
     
     // Navigate based on notification type
-    if (notification.meeting_request_id) {
+    if (notification.type === 'chat_message' && notification.meeting_id) {
+      // Navigate to meeting chat
+      router.push({
+        pathname: '/events/bsl2025/networking/meeting-detail' as any,
+        params: {
+          meetingId: notification.meeting_id,
+          openChat: 'true'
+        }
+      });
+    } else if (notification.meeting_request_id) {
       try {
         // Fetch meeting request details
         const { data: meetingRequest, error } = await supabase
@@ -112,6 +132,8 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
+      case 'chat_message':
+        return 'chat';
       case 'meeting_request':
         return 'send';
       case 'meeting_accepted':
@@ -143,10 +165,10 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
           size={26} 
           color={isDark ? '#FFFFFF' : '#000000'} 
         />
-        {unreadCount > 0 && (
+        {displayBadgeCount > 0 && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {displayBadgeCount > 9 ? '9+' : displayBadgeCount}
             </Text>
           </View>
         )}
@@ -223,18 +245,18 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
               )}
             </ScrollView>
 
-            {recentNotifications.length > 0 && (
-              <TouchableOpacity
-                style={styles.viewAllButton}
-                onPress={() => {
-                  setIsOpen(false);
-                  router.push('/dashboard/notifications');
-                }}
-              >
-                <Text style={styles.viewAllText}>View All Notifications</Text>
-                <MaterialIcons name="arrow-forward" size={16} color={colors.primary} />
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.viewAllButton}
+              onPress={() => {
+                setIsOpen(false);
+                router.push('/dashboard/notifications');
+              }}
+            >
+              <Text style={styles.viewAllText}>
+                {recentNotifications.length > 0 ? 'View All Notifications' : 'Go to Notification Center'}
+              </Text>
+              <MaterialIcons name="arrow-forward" size={16} color={colors.primary} />
+            </TouchableOpacity>
           </View>
         </Modal>
       )}

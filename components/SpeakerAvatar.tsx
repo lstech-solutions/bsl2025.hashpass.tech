@@ -94,11 +94,6 @@ export default function SpeakerAvatar({
     setImageTimeout(false);
     setImageLoaded(false);
     
-    // Debug: Log what URLs are available
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[SpeakerAvatar] ${name} - URLs:`, { localOptimizedUrl, s3Url, imageUrl });
-    }
-    
     if (localOptimizedUrl) {
       // Try local optimized first - set loading state and URL
       isProcessingRef.current = false; // Reset processing flag before starting new load
@@ -115,9 +110,6 @@ export default function SpeakerAvatar({
       currentUrlRef.current = s3Url;
     } else {
       // No URLs available - show initials immediately (no loader needed)
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn(`[SpeakerAvatar] ${name} - No URLs available, showing initials`);
-      }
       setCurrentAvatarUrl(null);
       setUrlSource(null);
       currentUrlRef.current = null;
@@ -210,16 +202,6 @@ export default function SpeakerAvatar({
     // Mark as not successfully loaded
     setImageLoaded(false);
     
-    // Only log in development
-    if (process.env.NODE_ENV !== 'production') {
-      console.error(`[SpeakerAvatar] ❌ ${urlSource} image load error for ${name}:`, {
-        url: avatarUrl,
-        error: errorMessage,
-        statusCode: statusCode,
-        source: urlSource,
-      });
-    }
-    
     // Mark URL as failed
     if (avatarUrl) {
       failedUrlsRef.current.add(avatarUrl);
@@ -256,11 +238,6 @@ export default function SpeakerAvatar({
   const handleLoad = useCallback(() => {
     // Mark as successfully loaded - don't block on isProcessingRef
     setImageLoaded(true);
-    
-    // Only log in development
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[SpeakerAvatar] ✅ Image loaded successfully for ${name} from ${urlSource}:`, avatarUrl);
-    }
     
     // Clear loading state
     setImageLoading(false);

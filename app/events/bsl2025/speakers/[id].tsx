@@ -49,7 +49,7 @@ export default function SpeakerDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isDark, colors } = useTheme();
   const { event } = useEvent();
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const router = useRouter();
   const { showSuccess, showError, showWarning, showInfo } = useToastHelpers();
   
@@ -792,10 +792,18 @@ export default function SpeakerDetail() {
     console.log('User:', user?.id);
     console.log('Speaker:', speaker?.id);
     
-    if (!user) {
-      console.log('❌ No user found');
-      showWarning('Login Required', 'Please log in to request a meeting');
-      return;
+    // Check for active session
+    if (!isLoggedIn || !user) {
+      console.log('❌ No active session found');
+      // Check session directly to be sure
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        showWarning('Login Required', 'Please log in to request a meeting');
+        // Redirect to auth page with return URL
+        const currentPath = `/events/bsl2025/speakers/${id}`;
+        router.push(`/(shared)/auth?returnTo=${encodeURIComponent(currentPath)}`);
+        return;
+      }
     }
 
     if (!speaker) {
@@ -842,9 +850,10 @@ export default function SpeakerDetail() {
       console.log('🔵 Request data to send:', requestData);
       
       // Test if we can create a simple meeting request
+      let createdRequest;
       try {
-        await matchmakingService.createMeetingRequest(requestData);
-        console.log('✅ Meeting request created successfully');
+        createdRequest = await matchmakingService.createMeetingRequest(requestData);
+        console.log('✅ Meeting request created successfully', createdRequest);
       } catch (error) {
         console.error('❌ Error creating meeting request:', error);
         
@@ -873,6 +882,20 @@ export default function SpeakerDetail() {
       
       // Trigger pass display refresh
       setPassRefreshTrigger(prev => prev + 1);
+
+      // Redirect to meeting request details
+      if (createdRequest?.id) {
+        // Small delay to ensure the success message is visible
+        setTimeout(() => {
+          router.push({
+            pathname: '/events/bsl2025/networking/my-requests' as any,
+            params: {
+              requestId: createdRequest.id,
+              highlightRequest: 'true'
+            }
+          });
+        }, 500);
+      }
       
     } catch (error) {
       console.error('Error sending meeting request:', error);
@@ -992,6 +1015,20 @@ export default function SpeakerDetail() {
           'Meeting Request Sent! 🎉', 
           `Your request has been sent to ${speaker.name}. You will be notified when they respond.`
         );
+      }
+
+      // Redirect to meeting request details
+      if (meetingRequest?.id) {
+        // Small delay to ensure the success message is visible
+        setTimeout(() => {
+          router.push({
+            pathname: '/events/bsl2025/networking/my-requests' as any,
+            params: {
+              requestId: meetingRequest.id,
+              highlightRequest: 'true'
+            }
+          });
+        }, 500);
       }
     } catch (error) {
       console.error('Error creating meeting request:', error);
@@ -1599,8 +1636,8 @@ export default function SpeakerDetail() {
             </TouchableOpacity>
             <Text style={styles.modalTitle}>
               {selectedRequestDetail?.requester_id === user?.id 
-                ? 'Your Meeting Request Details' 
-                : 'Meeting Request Details'}
+                ? 'Your Meeting Details' 
+                : 'Meeting Details'}
             </Text>
             <View style={styles.modalHeaderSpacer} />
           </View>

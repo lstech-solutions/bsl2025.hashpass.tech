@@ -52,6 +52,34 @@ export default function MeetingChat({ meetingId, onClose }: MeetingChatProps) {
     loadMeetingInfo();
   }, [meetingId]);
 
+  // Update last seen when chat is viewed
+  useEffect(() => {
+    const updateLastSeen = async () => {
+      if (!user?.id || !meetingId) return;
+      
+      try {
+        const { error } = await supabase.rpc('update_chat_last_seen', {
+          p_user_id: user.id,
+          p_meeting_id: meetingId,
+        });
+        
+        if (error) {
+          console.error('Error updating chat last seen:', error);
+        }
+      } catch (error) {
+        console.error('Error updating chat last seen:', error);
+      }
+    };
+
+    // Update immediately when component mounts
+    updateLastSeen();
+    
+    // Update every 30 seconds while chat is open
+    const interval = setInterval(updateLastSeen, 30000);
+    
+    return () => clearInterval(interval);
+  }, [user?.id, meetingId]);
+
   const loadMeetingInfo = async () => {
     if (!user?.id) {
       console.error('No user ID available for loading meeting info');
@@ -104,14 +132,16 @@ export default function MeetingChat({ meetingId, onClose }: MeetingChatProps) {
             otherUserId = speakerData.user_id;
             otherUserName = meetingData.speaker_name || speakerData.name;
             
-            // Use speaker's image from bsl_speakers or generate avatar
-            // Note: We can't query auth.users directly, so we use speaker image or generate
-            const avatarUrl = speakerData.imageurl || generateUserAvatarUrl(otherUserName);
+            // ALWAYS use speaker's image from bsl_speakers
+            // Use imageurl from bsl_speakers, which will be handled by SpeakerAvatar component
+            // SpeakerAvatar will prioritize local optimized avatars, then S3, then generate initials
+            // Pass imageurl directly so SpeakerAvatar can handle the fallback chain properly
+            const avatarUrl = speakerData.imageurl || null; // Pass null to let SpeakerAvatar handle fallback
             
             setOtherParticipant({
               id: otherUserId,
               name: otherUserName,
-              avatar: avatarUrl,
+              avatar: avatarUrl, // This will be used by SpeakerAvatar component
             });
           }
         } else {

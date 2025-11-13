@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 
 export interface Notification {
   id: string;
-  type: 'meeting_request' | 'meeting_accepted' | 'meeting_declined' | 'meeting_reminder' | 'meeting_expired' | 'boost_received' | 'system_alert';
+  type: 'meeting_request' | 'meeting_accepted' | 'meeting_declined' | 'meeting_reminder' | 'meeting_expired' | 'boost_received' | 'system_alert' | 'chat_message';
   title: string;
   message: string;
   is_read: boolean;
@@ -15,6 +15,7 @@ export interface Notification {
   archived_at?: string;
   meeting_request_id?: string;
   speaker_id?: string;
+  meeting_id?: string;
 }
 
 export interface NotificationContextType {
@@ -264,11 +265,26 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
           
           // Show browser notification if permission granted
           if (Notification.permission === 'granted' && newNotification.is_urgent) {
-            new window.Notification(newNotification.title, {
+            const notificationOptions: NotificationOptions = {
               body: newNotification.message,
               icon: '/favicon.ico',
               tag: newNotification.id,
-            });
+              badge: '/favicon.ico',
+              requireInteraction: false,
+            };
+            
+            // Add click handler for chat messages to navigate to meeting room
+            const browserNotification = new window.Notification(newNotification.title, notificationOptions);
+            
+            browserNotification.onclick = () => {
+              window.focus();
+              // Navigate to meeting chat if it's a chat message
+              if (newNotification.type === 'chat_message' && (newNotification as any).meeting_id) {
+                const meetingId = (newNotification as any).meeting_id;
+                window.location.href = `/events/bsl2025/networking/meeting-detail?meetingId=${meetingId}&openChat=true`;
+              }
+              browserNotification.close();
+            };
           }
         }
       )

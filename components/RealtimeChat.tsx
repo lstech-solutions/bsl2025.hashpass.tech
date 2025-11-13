@@ -19,6 +19,7 @@ import { useMessagesQuery } from '../hooks/useMessagesQuery';
 import { storeMessages } from '../lib/store-messages';
 import SpeakerAvatar from './SpeakerAvatar';
 import { supabase } from '../lib/supabase';
+import { useNotifications } from '../contexts/NotificationContext';
 
 interface RealtimeChatProps {
   roomName: string;
@@ -49,6 +50,7 @@ export default function RealtimeChat({
 }: RealtimeChatProps) {
   const { isDark, colors } = useTheme();
   const { user } = useAuth();
+  const { refreshNotifications } = useNotifications();
   const styles = getStyles(isDark, colors);
 
   const [newMessage, setNewMessage] = useState('');
@@ -77,16 +79,24 @@ export default function RealtimeChat({
   }, [user]);
 
   // Load other participant avatar
+  // IMPORTANT: Always prioritize otherParticipantAvatar (speaker avatar) if provided
+  // This ensures speaker avatars from bsl_speakers are always used
   useEffect(() => {
     const loadOtherAvatar = async () => {
+      // Priority 1: Use provided avatar (speaker avatar from bsl_speakers)
       if (otherParticipantAvatar) {
         setOtherUserAvatar(otherParticipantAvatar);
-      } else if (otherParticipantName) {
-        // Generate avatar from name
+        return; // Don't override with generated avatar
+      }
+      
+      // Priority 2: Generate avatar from name (only if no avatar provided)
+      if (otherParticipantName) {
         setOtherUserAvatar(generateUserAvatarUrl(otherParticipantName));
-      } else if (otherParticipantId && user) {
-        // Try to get avatar from message user data if available
-        // For now, generate based on ID as fallback
+        return;
+      }
+      
+      // Priority 3: Fallback to ID-based avatar
+      if (otherParticipantId && user) {
         const fallbackName = otherParticipantId.substring(0, 8);
         setOtherUserAvatar(generateUserAvatarUrl(fallbackName));
       }
@@ -119,17 +129,105 @@ export default function RealtimeChat({
   // Use chat scroll hook
   const { containerRef, scrollToBottom } = useChatScroll();
 
+  // Get last seen for other participant
+  const [otherParticipantLastSeen, setOtherParticipantLastSeen] = useState<Date | null>(null);
+  
+  useEffect(() => {
+    const fetchLastSeen = async () => {
+      if (!otherParticipantId || !meetingId) return;
+      
+      try {
+        const { data, error } = await supabase.rpc('get_chat_last_seen', {
+          p_user_id: otherParticipantId,
+          p_meeting_id: meetingId,
+        });
+        
+        if (!error && data?.success && data?.last_seen_at) {
+          setOtherParticipantLastSeen(new Date(data.last_seen_at));
+        }
+      } catch (error) {
+        console.error('Error fetching last seen:', error);
+      }
+    };
+    
+    fetchLastSeen();
+    // Refresh last seen every 30 seconds
+    const interval = setInterval(fetchLastSeen, 30000);
+    return () => clearInterval(interval);
+  }, [otherParticipantId, meetingId]);
+
   // Combine initial messages, persisted messages, and real-time messages
+  // Remove duplicates by message ID
   const allMessages = [
     ...(initialMessages || []),
     ...(persistedMessages || []),
     ...realtimeMessages,
-  ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  ]
+    .filter((msg, index, self) => 
+      index === self.findIndex((m) => m.id === msg.id)
+    )
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom();
   }, [allMessages.length, scrollToBottom]);
+
+  // Update last seen when user views chat or scrolls
+  useEffect(() => {
+    const updateLastSeen = async () => {
+      if (!user?.id || !meetingId) return;
+      
+      try {
+        const { error } = await supabase.rpc('update_chat_last_seen', {
+          p_user_id: user.id,
+          p_meeting_id: meetingId,
+        });
+        
+        if (error) {
+          console.error('Error updating chat last seen:', error);
+        }
+      } catch (error) {
+        console.error('Error updating chat last seen:', error);
+      }
+    };
+
+    // Update when component mounts
+    updateLastSeen();
+    
+    // Update when new messages arrive (user is viewing)
+    if (allMessages.length > 0) {
+      updateLastSeen();
+    }
+    
+    // Update periodically while chat is open (every 30 seconds)
+    const interval = setInterval(updateLastSeen, 30000);
+    
+    return () => clearInterval(interval);
+  }, [user?.id, meetingId, allMessages.length]);
+
+  // Listen for new incoming messages and refresh notifications
+  useEffect(() => {
+    const incomingMessages = allMessages.filter(msg => {
+      const messageUserId = msg.user.id;
+      const currentUserId = user?.id;
+      const currentUserEmail = user?.email;
+      const currentUsername = username;
+      
+      return !(
+        messageUserId === currentUserId || 
+        messageUserId === currentUserEmail || 
+        messageUserId === currentUsername ||
+        (currentUserId && messageUserId.includes(currentUserId)) ||
+        (currentUserEmail && messageUserId.includes(currentUserEmail))
+      );
+    });
+    
+    // If there are new incoming messages, refresh notifications
+    if (incomingMessages.length > 0) {
+      refreshNotifications();
+    }
+  }, [allMessages.length, user?.id, username, refreshNotifications]);
 
   // Handle message sending
   const handleSendMessage = async () => {
@@ -186,13 +284,32 @@ export default function RealtimeChat({
   };
 
   const renderMessage = (message: ChatMessage, index: number) => {
-    const isOwnMessage = message.user.id === user?.id || message.user.id === user?.email || message.user.id === username;
+    // More robust check for own message - check all possible ID formats
+    const messageUserId = message.user.id;
+    const currentUserId = user?.id;
+    const currentUserEmail = user?.email;
+    const currentUsername = username;
+    
+    const isOwnMessage = 
+      messageUserId === currentUserId || 
+      messageUserId === currentUserEmail || 
+      messageUserId === currentUsername ||
+      (currentUserId && messageUserId.includes(currentUserId)) ||
+      (currentUserEmail && messageUserId.includes(currentUserEmail));
+    
     const isSystemMessage = message.messageType === 'system';
     const isMeetingUpdate = message.messageType === 'meeting_update';
-    const messageAvatar = isOwnMessage ? userAvatar : otherUserAvatar;
+    
+    // For own messages: use userAvatar (generated from user metadata or name)
+    // For incoming messages: ALWAYS use otherParticipantAvatar if provided (speaker avatar from bsl_speakers)
+    // This ensures speaker avatars are correctly displayed for incoming messages
+    const messageAvatar = isOwnMessage 
+      ? userAvatar 
+      : (otherParticipantAvatar || otherUserAvatar); // Prioritize otherParticipantAvatar (speaker avatar)
+    
     const messageName = isOwnMessage 
       ? (user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'You')
-      : (otherParticipantName || message.user.name);
+      : (otherParticipantName || message.user.name || 'User');
 
     // Different colors for different message types
     const getMessageBubbleStyle = () => {
@@ -304,11 +421,57 @@ export default function RealtimeChat({
     );
   }
 
+  // Format last seen status
+  const formatLastSeen = (lastSeen: Date | null) => {
+    if (!lastSeen) return null;
+    const now = new Date();
+    const diffMs = now.getTime() - lastSeen.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Active now';
+    if (diffMins < 60) return `Active ${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `Active ${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `Active ${diffDays}d ago`;
+  };
+
+  const lastSeenText = formatLastSeen(otherParticipantLastSeen);
+  const isOtherParticipantOnline = otherParticipantLastSeen && 
+    (new Date().getTime() - otherParticipantLastSeen.getTime()) < 60000; // Within last minute
+
   return (
     <KeyboardAvoidingView 
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Header with participant info and last seen - Avatar always visible for speaker */}
+      {(otherParticipantName || otherParticipantAvatar) && (
+        <View style={styles.chatHeader}>
+          <View style={styles.headerInfo}>
+            <View style={styles.headerAvatarContainer}>
+              <SpeakerAvatar
+                name={otherParticipantName || 'User'}
+                imageUrl={otherParticipantAvatar || undefined}
+                size={40}
+                showBorder={true}
+              />
+              {isOtherParticipantOnline && (
+                <View style={styles.onlineIndicator} />
+              )}
+            </View>
+            <View style={styles.headerTextContainer}>
+              {otherParticipantName && (
+                <Text style={styles.headerName}>{otherParticipantName}</Text>
+              )}
+              {lastSeenText && (
+                <Text style={styles.headerLastSeen}>{lastSeenText}</Text>
+              )}
+            </View>
+          </View>
+        </View>
+      )}
+      
       {/* Connection Status and Presence */}
       <View style={styles.statusBar}>
         <View style={styles.statusLeft}>
@@ -374,6 +537,51 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background?.default || (isDark ? '#000000' : '#ffffff'),
+  },
+  chatHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? '#2a2a2a' : '#e9ecef',
+    backgroundColor: colors.background?.paper || (isDark ? '#1a1a1a' : '#ffffff'),
+  },
+  headerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerAvatarContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#34A853',
+    borderWidth: 2,
+    borderColor: isDark ? '#1a1a1a' : '#ffffff',
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text?.primary || (isDark ? '#ffffff' : '#000000'),
+    marginBottom: 2,
+  },
+  headerName: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.text?.secondary || (isDark ? '#cccccc' : '#666666'),
+    marginBottom: 2,
+  },
+  headerLastSeen: {
+    fontSize: 11,
+    color: colors.text?.secondary || (isDark ? '#a0a0a0' : '#666666'),
   },
   loadingContainer: {
     flex: 1,
@@ -451,36 +659,40 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     paddingBottom: 8,
   },
   messageWrapper: {
-    marginBottom: 16,
+    marginBottom: 12,
     width: '100%',
   },
   ownMessageWrapper: {
     alignItems: 'flex-end',
-    paddingLeft: 60, // Space for avatar on left
+    paddingLeft: 50, // Space for avatar on left
   },
   incomingMessageWrapper: {
     alignItems: 'flex-start',
-    paddingRight: 60, // Space for avatar on right
+    paddingRight: 50, // Space for avatar on right
   },
   messageContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    maxWidth: '75%',
-    gap: 10,
+    maxWidth: '80%',
+    gap: 8,
   },
   ownMessageContainer: {
     flexDirection: 'row-reverse',
     alignSelf: 'flex-end',
+    justifyContent: 'flex-end',
   },
   incomingMessageContainer: {
     flexDirection: 'row',
     alignSelf: 'flex-start',
+    justifyContent: 'flex-start',
   },
   avatarContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
     overflow: 'hidden',
+    alignSelf: 'flex-end',
+    marginBottom: 4,
   },
   messageContent: {
     flex: 1,
@@ -493,34 +705,36 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     alignItems: 'flex-start',
   },
   senderName: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.text?.secondary || (isDark ? '#a0a0a0' : '#666666'),
-    marginBottom: 6,
-    marginLeft: 12,
+    marginBottom: 4,
+    marginLeft: 8,
   },
   messageBubble: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
     maxWidth: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
     elevation: 2,
   },
   ownMessageBubble: {
     backgroundColor: colors.primary || '#007AFF',
     borderTopRightRadius: 4,
     borderBottomRightRadius: 4,
-    borderBottomLeftRadius: 20,
+    borderBottomLeftRadius: 18,
+    borderTopLeftRadius: 18,
   },
   incomingMessageBubble: {
-    backgroundColor: isDark ? '#2a2a2a' : '#e9ecef',
+    backgroundColor: isDark ? '#2a2a2a' : '#f1f3f5',
     borderTopLeftRadius: 4,
     borderBottomLeftRadius: 4,
-    borderBottomRightRadius: 20,
+    borderBottomRightRadius: 18,
+    borderTopRightRadius: 18,
   },
   systemMessageBubble: {
     backgroundColor: 'transparent',
@@ -547,19 +761,35 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     color: colors.text?.primary || (isDark ? '#ffffff' : '#1a1a1a'),
   },
   messageTime: {
-    fontSize: 11,
+    fontSize: 10,
     color: colors.text?.secondary || (isDark ? '#888888' : '#999999'),
     marginTop: 4,
-    marginLeft: 12,
+    fontWeight: '400',
   },
   ownMessageTime: {
-    marginLeft: 0,
-    marginRight: 12,
     textAlign: 'right',
+    marginRight: 8,
   },
   incomingMessageTime: {
-    marginLeft: 12,
-    marginRight: 0,
+    textAlign: 'left',
+    marginLeft: 8,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text?.secondary || (isDark ? '#888888' : '#999999'),
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.text?.secondary || (isDark ? '#666666' : '#999999'),
+    marginTop: 8,
   },
   systemMessageContainer: {
     alignSelf: 'center',

@@ -529,6 +529,30 @@ export default function AuthScreen() {
     }
   };
 
+  // Helper function to verify session establishment with retries
+  const verifySessionWithRetries = async (maxRetries: number = 3, delayMs: number = 500): Promise<Session> => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      console.log(`🔄 Verifying session establishment (attempt ${attempt}/${maxRetries})...`);
+      
+      // Wait before checking (longer delay on first attempt)
+      const waitTime = attempt === 1 ? delayMs : delayMs * attempt;
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (session && !error) {
+        console.log(`✅ Session established successfully on attempt ${attempt}`);
+        return session;
+      }
+      
+      if (attempt < maxRetries) {
+        console.log(`⚠️ Session not yet established, retrying in ${waitTime}ms... (${attempt}/${maxRetries})`);
+      }
+    }
+    
+    throw new Error('Session not established after multiple verification attempts');
+  };
+
   const verifyOTP = async () => {
     if (!otpCode || otpCode.length !== 6) {
       showError('Invalid Code', 'Please enter the 6-digit code from your email.');
@@ -574,24 +598,23 @@ export default function AuthScreen() {
         }
 
         if (session) {
-          // Wait a moment to ensure session is fully established
-          // This helps prevent race conditions on production
-          await new Promise(resolve => setTimeout(resolve, 300));
-          
-          // Double-check session is still valid
-          const { data: { session: currentSession } } = await supabase.auth.getSession();
-          if (!currentSession) {
-            throw new Error('Session not established');
+          // Verify session establishment with 3 retry attempts
+          // This helps prevent race conditions on mobile devices
+          try {
+            await verifySessionWithRetries(3, 500);
+            
+            // Additional delay to ensure router state is ready
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            setLoading(false);
+            
+            // Navigate to dashboard - user is already authenticated
+            router.replace(getRedirectPath());
+            return;
+          } catch (sessionError: any) {
+            console.error('Session verification error:', sessionError);
+            throw new Error('Session not established. Please try again.');
           }
-
-          // Additional delay to ensure router state is ready
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
-          setLoading(false);
-          
-          // Navigate to dashboard - user is already authenticated
-          router.replace(getRedirectPath());
-          return;
         } else {
           throw new Error('No session created after verification');
         }

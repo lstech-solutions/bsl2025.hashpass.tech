@@ -2,7 +2,7 @@
   "expo": {
     "name": "hashpass.tech",
     "slug": "hashpass-tech",
-    "version": "1.6.67",
+    "version": "1.6.68",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "hashpass",

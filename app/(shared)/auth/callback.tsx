@@ -4,6 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { createSessionFromUrl, supabase } from '../../../lib/supabase';
 import { Check, AlertCircle, Info } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
+import type { Session } from '@supabase/supabase-js';
 
 export default function AuthCallback() {
     const router = useRouter();
@@ -43,6 +44,30 @@ export default function AuthCallback() {
     // Processing guard to prevent duplicate processing
     const isProcessingRef = useRef(false);
     const hasNavigatedRef = useRef(false);
+
+    // Helper function to verify session establishment with retries
+    const verifySessionWithRetries = async (maxRetries: number = 3, delayMs: number = 500): Promise<Session> => {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            console.log(`🔄 Verifying session establishment (attempt ${attempt}/${maxRetries})...`);
+            
+            // Wait before checking (longer delay on first attempt)
+            const waitTime = attempt === 1 ? delayMs : delayMs * attempt;
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (session && !error) {
+                console.log(`✅ Session established successfully on attempt ${attempt}`);
+                return session;
+            }
+            
+            if (attempt < maxRetries) {
+                console.log(`⚠️ Session not yet established, retrying in ${waitTime}ms... (${attempt}/${maxRetries})`);
+            }
+        }
+        
+        throw new Error('Session not established after multiple verification attempts');
+    };
 
     useEffect(() => {
         // Prevent duplicate processing
@@ -134,64 +159,46 @@ export default function AuthCallback() {
 
                 if (!hasNavigatedRef.current) {
                     hasNavigatedRef.current = true;
-                    // Wait a moment to ensure session is fully established (especially important for OTP links)
-                    await new Promise(resolve => setTimeout(resolve, 300));
                     
-                    // Double-check session is still valid before redirecting
-                    const { data: { session: verifySession } } = await supabase.auth.getSession();
-                    if (!verifySession) {
-                        console.warn('⚠️ Session lost after creation, retrying...');
-                        // Retry once
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        const { data: { session: retrySession } } = await supabase.auth.getSession();
-                        if (!retrySession) {
-                            throw new Error('Session not established after authentication');
-                        }
-                    }
-                    
-                    // Navigate to the correct path (respects returnTo parameter)
-                    const redirectPath = getRedirectPath();
-                    console.log('🔄 Redirecting to:', redirectPath);
-                    router.replace(redirectPath);
-                }
-            } else {
-                console.log('⚠️ No session created but no error - checking for existing session');
-
-                // Wait a bit for session to be established (important for OTP links)
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                const { data: { session: existingSession } } = await supabase.auth.getSession();
-
-                if (existingSession) {
-                    console.log('✅ Found existing session');
-                    setStatus('success');
-                    setMessage('✅ Authentication successful!');
-
-                    if (!hasNavigatedRef.current) {
-                        hasNavigatedRef.current = true;
+                    // Verify session establishment with 3 retry attempts
+                    // This helps prevent race conditions on mobile devices
+                    try {
+                        await verifySessionWithRetries(3, 500);
+                        
                         // Navigate to the correct path (respects returnTo parameter)
                         const redirectPath = getRedirectPath();
                         console.log('🔄 Redirecting to:', redirectPath);
                         router.replace(redirectPath);
+                    } catch (sessionError: any) {
+                        console.error('Session verification error:', sessionError);
+                        throw new Error('Session not established after authentication. Please try again.');
                     }
-                } else {
-                    // Last retry - sometimes OTP links need more time
-                    console.log('🔄 Retrying session check...');
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    const { data: { session: retrySession } } = await supabase.auth.getSession();
-                    if (retrySession) {
-                        console.log('✅ Found session on retry');
+                }
+            } else {
+                console.log('⚠️ No session created but no error - checking for existing session with retries');
+
+                // Verify session establishment with 3 retry attempts
+                try {
+                    const existingSession = await verifySessionWithRetries(3, 500);
+                    
+                    if (existingSession) {
+                        console.log('✅ Found existing session after retries');
                         setStatus('success');
                         setMessage('✅ Authentication successful!');
+
                         if (!hasNavigatedRef.current) {
                             hasNavigatedRef.current = true;
+                            // Navigate to the correct path (respects returnTo parameter)
                             const redirectPath = getRedirectPath();
                             console.log('🔄 Redirecting to:', redirectPath);
                             router.replace(redirectPath);
                         }
                     } else {
-                        throw new Error('No session could be established');
+                        throw new Error('No session could be established after multiple attempts');
                     }
+                } catch (sessionError: any) {
+                    console.error('Session verification error:', sessionError);
+                    throw new Error('Session not established. Please try again.');
                 }
             }
         } catch (error: any) {

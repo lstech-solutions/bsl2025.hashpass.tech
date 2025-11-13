@@ -109,22 +109,22 @@ const BlockchainTokensView = () => {
     }
   }, [user?.id, showSuccess]);
 
-  // Listen for balance refresh events from other components
-  const handleBalanceRefresh = useCallback(() => {
-    console.log('💰 Balance refresh event received, refreshing...');
-    // Force a fresh fetch from the database
-    fetchTokenBalance('LUKAS', true);
-  }, [fetchTokenBalance]);
+    // Listen for balance refresh events from other components
+    const handleBalanceRefresh = useCallback(() => {
+      console.log('💰 Balance refresh event received, refreshing...');
+      // Force a fresh fetch from the database
+      fetchTokenBalance('LUKAS', true);
+    }, [fetchTokenBalance]);
 
-  // Subscribe to custom refresh events
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('balance:refresh', handleBalanceRefresh);
-      return () => {
-        window.removeEventListener('balance:refresh', handleBalanceRefresh);
-      };
-    }
-  }, [handleBalanceRefresh]);
+    // Subscribe to custom refresh events
+    useEffect(() => {
+      if (typeof window !== 'undefined') {
+        window.addEventListener('balance:refresh', handleBalanceRefresh);
+        return () => {
+          window.removeEventListener('balance:refresh', handleBalanceRefresh);
+        };
+      }
+    }, [handleBalanceRefresh]);
 
   // Initial fetch and subscription setup
   useEffect(() => {

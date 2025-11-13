@@ -112,7 +112,8 @@ function ThemedContent() {
     pathname === '/privacy' || 
     pathname === '/(shared)/privacy' ||
     pathname === '/terms' || 
-    pathname === '/(shared)/terms';
+    pathname === '/(shared)/terms' ||
+    pathname === '/status';
 
   // Handle loading state and splash screen
   useEffect(() => {

@@ -22,28 +22,57 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511121828, // Updated to current timestamp
-  releaseDate: '2025-11-12',
+  buildNumber: 202511130935, // Updated to current timestamp
+  releaseDate: '2025-11-13',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [
-    'Added active speaker badges to all speaker cards (green dot + Active label)',
-    'Added active speakers filter in unified filter component',
-    'Added active speakers count to EventBanner subtitle'
+    'Added chat last seen tracking system - tracks when users view meeting chats',
+    'Added automatic notifications for incoming chat messages (only when user is not actively viewing)',
+    'Added chat header with participant info, avatar, and last seen status',
+    'Added online indicator (green dot) for active participants',
+    'Improved chat UI with better message bubble styling and spacing',
+    'Added empty state for chat when no messages exist'
   ],
   bugfixes: [
-    'Fixed speaker avatar loading logic - simplified conditions for better reliability',
-    'Improved image loading UX - shows with 0.5 opacity while loading',
-    'Fixed avatar component state management - removed blocking conditions',
-    'Improved speaker card design - better shadows, typography, and spacing',
-    'Fixed Metro middleware asset serving with debug logging'
+    'Fixed avatar display issues - corrected avatar assignment for own vs incoming messages',
+    'Fixed message positioning and alignment in chat bubbles',
+    'Fixed realtime notifications not appearing in notification center',
+    'Fixed missing useNotifications import causing runtime error',
+    'Improved message duplicate detection and removal',
+    'Enhanced message bubble styling with better borders and shadows'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.60 release - Active speaker badges, improved avatar loading, and enhanced UI'
+  notes: 'Version 1.6.61 release - Chat improvements with last seen tracking, notifications, and enhanced UI'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.61': {
+    version: '1.6.61',
+    buildNumber: 202511130935,
+    releaseDate: '2025-11-13',
+    releaseType: 'beta',
+    environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+    features: [
+      'Added chat last seen tracking system - tracks when users view meeting chats',
+      'Added automatic notifications for incoming chat messages (only when user is not actively viewing)',
+      'Added chat header with participant info, avatar, and last seen status',
+      'Added online indicator (green dot) for active participants',
+      'Improved chat UI with better message bubble styling and spacing',
+      'Added empty state for chat when no messages exist'
+    ],
+    bugfixes: [
+      'Fixed avatar display issues - corrected avatar assignment for own vs incoming messages',
+      'Fixed message positioning and alignment in chat bubbles',
+      'Fixed realtime notifications not appearing in notification center',
+      'Fixed missing useNotifications import causing runtime error',
+      'Improved message duplicate detection and removal',
+      'Enhanced message bubble styling with better borders and shadows'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.61 release - Chat improvements with last seen tracking, notifications, and enhanced UI'
+  },
   '1.6.60': {
     version: '1.6.60',
     buildNumber: 202511121828,

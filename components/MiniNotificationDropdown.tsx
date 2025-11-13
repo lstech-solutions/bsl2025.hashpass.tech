@@ -31,7 +31,16 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
     }
     
     // Navigate based on notification type
-    if (notification.meeting_request_id) {
+    if (notification.type === 'chat_message' && notification.meeting_id) {
+      // Navigate to meeting chat
+      router.push({
+        pathname: '/events/bsl2025/networking/meeting-detail' as any,
+        params: {
+          meetingId: notification.meeting_id,
+          openChat: 'true'
+        }
+      });
+    } else if (notification.meeting_request_id) {
       try {
         // Fetch meeting request details
         const { data: meetingRequest, error } = await supabase
@@ -112,6 +121,8 @@ export default function MiniNotificationDropdown({ onNotificationPress }: MiniNo
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
+      case 'chat_message':
+        return 'chat';
       case 'meeting_request':
         return 'send';
       case 'meeting_accepted':

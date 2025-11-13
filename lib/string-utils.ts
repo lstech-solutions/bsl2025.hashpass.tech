@@ -87,17 +87,10 @@ export function getSpeakerAvatarUrl(
   // Speaker avatars use EXPO_PUBLIC_AWS_S3_BUCKET (hashpass-assets)
   if (typeof process !== 'undefined' && process.env) {
     s3Bucket = process.env.EXPO_PUBLIC_AWS_S3_BUCKET || 
-               process.env.AWS_S3_BUCKET || 
-               process.env.AWS_S3_BUCKET_NAME || 
-               process.env.EXPO_PUBLIC_AWS_S3_BUCKET_NAME || 
+               process.env.AWS_S3_CDN_URL || 
+               process.env.AWS_S3_BUCKET_URL || 
                '';
-    cdnUrl = process.env.AWS_S3_CDN_URL || 
-             process.env.AWS_S3_BUCKET_URL || 
-             process.env.EXPO_PUBLIC_AWS_S3_CDN_URL || 
-             process.env.EXPO_PUBLIC_AWS_S3_BUCKET_URL || 
-             '';
     awsRegion = process.env.AWS_REGION || 
-                process.env.EXPO_PUBLIC_AWS_REGION || 
                 defaultAwsRegion;
   }
 

@@ -248,10 +248,37 @@ async function main() {
     const matches = [];
     const processedSpeakers = new Set();
     
+    // First, check speakers that already have user_id to ensure they have VIP and speaker role
+    console.log('📋 Checking speakers with existing user_id...\n');
+    const existingLinks = [];
     for (const speaker of speakers) {
       if (speaker.user_id) {
-        console.log(`⏭️  Speaker "${speaker.name}" already has user_id, skipping...`);
-        continue;
+        existingLinks.push({
+          speaker: speaker,
+          user: usersData.users.find(u => u.id === speaker.user_id)
+        });
+      }
+    }
+    
+    if (existingLinks.length > 0) {
+      console.log(`📋 Found ${existingLinks.length} speakers with existing user_id. Verifying VIP and speaker role...\n`);
+      for (const link of existingLinks) {
+        if (link.user) {
+          const userName = link.user.user_metadata?.name || link.user.user_metadata?.full_name || link.user.email;
+          console.log(`\n🔍 Verifying: "${link.speaker.name}" <-> "${userName}" (${link.user.email})`);
+          const success = await updateUserToVIPAndSpeaker(link.user.id, link.speaker.id, link.speaker.name);
+          if (success) {
+            console.log(`✅ Verified and updated ${userName}`);
+          }
+        }
+      }
+      console.log('\n' + '='.repeat(60) + '\n');
+    }
+    
+    // Now find new matches for speakers without user_id
+    for (const speaker of speakers) {
+      if (speaker.user_id) {
+        continue; // Skip already linked speakers
       }
       
       const speakerName = speaker.name;

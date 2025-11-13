@@ -459,7 +459,7 @@ export default function MyRequestsView() {
           
           if (showPicker && (!retryData || retryData.length === 0)) {
             console.warn('⚠️ No slots returned after retry');
-            showError('No Available Slots', 'There are no available time slots. Please try again later.');
+            showError('No Available Slots', 'No available slots found. Please mark some time slots as available in your schedule.');
           }
           return;
         }
@@ -549,7 +549,7 @@ export default function MyRequestsView() {
       
       // Show warning if no slots available (only if showing picker)
       if (showPicker && (!data || data.length === 0)) {
-        showError('No Available Slots', 'There are no available time slots. Please try again later.');
+        showError('No Available Slots', 'No available slots found. Please mark some time slots as available in your schedule.');
       }
     } catch (error: any) {
       console.error('❌ Error loading slots:', error);
@@ -1045,29 +1045,41 @@ export default function MyRequestsView() {
             style={styles.modalContent}
             contentContainerStyle={styles.modalContentContainer}
           >
+            {/* Speaker Info */}
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>
-                {(selectedRequest as any)._direction === 'incoming' ? 'Requester' : 'Speaker'}
-              </Text>
+              <Text style={styles.detailLabel}>Speaker</Text>
               <View style={styles.speakerDetail}>
                 <SpeakerAvatar
-                  name={(selectedRequest as any)._direction === 'incoming' 
-                    ? ((selectedRequest as any).requester_full_name || selectedRequest.requester_name)
-                    : selectedRequest.speaker_name}
-                  imageUrl={(selectedRequest as any)._direction === 'incoming'
-                    ? ((selectedRequest as any).requester_avatar)
-                    : (selectedRequest.speaker_image || null)}
+                  name={selectedRequest.speaker_name}
+                  imageUrl={selectedRequest.speaker_image || null}
+                  size={60}
+                  showBorder={true}
+                />
+                <View style={styles.speakerDetailInfo}>
+                  <Text style={styles.speakerDetailName}>
+                    {selectedRequest.speaker_name}
+                  </Text>
+                  <Text style={styles.speakerDetailTitle}>Speaker</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Requester Info */}
+            <View style={styles.detailSection}>
+              <Text style={styles.detailLabel}>Requester</Text>
+              <View style={styles.speakerDetail}>
+                <SpeakerAvatar
+                  name={(selectedRequest as any).requester_full_name || selectedRequest.requester_name}
+                  imageUrl={(selectedRequest as any).requester_avatar || null}
                   size={60}
                   showBorder={true}
                 />
                 <View style={styles.speakerDetailInfo}>
                   <View style={styles.nameRowWithBadge}>
                     <Text style={styles.speakerDetailName}>
-                      {(selectedRequest as any)._direction === 'incoming'
-                        ? ((selectedRequest as any).requester_full_name || selectedRequest.requester_name)
-                        : selectedRequest.speaker_name}
+                      {(selectedRequest as any).requester_full_name || selectedRequest.requester_name}
                     </Text>
-                    {(selectedRequest as any)._direction === 'incoming' && selectedRequest.requester_ticket_type && (
+                    {selectedRequest.requester_ticket_type && (
                       <View style={[
                         styles.ticketBadge,
                         selectedRequest.requester_ticket_type.toLowerCase() === 'vip' && styles.vipBadge
@@ -1083,9 +1095,17 @@ export default function MyRequestsView() {
                       </View>
                     )}
                   </View>
-                  <Text style={styles.speakerDetailTitle}>
-                    {(selectedRequest as any)._direction === 'incoming' ? 'Requester' : 'Speaker'}
-                  </Text>
+                  <Text style={styles.speakerDetailTitle}>Requester</Text>
+                  {selectedRequest.requester_title && (
+                    <Text style={[styles.speakerDetailTitle, { marginTop: 4 }]}>
+                      {selectedRequest.requester_title}
+                    </Text>
+                  )}
+                  {selectedRequest.requester_company && (
+                    <Text style={[styles.speakerDetailTitle, { marginTop: 2 }]}>
+                      {selectedRequest.requester_company}
+                    </Text>
+                  )}
                 </View>
               </View>
             </View>
@@ -1208,6 +1228,36 @@ export default function MyRequestsView() {
                     {formatDate(selectedRequest.speaker_response_at)}
                   </Text>
                 )}
+              </View>
+            )}
+
+            {/* Link to Meeting if Accepted */}
+            {selectedRequest.status === 'accepted' && selectedRequest.meeting_id && (
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>Meeting</Text>
+                <TouchableOpacity
+                  style={[styles.meetingLinkButton, { backgroundColor: colors.primary }]}
+                  onPress={() => {
+                    router.push({
+                      pathname: "/events/bsl2025/networking/meeting-detail" as any,
+                      params: {
+                        meetingId: selectedRequest.meeting_id,
+                        speakerName: selectedRequest.speaker_name,
+                        requesterName: (selectedRequest as any).requester_full_name || selectedRequest.requester_name,
+                        status: 'confirmed',
+                        scheduledAt: selectedRequest.meeting_scheduled_at || '',
+                        location: selectedRequest.location || 'TBD',
+                        duration: selectedRequest.duration_minutes || 15,
+                        isSpeaker: (selectedRequest as any)._direction === 'incoming' ? 'true' : 'false'
+                      }
+                    });
+                    setShowDetailModal(false);
+                  }}
+                >
+                  <MaterialIcons name="event" size={20} color="white" />
+                  <Text style={styles.meetingLinkButtonText}>View Meeting Details</Text>
+                  <MaterialIcons name="chevron-right" size={20} color="white" />
+                </TouchableOpacity>
               </View>
             )}
 
@@ -2817,6 +2867,22 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+  },
+  meetingLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 12,
+    marginTop: 8,
+  },
+  meetingLinkButtonText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: '600',
+    flex: 1,
   },
   // Slot Picker Modal Styles
   slotPickerModalContent: {

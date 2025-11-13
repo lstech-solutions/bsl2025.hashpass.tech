@@ -32,7 +32,18 @@
       "description": "Manage your $LUKAS, $COP, and $VOI tokens",
       "swap": "Swap",
       "totalPortfolio": "Total Portfolio Value",
-      "portfolioDesc": "Combined value of all your tokens"
+      "portfolioDesc": "Combined value of all your tokens",
+      "withdrawalDisclaimer": "💡 Withdrawal available when balance is over 5 LUKAS",
+      "swapAvailable": {
+        "title": "Swaps Available",
+        "message": "Swaps are available IRL on Hash merchants"
+      },
+      "lukasInfo": {
+        "title": "What is LUKAS?",
+        "description": "LUKAS is the digital currency of the HashPass ecosystem designed to reward user interactions and engagement.",
+        "features": "• Earn LUKAS by accepting and scheduling meetings\n• Will be monetized in HashHouse\n• Swappable to other crypto tokens",
+        "withdrawalDisclaimer": "You can withdraw LUKAS tokens when your balance is over 5 LUKAS."
+      }
     },
     "points": {
       "title": "Hash POINTS",

@@ -43,7 +43,16 @@ export default function NotificationsScreen() {
 
   const handleNotificationPress = async (notification: any) => {
     // Navigate based on notification type (without marking as read)
-    if (notification.meeting_request_id) {
+    if (notification.type === 'chat_message' && notification.meeting_id) {
+      // Navigate to meeting chat
+      router.push({
+        pathname: '/events/bsl2025/networking/meeting-detail' as any,
+        params: {
+          meetingId: notification.meeting_id,
+          openChat: 'true'
+        }
+      });
+    } else if (notification.meeting_request_id) {
       try {
         // Fetch meeting request details to get all necessary data
         const { data: meetingRequest, error } = await supabase
@@ -151,6 +160,7 @@ export default function NotificationsScreen() {
   };
 
   const getNotificationIcon = (type: string) => {
+    if (type === 'chat_message') return 'chat';
     switch (type) {
       case 'meeting_request':
         return 'send';
@@ -175,6 +185,8 @@ export default function NotificationsScreen() {
     if (isUrgent) return '#FF3B30';
     
     switch (type) {
+      case 'chat_message':
+        return '#5856D6';
       case 'meeting_request':
         return '#007AFF';
       case 'meeting_accepted':

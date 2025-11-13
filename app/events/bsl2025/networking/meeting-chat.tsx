@@ -6,14 +6,21 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import MeetingChat from '@/components/MeetingChat';
 import LoadingScreen from '@/components/LoadingScreen';
+import { supabase } from '@/lib/supabase';
 
 export default function MeetingChatPage() {
   const router = useRouter();
-  const { meetingId } = useLocalSearchParams<{ meetingId: string }>();
+  const { meetingId, title, speakerName, requesterName } = useLocalSearchParams<{ 
+    meetingId: string;
+    title?: string;
+    speakerName?: string;
+    requesterName?: string;
+  }>();
   const { colors } = useTheme();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [meetingInfo, setMeetingInfo] = useState<any>(null);
+  const [chatTitle, setChatTitle] = useState<string>('Chat');
 
   useEffect(() => {
     if (meetingId) {
@@ -27,15 +34,44 @@ export default function MeetingChatPage() {
   const loadMeetingInfo = async () => {
     try {
       setLoading(true);
-      // You can add logic here to fetch meeting details if needed
-      // For now, we'll just set basic info
-      setMeetingInfo({
-        id: meetingId,
-        title: 'Meeting Chat'
-      });
+      
+      // If title is provided in params, use it
+      if (title) {
+        setChatTitle(title);
+        setMeetingInfo({ id: meetingId, title });
+        setLoading(false);
+        return;
+      }
+      
+      // Otherwise, fetch meeting details to build title
+      if (meetingId && user?.id) {
+        const { data: meetingData, error } = await supabase
+          .from('meetings')
+          .select('speaker_name, requester_name, speaker_id, requester_id')
+          .eq('id', meetingId)
+          .single();
+        
+        if (meetingData && !error) {
+          const isRequester = meetingData.requester_id === user.id;
+          const userName = user.user_metadata?.full_name?.split(' ')[0] || user.email?.split('@')[0] || 'You';
+          const otherName = isRequester 
+            ? (meetingData.speaker_name?.split(' ')[0] || 'Speaker')
+            : (meetingData.requester_name?.split(' ')[0] || 'User');
+          
+          setChatTitle(`${userName} ↔ ${otherName}`);
+          setMeetingInfo({
+            id: meetingId,
+            title: chatTitle,
+            speakerName: meetingData.speaker_name,
+            requesterName: meetingData.requester_name
+          });
+        } else {
+          setChatTitle('Chat');
+        }
+      }
     } catch (error) {
       console.error('Error loading meeting info:', error);
-      Alert.alert('Error', 'Failed to load meeting information');
+      setChatTitle('Chat');
     } finally {
       setLoading(false);
     }
@@ -67,11 +103,15 @@ export default function MeetingChatPage() {
     <View style={[styles.container, { backgroundColor: colors.background?.default }]}>
       <Stack.Screen 
         options={{ 
-          title: '',  // Empty title to hide it
+          title: chatTitle,  // Show title in navigation bar
           headerBackTitle: 'Back',
-          headerShadowVisible: false,  // Remove header shadow for cleaner look
+          headerShadowVisible: false,
           headerStyle: {
             backgroundColor: colors.background?.default,
+          },
+          headerTitleStyle: {
+            fontSize: 16,
+            fontWeight: '600',
           },
           headerRight: () => (
             <TouchableOpacity

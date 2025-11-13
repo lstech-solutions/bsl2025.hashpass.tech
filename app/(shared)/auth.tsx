@@ -4,7 +4,7 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Platform, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import * as Linking from 'expo-linking';
 import ThemeAndLanguageSwitcher from '../../components/ThemeAndLanguageSwitcher';
@@ -26,7 +26,23 @@ export default function AuthScreen() {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation('auth');
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { showError, showSuccess, showWarning, showInfo } = useToastHelpers();
+  
+  // Get returnTo parameter from URL
+  const returnTo = params.returnTo as string | undefined;
+  
+  // Helper function to get redirect path after authentication
+  const getRedirectPath = () => {
+    if (returnTo) {
+      try {
+        return decodeURIComponent(returnTo);
+      } catch (e) {
+        console.warn('Failed to decode returnTo parameter:', e);
+      }
+    }
+    return '/(shared)/dashboard/explore';
+  };
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -38,6 +54,7 @@ export default function AuthScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'privacy' | 'terms'>('privacy');
   const [welcomeEmailSending, setWelcomeEmailSending] = useState<Set<string>>(new Set()); // Track users currently sending welcome email
+  const [rateLimitCooldown, setRateLimitCooldown] = useState(0); // Countdown timer for rate limit
   const styles = getStyles(isDark, colors);
 
   // Processing guards to prevent duplicate processing
@@ -59,6 +76,21 @@ export default function AuthScreen() {
     }
   }, []);
 
+  // Rate limit countdown timer
+  useEffect(() => {
+    if (rateLimitCooldown > 0) {
+      const timer = setInterval(() => {
+        setRateLimitCooldown(prev => {
+          if (prev <= 1) {
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [rateLimitCooldown]);
+
   // Check for existing session on mount (handles page reload)
   useEffect(() => {
     const checkExistingSession = async () => {
@@ -68,7 +100,7 @@ export default function AuthScreen() {
           console.log(`🔐 Found existing session on mount for user: ${session.user.id}`);
           // Navigate immediately if user is already authenticated
           hasNavigatedRef.current = true;
-          router.replace('/(shared)/dashboard/explore');
+          router.replace(getRedirectPath());
         }
       } catch (error) {
         console.warn('⚠️ Error checking existing session:', error);
@@ -110,7 +142,7 @@ export default function AuthScreen() {
             console.log('🔄 INITIAL_SESSION detected - user already authenticated, navigating to dashboard');
             if (!hasNavigatedRef.current) {
               hasNavigatedRef.current = true;
-              router.replace('/(shared)/dashboard/explore');
+              router.replace(getRedirectPath());
             }
             isProcessingRef.current = false;
             return;
@@ -129,14 +161,14 @@ export default function AuthScreen() {
               // Continue to dashboard even if pass creation fails
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
-              router.replace('/(shared)/dashboard/explore');
+              router.replace(getRedirectPath());
               }
             } else if (passId) {
               console.log('✅ Default pass created successfully:', passId);
               // Navigate immediately, don't wait
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
-              router.replace('/(shared)/dashboard/explore');
+              router.replace(getRedirectPath());
               }
             } else {
               console.warn('⚠️ Pass creation returned null - pass may already exist or creation failed silently');
@@ -157,7 +189,7 @@ export default function AuthScreen() {
               }
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
-              router.replace('/(shared)/dashboard/explore');
+              router.replace(getRedirectPath());
               }
             }
 
@@ -262,7 +294,7 @@ export default function AuthScreen() {
             // Continue to dashboard even if pass creation fails
             if (!hasNavigatedRef.current) {
               hasNavigatedRef.current = true;
-            router.replace('/(shared)/dashboard/explore');
+            router.replace(getRedirectPath());
             }
           } finally {
             isProcessingRef.current = false;
@@ -270,7 +302,7 @@ export default function AuthScreen() {
         } else {
           if (!hasNavigatedRef.current) {
             hasNavigatedRef.current = true;
-          router.replace('/(shared)/dashboard/explore');
+          router.replace(getRedirectPath());
         }
       }
       }
@@ -317,9 +349,23 @@ export default function AuthScreen() {
     setEmailError('');
     setLoading(true);
     try {
-      const redirectTo = Platform.OS === 'web' 
-        ? (typeof window !== 'undefined' ? window.location.origin + '/(shared)/auth/callback' : Linking.createURL('/(shared)/auth/callback'))
-        : Linking.createURL('/(shared)/auth/callback');
+      // Construct redirect URL - handle production properly
+      let redirectTo = '';
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined' && window.location) {
+          // Use the actual origin for production
+          const origin = window.location.origin;
+          // Include returnTo parameter if it exists
+          const returnToParam = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '';
+          redirectTo = `${origin}/(shared)/auth/callback${returnToParam}`;
+        } else {
+          // Fallback for SSR
+          redirectTo = Linking.createURL('/(shared)/auth/callback');
+        }
+      } else {
+        // For mobile, use deep linking
+        redirectTo = Linking.createURL('/(shared)/auth/callback');
+      }
 
       if (authMethod === 'otp') {
         // For OTP, use our custom API endpoint that sends the actual code
@@ -331,12 +377,38 @@ export default function AuthScreen() {
             if (result.error?.includes('rate limit') || 
                 result.error?.includes('Too many emails') ||
                 result.error?.includes('over_email_send_rate_limit')) {
-              throw new Error('Too many emails sent. Please wait a few minutes before requesting another code.');
+              // Parse the wait time from the error message
+              const timeMatch = result.error.match(/(\d+)\s*(second|minute|hour)/i);
+              let waitSeconds = 60; // Default to 60 seconds
+              let errorMsg = 'Too many emails sent. Please wait a few minutes before requesting another code.';
+              
+              if (timeMatch) {
+                const timeValue = parseInt(timeMatch[1], 10);
+                const timeUnit = timeMatch[2].toLowerCase();
+                
+                if (timeUnit.includes('second')) {
+                  waitSeconds = timeValue;
+                } else if (timeUnit.includes('minute')) {
+                  waitSeconds = timeValue * 60;
+                } else if (timeUnit.includes('hour')) {
+                  waitSeconds = timeValue * 3600;
+                }
+                
+                const timeDisplay = timeValue === 1 
+                  ? `1 ${timeUnit.slice(0, -1)}` 
+                  : `${timeValue} ${timeUnit}`;
+                errorMsg = `Too many requests. Please wait ${timeDisplay} before requesting another code.`;
+              }
+              
+              // Set the cooldown timer
+              setRateLimitCooldown(waitSeconds);
+              throw new Error(errorMsg);
             }
             throw new Error(result.error || 'Failed to send OTP code');
           }
 
           setOtpSent(true);
+          setRateLimitCooldown(0); // Clear any rate limit cooldown on success
           
           // Get email provider to add a link in the toast
           const emailProvider = getEmailProviderUrl(email.trim());
@@ -388,12 +460,42 @@ export default function AuthScreen() {
           // Handle rate limit errors specifically
           let errorTitle = 'Authentication Error';
           let errorMessage = error.message;
+          let waitSeconds = 0;
           
           if (error.message?.includes('rate limit') || 
               error.message?.includes('over_email_send_rate_limit') ||
               error.code === 'over_email_send_rate_limit') {
             errorTitle = 'Rate Limit Exceeded';
-            errorMessage = 'Too many emails sent. Please wait a few minutes before requesting another magic link.';
+            
+            // Parse the wait time from the error message
+            // Example: "For security purposes, you can only request this after 12 seconds."
+            const timeMatch = error.message.match(/(\d+)\s*(second|minute|hour)/i);
+            if (timeMatch) {
+              const timeValue = parseInt(timeMatch[1], 10);
+              const timeUnit = timeMatch[2].toLowerCase();
+              
+              if (timeUnit.includes('second')) {
+                waitSeconds = timeValue;
+              } else if (timeUnit.includes('minute')) {
+                waitSeconds = timeValue * 60;
+              } else if (timeUnit.includes('hour')) {
+                waitSeconds = timeValue * 3600;
+              }
+              
+              // Set the cooldown timer
+              if (waitSeconds > 0) {
+                setRateLimitCooldown(waitSeconds);
+              }
+              
+              const timeDisplay = timeValue === 1 
+                ? `1 ${timeUnit.slice(0, -1)}` 
+                : `${timeValue} ${timeUnit}`;
+              errorMessage = `Too many requests. Please wait ${timeDisplay} before requesting another magic link.`;
+            } else {
+              // Fallback if we can't parse the time
+              errorMessage = 'Too many emails sent. Please wait a few minutes before requesting another magic link.';
+              setRateLimitCooldown(60); // Default to 60 seconds
+            }
           }
           
           showError(errorTitle, errorMessage);
@@ -410,6 +512,8 @@ export default function AuthScreen() {
           label: emailProvider ? `Open ${emailProvider.name}` : 'Open Email App',
           onPress: async () => await openEmailProvider(email.trim()),
         };
+        
+        setRateLimitCooldown(0); // Clear any rate limit cooldown on success
         
         showSuccess(
           'Magic Link Sent',
@@ -470,9 +574,9 @@ export default function AuthScreen() {
         }
 
         if (session) {
-          // Wait a brief moment to ensure session is fully established
+          // Wait a moment to ensure session is fully established
           // This helps prevent race conditions on production
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 300));
           
           // Double-check session is still valid
           const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -480,10 +584,13 @@ export default function AuthScreen() {
             throw new Error('Session not established');
           }
 
+          // Additional delay to ensure router state is ready
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
           setLoading(false);
           
-          // Navigate immediately - user is already authenticated
-          router.replace('/(shared)/dashboard/explore');
+          // Navigate to dashboard - user is already authenticated
+          router.replace(getRedirectPath());
           return;
         } else {
           throw new Error('No session created after verification');
@@ -537,7 +644,7 @@ export default function AuthScreen() {
           setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
           // Navigate immediately, no delay
-          router.replace('/(shared)/dashboard/explore');
+          router.replace(getRedirectPath());
           return;
         }
       }
@@ -565,7 +672,7 @@ export default function AuthScreen() {
                 setLoading(false);
                 showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
                 // Navigate immediately, no delay
-                router.replace('/(shared)/dashboard/explore');
+                router.replace(getRedirectPath());
                 return;
               }
             }
@@ -589,7 +696,7 @@ export default function AuthScreen() {
       if (session) {
         setLoading(false);
         showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
-        router.replace('/(shared)/dashboard/explore');
+        router.replace(getRedirectPath());
         return;
       }
       
@@ -631,7 +738,7 @@ export default function AuthScreen() {
           setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
           // Navigate immediately, no delay
-          router.replace('/(shared)/dashboard/explore');
+          router.replace(getRedirectPath());
           return;
         }
       }
@@ -659,7 +766,7 @@ export default function AuthScreen() {
                 setLoading(false);
                 showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
                 // Navigate immediately, no delay
-                router.replace('/(shared)/dashboard/explore');
+                router.replace(getRedirectPath());
                 return;
               }
             }
@@ -683,7 +790,7 @@ export default function AuthScreen() {
       if (session) {
         setLoading(false);
         showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
-        router.replace('/(shared)/dashboard/explore');
+        router.replace(getRedirectPath());
         return;
       }
       
@@ -881,13 +988,23 @@ export default function AuthScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                style={[
+                  styles.primaryButton, 
+                  (loading || rateLimitCooldown > 0) && styles.primaryButtonDisabled
+                ]}
                 onPress={sendMagicLinkOrOTP}
-                disabled={loading}
+                disabled={loading || rateLimitCooldown > 0}
                 activeOpacity={0.7}
               >
                 {loading ? (
                   <ActivityIndicator color="#FFFFFF" />
+                ) : rateLimitCooldown > 0 ? (
+                  <View style={styles.primaryButtonContent}>
+                    <Ionicons name="time-outline" size={20} color="#FFFFFF" />
+                    <Text style={styles.primaryButtonText}>
+                      Wait {rateLimitCooldown}s
+                    </Text>
+                  </View>
                 ) : (
                   <View style={styles.primaryButtonContent}>
                     <Ionicons 

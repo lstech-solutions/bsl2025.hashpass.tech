@@ -32,7 +32,18 @@
       "description": "Verwalten Sie Ihre $LUKAS-, $COP- und $VOI-Token",
       "swap": "Tauschen",
       "totalPortfolio": "Gesamtwert des Portfolios",
-      "portfolioDesc": "Kombinierter Wert aller Ihrer Token"
+      "portfolioDesc": "Kombinierter Wert aller Ihrer Token",
+      "withdrawalDisclaimer": "💡 Abhebung verfügbar, wenn das Guthaben über 5 LUKAS liegt",
+      "swapAvailable": {
+        "title": "Tausche verfügbar",
+        "message": "Tausche sind vor Ort bei Hash-Händlern verfügbar"
+      },
+      "lukasInfo": {
+        "title": "Was ist LUKAS?",
+        "description": "LUKAS ist die digitale Währung des HashPass-Ökosystems, die entwickelt wurde, um Benutzerinteraktionen und Engagement zu belohnen.",
+        "features": "• Verdienen Sie LUKAS durch Annahme und Planung von Meetings\n• Wird in HashHouse monetarisiert\n• Tauschbar gegen andere Krypto-Token",
+        "withdrawalDisclaimer": "Sie können LUKAS-Token abheben, wenn Ihr Guthaben über 5 LUKAS liegt."
+      }
     },
     "points": {
       "title": "Hash POINTS",

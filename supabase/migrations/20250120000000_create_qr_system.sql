@@ -97,23 +97,23 @@ CREATE INDEX IF NOT EXISTS idx_qr_scan_logs_scanned_at ON public.qr_scan_logs(sc
 CREATE OR REPLACE FUNCTION generate_qr_token()
 RETURNS TEXT AS $$
 DECLARE
-    token TEXT;
+    v_token TEXT;
     exists_check BOOLEAN;
 BEGIN
     LOOP
         -- Generate a unique token: type prefix + timestamp + random
-        token := 'QR-' || 
-                 EXTRACT(EPOCH FROM NOW())::bigint || '-' ||
-                 UPPER(SUBSTRING(MD5(RANDOM()::TEXT || NOW()::TEXT) FROM 1 FOR 12));
+        v_token := 'QR-' || 
+                   EXTRACT(EPOCH FROM NOW())::bigint || '-' ||
+                   UPPER(SUBSTRING(MD5(RANDOM()::TEXT || NOW()::TEXT) FROM 1 FOR 12));
         
-        -- Check if token exists
-        SELECT EXISTS(SELECT 1 FROM public.qr_codes WHERE qr_codes.token = generate_qr_token.token) INTO exists_check;
+        -- Check if token exists (use v_token variable to avoid ambiguity with column name)
+        SELECT EXISTS(SELECT 1 FROM public.qr_codes WHERE token = v_token) INTO exists_check;
         
         -- Exit loop if token is unique
         EXIT WHEN NOT exists_check;
     END LOOP;
     
-    RETURN token;
+    RETURN v_token;
 END;
 $$ LANGUAGE plpgsql;
 

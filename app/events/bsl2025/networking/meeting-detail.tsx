@@ -8,6 +8,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToastHelpers } from '@/contexts/ToastContext';
 import SpeakerAvatar from '@/components/SpeakerAvatar';
 import LoadingScreen from '@/components/LoadingScreen';
+import { supabase } from '@/lib/supabase';
+
+// Helper function to generate user avatar URL
+const generateUserAvatarUrl = (name: string): string => {
+  const seed = name.toLowerCase().replace(/\s+/g, '-');
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+};
 
 export default function MeetingDetailScreen() {
   const { colors, isDark } = useTheme();
@@ -25,8 +32,38 @@ export default function MeetingDetailScreen() {
       try {
         setLoading(true);
         
-        // If we have all params from navigation, use them
-        if (params.meetingId) {
+        if (!params.meetingId) {
+          showError('Error', 'Meeting ID is required');
+          setLoading(false);
+          return;
+        }
+
+        // Load meeting details from database
+        const { data: meetingData, error: meetingError } = await supabase
+          .from('meetings')
+          .select('*, speaker_id, requester_id, speaker_name, requester_name, meeting_request_id')
+          .eq('id', params.meetingId)
+          .single();
+        
+        // Also try to get requester details from meeting_requests if available
+        let requesterTitle: string | undefined;
+        let requesterCompany: string | undefined;
+        
+        if (meetingData?.meeting_request_id) {
+          const { data: requestData } = await supabase
+            .from('meeting_requests')
+            .select('requester_title, requester_company, requester_name')
+            .eq('id', meetingData.meeting_request_id)
+            .single();
+          
+          if (requestData) {
+            requesterTitle = requestData.requester_title;
+            requesterCompany = requestData.requester_company;
+          }
+        }
+
+        if (meetingError || !meetingData) {
+          // Fallback to params if database query fails
           setMeeting({
             id: params.meetingId,
             speaker_name: params.speakerName,
@@ -38,11 +75,57 @@ export default function MeetingDetailScreen() {
             location: params.location,
             duration: params.duration,
             notes: params.message,
-            requester_name: isSpeaker ? 'You' : params.requesterName,
+            requester_name: params.requesterName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
             speaker_id: params.speakerId,
-            requester_id: params.requesterId
+            requester_id: params.requesterId || user?.id
           });
+          setLoading(false);
+          return;
         }
+
+        // Determine if current user is speaker or requester
+        const isRequester = meetingData.requester_id === user?.id;
+        setIsSpeaker(!isRequester);
+
+        // Load speaker details
+        let speakerImage = params.speakerImage;
+        let speakerCompany = params.speakerCompany;
+        
+        if (meetingData.speaker_id) {
+          const { data: speakerData } = await supabase
+            .from('bsl_speakers')
+            .select('name, imageurl, company')
+            .eq('id', meetingData.speaker_id)
+            .single();
+          
+          if (speakerData) {
+            speakerImage = speakerData.imageurl || speakerImage;
+            speakerCompany = speakerData.company || speakerCompany;
+          }
+        }
+
+        // Get requester information - always show real name, not "You"
+        const requesterName = meetingData.requester_name || params.requesterName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+        const requesterAvatar = generateUserAvatarUrl(requesterName);
+
+        setMeeting({
+          id: meetingData.id,
+          speaker_name: meetingData.speaker_name || params.speakerName,
+          speaker_image: speakerImage,
+          speaker_company: speakerCompany,
+          status: meetingData.status || params.status,
+          message: params.message || meetingData.notes,
+          scheduled_at: meetingData.scheduled_at || params.scheduledAt,
+          location: meetingData.location || params.location,
+          duration: meetingData.duration_minutes || params.duration || 15,
+          notes: params.message || meetingData.notes,
+          requester_name: requesterName, // Always show real name
+          requester_avatar: requesterAvatar,
+          requester_id: meetingData.requester_id,
+          speaker_id: meetingData.speaker_id,
+          requester_title: requesterTitle || params.requesterTitle,
+          requester_company: requesterCompany || params.requesterCompany
+        });
       } catch (error) {
         console.error('Error loading meeting details:', error);
         showError('Error', 'Failed to load meeting details');
@@ -52,28 +135,44 @@ export default function MeetingDetailScreen() {
     };
 
     loadMeetingDetails();
-  }, [params.meetingId]);
+  }, [params.meetingId, user?.id]);
 
   const handleBack = () => {
     router.back();
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
+      case 'confirmed': return '#4CAF50';
+      case 'scheduled': return '#4CAF50';
+      case 'tentative': return '#FF9800';
+      case 'in_progress': return '#2196F3';
+      case 'completed': return '#4CAF50';
+      case 'cancelled': return '#F44336';
+      case 'no_show': return '#9E9E9E';
+      case 'unconfirmed': return '#FF9800';
+      // Legacy meeting_request statuses
       case 'requested': return '#FF9800';
       case 'accepted': return '#4CAF50';
       case 'rejected': return '#F44336';
-      case 'cancelled': return '#9E9E9E';
       default: return '#9E9E9E';
     }
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
+      case 'confirmed': return 'check-circle';
+      case 'scheduled': return 'event';
+      case 'tentative': return 'schedule';
+      case 'in_progress': return 'play-circle';
+      case 'completed': return 'check-circle';
+      case 'cancelled': return 'cancel';
+      case 'no_show': return 'block';
+      case 'unconfirmed': return 'schedule';
+      // Legacy meeting_request statuses
       case 'requested': return 'schedule';
       case 'accepted': return 'check-circle';
       case 'rejected': return 'cancel';
-      case 'cancelled': return 'block';
       default: return 'help';
     }
   };
@@ -86,6 +185,16 @@ export default function MeetingDetailScreen() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  // Helper function to shorten meeting ID
+  const shortenMeetingId = (id: string | undefined): string => {
+    if (!id) return '';
+    // Take first 8 characters and last 4 characters
+    if (id.length > 12) {
+      return `${id.substring(0, 8)}...${id.substring(id.length - 4)}`;
+    }
+    return id;
   };
 
   if (loading) {
@@ -110,7 +219,7 @@ export default function MeetingDetailScreen() {
     <View style={styles.container}>
       <Stack.Screen 
         options={{ 
-          title: 'Meeting Request Details',
+          title: 'Meeting Details',
           headerShown: false,
           presentation: 'modal',
           animation: 'slide_from_bottom',
@@ -121,7 +230,7 @@ export default function MeetingDetailScreen() {
       />
       
       <View style={styles.modalHeader}>
-        <Text style={styles.modalTitle}>Meeting Request Details</Text>
+        <Text style={styles.modalTitle}>Meeting Details</Text>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={handleBack}
@@ -145,15 +254,51 @@ export default function MeetingDetailScreen() {
               <View style={styles.speakerDetailInfo}>
                 <Text style={styles.speakerDetailName}>{meeting.speaker_name}</Text>
                 <Text style={styles.speakerDetailTitle}>Speaker</Text>
+                {meeting.speaker_company && (
+                  <Text style={[styles.speakerDetailTitle, { marginTop: 2 }]}>
+                    {meeting.speaker_company}
+                  </Text>
+                )}
               </View>
             </View>
           </View>
+
+          {/* Requester Info */}
+          {meeting.requester_name && (
+            <View style={styles.detailSection}>
+              <Text style={styles.detailLabel}>Requester</Text>
+              <View style={styles.speakerDetail}>
+                <SpeakerAvatar
+                  name={meeting.requester_name}
+                  imageUrl={meeting.requester_avatar || undefined}
+                  size={60}
+                  showBorder={true}
+                />
+                <View style={styles.speakerDetailInfo}>
+                  <Text style={styles.speakerDetailName}>{meeting.requester_name}</Text>
+                  <Text style={styles.speakerDetailTitle}>Requester</Text>
+                  {meeting.requester_title && (
+                    <Text style={[styles.speakerDetailTitle, { marginTop: 2 }]}>
+                      {meeting.requester_title}
+                    </Text>
+                  )}
+                  {meeting.requester_company && (
+                    <Text style={[styles.speakerDetailTitle, { marginTop: 2 }]}>
+                      {meeting.requester_company}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          )}
 
           <View style={styles.detailSection}>
             <Text style={styles.detailLabel}>Status</Text>
             <View style={[styles.statusDetail, { backgroundColor: getStatusColor(meeting.status) }]}>
               <MaterialIcons name={getStatusIcon(meeting.status) as any} size={20} color="white" />
-              <Text style={styles.statusDetailText}>{meeting.status.toUpperCase()}</Text>
+              <Text style={styles.statusDetailText}>
+                {meeting.status?.toUpperCase() || 'UNKNOWN'}
+              </Text>
             </View>
           </View>
 

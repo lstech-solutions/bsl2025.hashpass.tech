@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useEvent } from '../../../../contexts/EventContext';
 import { useTheme } from '../../../../hooks/useTheme';
@@ -56,8 +56,14 @@ export default function SpeakersCalendar() {
   const [groupedSpeakers, setGroupedSpeakers] = useState<{ [key: string]: Speaker[] }>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name');
+  const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const agenda = event?.agenda || [];
+  
+  // Calculate active speakers count
+  const activeSpeakersCount = useMemo(() => {
+    return speakers.filter(s => s.isActive).length;
+  }, [speakers]);
 
   // Load speakers from database with JSON fallback
   useEffect(() => {
@@ -245,7 +251,7 @@ export default function SpeakersCalendar() {
         {/* Event Header */}
         <EventBanner
           title="All Speakers"
-          subtitle={`Complete Directory • ${speakers.length} Speakers`}
+          subtitle={`Complete Directory • ${speakers.length} Speakers${activeSpeakersCount > 0 ? ` • ${activeSpeakersCount} Active` : ''}`}
           date="November 12-14, 2025 • Medellín, Colombia"
           showCountdown={true}
           showLiveIndicator={true}
@@ -259,6 +265,9 @@ export default function SpeakersCalendar() {
             onGroupedSpeakers={setGroupedSpeakers}
             onSearchChange={setSearchQuery}
             onSortChange={setSortBy}
+            onActiveFilterChange={(showActiveOnly) => {
+              setShowActiveOnly(showActiveOnly);
+            }}
           />
         )}
 
@@ -266,7 +275,11 @@ export default function SpeakersCalendar() {
         {filteredSpeakers.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              {searchQuery ? `Search Results (${filteredSpeakers.length})` : `All Speakers (${speakers.length})`}
+              {searchQuery 
+                ? `Search Results (${filteredSpeakers.length})`
+                : showActiveOnly 
+                  ? `Active Speakers (${filteredSpeakers.length})`
+                  : `All Speakers (${speakers.length})`}
             </Text>
             <View style={styles.speakersList}>
               {filteredSpeakers.map(speaker => (

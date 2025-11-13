@@ -429,7 +429,7 @@ const MySchedule = () => {
         title: m.title || `Meeting with ${m.speaker_name || m.requester_name || 'User'}`,
         description: m.notes || m.message,
         startTime: meetingStartTime,
-        endTime: m.end_time || (meetingStartTime ? addMinutes(parseEventISO(meetingStartTime), m.duration_minutes || 15).toISOString() : ''),
+        endTime: m.end_time || (meetingStartTime ? addMinutes(parseEventISO(meetingStartTime), m.duration_minutes ?? 15).toISOString() : ''),
         participants: m.speaker_name ? [m.speaker_name] : [],
         status: userStatus as 'confirmed' | 'unconfirmed',
         location: m.location || m.meeting_location || 'TBD',

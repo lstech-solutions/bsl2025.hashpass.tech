@@ -1413,56 +1413,68 @@ export async function sendTroubleshootingEmail(
         hashpassLogoUrl = hashpassLogoBase64 || getEmailAssetUrl('images/logo-full-hashpass-white.png');
       }
       
-      // Get "As of" translation
-      const asOfTranslations: Record<string, string> = {
-        en: 'As of',
-        es: 'A partir de',
-        ko: '기준',
-        fr: 'Au',
-        pt: 'A partir de',
-        de: 'Stand',
+      // Get status message translation
+      const statusMessages: Record<string, string> = {
+        en: 'All systems operational',
+        es: 'Todos los sistemas operativos',
+        ko: '모든 시스템 정상 작동',
+        fr: 'Tous les systèmes opérationnels',
+        pt: 'Todos os sistemas operacionais',
+        de: 'Alle Systeme betriebsbereit',
       };
-      const asOfText = asOfTranslations[normalizedLocale] || asOfTranslations.en;
+      const statusMessage = statusMessages[normalizedLocale] || statusMessages.en;
       
-      // Prepare assets object with all values
+      // Format timestamp with fallback
+      let statusTimestamp: string;
+      try {
+        const now = new Date();
+        statusTimestamp = now.toLocaleString(normalizedLocale, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZoneName: 'short'
+        });
+        // Fallback if toLocaleString fails or returns invalid value
+        if (!statusTimestamp || statusTimestamp === 'Invalid Date') {
+          statusTimestamp = now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+        }
+      } catch (error) {
+        // Ultimate fallback
+        statusTimestamp = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+      }
+      
+      // Prepare assets object with all values - ensure they are always strings
       const assets: Record<string, string> = {
         bslLogoUrl,
         hashpassLogoUrl,
         appUrl: 'https://bsl2025.hashpass.tech',
-        statusHtml: statusHtml || '',
-        overallStatus: overallStatus || 'HEALTHY',
-        statusTimestamp: statusTimestamp || new Date().toLocaleString(normalizedLocale),
-        asOfText: asOfText || 'As of',
+        statusMessage: String(statusMessage || 'All systems operational'),
+        statusTimestamp: String(statusTimestamp || new Date().toISOString()),
       };
-      
-      // Debug: Log the values before replacement
-      console.log('[sendTroubleshootingEmail] Status values before replacement:');
-      console.log('  statusHtml length:', statusHtml.length);
-      console.log('  overallStatus:', overallStatus);
-      console.log('  statusTimestamp:', statusTimestamp);
-      console.log('  asOfText:', asOfText);
       
       // Replace placeholders with translations and assets
       htmlContent = replaceTemplatePlaceholders(htmlContent, translations, assets, normalizedLocale);
       
+      // Final cleanup: ensure status placeholders are ALWAYS replaced with hardcoded fallbacks
+      // Use hardcoded fallback values to ensure they're never empty
+      const finalStatusMessage = assets.statusMessage || statusMessage || 'All systems operational';
+      const finalStatusTimestamp = assets.statusTimestamp || statusTimestamp || new Date().toISOString();
+      
+      htmlContent = htmlContent.replace(/\[STATUS_MESSAGE\]/g, finalStatusMessage);
+      htmlContent = htmlContent.replace(/\[STATUS_TIMESTAMP\]/g, finalStatusTimestamp);
+      
       // Debug: Check if placeholders were replaced
-      const remainingStatusPlaceholders = htmlContent.match(/\[(OVERALL_STATUS|AS_OF_TEXT|STATUS_TIMESTAMP|STATUS_HTML)\]/g);
-      if (remainingStatusPlaceholders) {
-        console.warn('[sendTroubleshootingEmail] ⚠️ Status placeholders still present after replacement:', remainingStatusPlaceholders);
+      const remaining = htmlContent.match(/\[(STATUS_MESSAGE|STATUS_TIMESTAMP)\]/g);
+      if (remaining) {
+        console.warn('[sendTroubleshootingEmail] ⚠️ Status placeholders still present after replacement:', remaining);
+        // Force replace one more time with hardcoded values
+        htmlContent = htmlContent.replace(/\[STATUS_MESSAGE\]/g, 'All systems operational');
+        htmlContent = htmlContent.replace(/\[STATUS_TIMESTAMP\]/g, new Date().toISOString());
       } else {
-        console.log('[sendTroubleshootingEmail] ✅ All status placeholders replaced successfully');
+        console.log('[sendTroubleshootingEmail] ✅ Status placeholders replaced successfully');
       }
-      
-      // Remove comment markers (status is always available now with dummy data)
-      htmlContent = htmlContent.replace(/<!--\[STATUS_AVAILABLE\]-->/g, '');
-      htmlContent = htmlContent.replace(/<!--\[\/STATUS_AVAILABLE\]-->/g, '');
-      
-      // Final cleanup: remove any remaining placeholders that might not have been replaced
-      // This is a safety measure - replace with actual values if still present
-      htmlContent = htmlContent.replace(/\[OVERALL_STATUS\]/g, overallStatus || 'HEALTHY');
-      htmlContent = htmlContent.replace(/\[AS_OF_TEXT\]/g, asOfText || 'As of');
-      htmlContent = htmlContent.replace(/\[STATUS_TIMESTAMP\]/g, statusTimestamp || new Date().toLocaleString(normalizedLocale));
-      htmlContent = htmlContent.replace(/\[STATUS_HTML\]/g, statusHtml || '');
       
     } catch (error) {
       // Fallback to inline HTML if file doesn't exist

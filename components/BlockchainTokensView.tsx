@@ -92,7 +92,7 @@ const BlockchainTokensView = () => {
         setIsLoadingBalance(false);
         
         if (forceRefresh) {
-          showSuccess('Balance Updated', `Your ${tokenSymbol} balance has been refreshed`);
+          showSuccess('Balance Updated', `Your ${tokenSymbol} balance has been refreshed`); // Auto-close with progress bar
         }
       }
       // Add other tokens here when they're supported

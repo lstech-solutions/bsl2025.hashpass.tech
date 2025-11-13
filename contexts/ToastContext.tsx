@@ -42,10 +42,12 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
 
   const showToast = useCallback((toast: Omit<Toast, 'id'>) => {
     const id = Date.now().toString();
+    // Use default duration of 2369ms (2.369 seconds) if duration is not explicitly provided (undefined or not set)
+    const duration = toast.duration !== undefined ? toast.duration : 2369;
     const newToast: Toast = {
       id,
-      duration: 4000,
-      ...toast,
+      ...toast, // Spread all toast properties
+      duration, // Always set duration (either explicit or default)
     };
 
     console.log('🔔 Creating toast:', newToast);
@@ -181,6 +183,10 @@ const ToastItem: React.FC<ToastItemProps> = ({
 }) => {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(100)); // Start from bottom (positive value)
+  const [progressAnim] = useState(new Animated.Value(0)); // Progress bar animation
+
+  // Determine if toast is non-critical (errors are critical, others are not)
+  const isNonCritical = toast.type !== 'error' && toast.duration && toast.duration > 0;
 
   React.useEffect(() => {
     // Animate in with spring effect
@@ -198,6 +204,15 @@ const ToastItem: React.FC<ToastItemProps> = ({
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Start progress bar animation for non-critical toasts
+    if (isNonCritical && toast.duration) {
+      Animated.timing(progressAnim, {
+        toValue: 1,
+        duration: toast.duration,
+        useNativeDriver: false, // Width animation requires native driver to be false
+      }).start();
+    }
   }, []);
 
   const handleHide = () => {
@@ -307,6 +322,25 @@ const ToastItem: React.FC<ToastItemProps> = ({
             </TouchableOpacity>
           )}
         </View>
+        
+        {/* Progress bar for non-critical toasts */}
+        {isNonCritical && (
+          <View style={styles.progressBarContainer}>
+            <Animated.View
+              style={[
+                styles.progressBar,
+                {
+                  backgroundColor: icon.color,
+                  opacity: 0.85, // Slightly transparent for a more polished look
+                  width: progressAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%'],
+                  }),
+                },
+              ]}
+            />
+          </View>
+        )}
       </View>
     </Animated.View>
   );
@@ -399,6 +433,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: 0.3,
+  },
+  progressBarContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 4, // More padding from left edge to better handle rounded corners
+    right: 4, // More padding from right edge to better handle rounded corners
+    height: 2, // Thinner, more polished bar
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+    borderBottomLeftRadius: 12, // Adjusted radius to match increased padding
+    borderBottomRightRadius: 12,
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#2196F3',
+    alignSelf: 'flex-start', // Align to left so it fills from left to right
+    borderRadius: 1, // Slight rounding on the bar itself
   },
 });
 

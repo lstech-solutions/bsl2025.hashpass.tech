@@ -3,6 +3,11 @@
  */
 
 import Constants from 'expo-constants';
+import { 
+  getSpeakerCloudinaryAvatarUrl, 
+  getCloudinaryUrl, 
+  isCloudinaryUrl
+} from './cloudinary';
 
 /**
  * Converts accented characters to ASCII equivalents for URL-safe strings
@@ -57,18 +62,66 @@ export function getLocalOptimizedAvatarUrl(name: string): string | null {
 }
 
 /**
- * Generates avatar URL for a speaker from S3
- * Note: The database imageurl should contain the S3 URL if available.
- * This function is used as a fallback when imageurl is not set.
+ * Gets the optimized avatar URL with Cloudinary priority
+ * Priority order: Cloudinary > Local optimized > S3
+ * @param name - The speaker's name
+ * @param imageUrl - Existing image URL (if any)
+ * @param size - Avatar size in pixels
+ * @returns Optimized avatar URL
+ */
+export function getOptimizedAvatarUrl(
+  name: string, 
+  imageUrl?: string | null,
+  size: number = 100
+): string {
+  // If imageUrl is already a Cloudinary URL, optimize it
+  if (imageUrl && isCloudinaryUrl(imageUrl)) {
+    return getCloudinaryUrl(imageUrl, {
+      width: size,
+      height: size,
+      crop: 'fill',
+      gravity: 'face',
+      format: 'auto',
+      quality: 'auto:best',
+      dpr: 'auto',
+    });
+  }
+
+  // Try Cloudinary first (highest priority for performance)
+  if (name) {
+    const cloudinaryUrl = getSpeakerCloudinaryAvatarUrl(name, size);
+    // Return Cloudinary URL - it will fallback gracefully if image doesn't exist
+    return cloudinaryUrl;
+  }
+
+  // Fallback to local optimized
+  const localUrl = getLocalOptimizedAvatarUrl(name);
+  if (localUrl) {
+    return localUrl;
+  }
+
+  // Final fallback to S3
+  return getSpeakerAvatarUrl(name, imageUrl);
+}
+
+/**
+ * Generates avatar URL for a speaker with Cloudinary priority
+ * Note: This function now prioritizes Cloudinary URLs over S3 for better performance.
  * @param name - The speaker's name
  * @param s3Url - S3 URL if already known (optional)
- * @returns Complete avatar URL (always S3)
+ * @returns Complete avatar URL (Cloudinary prioritized, S3 fallback)
  */
 export function getSpeakerAvatarUrl(
   name: string, 
   s3Url?: string
 ): string {
-  // If S3 URL is provided, use it as primary
+  // Priority 1: Try Cloudinary URL first
+  const cloudinaryUrl = getSpeakerCloudinaryAvatarUrl(name);
+  if (cloudinaryUrl) {
+    return cloudinaryUrl;
+  }
+
+  // Priority 2: If S3 URL is provided, use it
   if (s3Url) {
     return s3Url;
   }

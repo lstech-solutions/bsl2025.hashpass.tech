@@ -98,3 +98,4 @@ No code changes needed! The auth system will automatically:
 - Handle incorrect Supabase redirects
 - Work with any `*.hashpass.tech` subdomain
 
+

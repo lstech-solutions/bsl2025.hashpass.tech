@@ -278,3 +278,7 @@ COMMENT ON FUNCTION upgrade_all_speakers_to_vip IS 'Upgrades all speakers with l
 
 
 
+
+
+
+

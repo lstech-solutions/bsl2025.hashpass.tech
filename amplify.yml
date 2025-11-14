@@ -6,6 +6,10 @@ frontend:
         # Note: amplify/ folder has been permanently renamed to amplify-backend-config/
         # to prevent Amplify CLI from auto-detecting and initializing it
         - 'echo "Using amplify-backend-config/ folder (renamed from amplify/ to prevent auto-init)"'
+        # Disable Amplify CLI backend initialization (we only use Amplify for static hosting)
+        - export AMPLIFY_SKIP_BACKEND_BUILD=true
+        - export AMPLIFY_DISABLE_TS=true
+        - 'echo "Skipping Amplify CLI backend initialization for static hosting"'
         - nvm install 22.18.0
         - npm install --quiet --global @expo/cli
         - >

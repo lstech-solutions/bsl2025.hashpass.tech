@@ -44,8 +44,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if welcome email has already been sent (with message_id) - database-level check
     const supabase = supabaseServer;
+    
+    // Check if welcome email has already been sent (with message_id) - database-level check
     let alreadySent = false;
     try {
       const { data: emailCheck } = await supabase.rpc('has_email_been_sent', {

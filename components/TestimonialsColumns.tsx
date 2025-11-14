@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "motion/react";
 
 // Helper function to format wallet address (0x1234...5678)
@@ -8,28 +8,52 @@ const formatWalletAddress = (address: string): string => {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
 
+// Validate Ethereum address format (42 chars, starts with 0x, hex only)
+const isValidEthereumAddress = (address: string): boolean => {
+  if (!address || typeof address !== 'string') return false;
+  if (address.length !== 42) return false;
+  if (!address.startsWith('0x')) return false;
+  // Check if remaining characters are valid hex (0-9, a-f, A-F)
+  const hexPattern = /^0x[0-9a-fA-F]{40}$/;
+  return hexPattern.test(address);
+};
+
 // Generate avatar URL with multiple fallback options
 const getAvatarUrls = (address: string): string[] => {
   const normalizedAddress = address.toLowerCase();
-  return [
-    `https://effigy.im/a/${normalizedAddress}.svg`,
-    `https://avatar.vercel.sh/${normalizedAddress}`,
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(normalizedAddress)}&background=random&size=128`,
-  ];
+  const urls: string[] = [];
+  
+  // Only use effigy.im for valid Ethereum addresses to avoid 500 errors
+  if (isValidEthereumAddress(address)) {
+    urls.push(`https://effigy.im/a/${normalizedAddress}.svg`);
+  }
+  
+  // Add other fallbacks
+  urls.push(`https://avatar.vercel.sh/${normalizedAddress}`);
+  urls.push(`https://ui-avatars.com/api/?name=${encodeURIComponent(normalizedAddress)}&background=random&size=128`);
+  
+  return urls;
 };
 
 const AvatarImage = ({ address, alt }: { address: string; alt: string }) => {
-  const [imgSrc, setImgSrc] = useState(getAvatarUrls(address)[0]);
+  const fallbacks = useMemo(() => getAvatarUrls(address), [address]);
+  const [imgSrc, setImgSrc] = useState(fallbacks[0] || '');
   const [errorCount, setErrorCount] = useState(0);
-  const fallbacks = getAvatarUrls(address);
+
+  // Reset state if address changes
+  useEffect(() => {
+    setImgSrc(fallbacks[0] || '');
+    setErrorCount(0);
+  }, [address, fallbacks]);
 
   const handleError = () => {
     if (errorCount < fallbacks.length - 1) {
-      setErrorCount(errorCount + 1);
-      setImgSrc(fallbacks[errorCount + 1]);
+      const nextIndex = errorCount + 1;
+      setErrorCount(nextIndex);
+      setImgSrc(fallbacks[nextIndex]);
     } else {
       // Final fallback: generate a simple colored circle based on address hash
-      const hash = address.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const hash = (address || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
       const hue = hash % 360;
       setImgSrc(`data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="20" fill="hsl(${hue}, 70%, 50%)"/></svg>`)}`);
     }

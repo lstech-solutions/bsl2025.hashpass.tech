@@ -48,6 +48,128 @@ export default function Root({ children, metadata }: { children: ReactNode, meta
           }}
         />
 
+        {/* OAuth redirect fix - runs immediately to intercept Supabase redirects */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                'use strict';
+                // Only run on auth.hashpass.co domain (Supabase custom auth domain)
+                if (typeof window === 'undefined' || window.location.host !== 'auth.hashpass.co') {
+                  return;
+                }
+                
+                const currentPath = window.location.pathname;
+                const hashFragment = window.location.hash;
+                
+                // Check if we're on the incorrect redirect path with auth tokens
+                // Works with any hashpass.tech subdomain (bsl2025, event2026, etc.)
+                const isIncorrectRedirect = currentPath.includes('hashpass.tech') || 
+                                           currentPath.match(/\/[a-z0-9-]+\.hashpass\.tech/i);
+                
+                if (isIncorrectRedirect && hashFragment && hashFragment.includes('access_token')) {
+                  
+                  console.log('🔧 [Auto-fix] Detected incorrect Supabase redirect with tokens');
+                  
+                  // Get stored origin or use default
+                  // Try to extract from path first (e.g., /bsl2025.hashpass.tech -> https://bsl2025.hashpass.tech)
+                  // Dynamic: works with any hashpass.tech subdomain
+                  let correctOrigin = '';
+                  
+                  // First, try to get from current window location if we're on a hashpass.tech domain
+                  if (typeof window !== 'undefined' && window.location && window.location.hostname.includes('hashpass.tech')) {
+                    correctOrigin = window.location.protocol + '//' + window.location.hostname;
+                  }
+                  
+                  // Method 1: Try to extract from path
+                  if (currentPath.includes('hashpass.tech')) {
+                    const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
+                    if (domainMatch) {
+                      correctOrigin = 'https://' + domainMatch[1];
+                      console.log('📍 [Auto-fix] Extracted origin from path:', correctOrigin);
+                    }
+                  }
+                  
+                  // Method 2: Try localStorage (stored during OAuth flow)
+                  try {
+                    const storedOrigin = localStorage.getItem('oauth_redirect_origin');
+                    if (storedOrigin) {
+                      correctOrigin = storedOrigin;
+                      console.log('📍 [Auto-fix] Using stored origin:', correctOrigin);
+                    }
+                  } catch (e) {
+                    console.warn('⚠️ [Auto-fix] Could not access localStorage:', e);
+                  }
+                  
+                  // Method 3: If still no origin, extract from path (works for any subdomain)
+                  if (!correctOrigin && currentPath.includes('hashpass.tech')) {
+                    const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
+                    if (domainMatch) {
+                      correctOrigin = 'https://' + domainMatch[1];
+                      console.log('📍 [Auto-fix] Extracted from path (Method 3):', correctOrigin);
+                    }
+                  }
+                  
+                  // Method 4: For development, check if we're on localhost
+                  // If the stored origin is localhost but we're on production, use production
+                  if (correctOrigin.includes('localhost') && currentPath.includes('hashpass.tech')) {
+                    // Extract production domain from path
+                    const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
+                    if (domainMatch) {
+                      correctOrigin = 'https://' + domainMatch[1];
+                      console.log('📍 [Auto-fix] Overriding localhost with production:', correctOrigin);
+                    }
+                  }
+                  
+                  // Final fallback: use current origin if available
+                  if (!correctOrigin && typeof window !== 'undefined' && window.location) {
+                    correctOrigin = window.location.origin;
+                    console.log('📍 [Auto-fix] Using current origin as final fallback:', correctOrigin);
+                  }
+                  
+                  // Build redirect URL
+                  let redirectUrl = correctOrigin + '/auth/callback';
+                  
+                  // Try to get apikey
+                  let apikey = '';
+                  try {
+                    apikey = window.__SUPABASE_ANON_KEY__ || 
+                             window.__EXPO_PUBLIC_SUPABASE_KEY__ ||
+                             (localStorage && localStorage.getItem('supabase_anon_key')) || '';
+                  } catch (e) {
+                    // Ignore
+                  }
+                  
+                  if (apikey) {
+                    redirectUrl += '?apikey=' + encodeURIComponent(apikey);
+                  }
+                  
+                  // Preserve hash fragment (contains all OAuth tokens)
+                  redirectUrl += hashFragment;
+                  
+                  // Preserve query params
+                  try {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    urlParams.forEach(function(value, key) {
+                      if (key !== 'apikey') {
+                        redirectUrl += (redirectUrl.includes('?') ? '&' : '?') + 
+                                      encodeURIComponent(key) + '=' + encodeURIComponent(value);
+                      }
+                    });
+                  } catch (e) {
+                    // Ignore
+                  }
+                  
+                  console.log('🚀 [Auto-fix] Redirecting to:', redirectUrl.substring(0, 300));
+                  
+                  // Redirect immediately
+                  window.location.replace(redirectUrl);
+                }
+              })();
+            `,
+          }}
+        />
+
         {/* Bootstrap the service worker. */}
         <script dangerouslySetInnerHTML={{ __html: sw }} />
 

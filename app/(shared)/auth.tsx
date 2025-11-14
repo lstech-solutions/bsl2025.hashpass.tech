@@ -28,7 +28,7 @@ export default function AuthScreen() {
   const { t } = useTranslation('auth');
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { showError, showSuccess, showWarning, showInfo } = useToastHelpers();
+  const { showError, showSuccess, showWarning } = useToastHelpers();
   
   // Get returnTo parameter from URL
   const returnTo = params.returnTo as string | undefined;
@@ -38,8 +38,8 @@ export default function AuthScreen() {
     if (returnTo) {
       try {
         return decodeURIComponent(returnTo);
-      } catch (e) {
-        console.warn('Failed to decode returnTo parameter:', e);
+      } catch {
+        console.warn('Failed to decode returnTo parameter');
       }
     }
     return '/(shared)/dashboard/explore';

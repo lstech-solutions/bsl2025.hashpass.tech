@@ -3,13 +3,10 @@ import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-nativ
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { createSessionFromUrl, supabase } from '../../../lib/supabase';
 import { Check, AlertCircle } from 'lucide-react-native';
-import type { Session } from '@supabase/supabase-js';
-import { useTranslation } from '../../../i18n/i18n';
 
 export default function AuthCallback() {
     const router = useRouter();
     const params = useLocalSearchParams();
-    const { t } = useTranslation('common');
     const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
     const [message, setMessage] = useState('Processing authentication...');
     

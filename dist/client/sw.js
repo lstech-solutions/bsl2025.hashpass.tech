@@ -1,7 +1,7 @@
 // Version-aware Service Worker for HashPass
 // Automatically clears cache when version changes
 
-const APP_VERSION = '1.6.79'; // This will be updated during build
+const APP_VERSION = '1.6.88'; // This will be updated during build
 const CACHE_NAME = `hashpass-v${APP_VERSION}`;
 const VERSION_CHECK_URL = '/api/config/versions';
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
@@ -53,6 +53,114 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+  
+  // For API requests, let them pass through without service worker interception
+  // This prevents service worker from interfering with API calls
+  if (url.pathname.startsWith('/api/')) {
+    // Let the browser handle API requests directly - don't intercept
+    // This ensures API requests work correctly even if service worker has issues
+    return;
+  }
+
+  // CRITICAL: Detect incorrect Supabase redirect to auth.hashpass.co/{subdomain}.hashpass.tech
+  // This happens when Supabase uses site_url as a relative path instead of absolute URL
+  // Works with any hashpass.tech subdomain (bsl2025, event2026, etc.)
+  const isIncorrectAuthRedirect = url.host === 'auth.hashpass.co' && 
+                                   (url.pathname.includes('hashpass.tech') || 
+                                    url.pathname.match(/\/[a-z0-9-]+\.hashpass\.tech/i));
+  
+  if (isIncorrectAuthRedirect) {
+    console.log('[SW] ⚠️ Detected incorrect Supabase redirect to auth.hashpass.co');
+    console.log('[SW] 📍 Path:', url.pathname);
+    console.log('[SW] 🔧 Notifying clients to redirect...');
+    
+    // Notify all clients to redirect immediately
+    self.clients.matchAll({ includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => {
+        // Send message to client to trigger redirect
+        client.postMessage({
+          type: 'OAUTH_REDIRECT_FIX',
+          action: 'redirect',
+          reason: 'incorrect_supabase_redirect'
+        }).catch((err) => {
+          console.warn('[SW] Failed to send redirect message:', err);
+        });
+      });
+    }).catch((err) => {
+      console.warn('[SW] Failed to get clients for redirect:', err);
+    });
+    
+    // Return a response that includes a redirect script
+    // This ensures the redirect happens even if the message doesn't reach the client
+    const redirectScript = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Redirecting...</title>
+          <script>
+            (function() {
+              console.log('[SW Redirect] Fixing OAuth redirect...');
+              const hashFragment = window.location.hash;
+              if (!hashFragment || !hashFragment.includes('access_token')) {
+                console.error('[SW Redirect] No access_token found');
+                return;
+              }
+              
+              // Dynamic: extract from path or use stored origin
+              let correctOrigin = '';
+              
+              // Method 1: Extract from path (works for any hashpass.tech subdomain)
+              const pathMatch = window.location.pathname.match(/([a-z0-9-]+\.hashpass\.tech)/i);
+              if (pathMatch) {
+                correctOrigin = 'https://' + pathMatch[1];
+                console.log('[SW Redirect] Extracted origin from path:', correctOrigin);
+              }
+              
+              // Method 2: Try localStorage (stored during OAuth flow)
+              if (!correctOrigin) {
+                try {
+                  const stored = localStorage.getItem('oauth_redirect_origin');
+                  if (stored) {
+                    correctOrigin = stored;
+                    console.log('[SW Redirect] Using stored origin:', correctOrigin);
+                  }
+                } catch(e) {
+                  console.warn('[SW Redirect] Could not access localStorage:', e);
+                }
+              }
+              
+              // Method 3: Final fallback - use current origin if on hashpass.tech
+              if (!correctOrigin && window.location.hostname.includes('hashpass.tech')) {
+                correctOrigin = window.location.protocol + '//' + window.location.hostname;
+                console.log('[SW Redirect] Using current hostname:', correctOrigin);
+              }
+              
+              let redirectUrl = correctOrigin + '/auth/callback';
+              const apikey = window.__SUPABASE_ANON_KEY__ || window.__EXPO_PUBLIC_SUPABASE_KEY__ || '';
+              if (apikey) redirectUrl += '?apikey=' + encodeURIComponent(apikey);
+              redirectUrl += hashFragment;
+              
+              console.log('[SW Redirect] Redirecting to:', redirectUrl.substring(0, 200));
+              window.location.replace(redirectUrl);
+            })();
+          </script>
+        </head>
+        <body>
+          <p>Redirecting...</p>
+        </body>
+      </html>
+    `;
+    
+    event.respondWith(
+      new Response(redirectScript, {
+        headers: {
+          'Content-Type': 'text/html',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        }
+      })
+    );
+    return;
+  }
 
   // NEVER cache authentication-related URLs - always fetch fresh
   // This prevents PWA from getting stuck on auth callback pages
@@ -77,11 +185,26 @@ self.addEventListener('fetch', (event) => {
           'Pragma': 'no-cache',
           'Expires': '0',
         }
-      }).catch(() => {
+      }).catch((error) => {
+        // Log the actual error for debugging
+        console.error('[SW] Auth fetch error:', error);
+        console.error('[SW] Request URL:', request.url);
+        console.error('[SW] Error name:', error?.name);
+        console.error('[SW] Error message:', error?.message);
+        
         // Even if network fails, don't use cache for auth
-        return new Response('Authentication requires network connection', {
+        // Return proper JSON error response
+        return new Response(JSON.stringify({
+          error: 'Network connection error',
+          code: 'network_error',
+          message: 'Authentication requires network connection. Please check your internet connection and try again.',
+          details: error?.message || 'Unknown error'
+        }), {
           status: 503,
-          statusText: 'Service Unavailable'
+          statusText: 'Service Unavailable',
+          headers: {
+            'Content-Type': 'application/json'
+          }
         });
       })
     );

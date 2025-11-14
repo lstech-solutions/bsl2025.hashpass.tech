@@ -1,7 +1,7 @@
 {
   "name": "hashpass.tech",
   "main": "expo-router/entry",
-  "version": "1.6.88",
+  "version": "1.6.90",
   "scripts": {
     "start": "NODE_OPTIONS='--max-old-space-size=4096' expo start",
     "start:reset": "NODE_OPTIONS='--max-old-space-size=4096' expo start --clear",
@@ -97,6 +97,7 @@
     "expo-font": "~13.3.1",
     "expo-haptics": "~14.1.4",
     "expo-image": "~2.1.6",
+    "expo-image-picker": "^17.0.8",
     "expo-linear-gradient": "~14.1.5",
     "expo-linking": "~7.1.4",
     "expo-localization": "^16.1.6",

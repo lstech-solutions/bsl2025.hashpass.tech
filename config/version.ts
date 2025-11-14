@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511140839, // Updated to current timestamp
+  buildNumber: 202511141000, // Updated to current timestamp
   releaseDate: '2025-11-14',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -35,11 +35,30 @@ export const CURRENT_VERSION: VersionInfo = {
     'Added redirect loop prevention checks in all navigation paths'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.88 release'
+  notes: 'Version 1.6.90 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.90': {
+    version: '1.6.90',
+    buildNumber: 202511141000,
+    releaseDate: '2025-11-14',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      // No new features
+    ],
+    bugfixes: [
+      'Fixed infinite redirect loop in OAuth callback handler',
+      'Added safeNavigate helper to prevent redirecting to callback route',
+      'Enhanced getRedirectPath to reject callback route redirects',
+      'Fixed OAuth redirect detection to only trigger on wrong domain (auth.hashpass.co)',
+      'Added redirect loop prevention checks in all navigation paths'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.90 release'
+  },
   '1.6.88': {
     version: '1.6.88',
     buildNumber: 202511140839,

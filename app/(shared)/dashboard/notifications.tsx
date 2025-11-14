@@ -89,7 +89,7 @@ export default function NotificationsScreen() {
           const { data: speaker } = await supabase
             .from('bsl_speakers')
             .select('imageurl, company, id, user_id')
-            .eq('user_id', meetingRequest.speaker_id)
+            .eq('user_id', (meetingRequest as any).speaker_id)
             .single();
 
           // Navigate to meeting detail page with all necessary params
@@ -98,7 +98,7 @@ export default function NotificationsScreen() {
           router.push({
             pathname: '/events/bsl2025/networking/my-requests' as any,
             params: {
-              requestId: meetingRequest.id,
+              requestId: (meetingRequest as any).id,
               highlightRequest: 'true'
             }
           });

@@ -165,6 +165,24 @@ let supabaseClient: ReturnType<typeof createClient> | null = null;
 const initializeSupabase = () => {
   if (!supabaseClient) {
     try {
+      // Custom fetch function to ensure apikey header is always included
+      // This is necessary when using custom domains like auth.hashpass.co
+      // The Supabase client should add this automatically, but custom domains may not work correctly
+      const customFetch: typeof fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+        const headers = new Headers(init?.headers);
+        
+        // Ensure apikey header is always present for Supabase API requests
+        // This is critical for custom auth domains
+        if (!headers.has('apikey') && supabaseAnonKey) {
+          headers.set('apikey', supabaseAnonKey);
+        }
+        
+        return fetch(input, {
+          ...init,
+          headers
+        });
+      };
+
       supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
           storage: storage,
@@ -172,11 +190,29 @@ const initializeSupabase = () => {
           persistSession: true,
           detectSessionInUrl: Platform.OS === 'web', // Enable for OAuth (like working version)
         },
+        global: {
+          headers: {
+            'apikey': supabaseAnonKey
+          },
+          fetch: customFetch
+        }
       });
     } catch (error) {
       // If initialization fails due to navigation state error, retry without detectSessionInUrl
       console.warn('⚠️ Supabase init error, retrying without detectSessionInUrl:', error);
       try {
+        // Custom fetch function for fallback initialization
+        const customFetch: typeof fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+          const headers = new Headers(init?.headers);
+          if (!headers.has('apikey') && supabaseAnonKey) {
+            headers.set('apikey', supabaseAnonKey);
+          }
+          return fetch(input, {
+            ...init,
+            headers
+          });
+        };
+
         supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
           auth: {
             storage: storage,
@@ -184,6 +220,12 @@ const initializeSupabase = () => {
             persistSession: true,
             detectSessionInUrl: false, // Fallback if navigation state not ready
           },
+          global: {
+            headers: {
+              'apikey': supabaseAnonKey
+            },
+            fetch: customFetch
+          }
         });
       } catch (retryError) {
         console.error('Error creating Supabase client:', retryError);

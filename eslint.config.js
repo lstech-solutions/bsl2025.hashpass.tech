@@ -51,4 +51,11 @@ module.exports = defineConfig([
       'no-restricted-syntax': 'off',
     },
   },
+  {
+    // Allow fetch in +html.tsx (runs in HTML head context, needs direct fetch)
+    files: ['**/+html.tsx', '**/+html.jsx'],
+    rules: {
+      'no-restricted-syntax': 'off',
+    },
+  },
 ]);

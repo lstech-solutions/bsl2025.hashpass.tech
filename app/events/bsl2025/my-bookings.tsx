@@ -5,6 +5,7 @@ import { ThemeContextType } from '@/types/theme';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { apiClient } from '@/lib/api-client';
 
 interface Booking {
   id: string;
@@ -82,14 +83,9 @@ export default function MyBookings() {
 
   const handleCancelBooking = async (bookingId: string) => {
     try {
-      const response = await fetch(`/api/bslatam/bookings/${bookingId}`, { 
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const result = await apiClient.delete(`/bslatam/bookings/${bookingId}`);
       
-      const result = await response.json() as { error?: string };
-      
-      if (!response.ok) {
+      if (!result.success) {
         throw new Error(result.error || 'Error al cancelar la reserva');
       }
       
@@ -105,15 +101,11 @@ export default function MyBookings() {
 
   const handleConfirmBooking = async (bookingId: string) => {
     try {
-      const response = await fetch(`/api/bslatam/bookings/${bookingId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'confirmed' })
+      const result = await apiClient.patch(`/bslatam/bookings/${bookingId}`, {
+        status: 'confirmed'
       });
-
-      const result = await response.json();
       
-      if (!response.ok) {
+      if (!result.success) {
         throw new Error(result.error || 'Error al confirmar la reserva');
       }
       

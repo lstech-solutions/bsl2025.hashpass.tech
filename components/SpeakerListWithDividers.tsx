@@ -61,7 +61,7 @@ export default function SpeakerListWithDividers({
       groupRef.measureLayout(
         scrollViewRef.current as any,
         (x, y) => {
-          scrollViewRef.current?.scrollTo({ y: y - 20, animated: true });
+          scrollViewRef.current?.scrollToOffset({ offset: y - 20, animated: true });
         },
         () => {
           console.log('Failed to measure layout');

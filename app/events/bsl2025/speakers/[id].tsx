@@ -108,7 +108,7 @@ export default function SpeakerDetail() {
       // Use helper function to find speaker by UUID or slug
       const { data: speakerData, error } = await supabase
         .rpc('get_speaker_by_id_or_slug', { p_id: id } as any)
-        .maybeSingle();
+        .maybeSingle() as any;
       
       // Check if this speaker's user_id matches current user
       if (!error && speakerData && typeof speakerData === 'object' && 'user_id' in speakerData && speakerData.user_id === user.id) {
@@ -131,7 +131,7 @@ export default function SpeakerDetail() {
       // Use maybeSingle() to handle cases where speaker is not found (returns null instead of error)
       const dbPromise = supabase
         .rpc('get_speaker_by_id_or_slug', { p_id: id } as any)
-        .maybeSingle();
+        .maybeSingle() as any;
 
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
@@ -155,7 +155,7 @@ export default function SpeakerDetail() {
           
           try {
             const { data: activeData, error: activeError } = await supabase
-              .rpc('is_speaker_active', { p_speaker_id: dbSpeaker.id.toString() } as any);
+              .rpc('is_speaker_active', { p_speaker_id: dbSpeaker.id.toString() } as any) as any;
             
             if (!activeError) {
               isActive = activeData === true;
@@ -167,7 +167,7 @@ export default function SpeakerDetail() {
             // Check if speaker is online using RPC function
             if (isActive) {
               const { data: onlineData, error: onlineError } = await supabase
-                .rpc('is_speaker_online', { p_speaker_id: dbSpeaker.id.toString() } as any);
+                .rpc('is_speaker_online', { p_speaker_id: dbSpeaker.id.toString() } as any) as any;
               
               if (!onlineError) {
                 isOnline = onlineData === true;
@@ -358,7 +358,7 @@ export default function SpeakerDetail() {
         .rpc('get_meeting_requests_for_speaker', {
           p_user_id: user.id.toString(),
           p_speaker_id: speaker.id
-        } as any);
+        } as any) as any;
 
       if (error) {
         console.error('❌ Error loading meeting requests:', error);
@@ -495,7 +495,7 @@ export default function SpeakerDetail() {
           p_speaker_id: speakerData.id, // Use bsl_speakers.id (TEXT), not user_id
           p_slot_start_time: slotTime,
           p_speaker_response: null
-        } as any);
+        } as any) as any;
 
       if (error) {
         console.error('❌ RPC error:', error);
@@ -570,7 +570,7 @@ export default function SpeakerDetail() {
           p_request_id: request.id,
           p_speaker_id: speakerData.id, // Use bsl_speakers.id (TEXT), not user_id
           p_speaker_response: null
-        } as any);
+        } as any) as any;
 
       if (error) throw error;
 
@@ -609,7 +609,7 @@ export default function SpeakerDetail() {
           p_speaker_id: speakerData.id, // Use bsl_speakers.id (TEXT), not user_id
           p_user_id: request.requester_id,
           p_reason: 'User has been blocked'
-        } as any);
+        } as any) as any;
 
       if (error) throw error;
 
@@ -641,7 +641,7 @@ export default function SpeakerDetail() {
         .rpc('cancel_meeting_request', {
           p_request_id: selectedRequestToCancel.id,
           p_user_id: user.id
-        } as any);
+        } as any) as any;
 
       console.log('🔄 Cancel response - data:', cancelResult);
       console.log('🔄 Cancel response - error:', cancelError);
@@ -722,7 +722,7 @@ export default function SpeakerDetail() {
       // Use the new function that counts actual meeting requests
       const { data, error } = await supabase.rpc('get_user_meeting_request_counts', {
         p_user_id: user.id
-      } as any);
+      } as any) as any;
 
       if (error) {
         console.error('❌ Error calling get_user_meeting_request_counts:', error);

@@ -24,7 +24,17 @@ function getSupabaseServer() {
   }
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Missing Supabase environment variables. Please set EXPO_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your environment.');
+    const missingVars = [];
+    if (!supabaseUrl) missingVars.push('EXPO_PUBLIC_SUPABASE_URL');
+    if (!supabaseServiceKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
+    
+    const errorMsg = `Missing Supabase environment variables: ${missingVars.join(', ')}. ` +
+                     `Please ensure these are set in your production environment. ` +
+                     `Current values: EXPO_PUBLIC_SUPABASE_URL=${supabaseUrl ? 'SET' : 'MISSING'}, ` +
+                     `SUPABASE_SERVICE_ROLE_KEY=${supabaseServiceKey ? 'SET' : 'MISSING'}`;
+    
+    console.error('❌ Supabase Server Configuration Error:', errorMsg);
+    throw new Error(errorMsg);
   }
 
   if (!_supabaseServer) {

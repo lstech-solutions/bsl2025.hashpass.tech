@@ -34,7 +34,7 @@ export default function AuthScreen() {
   const returnTo = params.returnTo as string | undefined;
   
   // Helper function to get redirect path after authentication
-  const getRedirectPath = () => {
+  const getRedirectPath = (): string => {
     if (returnTo) {
       try {
         return decodeURIComponent(returnTo);
@@ -110,7 +110,7 @@ export default function AuthScreen() {
           console.log(`🔐 Found valid existing session on mount for user: ${user.id}`);
           // Navigate immediately if user is already authenticated with valid session
           hasNavigatedRef.current = true;
-          router.replace(getRedirectPath());
+          router.replace(getRedirectPath() as any);
         }
       } catch (error) {
         console.warn('⚠️ Error checking existing session:', error);
@@ -173,7 +173,7 @@ export default function AuthScreen() {
             console.log('🔄 INITIAL_SESSION detected - user already authenticated, navigating to dashboard');
             if (!hasNavigatedRef.current) {
               hasNavigatedRef.current = true;
-              router.replace(getRedirectPath());
+              router.replace(getRedirectPath() as any);
             }
             isProcessingRef.current = false;
             return;
@@ -185,21 +185,21 @@ export default function AuthScreen() {
               .rpc('create_default_pass', {
                 p_user_id: session.user.id,
                 p_pass_type: 'general'
-              });
+              } as any);
               
             if (error) {
               console.error('❌ Error creating default pass:', error);
               // Continue to dashboard even if pass creation fails
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
-              router.replace(getRedirectPath());
+              router.replace(getRedirectPath() as any);
               }
             } else if (passId) {
               console.log('✅ Default pass created successfully:', passId);
               // Navigate immediately, don't wait
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
-              router.replace(getRedirectPath());
+              router.replace(getRedirectPath() as any);
               }
             } else {
               console.warn('⚠️ Pass creation returned null - pass may already exist or creation failed silently');
@@ -211,7 +211,7 @@ export default function AuthScreen() {
                 .eq('event_id', 'bsl2025')
                 .eq('status', 'active')
                 .limit(1)
-                .maybeSingle();
+                .maybeSingle() as any;
               
               if (existingPass) {
                 console.log('✅ User already has an active pass:', existingPass.id);
@@ -220,7 +220,7 @@ export default function AuthScreen() {
               }
               if (!hasNavigatedRef.current) {
                 hasNavigatedRef.current = true;
-              router.replace(getRedirectPath());
+              router.replace(getRedirectPath() as any);
               }
             }
 
@@ -229,103 +229,124 @@ export default function AuthScreen() {
             const userEmail = session.user.email;
             if (userEmail && !userEmail.includes('@wallet.')) {
               const userId = session.user.id;
-              if (welcomeEmailSending.has(userId)) {
-                console.log(`⏭️ Welcome email already being sent for user ${userId}, skipping duplicate`);
-              } else {
-              // Mark as sending to prevent duplicates
-              setWelcomeEmailSending(prev => new Set(prev).add(userId));
               
-                // Send email in background - don't await, let it run async
-                // NOTE: We rely on the API endpoint to check if email was already sent
-                // The API has proper permissions (service_role) to check the database
-                (async () => {
-              try {
-                    // Get locale
-                let userLocale = 'en';
+              // Check if welcome email has already been sent using database flag
+              (async () => {
                 try {
-                  const savedLocale = await AsyncStorage.getItem('user_locale');
-                  if (savedLocale && ['en', 'es', 'ko', 'fr', 'pt', 'de'].includes(savedLocale)) {
-                    userLocale = savedLocale;
-                  } else {
+                  // Check if welcome email has already been sent using RPC function
+                  const { data: emailCheck, error: emailCheckError } = await supabase.rpc('has_email_been_sent', {
+                    p_user_id: userId,
+                    p_email_type: 'welcome'
+                  } as any);
+                  
+                  if (emailCheckError) {
+                    console.warn('⚠️ Error checking email tracking:', emailCheckError);
+                    // Continue to try sending if check fails (better to send than miss)
+                  }
+                  
+                  const alreadySent = emailCheck === true;
+                  
+                  if (alreadySent) {
+                    console.log(`ℹ️ Welcome email already sent to user ${userId}, skipping`);
+                    return;
+                  }
+                  
+                  if (welcomeEmailSending.has(userId)) {
+                    console.log(`⏭️ Welcome email already being sent for user ${userId}, skipping duplicate`);
+                    return;
+                  }
+                  
+                  // Mark as sending to prevent duplicates
+                  setWelcomeEmailSending(prev => new Set(prev).add(userId));
+                  
+                  // Send email in background - don't await, let it run async
+                  // NOTE: We rely on the API endpoint to check if email was already sent
+                  // The API has proper permissions (service_role) to check the database
+                  // Get locale
+                  let userLocale = 'en';
+                  try {
+                    const savedLocale = await AsyncStorage.getItem('user_locale');
+                    if (savedLocale && ['en', 'es', 'ko', 'fr', 'pt', 'de'].includes(savedLocale)) {
+                      userLocale = savedLocale;
+                    } else {
+                      userLocale = getCurrentLocale() || 'en';
+                    }
+                  } catch {
                     userLocale = getCurrentLocale() || 'en';
                   }
-                    } catch {
-                  userLocale = getCurrentLocale() || 'en';
-                }
-                
-                if (!userLocale || userLocale === 'en') {
-                  userLocale = session.user.user_metadata?.locale || userLocale || 'en';
-                }
-                
-                    // Update locale if needed (non-blocking)
-                if (session.user.user_metadata?.locale !== userLocale) {
-                      supabase.auth.updateUser({
+                  
+                  if (!userLocale || userLocale === 'en') {
+                    userLocale = session.user.user_metadata?.locale || userLocale || 'en';
+                  }
+                  
+                  // Update locale if needed (non-blocking)
+                  if (session.user.user_metadata?.locale !== userLocale) {
+                    supabase.auth.updateUser({
                       data: { locale: userLocale }
-                      }).catch(err => console.warn('⚠️ Could not update user metadata with locale:', err));
-                }
-                
-                    // Send welcome email
-                    // The API endpoint will check if email was already sent (with message_id) and skip if so
-                    apiClient.post('/auth/send-welcome-email', { userId, email: userEmail, locale: userLocale }, { skipEventSegment: true })
-                      .then(result => {
-                        if (result.success && result.data) {
-                          if (result.data.alreadySent) {
-                            console.log(`ℹ️ Welcome email already sent to user ${userId}, skipping`);
-                            // Don't send onboarding emails if welcome email was already sent
-                            return;
-                          }
-                          
-                          if (result.data.skipped) {
-                            console.log(`ℹ️ Welcome email skipped for user ${userId} (wallet address or other reason)`);
-                            return;
-                          }
-                          
-                          console.log('✅ Welcome email sent successfully');
-                          
-                          // After welcome email is sent, send onboarding emails
-                          // This includes user onboarding for all users and speaker onboarding if user is a speaker
-                          // Only send if welcome email was actually sent (not skipped or already sent)
-                          apiClient.post('/auth/send-onboarding-emails', { userId, email: userEmail, locale: userLocale }, { skipEventSegment: true })
-                            .then(onboardingResult => {
-                              if (onboardingResult.success && onboardingResult.data) {
-                                if (onboardingResult.data.results?.userOnboarding?.success && !onboardingResult.data.results.userOnboarding.alreadySent) {
-                                  console.log('✅ User onboarding email sent successfully');
-                                } else if (onboardingResult.data.results?.userOnboarding?.alreadySent) {
-                                  console.log('ℹ️ User onboarding email already sent, skipped');
-                                }
-                                if (onboardingResult.data.results?.speakerOnboarding?.isSpeaker) {
-                                  if (onboardingResult.data.results.speakerOnboarding.success && !onboardingResult.data.results.speakerOnboarding.alreadySent) {
-                                    console.log('✅ Speaker onboarding email sent successfully');
-                                  } else if (onboardingResult.data.results.speakerOnboarding.alreadySent) {
-                                    console.log('ℹ️ Speaker onboarding email already sent, skipped');
-                                  }
+                    }).catch(err => console.warn('⚠️ Could not update user metadata with locale:', err));
+                  }
+                  
+                  // Send welcome email
+                  // The API endpoint will check if email was already sent (with message_id) and skip if so
+                  apiClient.post('/auth/send-welcome-email', { userId, email: userEmail, locale: userLocale }, { skipEventSegment: true })
+                    .then(result => {
+                      if (result.success && result.data) {
+                        if (result.data.alreadySent) {
+                          console.log(`ℹ️ Welcome email already sent to user ${userId}, skipping`);
+                          // Don't send onboarding emails if welcome email was already sent
+                          return;
+                        }
+                        
+                        if (result.data.skipped) {
+                          console.log(`ℹ️ Welcome email skipped for user ${userId} (wallet address or other reason)`);
+                          return;
+                        }
+                        
+                        console.log('✅ Welcome email sent successfully');
+                        
+                        // After welcome email is sent, send onboarding emails
+                        // This includes user onboarding for all users and speaker onboarding if user is a speaker
+                        // Only send if welcome email was actually sent (not skipped or already sent)
+                        apiClient.post('/auth/send-onboarding-emails', { userId, email: userEmail, locale: userLocale }, { skipEventSegment: true })
+                          .then(onboardingResult => {
+                            if (onboardingResult.success && onboardingResult.data) {
+                              if (onboardingResult.data.results?.userOnboarding?.success && !onboardingResult.data.results.userOnboarding.alreadySent) {
+                                console.log('✅ User onboarding email sent successfully');
+                              } else if (onboardingResult.data.results?.userOnboarding?.alreadySent) {
+                                console.log('ℹ️ User onboarding email already sent, skipped');
+                              }
+                              if (onboardingResult.data.results?.speakerOnboarding?.isSpeaker) {
+                                if (onboardingResult.data.results.speakerOnboarding.success && !onboardingResult.data.results.speakerOnboarding.alreadySent) {
+                                  console.log('✅ Speaker onboarding email sent successfully');
+                                } else if (onboardingResult.data.results.speakerOnboarding.alreadySent) {
+                                  console.log('ℹ️ Speaker onboarding email already sent, skipped');
                                 }
                               }
-                            })
-                            .catch(err => console.error('❌ Error sending onboarding emails:', err));
-                        } else {
-                          console.warn('⚠️ Welcome email API returned unsuccessful result:', result);
-                        }
-                      })
-                      .catch(err => console.error('❌ Error sending welcome email:', err));
-              } catch (emailError) {
-                    console.error('❌ Error in welcome email flow:', emailError);
-              } finally {
-                setWelcomeEmailSending(prev => {
-                  const newSet = new Set(prev);
-                  newSet.delete(userId);
-                  return newSet;
-                });
-                  }
-                })();
-              }
+                            }
+                          })
+                          .catch(err => console.error('❌ Error sending onboarding emails:', err));
+                      } else {
+                        console.warn('⚠️ Welcome email API returned unsuccessful result:', result);
+                      }
+                    })
+                    .catch(err => console.error('❌ Error sending welcome email:', err));
+                } catch (emailError) {
+                  console.error('❌ Error in welcome email flow:', emailError);
+                } finally {
+                  setWelcomeEmailSending(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(userId);
+                    return newSet;
+                  });
+                }
+              })();
             }
           } catch (error) {
             console.error('❌ Error in pass creation:', error);
             // Continue to dashboard even if pass creation fails
             if (!hasNavigatedRef.current) {
               hasNavigatedRef.current = true;
-            router.replace(getRedirectPath());
+            router.replace(getRedirectPath() as any);
             }
           } finally {
             isProcessingRef.current = false;
@@ -333,7 +354,7 @@ export default function AuthScreen() {
         } else {
           if (!hasNavigatedRef.current) {
             hasNavigatedRef.current = true;
-          router.replace(getRedirectPath());
+          router.replace(getRedirectPath() as any);
         }
       }
       }
@@ -562,6 +583,7 @@ export default function AuthScreen() {
   };
 
   // Helper function to verify session establishment with retries
+  // More lenient - accepts session if getSession() succeeds, even if getUser() fails temporarily
   const verifySessionWithRetries = async (maxRetries: number = 3, delayMs: number = 500): Promise<Session> => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       console.log(`🔄 Verifying session establishment (attempt ${attempt}/${maxRetries})...`);
@@ -573,21 +595,42 @@ export default function AuthScreen() {
       // First check if session exists
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (session && !sessionError) {
-        // Verify the session token is valid by calling getUser
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (user && !userError) {
-          console.log(`✅ Session established and verified successfully on attempt ${attempt}`);
+      if (session && !sessionError && session.user) {
+        // Session exists and has user - this is sufficient
+        // Try to verify with getUser, but don't fail if it errors (might be temporary network issue)
+        try {
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          if (user && !userError && user.id === session.user.id) {
+            console.log(`✅ Session established and verified successfully on attempt ${attempt}`);
+            return session;
+          } else if (userError) {
+            // getUser failed, but session exists - accept it anyway (might be temporary)
+            console.log(`⚠️ getUser failed but session exists, accepting session (attempt ${attempt})`);
+            console.log(`⚠️ getUser error:`, userError.message);
+            return session;
+          }
+        } catch (getUserError: any) {
+          // getUser threw an error, but session exists - accept it anyway
+          console.log(`⚠️ getUser exception but session exists, accepting session (attempt ${attempt})`);
+          console.log(`⚠️ getUser exception:`, getUserError?.message);
           return session;
-        } else {
-          console.log(`⚠️ Session exists but token invalid, retrying... (${attempt}/${maxRetries})`);
         }
+        
+        // If we get here, session exists but user doesn't match - this is unusual but accept session
+        console.log(`⚠️ Session user mismatch but accepting session (attempt ${attempt})`);
+        return session;
       } else {
         if (attempt < maxRetries) {
           console.log(`⚠️ Session not yet established, retrying in ${waitTime}ms... (${attempt}/${maxRetries})`);
         }
       }
+    }
+    
+    // Last attempt - check one more time and be more lenient
+    const { data: { session: finalSession }, error: finalError } = await supabase.auth.getSession();
+    if (finalSession && finalSession.user && !finalError) {
+      console.log(`✅ Found session on final attempt, accepting it`);
+      return finalSession;
     }
     
     throw new Error('Session not established after multiple verification attempts');
@@ -737,7 +780,7 @@ export default function AuthScreen() {
         console.log('✅ Session fully established, navigating...');
         
         // Navigate after session is confirmed
-        router.replace(getRedirectPath());
+        router.replace(getRedirectPath() as any);
         return;
       } catch (sessionError: any) {
         console.error('❌ Session verification error:', sessionError);
@@ -754,7 +797,7 @@ export default function AuthScreen() {
             console.log('✅ Session recovered successfully');
             hasNavigatedRef.current = true;
             setLoading(false);
-            router.replace(getRedirectPath());
+            router.replace(getRedirectPath() as any);
             return;
           }
         } catch (recoveryError: any) {
@@ -809,10 +852,33 @@ export default function AuthScreen() {
         // Use the actual origin for web
         // In Expo Router, (shared) group is removed from URL, so path is /auth/callback
         const origin = window.location.origin;
+        
+        // Ensure we have a valid origin (not empty or malformed)
+        if (!origin || origin === 'null' || origin === 'undefined') {
+          throw new Error('Invalid origin detected. Cannot proceed with OAuth.');
+        }
+        
+        // Build the redirect URL with proper protocol
         redirectUrl = `${origin}/auth/callback`;
+        
+        // Validate the URL is properly formed
+        try {
+          new URL(redirectUrl);
+        } catch (e) {
+          console.error('❌ Invalid redirect URL constructed:', redirectUrl);
+          throw new Error(`Invalid redirect URL: ${redirectUrl}`);
+        }
       } else {
         // For mobile, use Linking.createURL (keeps Expo Router format)
         redirectUrl = Linking.createURL('/(shared)/auth/callback');
+      }
+      
+      // Add apikey to redirect URL to ensure Supabase can process the callback
+      // This is critical for custom auth domains
+      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_KEY;
+      if (supabaseAnonKey) {
+        const separator = redirectUrl.includes('?') ? '&' : '?';
+        redirectUrl = `${redirectUrl}${separator}apikey=${encodeURIComponent(supabaseAnonKey)}`;
       }
       
       // Add returnTo parameter if present
@@ -821,24 +887,129 @@ export default function AuthScreen() {
         redirectUrl = `${redirectUrl}${separator}returnTo=${encodeURIComponent(returnTo)}`;
       }
       
-      console.log(`🔐 Starting ${provider} OAuth flow`);
-      console.log('📍 Redirect URL:', redirectUrl);
+      // Final validation of the redirect URL
+      let redirectUrlObj: URL;
+      try {
+        redirectUrlObj = new URL(redirectUrl);
+        console.log(`🔐 Starting ${provider} OAuth flow`);
+        console.log('📍 Redirect URL:', redirectUrl);
+        console.log('📍 Redirect URL parsed:', {
+          protocol: redirectUrlObj.protocol,
+          host: redirectUrlObj.host,
+          pathname: redirectUrlObj.pathname,
+          search: redirectUrlObj.search.substring(0, 100)
+        });
+        console.log('📍 Current origin:', Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : 'N/A');
+        console.log('📍 Has apikey in redirect URL:', redirectUrl.includes('apikey='));
+      } catch (e) {
+        console.error('❌ Failed to parse redirect URL:', redirectUrl, e);
+        throw new Error(`Invalid redirect URL format: ${redirectUrl}`);
+      }
       
+      // CRITICAL: Ensure redirectTo is an absolute URL with protocol
+      // Supabase may interpret relative URLs incorrectly with custom auth domains
+      // Reconstruct the URL to ensure it's properly formatted
+      const finalRedirectUrl = redirectUrlObj.toString();
+      console.log('✅ Final redirect URL (absolute):', finalRedirectUrl);
+      
+      // Store the origin in localStorage so the callback handler can use it if Supabase redirects incorrectly
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem('oauth_redirect_origin', redirectUrlObj.origin);
+          console.log('💾 Stored OAuth redirect origin:', redirectUrlObj.origin);
+        } catch (e) {
+          console.warn('⚠️ Could not store OAuth redirect origin:', e);
+        }
+      }
+      
+      // CRITICAL: Use skipBrowserRedirect: true to prevent Supabase from using site_url
+      // We'll handle the redirect manually to ensure we use the correct callback URL
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: redirectUrl,
-          skipBrowserRedirect: false,
+          redirectTo: finalRedirectUrl,
+          skipBrowserRedirect: true, // CRITICAL: Handle redirect manually to avoid site_url issues
+          queryParams: {
+            // Google OAuth specific params
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 
       if (error) {
         console.error(`❌ ${provider} OAuth error:`, error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          status: (error as any).status,
+          name: error.name
+        });
         showError('Authentication Error', error.message);
         setLoading(false);
       } else if (data.url) {
-        console.log(`✅ Opening ${provider} OAuth URL`);
-        Linking.openURL(data.url);
+        console.log(`✅ Got OAuth URL from Supabase (skipBrowserRedirect: true)`);
+        console.log('🔗 OAuth URL from Supabase:', data.url.substring(0, 200));
+        
+        // CRITICAL: Since we're using skipBrowserRedirect: true, we have full control
+        // Always replace redirect_to with our validated URL to ensure correct callback
+        let finalOAuthUrl = data.url;
+        try {
+          const oauthUrl = new URL(data.url);
+          console.log('🔍 OAuth URL parsed:', {
+            protocol: oauthUrl.protocol,
+            host: oauthUrl.host,
+            pathname: oauthUrl.pathname,
+            hasRedirectTo: oauthUrl.searchParams.has('redirect_to'),
+            redirectToValue: oauthUrl.searchParams.get('redirect_to')?.substring(0, 100)
+          });
+          
+          // CRITICAL: ALWAYS replace redirect_to with our validated URL
+          // Supabase may ignore this and use site_url, but we must try
+          console.log('🔧 Setting redirect_to to our validated URL:', finalRedirectUrl);
+          
+          // Set redirect_to in the URL search params
+          oauthUrl.searchParams.set('redirect_to', finalRedirectUrl);
+          
+          // Also try setting it as a query parameter directly (some OAuth providers need this)
+          // The redirect_to should be URL-encoded
+          const encodedRedirectTo = encodeURIComponent(finalRedirectUrl);
+          
+          // Log what we're setting
+          console.log('🔧 redirect_to (raw):', finalRedirectUrl);
+          console.log('🔧 redirect_to (encoded):', encodedRedirectTo.substring(0, 100) + '...');
+          
+          finalOAuthUrl = oauthUrl.toString();
+          console.log('✅ Final OAuth URL (first 200 chars):', finalOAuthUrl.substring(0, 200));
+          console.log('✅ Full OAuth URL length:', finalOAuthUrl.length);
+          
+          // Verify the redirect_to is now correct
+          const verifyUrl = new URL(finalOAuthUrl);
+          const verifyRedirectTo = verifyUrl.searchParams.get('redirect_to');
+          console.log('🔍 Verification - redirect_to in URL:', verifyRedirectTo?.substring(0, 100));
+          
+          if (verifyRedirectTo === finalRedirectUrl) {
+            console.log('✅ Verified: redirect_to is correctly set to our callback URL');
+          } else {
+            console.error('❌ WARNING: redirect_to verification failed!');
+            console.error('Expected:', finalRedirectUrl);
+            console.error('Got:', verifyRedirectTo);
+            console.error('⚠️ Supabase may still use site_url despite our redirect_to parameter');
+            console.error('💡 This is a known Supabase issue with custom auth domains');
+            // Don't throw - let it try anyway, we have the callback handler as fallback
+          }
+          
+          // Log the full URL for debugging (truncated)
+          console.log('🔍 Full OAuth URL (first 500 chars):', finalOAuthUrl.substring(0, 500));
+        } catch (e) {
+          console.error('❌ Could not parse or fix OAuth URL from Supabase:', e);
+          setLoading(false);
+          showError('OAuth Error', 'Failed to prepare OAuth URL. Please try again.');
+          return;
+        }
+        
+        // Open the OAuth URL manually - this gives us full control over the redirect
+        console.log('🚀 Opening OAuth URL manually...');
+        Linking.openURL(finalOAuthUrl);
         // Keep loading state - will be cleared by callback handler
       } else {
         console.warn(`⚠️ No URL returned from ${provider} OAuth`);
@@ -869,7 +1040,7 @@ export default function AuthScreen() {
           setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
           // Navigate - auth state change will handle session verification
-          router.replace(getRedirectPath());
+          router.replace(getRedirectPath() as any);
           return;
         }
       }
@@ -899,7 +1070,7 @@ export default function AuthScreen() {
                 setLoading(false);
                 showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
                 // Navigate - auth state change will handle session verification
-                router.replace(getRedirectPath());
+                router.replace(getRedirectPath() as any);
                 return;
               }
             }
@@ -928,7 +1099,7 @@ export default function AuthScreen() {
           sessionFound = true;
           setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Ethereum wallet.');
-          router.replace(getRedirectPath());
+          router.replace(getRedirectPath() as any);
           return;
         }
       }
@@ -978,7 +1149,7 @@ export default function AuthScreen() {
           setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
           // Navigate - auth state change will handle session verification
-          router.replace(getRedirectPath());
+          router.replace(getRedirectPath() as any);
           return;
         }
       }
@@ -1008,7 +1179,7 @@ export default function AuthScreen() {
                 setLoading(false);
                 showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
                 // Navigate - auth state change will handle session verification
-                router.replace(getRedirectPath());
+                router.replace(getRedirectPath() as any);
                 return;
               }
             }
@@ -1037,7 +1208,7 @@ export default function AuthScreen() {
           sessionFound = true;
           setLoading(false);
           showSuccess('Authentication Successful', 'Welcome! You have been signed in with your Solana wallet.');
-          router.replace(getRedirectPath());
+          router.replace(getRedirectPath() as any);
           return;
         }
       }

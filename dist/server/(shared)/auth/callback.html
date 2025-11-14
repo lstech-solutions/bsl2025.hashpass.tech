@@ -4,6 +4,73 @@
               // Can be overridden via environment variable EXPO_PUBLIC_API_BASE_URL
               window.__API_BASE_URL__ = "https://hashpass.co/api";
             </script><script>
+              (function() {
+                'use strict';
+                // Only run on auth.hashpass.co domain (Supabase custom auth domain)
+                if (typeof window === 'undefined' || window.location.host !== 'auth.hashpass.co') {
+                  return;
+                }
+                
+                const currentPath = window.location.pathname;
+                const hashFragment = window.location.hash;
+                
+                // Check if we're on the incorrect redirect path with auth tokens
+                if ((currentPath.includes('hashpass.tech') || currentPath.startsWith('/bsl2025')) && 
+                    hashFragment && hashFragment.includes('access_token')) {
+                  
+                  console.log('🔧 [Auto-fix] Detected incorrect Supabase redirect with tokens');
+                  
+                  // Get stored origin or use default
+                  let correctOrigin = 'http://localhost:8081';
+                  try {
+                    const storedOrigin = localStorage.getItem('oauth_redirect_origin');
+                    if (storedOrigin) {
+                      correctOrigin = storedOrigin;
+                    }
+                  } catch (e) {
+                    // Ignore localStorage errors
+                  }
+                  
+                  // Build redirect URL
+                  let redirectUrl = correctOrigin + '/auth/callback';
+                  
+                  // Try to get apikey
+                  let apikey = '';
+                  try {
+                    apikey = window.__SUPABASE_ANON_KEY__ || 
+                             window.__EXPO_PUBLIC_SUPABASE_KEY__ ||
+                             (localStorage && localStorage.getItem('supabase_anon_key')) || '';
+                  } catch (e) {
+                    // Ignore
+                  }
+                  
+                  if (apikey) {
+                    redirectUrl += '?apikey=' + encodeURIComponent(apikey);
+                  }
+                  
+                  // Preserve hash fragment (contains all OAuth tokens)
+                  redirectUrl += hashFragment;
+                  
+                  // Preserve query params
+                  try {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    urlParams.forEach(function(value, key) {
+                      if (key !== 'apikey') {
+                        redirectUrl += (redirectUrl.includes('?') ? '&' : '?') + 
+                                      encodeURIComponent(key) + '=' + encodeURIComponent(value);
+                      }
+                    });
+                  } catch (e) {
+                    // Ignore
+                  }
+                  
+                  console.log('🚀 [Auto-fix] Redirecting to:', redirectUrl.substring(0, 300));
+                  
+                  // Redirect immediately
+                  window.location.replace(redirectUrl);
+                }
+              })();
+            </script><script>
 if ('serviceWorker' in navigator) {
     // First, unregister all existing service workers to stop reload loops
     navigator.serviceWorker.getRegistrations().then(function(registrations) {
@@ -182,6 +249,7 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 .r-fx7oqy{border-bottom-color:rgba(0,0,255,1.00);border-left-color:rgba(0,0,255,1.00);border-right-color:rgba(0,0,255,1.00);border-top-color:rgba(0,0,255,1.00);}
 .r-krxsd3{display:-webkit-box;}
 .r-nsbfu8{padding:16px;}
+.r-qwd59z{border-bottom-left-radius:1px;border-bottom-right-radius:1px;border-top-left-radius:1px;border-top-right-radius:1px;}
 .r-rs99b7{border-bottom-width:1px;border-left-width:1px;border-right-width:1px;border-top-width:1px;}
 .r-t60dpp{padding:0px;}
 .r-tuq35u{padding:4px;}
@@ -325,6 +393,7 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 .r-1ld3bg{top:-4px;}
 .r-1ldzwu0{animation-timing-function:linear;}
 .r-1loqt21{cursor:pointer;}
+.r-1mdsvnl{width:95%;}
 .r-1mlwlqe{flex-basis:auto;}
 .r-1mrlafo{background-position:0;}
 .r-1muvv40{animation-iteration-count:infinite;}
@@ -410,9 +479,11 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 .r-dkge59{background-color:rgba(170,184,194,1.00);}
 .r-dnmrzs{max-width:100%;}
 .r-drfeu3{background-color:rgba(0,0,0,0.50);}
+.r-dukzhd{right:14px;}
 .r-eafdt9{transition-duration:0.15s;}
 .r-ebwn4k{animation-name:r-q67da2;}
 .r-ehq7j7{background-size:contain;}
+.r-epq5cr{height:2px;}
 .r-eqz5dr{flex-direction:column;}
 .r-eu3ka{height:40px;}
 .r-fdjqy7{text-align:left;}
@@ -425,9 +496,11 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 .r-hxflta{padding-right:env(safe-area-inset-right);}
 .r-icoktb{opacity:0.5;}
 .r-ipm5af{top:0px;}
+.r-j9nkxj{border-bottom-right-radius:12px;}
 .r-jwli3a{color:rgba(255,255,255,1.00);}
 .r-k200y{align-self:flex-start;}
 .r-kemksi{background-color:rgba(0,0,0,1.00);}
+.r-keui8w{border-bottom-left-radius:12px;}
 .r-kizejy{color:rgba(155,161,166,1.00);}
 .r-knv0ih{margin-top:8px;}
 .r-lltvgl{overflow-x:auto;}
@@ -483,5 +556,5 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 @keyframes r-1pzkwqh{0%{transform:translateY(100%);}100%{transform:translateY(0%);}}
 @keyframes r-imtty0{0%{opacity:0;}100%{opacity:1;}}
 @keyframes r-q67da2{0%{transform:translateX(-100%);}100%{transform:translateX(400%);}}
-@keyframes r-t2lo5v{0%{opacity:1;}100%{opacity:0;}}</style><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script><link rel="preload" href="/_expo/static/css/web-27d1ee099f2b04d408812f765ff3f9ab.css" as="style"><link rel="stylesheet" href="/_expo/static/css/web-27d1ee099f2b04d408812f765ff3f9ab.css"></head><body><div id="root"><div class="css-g5y9jx r-13awgt0"><!--$--><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx" style="flex:1"></div></div><!--/$--></div></div><script src="/_expo/static/js/web/entry-f6f1c190dedc77d49a0cef9dbb9163f8.js" defer></script>
+@keyframes r-t2lo5v{0%{opacity:1;}100%{opacity:0;}}</style><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script><link rel="preload" href="/_expo/static/css/web-27d1ee099f2b04d408812f765ff3f9ab.css" as="style"><link rel="stylesheet" href="/_expo/static/css/web-27d1ee099f2b04d408812f765ff3f9ab.css"></head><body><div id="root"><div class="css-g5y9jx r-13awgt0"><!--$--><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx" style="flex:1"></div></div><!--/$--></div></div><script src="/_expo/static/js/web/entry-a0562d0163a3fcf2d9d7cb37a6a134ea.js" defer></script>
 </body></html>

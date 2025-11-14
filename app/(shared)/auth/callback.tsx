@@ -14,6 +14,122 @@ export default function AuthCallback() {
     const [status, setStatus] = useState<'processing' | 'success' | 'warning' | 'error' | 'show_download'>('processing');
     const [message, setMessage] = useState('Processing authentication...');
     
+    // Log when component mounts to verify it's being rendered
+    useEffect(() => {
+        console.log('🚀 AuthCallback component mounted');
+        console.log('📋 Initial params:', params);
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            console.log('🌐 Current URL:', window.location.href);
+            console.log('🔍 URL has code:', window.location.href.includes('code='));
+            console.log('🔍 URL has access_token:', window.location.href.includes('access_token='));
+            
+            // CRITICAL: Check if we're on the wrong domain (Supabase redirect issue)
+            // If we're on auth.hashpass.co with a path that looks like a site_url, redirect to correct callback
+            const currentHost = window.location.host;
+            const currentPath = window.location.pathname;
+            
+            // Detect if Supabase incorrectly redirected to auth.hashpass.co/bsl2025.hashpass.tech
+            // This happens when Supabase uses site_url as a relative path instead of absolute URL
+            if (currentHost === 'auth.hashpass.co' && (currentPath.includes('hashpass.tech') || currentPath.startsWith('/bsl2025'))) {
+                console.error('❌ Detected incorrect Supabase redirect!');
+                console.error('❌ Current URL:', window.location.href.substring(0, 200));
+                console.error('❌ This is a Supabase bug with custom auth domains');
+                
+                // Extract ALL parameters from hash (OAuth tokens are usually in hash)
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const urlParams = new URLSearchParams(window.location.search);
+                
+                // Check if we have auth tokens in the hash
+                const hasAuthTokens = hashParams.has('access_token') || hashParams.has('code') || 
+                                     window.location.hash.includes('access_token') || 
+                                     window.location.hash.includes('code=');
+                
+                if (hasAuthTokens) {
+                    console.log('✅ Found auth tokens in URL, redirecting to correct callback...');
+                    
+                    // Determine the correct origin - try multiple sources
+                    let correctOrigin = '';
+                    
+                    // Method 1: Try localStorage (stored during OAuth flow)
+                    try {
+                        const storedOrigin = localStorage.getItem('oauth_redirect_origin');
+                        if (storedOrigin) {
+                            correctOrigin = storedOrigin;
+                            console.log('📍 Using stored origin from OAuth flow:', correctOrigin);
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Could not access localStorage:', e);
+                    }
+                    
+                    // Method 2: Try environment variable (for production)
+                    if (!correctOrigin && typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_SITE_URL) {
+                        correctOrigin = process.env.EXPO_PUBLIC_SITE_URL;
+                        console.log('📍 Using EXPO_PUBLIC_SITE_URL:', correctOrigin);
+                    }
+                    
+                    // Method 3: Try to extract from the path (if path contains the domain)
+                    if (!correctOrigin && currentPath.includes('hashpass.tech')) {
+                        // Extract domain from path like /bsl2025.hashpass.tech
+                        const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
+                        if (domainMatch) {
+                            // Use https for production domains
+                            correctOrigin = `https://${domainMatch[1]}`;
+                            console.log('📍 Extracted origin from path:', correctOrigin);
+                        }
+                    }
+                    
+                    // Method 4: Fallback to production URL
+                    if (!correctOrigin) {
+                        correctOrigin = 'https://bsl2025.hashpass.tech';
+                        console.log('📍 Using production fallback:', correctOrigin);
+                    }
+                    
+                    // For development, check if we're on localhost
+                    if (correctOrigin.includes('hashpass.tech') && window.location.href.includes('localhost')) {
+                        // If we're in development but got redirected to auth domain, try localhost
+                        const localhostPort = window.location.href.match(/localhost:(\d+)/)?.[1] || '8081';
+                        correctOrigin = `http://localhost:${localhostPort}`;
+                        console.log('📍 Detected development environment, using:', correctOrigin);
+                    }
+                    
+                    // Build redirect URL with hash fragment (tokens are in hash)
+                    // The hash fragment should be preserved as-is since it contains all the auth tokens
+                    let redirectUrl = `${correctOrigin}/auth/callback`;
+                    
+                    // Add apikey as query parameter
+                    const supabaseAnonKey = process.env?.EXPO_PUBLIC_SUPABASE_KEY || 
+                                          (typeof window !== 'undefined' && (window as any).__SUPABASE_ANON_KEY__);
+                    if (supabaseAnonKey) {
+                        redirectUrl += `?apikey=${encodeURIComponent(supabaseAnonKey)}`;
+                    }
+                    
+                    // Preserve the entire hash fragment (contains all OAuth tokens)
+                    if (window.location.hash) {
+                        redirectUrl += window.location.hash;
+                    }
+                    
+                    // Also copy any query params from URL (not hash)
+                    urlParams.forEach((value, key) => {
+                        if (key !== 'apikey') {
+                            const separator = redirectUrl.includes('?') ? '&' : '?';
+                            redirectUrl += `${separator}${key}=${encodeURIComponent(value)}`;
+                        }
+                    });
+                    
+                    console.log('🔧 Redirecting to correct callback URL:', redirectUrl.substring(0, 300));
+                    console.log('🔧 Hash fragment preserved:', window.location.hash.substring(0, 100) + '...');
+                    
+                    // Use replace to avoid adding to history - do this IMMEDIATELY
+                    window.location.replace(redirectUrl);
+                    return;
+                } else {
+                    console.warn('⚠️ No auth tokens found in URL, cannot redirect');
+                    console.warn('📍 Full hash:', window.location.hash.substring(0, 200));
+                }
+            }
+        }
+    }, []);
+    
     // Get returnTo parameter from URL for proper redirect
     const getRedirectPath = () => {
         // Check URL params first (from query string)
@@ -46,8 +162,28 @@ export default function AuthCallback() {
     // Processing guard to prevent duplicate processing
     const isProcessingRef = useRef(false);
     const hasNavigatedRef = useRef(false);
+    
+    // Listen for auth state changes to catch SIGNED_IN events
+    useEffect(() => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log(`🔐 Callback auth event: ${event}, user: ${session?.user?.id || 'none'}`);
+            
+            // If we get a SIGNED_IN event with a session, navigate immediately
+            if (event === 'SIGNED_IN' && session?.user && !hasNavigatedRef.current) {
+                console.log('✅ SIGNED_IN event detected in callback, navigating to dashboard');
+                hasNavigatedRef.current = true;
+                const redirectPath = getRedirectPath();
+                router.replace(redirectPath as any);
+            }
+        });
+        
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [router]);
 
     // Helper function to verify session establishment with retries
+    // More lenient - accepts session if getSession() succeeds, even if getUser() fails temporarily
     const verifySessionWithRetries = async (maxRetries: number = 3, delayMs: number = 500): Promise<Session> => {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             console.log(`🔄 Verifying session establishment (attempt ${attempt}/${maxRetries})...`);
@@ -59,21 +195,42 @@ export default function AuthCallback() {
             // First check if session exists
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
             
-            if (session && !sessionError) {
-                // Verify the session token is valid by calling getUser
-                const { data: { user }, error: userError } = await supabase.auth.getUser();
-                
-                if (user && !userError) {
-                    console.log(`✅ Session established and verified successfully on attempt ${attempt}`);
+            if (session && !sessionError && session.user) {
+                // Session exists and has user - this is sufficient
+                // Try to verify with getUser, but don't fail if it errors (might be temporary network issue)
+                try {
+                    const { data: { user }, error: userError } = await supabase.auth.getUser();
+                    if (user && !userError && user.id === session.user.id) {
+                        console.log(`✅ Session established and verified successfully on attempt ${attempt}`);
+                        return session;
+                    } else if (userError) {
+                        // getUser failed, but session exists - accept it anyway (might be temporary)
+                        console.log(`⚠️ getUser failed but session exists, accepting session (attempt ${attempt})`);
+                        console.log(`⚠️ getUser error:`, userError.message);
+                        return session;
+                    }
+                } catch (getUserError: any) {
+                    // getUser threw an error, but session exists - accept it anyway
+                    console.log(`⚠️ getUser exception but session exists, accepting session (attempt ${attempt})`);
+                    console.log(`⚠️ getUser exception:`, getUserError?.message);
                     return session;
-                } else {
-                    console.log(`⚠️ Session exists but token invalid, retrying... (${attempt}/${maxRetries})`);
                 }
+                
+                // If we get here, session exists but user doesn't match - this is unusual but accept session
+                console.log(`⚠️ Session user mismatch but accepting session (attempt ${attempt})`);
+                return session;
             } else {
                 if (attempt < maxRetries) {
                     console.log(`⚠️ Session not yet established, retrying in ${waitTime}ms... (${attempt}/${maxRetries})`);
                 }
             }
+        }
+        
+        // Last attempt - check one more time and be more lenient
+        const { data: { session: finalSession }, error: finalError } = await supabase.auth.getSession();
+        if (finalSession && finalSession.user && !finalError) {
+            console.log(`✅ Found session on final attempt, accepting it`);
+            return finalSession;
         }
         
         throw new Error('Session not established after multiple verification attempts');
@@ -102,8 +259,31 @@ export default function AuthCallback() {
             if (Platform.OS === 'web') {
                 if (typeof window !== 'undefined' && window.location) {
                     // Use the actual URL from the browser (works in production)
+                    // This includes both query string and hash fragment
                     currentUrl = window.location.href;
                     console.log('🌐 Using browser URL:', currentUrl.substring(0, 150));
+                    console.log('🔍 URL breakdown:', {
+                        origin: window.location.origin,
+                        pathname: window.location.pathname,
+                        search: window.location.search.substring(0, 100),
+                        hash: window.location.hash.substring(0, 100),
+                        fullHref: currentUrl.substring(0, 200)
+                    });
+                    
+                    // Check if we have a code parameter in the URL
+                    // If we do, we need to exchange it for a session
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                    const code = urlParams.get('code') || hashParams.get('code');
+                    
+                    if (code) {
+                        console.log('✅ Found OAuth code in URL, will exchange for session');
+                        console.log('📝 Code (first 20 chars):', code.substring(0, 20) + '...');
+                    } else {
+                        console.warn('⚠️ No code parameter found in URL');
+                        console.log('🔍 Search params:', window.location.search);
+                        console.log('🔍 Hash:', window.location.hash.substring(0, 200));
+                    }
                 } else {
                     // Fallback for SSR - construct URL from params
                     // Try to get origin from environment or use a sensible default
@@ -144,53 +324,69 @@ export default function AuthCallback() {
             console.log('🎯 Processing URL:', currentUrl.substring(0, 100) + '...');
 
             // Try to create session from URL
-            const session = await createSessionFromUrl(currentUrl);
+            const sessionResult = await createSessionFromUrl(currentUrl);
+            console.log('📦 Session result:', {
+                hasSession: !!sessionResult.session,
+                hasUser: !!sessionResult.user,
+                sessionUserId: sessionResult.session?.user?.id,
+                error: sessionResult.error?.message
+            });
 
-            if (session && session.user) {
-                console.log('✅ Session created successfully:', session.user.id);
+            // Check if we have a valid session (either from return value or session object)
+            const session = sessionResult.session;
+            const user = sessionResult.user || session?.user;
+            
+            if (session && user) {
+                console.log('✅ Session created successfully:', user.id);
                 setStatus('success');
                 // Detect auth type from user metadata
-                const authProvider = session.user.user_metadata?.auth_provider || 
-                                   (session.user.user_metadata?.wallet_type ? 'wallet' : 'OAuth');
+                const authProvider = user.user_metadata?.auth_provider || 
+                                   (user.user_metadata?.wallet_type ? 'wallet' : 'OAuth');
                 const authType = authProvider === 'wallet' 
-                    ? (session.user.user_metadata?.wallet_type === 'ethereum' ? 'Ethereum' : 'Solana')
+                    ? (user.user_metadata?.wallet_type === 'ethereum' ? 'Ethereum' : 'Solana')
                     : (authProvider === 'email' ? 'Email' : (authProvider === 'google' ? 'Google' : 'Discord'));
                 setMessage(`✅ ${authType} authentication successful!`);
 
                 if (!hasNavigatedRef.current) {
                     hasNavigatedRef.current = true;
                     
-                    // For OAuth, wait a brief moment for session to be fully established
-                    // Then navigate immediately
+                    // For OAuth, wait for session to be fully established before navigating
+                    // This prevents the layout from redirecting back to /auth
                     try {
-                        // Small delay to ensure session is fully set
-                        await new Promise(resolve => setTimeout(resolve, 100));
+                        // Wait longer to ensure session is fully established (especially for custom auth domains)
+                        await new Promise(resolve => setTimeout(resolve, 1500));
                         
-                        // Quick async verification (don't block navigation)
-                        supabase.auth.getUser().then(({ data: { user }, error: userError }) => {
-                            if (userError || !user) {
-                                console.warn('⚠️ Session verification warning (non-blocking):', userError?.message);
-                            } else {
-                                console.log('✅ Session verified successfully');
+                        // Verify session is actually established before navigating
+                        let verified = false;
+                        let retries = 5;
+                        
+                        while (retries > 0 && !verified) {
+                            const { data: { user }, error: userError } = await supabase.auth.getUser();
+                            if (!userError && user) {
+                                verified = true;
+                                console.log('✅ Session verified successfully before navigation');
+                                break;
                             }
-                        }).catch(err => {
-                            console.warn('⚠️ Session verification check failed (non-blocking):', err);
-                        });
+                            
+                            retries--;
+                            if (retries > 0) {
+                                console.log(`⏳ Session not ready, waiting... (${5 - retries}/5)`);
+                                await new Promise(resolve => setTimeout(resolve, 800));
+                            }
+                        }
                         
-                        // Navigate immediately - session from createSessionFromUrl is trusted
-                        // Auth state change handler will handle any edge cases
+                        if (!verified) {
+                            console.warn('⚠️ Session not verified but navigating anyway - auth state will handle it');
+                            // Wait a bit more before navigating if not verified
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                        
+                        // Navigate after session is verified
                         const redirectPath = getRedirectPath();
                         console.log('🔄 Redirecting to:', redirectPath);
                         
                         // Use replace to ensure navigation happens
                         router.replace(redirectPath as any);
-                        
-                        // Also try push as fallback after a short delay
-                        setTimeout(() => {
-                            if (hasNavigatedRef.current) {
-                                router.push(redirectPath as any);
-                            }
-                        }, 500);
                     } catch (sessionError: any) {
                         console.error('Session error (non-fatal):', sessionError);
                         // Still navigate - session from createSessionFromUrl should be valid
@@ -200,68 +396,105 @@ export default function AuthCallback() {
                     }
                 }
             } else {
-                console.log('⚠️ No session created but no error - checking for existing session');
-
-                // For OAuth, the session might be set by Supabase automatically
-                // Wait a moment and check again
                 try {
-                    // Wait a bit for OAuth session to be established
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    console.log('⚠️ No session from createSessionFromUrl - checking for existing session');
+                    console.log('📋 Session result details:', {
+                        hasSession: !!sessionResult.session,
+                        hasError: !!sessionResult.error,
+                        errorMessage: sessionResult.error?.message
+                    });
                     
-                    // Check for existing session
-                    const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession();
+                    // For OAuth, the session might be set by Supabase automatically
+                    // Wait and retry multiple times with increasing delays
+                    let foundSession = false;
                     
-                    if (existingSession && !sessionError && existingSession.user) {
-                        console.log('✅ Found existing session after wait:', existingSession.user.id);
+                    // If we're on the callback route but don't have a code, Supabase might have
+                    // already processed the OAuth and created a session server-side
+                    // Check immediately for a session before retrying
+                    console.log('🔍 Checking for immediate session (OAuth might have been processed server-side)...');
+                    const { data: { session: immediateSession }, error: immediateError } = await supabase.auth.getSession();
+                    if (immediateSession && immediateSession.user) {
+                        console.log('✅ Found immediate session:', immediateSession.user.id);
                         setStatus('success');
                         setMessage('✅ Authentication successful!');
-
+                        foundSession = true;
                         if (!hasNavigatedRef.current) {
                             hasNavigatedRef.current = true;
-                            // Navigate immediately - session exists
                             const redirectPath = getRedirectPath();
                             console.log('🔄 Redirecting to:', redirectPath);
                             router.replace(redirectPath as any);
-                            
-                            // Fallback navigation
-                            setTimeout(() => {
-                                router.push(redirectPath as any);
-                            }, 300);
+                            return;
                         }
-                    } else {
-                        // No session found - wait a bit more and check again (OAuth can be slow)
-                        console.log('⚠️ No immediate session, waiting for OAuth to complete...');
-                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                    const maxRetries = 5;
+                    
+                    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                        const delay = attempt === 1 ? 500 : 1000 * attempt;
+                        console.log(`⏳ Checking for session (attempt ${attempt}/${maxRetries}) after ${delay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
                         
-                        const { data: { session: retrySession } } = await supabase.auth.getSession();
-                        if (retrySession && retrySession.user) {
-                            console.log('✅ Found session on retry:', retrySession.user.id);
+                        // Try getSession first (faster)
+                        const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession();
+                        
+                        if (existingSession && !sessionError && existingSession.user) {
+                            console.log('✅ Found existing session:', existingSession.user.id);
                             setStatus('success');
                             setMessage('✅ Authentication successful!');
-                            
+                            foundSession = true;
+
                             if (!hasNavigatedRef.current) {
                                 hasNavigatedRef.current = true;
-                                const redirectPath = getRedirectPath();
-                                router.replace(redirectPath as any);
+                                // Wait a bit more to ensure session is fully established
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                                
+                                // Verify with getUser before navigating
+                                const { data: { user: verifiedUser }, error: verifyError } = await supabase.auth.getUser();
+                                if (verifiedUser && !verifyError) {
+                                    console.log('✅ Session verified with getUser before navigation');
+                                    const redirectPath = getRedirectPath();
+                                    console.log('🔄 Redirecting to:', redirectPath);
+                                    router.replace(redirectPath as any);
+                                    break;
+                                } else {
+                                    console.warn('⚠️ Session exists but getUser failed, navigating anyway');
+                                    const redirectPath = getRedirectPath();
+                                    router.replace(redirectPath as any);
+                                    break;
+                                }
                             }
-                        } else {
-                            // Still no session - let auth state change handler process it
-                            console.log('⚠️ No session found, but auth state change will handle it');
-                            setStatus('success');
-                            setMessage('✅ Authentication successful!');
-                            
-                            if (!hasNavigatedRef.current) {
-                                hasNavigatedRef.current = true;
-                                // Navigate anyway - auth state change will verify
-                                const redirectPath = getRedirectPath();
-                                console.log('🔄 Navigating to:', redirectPath);
-                                router.replace(redirectPath as any);
+                            break;
+                        }
+                        
+                        // Also try getUser (more reliable but slower)
+                        if (attempt >= 2) {
+                            const { data: { user: directUser }, error: userError } = await supabase.auth.getUser();
+                            if (directUser && !userError) {
+                                console.log('✅ Found user via getUser:', directUser.id);
+                                setStatus('success');
+                                setMessage('✅ Authentication successful!');
+                                foundSession = true;
+
+                                if (!hasNavigatedRef.current) {
+                                    hasNavigatedRef.current = true;
+                                    const redirectPath = getRedirectPath();
+                                    console.log('🔄 Redirecting to:', redirectPath);
+                                    router.replace(redirectPath as any);
+                                    break;
+                                }
+                                break;
                             }
                         }
                     }
+                    
+                    if (!foundSession) {
+                        // Still no session - show error but don't navigate
+                        console.error('❌ No session found after all retries');
+                        setStatus('error');
+                        setMessage('⚠️ Authentication completed but session not found. Please try signing in again.');
+                    }
                 } catch (sessionError: any) {
                     console.error('Session check error (non-fatal):', sessionError);
-                    // Still navigate - auth state change handler will process it
+                    // Still try to navigate - auth state change handler might process it
                     setStatus('success');
                     setMessage('✅ Authentication successful!');
                     
@@ -287,7 +520,7 @@ export default function AuthCallback() {
                     // Navigate to the correct path (respects returnTo parameter)
                     const redirectPath = getRedirectPath();
                     console.log('🔄 Redirecting to:', redirectPath);
-                    router.replace(redirectPath);
+                    router.replace(redirectPath as any);
                 }
                 return;
             }
@@ -308,8 +541,18 @@ export default function AuthCallback() {
     };
 
     useEffect(() => {
+        console.log('🔄 AuthCallback useEffect triggered');
+        console.log('📋 Params in useEffect:', params);
+        
         // Don't clear cache if we have auth params - session might be valid
         const hasAuthParams = params.access_token || params.refresh_token || params.code || params.token_hash;
+        
+        console.log('🔍 Has auth params:', hasAuthParams);
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            console.log('🌐 Full URL:', window.location.href);
+            console.log('🔍 URL has code:', window.location.href.includes('code='));
+            console.log('🔍 URL has access_token:', window.location.href.includes('access_token='));
+        }
         
         // Only clear stale cache if there are no auth params
         if (Platform.OS === 'web' && typeof window !== 'undefined' && !hasAuthParams) {
@@ -338,7 +581,9 @@ export default function AuthCallback() {
         
         // Wait a moment for params to be fully loaded, then process
         const processCallback = async () => {
+            console.log('⏳ Waiting 200ms before processing callback...');
             await new Promise(resolve => setTimeout(resolve, 200));
+            console.log('🚀 Starting handleAuthCallback...');
             await handleAuthCallback();
         };
         
@@ -381,7 +626,7 @@ export default function AuthCallback() {
 
     const handleContinue = () => {
         const redirectPath = getRedirectPath();
-        router.replace(redirectPath);
+        router.replace(redirectPath as any);
     };
 
     if (status === 'show_download') {

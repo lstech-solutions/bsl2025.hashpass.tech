@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.80] - 2025-11-14
+
+### Beta
+- Updated
+
+### Technical Details
+- Version: 1.6.80
+- Release Type: beta
+- Build Number: 202511140402
+- Release Date: 2025-11-14T04:02:00.095Z
+
+
 ## [1.6.79] - 2025-11-14
 
 ### Beta

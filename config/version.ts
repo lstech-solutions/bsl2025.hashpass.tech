@@ -22,7 +22,7 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511140142, // Updated to current timestamp
+  buildNumber: 202511140402, // Updated to current timestamp
   releaseDate: '2025-11-14',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -40,11 +40,33 @@ export const CURRENT_VERSION: VersionInfo = {
     'Fixed requester information not displaying in meeting details'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.79 release'
+  notes: 'Updated'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.80': {
+    version: '1.6.80',
+    buildNumber: 202511140402,
+    releaseDate: '2025-11-14',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      'Added requester information display in meeting details (name, avatar, title, company)',
+      'Moved chat title to navigation bar for better UX',
+      'Improved meeting status display with proper status handling (confirmed, tentative, etc.)'
+    ],
+    bugfixes: [
+      'Fixed chat avatar always showing speaker avatar correctly',
+      'Fixed meeting detail title from ',
+      'Fixed meeting status showing ',
+      'Updated meetings in database from tentative to confirmed status for accepted requests',
+      'Fixed meeting status color and icon mapping for all meeting statuses',
+      'Fixed requester information not displaying in meeting details'
+    ],
+    breakingChanges: [],
+    notes: 'Updated'
+  },
   '1.6.79': {
     version: '1.6.79',
     buildNumber: 202511140142,

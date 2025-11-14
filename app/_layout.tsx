@@ -143,19 +143,47 @@ function ThemedContent() {
         return;
       }
       
+      // Check if we're on the callback route - don't redirect during OAuth processing
+      const isCallbackRoute = pathname.includes('/auth/callback');
+      
       // Check if accessing protected dashboard routes
       const isDashboardRoute = pathname.startsWith('/(shared)/dashboard');
       
+      if (isCallbackRoute) {
+        // Don't redirect during callback processing - let the callback handler manage navigation
+        console.log('🔄 On callback route, skipping session check to allow OAuth processing');
+        return;
+      }
+      
       if (isDashboardRoute) {
         // For dashboard routes, verify session is actually valid
-        // But give it a moment in case session is being established
+        // But give it a moment in case session is being established (especially after OAuth)
         const checkSession = async () => {
-          // Wait a bit for session to be established (especially for OAuth/magic link)
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Wait longer for OAuth/magic link sessions to be established
+          // OAuth callbacks can take 2-3 seconds to fully establish, especially with custom auth domains
+          await new Promise(resolve => setTimeout(resolve, 3000));
           
-          const { data: { user }, error } = await supabase.auth.getUser();
-          if (error || !user) {
-            console.warn('⚠️ Invalid session on dashboard route, redirecting to auth');
+          // Check multiple times with retries for OAuth sessions
+          let retries = 5;
+          let hasSession = false;
+          
+          while (retries > 0 && !hasSession) {
+            const { data: { user }, error } = await supabase.auth.getUser();
+            if (!error && user) {
+              hasSession = true;
+              console.log('✅ Session verified on dashboard route');
+              break;
+            }
+            
+            retries--;
+            if (retries > 0) {
+              console.log(`⏳ Session not ready yet, retrying in 800ms... (${5 - retries}/5)`);
+              await new Promise(resolve => setTimeout(resolve, 800));
+            }
+          }
+          
+          if (!hasSession) {
+            console.warn('⚠️ Invalid session on dashboard route after retries, redirecting to auth');
             router.replace('/(shared)/auth' as any);
           }
         };

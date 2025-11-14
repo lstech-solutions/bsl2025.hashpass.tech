@@ -48,6 +48,80 @@ export default function Root({ children, metadata }: { children: ReactNode, meta
           }}
         />
 
+        {/* OAuth redirect fix - runs immediately to intercept Supabase redirects */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                'use strict';
+                // Only run on auth.hashpass.co domain (Supabase custom auth domain)
+                if (typeof window === 'undefined' || window.location.host !== 'auth.hashpass.co') {
+                  return;
+                }
+                
+                const currentPath = window.location.pathname;
+                const hashFragment = window.location.hash;
+                
+                // Check if we're on the incorrect redirect path with auth tokens
+                if ((currentPath.includes('hashpass.tech') || currentPath.startsWith('/bsl2025')) && 
+                    hashFragment && hashFragment.includes('access_token')) {
+                  
+                  console.log('🔧 [Auto-fix] Detected incorrect Supabase redirect with tokens');
+                  
+                  // Get stored origin or use default
+                  let correctOrigin = 'http://localhost:8081';
+                  try {
+                    const storedOrigin = localStorage.getItem('oauth_redirect_origin');
+                    if (storedOrigin) {
+                      correctOrigin = storedOrigin;
+                    }
+                  } catch (e) {
+                    // Ignore localStorage errors
+                  }
+                  
+                  // Build redirect URL
+                  let redirectUrl = correctOrigin + '/auth/callback';
+                  
+                  // Try to get apikey
+                  let apikey = '';
+                  try {
+                    apikey = window.__SUPABASE_ANON_KEY__ || 
+                             window.__EXPO_PUBLIC_SUPABASE_KEY__ ||
+                             (localStorage && localStorage.getItem('supabase_anon_key')) || '';
+                  } catch (e) {
+                    // Ignore
+                  }
+                  
+                  if (apikey) {
+                    redirectUrl += '?apikey=' + encodeURIComponent(apikey);
+                  }
+                  
+                  // Preserve hash fragment (contains all OAuth tokens)
+                  redirectUrl += hashFragment;
+                  
+                  // Preserve query params
+                  try {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    urlParams.forEach(function(value, key) {
+                      if (key !== 'apikey') {
+                        redirectUrl += (redirectUrl.includes('?') ? '&' : '?') + 
+                                      encodeURIComponent(key) + '=' + encodeURIComponent(value);
+                      }
+                    });
+                  } catch (e) {
+                    // Ignore
+                  }
+                  
+                  console.log('🚀 [Auto-fix] Redirecting to:', redirectUrl.substring(0, 300));
+                  
+                  // Redirect immediately
+                  window.location.replace(redirectUrl);
+                }
+              })();
+            `,
+          }}
+        />
+
         {/* Bootstrap the service worker. */}
         <script dangerouslySetInnerHTML={{ __html: sw }} />
 

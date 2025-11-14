@@ -6,6 +6,9 @@
 .env.development
 .env.test
 
+# Amplify - use amplify-backend-config/ instead
+amplify/
+amplify-backend-config/
 
 # Storybook
 storybook-static

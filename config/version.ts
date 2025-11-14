@@ -22,24 +22,60 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511141000, // Updated to current timestamp
+  buildNumber: 202511141147, // Updated to current timestamp
   releaseDate: '2025-11-14',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [],
   bugfixes: [
-    'Fixed infinite redirect loop in OAuth callback handler',
-    'Added safeNavigate helper to prevent redirecting to callback route',
-    'Enhanced getRedirectPath to reject callback route redirects',
-    'Fixed OAuth redirect detection to only trigger on wrong domain (auth.hashpass.co)',
-    'Added redirect loop prevention checks in all navigation paths'
+    'Fixed auth login redirect loop on production by disabling detectSessionInUrl on web',
+    'Optimized session verification timing - reduced from 7+ seconds to 2 seconds',
+    'Added redirect throttling to prevent rapid redirect loops (5-second minimum)',
+    'Fixed Supabase session detection conflicts with manual OAuth callback handling',
+    'Improved auth flow reliability with better error handling and debugging'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.90 release'
+  notes: 'Version 1.6.93 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.93': {
+    version: '1.6.93',
+    buildNumber: 202511141147,
+    releaseDate: '2025-11-14',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      // No new features
+    ],
+    bugfixes: [
+      'Fixed auth login redirect loop on production by disabling detectSessionInUrl on web',
+      'Optimized session verification timing - reduced from 7+ seconds to 2 seconds',
+      'Added redirect throttling to prevent rapid redirect loops (5-second minimum)',
+      'Fixed Supabase session detection conflicts with manual OAuth callback handling',
+      'Improved auth flow reliability with better error handling and debugging'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.93 release'
+  },
+  '1.6.92': {
+    version: '1.6.92',
+    buildNumber: 202511141100,
+    releaseDate: '2025-11-14',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [],
+    bugfixes: [
+      'Fixed auth login redirect loop on production by disabling detectSessionInUrl on web',
+      'Optimized session verification timing - reduced from 7+ seconds to 2 seconds',
+      'Added redirect throttling to prevent rapid redirect loops (5-second minimum)',
+      'Fixed Supabase session detection conflicts with manual OAuth callback handling',
+      'Improved auth flow reliability with better error handling and debugging'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.92 release - Auth login loop fixes and optimizations'
+  },
   '1.6.90': {
     version: '1.6.90',
     buildNumber: 202511141000,

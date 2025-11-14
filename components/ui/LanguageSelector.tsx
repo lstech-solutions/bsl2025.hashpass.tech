@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, Modal, Image } from "react-native";
-import { useRouter } from "expo-router";
 import { Check } from "lucide-react-native";
 
 interface LanguageSelectorProps {
@@ -54,7 +53,6 @@ export default function LanguageSelector({
   onClose = () => {},
 }: LanguageSelectorProps) {
   const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'es' | 'ko' | 'fr' | 'pt' | 'de'>("en");
-  const router = useRouter();
 
   const handleConfirm = () => {
     onSelectLanguage(selectedLanguage);

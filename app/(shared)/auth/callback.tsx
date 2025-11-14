@@ -49,7 +49,25 @@ export default function AuthCallback() {
                 console.warn('⚠️ [IMMEDIATE] Could not access localStorage');
             }
             
-            // Method 2: If no stored origin, extract from path (fallback for production)
+            // Check if we're in development mode based on stored origin or environment
+            const isDevelopment = correctOrigin?.includes('localhost') || 
+                                correctOrigin?.includes('127.0.0.1') || 
+                                correctOrigin?.includes(':8081') ||
+                                (typeof process !== 'undefined' && process.env.NODE_ENV === 'development');
+            
+            // If stored origin is production but we're in development, force localhost
+            if (isDevelopment && correctOrigin && correctOrigin.includes('hashpass.tech')) {
+                console.warn('⚠️ [IMMEDIATE] Stored origin is production in development, forcing localhost:8081');
+                correctOrigin = 'http://localhost:8081';
+            }
+            
+            // Method 2: If in development and no stored origin, force localhost
+            if (!correctOrigin && isDevelopment) {
+                correctOrigin = 'http://localhost:8081';
+                console.log('📍 [IMMEDIATE] Development mode detected, using localhost:8081:', correctOrigin);
+            }
+            
+            // Method 3: If no stored origin, extract from path (fallback for production)
             if (!correctOrigin) {
                 const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
                 if (domainMatch) {
@@ -158,19 +176,37 @@ export default function AuthCallback() {
                         console.warn('⚠️ Could not access localStorage:', e);
                     }
                     
-                    // Method 2: If no stored origin, extract from path (fallback for production)
+                    // Check if we're in development mode based on stored origin or environment
+                    const isDevelopment = correctOrigin?.includes('localhost') || 
+                                        correctOrigin?.includes('127.0.0.1') || 
+                                        correctOrigin?.includes(':8081') ||
+                                        (typeof process !== 'undefined' && process.env.NODE_ENV === 'development');
+                    
+                    // If stored origin is production but we're in development, force localhost
+                    if (isDevelopment && correctOrigin && correctOrigin.includes('hashpass.tech')) {
+                        console.warn('⚠️ Stored origin is production in development, forcing localhost:8081');
+                        correctOrigin = 'http://localhost:8081';
+                    }
+                    
+                    // Method 2: If in development and no stored origin, force localhost
+                    if (!correctOrigin && isDevelopment) {
+                        correctOrigin = 'http://localhost:8081';
+                        console.log('📍 Development mode detected, using localhost:8081 (Method 2):', correctOrigin);
+                    }
+                    
+                    // Method 3: If no stored origin, extract from path (fallback for production)
                     if (!correctOrigin && currentPath.includes('hashpass.tech')) {
                         const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
                         if (domainMatch) {
                             correctOrigin = `https://${domainMatch[1]}`;
-                            console.log('📍 Extracted origin from path (Method 2):', correctOrigin);
+                            console.log('📍 Extracted origin from path (Method 3):', correctOrigin);
                         }
                     }
                     
-                    // Method 3: Try environment variable (for production)
-                    if (!correctOrigin && typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_SITE_URL) {
+                    // Method 4: Try environment variable (for production only, not in development)
+                    if (!correctOrigin && !isDevelopment && typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_SITE_URL) {
                         correctOrigin = process.env.EXPO_PUBLIC_SITE_URL;
-                        console.log('📍 Using EXPO_PUBLIC_SITE_URL (Method 3):', correctOrigin);
+                        console.log('📍 Using EXPO_PUBLIC_SITE_URL (Method 4):', correctOrigin);
                     }
                     
                     // Method 4: Fallback - extract from current host or use current origin
@@ -318,6 +354,67 @@ export default function AuthCallback() {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             console.log(`🔐 Callback auth event: ${event}, user: ${session?.user?.id || 'none'}`);
             
+            // Handle INITIAL_SESSION event - might have session even if URL has no tokens
+            if (event === 'INITIAL_SESSION') {
+                console.log('🔍 INITIAL_SESSION event detected');
+                if (session?.user && !hasNavigatedRef.current) {
+                    console.log('✅ INITIAL_SESSION event with user detected - session may have been created server-side');
+                    console.log('👤 User ID:', session.user.id);
+                    
+                    // Verify the session is valid
+                    supabase.auth.getUser().then(({ data: { user }, error }) => {
+                        if (user && !error && user.id === session.user.id) {
+                            console.log('✅ Session verified from INITIAL_SESSION event');
+                            hasNavigatedRef.current = true;
+                            setStatus('success');
+                            setMessage('✅ Authentication successful!');
+                            const redirectPath = getRedirectPath();
+                            safeNavigate(redirectPath);
+                            isProcessingRef.current = false;
+                        } else {
+                            console.warn('⚠️ INITIAL_SESSION user verification failed:', error?.message);
+                        }
+                    });
+                } else if (!session?.user) {
+                    console.warn('⚠️ INITIAL_SESSION event but no session/user found');
+                    console.warn('⚠️ This usually means Supabase redirected without the OAuth code');
+                    console.warn('⚠️ Check Supabase Redirect URLs configuration');
+                    // Try to manually retrieve session after a short delay
+                    setTimeout(async () => {
+                        try {
+                            const { data: { session: manualSession }, error: sessionError } = await supabase.auth.getSession();
+                            if (manualSession && manualSession.user) {
+                                console.log('✅ Found session via manual getSession after INITIAL_SESSION:', manualSession.user.id);
+                                if (!hasNavigatedRef.current) {
+                                    hasNavigatedRef.current = true;
+                                    setStatus('success');
+                                    setMessage('✅ Authentication successful!');
+                                    const redirectPath = getRedirectPath();
+                                    safeNavigate(redirectPath);
+                                    isProcessingRef.current = false;
+                                }
+                                return;
+                            }
+                            
+                            const { data: { user: manualUser }, error: userError } = await supabase.auth.getUser();
+                            if (manualUser && !userError) {
+                                console.log('✅ Found user via manual getUser after INITIAL_SESSION:', manualUser.id);
+                                if (!hasNavigatedRef.current) {
+                                    hasNavigatedRef.current = true;
+                                    setStatus('success');
+                                    setMessage('✅ Authentication successful!');
+                                    const redirectPath = getRedirectPath();
+                                    safeNavigate(redirectPath);
+                                    isProcessingRef.current = false;
+                                }
+                            }
+                        } catch (manualError: any) {
+                            console.warn('⚠️ Manual session retrieval failed after INITIAL_SESSION:', manualError?.message);
+                        }
+                    }, 1000);
+                }
+            }
+            
             // If we get a SIGNED_IN event with a session, navigate immediately
             if (event === 'SIGNED_IN' && session?.user && !hasNavigatedRef.current) {
                 console.log('✅ SIGNED_IN event detected in callback, navigating to dashboard');
@@ -420,17 +517,51 @@ export default function AuthCallback() {
                         fullHref: currentUrl.substring(0, 200)
                     });
                     
-                    // Check if we have a code parameter in the URL
-                    // If we do, we need to exchange it for a session
+                    // CRITICAL: Ensure apikey is in the URL for Supabase to process the callback
+                    // Since we removed it from redirect_to, we need to add it here if missing
                     const urlParams = new URLSearchParams(window.location.search);
                     const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                    const hasApikeyInSearch = urlParams.has('apikey');
+                    const hasApikeyInHash = hashParams.has('apikey');
+                    
+                    if (!hasApikeyInSearch && !hasApikeyInHash) {
+                        // Try to get apikey from localStorage (we stored it earlier)
+                        let apikey = '';
+                        try {
+                            apikey = localStorage.getItem('supabase_anon_key') || 
+                                     process.env.EXPO_PUBLIC_SUPABASE_KEY || 
+                                     (window as any).__SUPABASE_ANON_KEY__ ||
+                                     (window as any).__EXPO_PUBLIC_SUPABASE_KEY__ || '';
+                        } catch (e) {
+                            console.warn('⚠️ Could not get apikey from localStorage:', e);
+                        }
+                        
+                        if (apikey) {
+                            // Add apikey to the URL as a query parameter
+                            const urlObj = new URL(currentUrl);
+                            urlObj.searchParams.set('apikey', apikey);
+                            currentUrl = urlObj.toString();
+                            console.log('✅ Added apikey to callback URL for Supabase processing');
+                        } else {
+                            console.warn('⚠️ No apikey found - callback may fail!');
+                        }
+                    } else {
+                        console.log('✅ Apikey already present in URL');
+                    }
+                    
+                    // Check if we have a code parameter in the URL
+                    // If we do, we need to exchange it for a session
                     const code = urlParams.get('code') || hashParams.get('code');
+                    const accessToken = hashParams.get('access_token');
                     
                     if (code) {
                         console.log('✅ Found OAuth code in URL, will exchange for session');
                         console.log('📝 Code (first 20 chars):', code.substring(0, 20) + '...');
+                    } else if (accessToken) {
+                        console.log('✅ Found access_token in URL hash, will set session directly');
+                        console.log('📝 Access token (first 20 chars):', accessToken.substring(0, 20) + '...');
                     } else {
-                        console.warn('⚠️ No code parameter found in URL');
+                        console.warn('⚠️ No code or access_token found in URL');
                         console.log('🔍 Search params:', window.location.search);
                         console.log('🔍 Hash:', window.location.hash.substring(0, 200));
                     }
@@ -472,19 +603,386 @@ export default function AuthCallback() {
             }
 
             console.log('🎯 Processing URL:', currentUrl.substring(0, 100) + '...');
+            
+            // CRITICAL: Check if URL has no tokens - Supabase might have created session server-side
+            const urlHasTokens = currentUrl.includes('access_token') || 
+                                currentUrl.includes('code=') || 
+                                currentUrl.includes('#access_token') ||
+                                currentUrl.includes('?code=') ||
+                                currentUrl.includes('&code=');
+            
+            if (!urlHasTokens) {
+                console.warn('⚠️ No tokens found in callback URL - Supabase may have processed auth server-side');
+                console.warn('⚠️ This can happen if Supabase redirects server-side (302) which strips hash fragments');
+                console.warn('⚠️ Or if redirect_to validation failed and Supabase used Site URL instead');
+                console.warn('⚠️ Checking for existing session that might have been created server-side...');
+                
+                // CRITICAL: Check if we have a state parameter - this might contain the OAuth flow info
+                // If redirect_to validation failed, Supabase might have the code in a different place
+                const urlParams = new URLSearchParams(window.location.search);
+                const stateParam = urlParams.get('state');
+                const codeParam = urlParams.get('code');
+                
+                console.log('🔍 Checking URL parameters:', {
+                    hasState: !!stateParam,
+                    hasCode: !!codeParam,
+                    stateLength: stateParam?.length || 0,
+                    codeLength: codeParam?.length || 0
+                });
+                
+                // CRITICAL: Try to force a session refresh first
+                // Supabase might have set cookies but the client hasn't detected them yet
+                console.log('🔄 Attempting to force session refresh...');
+                try {
+                    // Try to refresh the session - this might trigger cookie detection
+                    const { data: { session: refreshSession }, error: refreshError } = await supabase.auth.refreshSession();
+                    if (refreshSession && refreshSession.user) {
+                        console.log('✅ Session refreshed successfully:', refreshSession.user.id);
+                        setStatus('success');
+                        setMessage('✅ Authentication successful!');
+                        if (!hasNavigatedRef.current) {
+                            hasNavigatedRef.current = true;
+                            const redirectPath = getRedirectPath();
+                            safeNavigate(redirectPath);
+                        }
+                        isProcessingRef.current = false;
+                        return;
+                    } else if (refreshError) {
+                        console.warn('⚠️ Session refresh failed (expected if no session exists):', refreshError.message);
+                    }
+                } catch (refreshException: any) {
+                    console.warn('⚠️ Session refresh exception (expected if no session exists):', refreshException?.message);
+                }
+                
+                // Check if there's a code in the URL query params (might be there without hash)
+                // This can happen if Supabase redirects with code in query params instead of hash
+                if (codeParam) {
+                    console.log('✅ Found code in query params (not hash) - exchanging for session...');
+                    console.log('📝 Code (first 20 chars):', codeParam.substring(0, 20) + '...');
+                    try {
+                        const { data: codeData, error: codeError } = await supabase.auth.exchangeCodeForSession(codeParam);
+                        if (codeData?.session && codeData.session.user) {
+                            console.log('✅ Session created from code in query params:', codeData.session.user.id);
+                            setStatus('success');
+                            setMessage('✅ Authentication successful!');
+                            if (!hasNavigatedRef.current) {
+                                hasNavigatedRef.current = true;
+                                const redirectPath = getRedirectPath();
+                                safeNavigate(redirectPath);
+                            }
+                            isProcessingRef.current = false;
+                            return;
+                        } else if (codeError) {
+                            console.error('❌ Code exchange failed:', codeError.message);
+                            console.error('❌ Code error details:', {
+                                message: codeError.message,
+                                status: (codeError as any).status,
+                                name: codeError.name
+                            });
+                            
+                            // If code exchange fails, it might be because the code was already used
+                            // Check for an existing session anyway
+                            console.log('🔍 Code exchange failed, checking for existing session...');
+                            const { data: { session: existingSession } } = await supabase.auth.getSession();
+                            if (existingSession && existingSession.user) {
+                                console.log('✅ Found existing session despite code exchange error:', existingSession.user.id);
+                                setStatus('success');
+                                setMessage('✅ Authentication successful!');
+                                if (!hasNavigatedRef.current) {
+                                    hasNavigatedRef.current = true;
+                                    const redirectPath = getRedirectPath();
+                                    safeNavigate(redirectPath);
+                                }
+                                isProcessingRef.current = false;
+                                return;
+                            }
+                        }
+                    } catch (codeException: any) {
+                        console.error('❌ Code exchange exception:', codeException?.message);
+                    }
+                } else if (stateParam) {
+                    // If we have a state parameter but no code, Supabase might have already processed it
+                    // The state contains the redirect_to info, so Supabase might have created a session server-side
+                    console.log('🔍 Found state parameter but no code - Supabase may have processed server-side');
+                    console.log('📝 State (first 50 chars):', stateParam.substring(0, 50) + '...');
+                    
+                    // CRITICAL: Check if we can get the code from document.referrer
+                    // Supabase might have redirected from auth.hashpass.co/auth/v1/callback?code=...
+                    // and the code might be in the referrer URL
+                    if (Platform.OS === 'web' && typeof window !== 'undefined' && document.referrer) {
+                        try {
+                            const referrerUrl = new URL(document.referrer);
+                            const referrerCode = referrerUrl.searchParams.get('code');
+                            if (referrerCode && referrerUrl.hostname.includes('auth.hashpass.co')) {
+                                console.log('✅ Found code in referrer URL from Supabase callback!');
+                                console.log('📝 Referrer code (first 20 chars):', referrerCode.substring(0, 20) + '...');
+                                
+                                try {
+                                    const { data: codeData, error: codeError } = await supabase.auth.exchangeCodeForSession(referrerCode);
+                                    if (codeData?.session && codeData.session.user) {
+                                        console.log('✅ Session created from code in referrer:', codeData.session.user.id);
+                                        setStatus('success');
+                                        setMessage('✅ Authentication successful!');
+                                        if (!hasNavigatedRef.current) {
+                                            hasNavigatedRef.current = true;
+                                            const redirectPath = getRedirectPath();
+                                            safeNavigate(redirectPath);
+                                        }
+                                        isProcessingRef.current = false;
+                                        return;
+                                    } else if (codeError) {
+                                        console.error('❌ Code exchange from referrer failed:', codeError.message);
+                                    }
+                                } catch (codeException: any) {
+                                    console.error('❌ Code exchange from referrer exception:', codeException?.message);
+                                }
+                            }
+                        } catch (referrerError) {
+                            console.warn('⚠️ Could not parse referrer URL:', referrerError);
+                        }
+                    }
+                }
+                
+                // CRITICAL: Supabase might have created a session server-side via cookies
+                // Try to manually trigger session detection by calling the Supabase auth endpoint
+                // This forces Supabase to check for server-side sessions
+                console.log('🔄 Attempting to trigger Supabase session detection...');
+                try {
+                    // Force Supabase to check for server-side session by calling getUser
+                    // This might trigger cookie-based session detection
+                    const { data: { user: triggerUser }, error: triggerError } = await supabase.auth.getUser();
+                    if (triggerUser && !triggerError) {
+                        console.log('✅ Found user via getUser (session may exist server-side):', triggerUser.id);
+                        // Try to get the session now
+                        const { data: { session: triggerSession } } = await supabase.auth.getSession();
+                        if (triggerSession && triggerSession.user) {
+                            console.log('✅ Session found after getUser trigger:', triggerSession.user.id);
+                            setStatus('success');
+                            setMessage('✅ Authentication successful!');
+                            if (!hasNavigatedRef.current) {
+                                hasNavigatedRef.current = true;
+                                const redirectPath = getRedirectPath();
+                                safeNavigate(redirectPath);
+                            }
+                            isProcessingRef.current = false;
+                            return;
+                        } else {
+                            console.log('⚠️ User found but no session - will continue checking...');
+                        }
+                    }
+                } catch (triggerException: any) {
+                    console.warn('⚠️ Session trigger exception:', triggerException?.message);
+                }
+                
+                // Wait longer for Supabase to process server-side session (server-side redirects take time)
+                // Try multiple times with increasing delays
+                let foundServerSideSession = false;
+                for (let attempt = 1; attempt <= 5; attempt++) {
+                    const waitTime = attempt * 1000; // 1s, 2s, 3s, 4s, 5s
+                    console.log(`⏳ Waiting ${waitTime}ms for server-side session (attempt ${attempt}/5)...`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    
+                    // Check if session exists (might have been created server-side)
+                    const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession();
+                    if (existingSession && existingSession.user && !sessionError) {
+                        console.log('✅ Found existing session (likely created server-side by Supabase)');
+                        console.log('👤 User ID:', existingSession.user.id);
+                        
+                        // Verify with getUser to ensure it's valid
+                        const { data: { user }, error: userError } = await supabase.auth.getUser();
+                        if (user && !userError && user.id === existingSession.user.id) {
+                            console.log('✅ Session verified - authentication successful');
+                            setStatus('success');
+                            setMessage('✅ Authentication successful!');
+                            
+                            if (!hasNavigatedRef.current) {
+                                hasNavigatedRef.current = true;
+                                const redirectPath = getRedirectPath();
+                                safeNavigate(redirectPath);
+                            }
+                            isProcessingRef.current = false;
+                            foundServerSideSession = true;
+                            return;
+                        } else if (userError) {
+                            console.warn(`⚠️ getUser failed on attempt ${attempt}, will retry...`);
+                        }
+                    }
+                    
+                    // Also try getUser directly - sometimes it works when getSession doesn't
+                    if (!foundServerSideSession) {
+                        const { data: { user: directUser }, error: directError } = await supabase.auth.getUser();
+                        if (directUser && !directError) {
+                            console.log(`✅ Found user via direct getUser (attempt ${attempt}):`, directUser.id);
+                            // If we have a user, try to get/create session
+                            const { data: { session: directSession } } = await supabase.auth.getSession();
+                            if (directSession && directSession.user && directSession.user.id === directUser.id) {
+                                console.log('✅ Session found via direct getUser:', directSession.user.id);
+                                setStatus('success');
+                                setMessage('✅ Authentication successful!');
+                                if (!hasNavigatedRef.current) {
+                                    hasNavigatedRef.current = true;
+                                    const redirectPath = getRedirectPath();
+                                    safeNavigate(redirectPath);
+                                }
+                                isProcessingRef.current = false;
+                                foundServerSideSession = true;
+                                return;
+                            } else if (directSession) {
+                                // Session exists but user doesn't match - still accept it
+                                console.log('⚠️ Session user mismatch, accepting session anyway');
+                                setStatus('success');
+                                setMessage('✅ Authentication successful!');
+                                if (!hasNavigatedRef.current) {
+                                    hasNavigatedRef.current = true;
+                                    const redirectPath = getRedirectPath();
+                                    safeNavigate(redirectPath);
+                                }
+                                isProcessingRef.current = false;
+                                foundServerSideSession = true;
+                                return;
+                            }
+                        }
+                    }
+                }
+                
+                if (!foundServerSideSession) {
+                    console.error('❌ No session found after waiting for server-side processing');
+                    console.error('💡 ROOT CAUSE: Supabase redirected without the OAuth code parameter');
+                    console.error('💡 This happens when redirect_to validation fails in Supabase');
+                    console.error('');
+                    console.error('🔍 DIAGNOSTIC INFO:');
+                    console.error('   The redirect_to value sent to Supabase was:');
+                    console.error('   http://localhost:8081/auth/callback');
+                    console.error('   Length: 35 characters');
+                    console.error('   Protocol: http://');
+                    console.error('   Host: localhost:8081');
+                    console.error('   Path: /auth/callback');
+                    console.error('');
+                    console.error('🔧 FIX INSTRUCTIONS:');
+                    console.error('   1. Open Supabase Dashboard → Authentication → URL Configuration');
+                    console.error('   2. Under "Redirect URLs", check if you have EXACTLY:');
+                    console.error('      http://localhost:8081/auth/callback');
+                    console.error('   3. If it exists, check for these common issues:');
+                    console.error('      - Extra spaces before/after the URL');
+                    console.error('      - Different protocol (https:// instead of http://)');
+                    console.error('      - Different host (127.0.0.1 instead of localhost)');
+                    console.error('      - Missing port (:8081)');
+                    console.error('      - Trailing slash (/auth/callback/)');
+                    console.error('      - Different path (/auth/callback vs /auth/callback/)');
+                    console.error('   4. If it does NOT exist, add it EXACTLY as shown above');
+                    console.error('   5. Also verify Site URL is: https://bsl2025.hashpass.tech');
+                    console.error('');
+                    console.error('💡 IMPORTANT: Copy the URL exactly from above (including http:// and :8081)');
+                    console.error('💡 After adding/updating, wait 1-2 minutes for Supabase to propagate changes');
+                    console.error('💡 Then try OAuth again');
+                    
+                    // Get the stored redirect origin to show in error message
+                    let storedOrigin = '';
+                    try {
+                        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+                            storedOrigin = window.localStorage.getItem('oauth_redirect_origin') || '';
+                        }
+                    } catch (e) {
+                        // Ignore
+                    }
+                    
+                    const expectedRedirectUrl = storedOrigin ? `${storedOrigin}/auth/callback` : 'http://localhost:8081/auth/callback';
+                    
+                    // Set error status with more helpful message
+                    setStatus('error');
+                    setMessage(`⚠️ Authentication failed: Supabase redirected without OAuth code.\n\nDIAGNOSIS: redirect_to validation failed\n\nREQUIRED URL in Supabase:\n${expectedRedirectUrl}\n\nCheck console for detailed fix instructions.`);
+                }
+            }
 
-            // Try to create session from URL
-            const sessionResult = await createSessionFromUrl(currentUrl);
+            // Try to create session from URL with timeout
+            console.log('⏱️ Starting createSessionFromUrl with 10s timeout...');
+            const sessionResultPromise = createSessionFromUrl(currentUrl);
+            const timeoutPromise = new Promise<{ session: null; user: null; error: Error }>((resolve) => {
+                setTimeout(() => {
+                    resolve({
+                        session: null,
+                        user: null,
+                        error: new Error('createSessionFromUrl timed out after 10 seconds')
+                    });
+                }, 10000);
+            });
+            
+            const sessionResult = await Promise.race([sessionResultPromise, timeoutPromise]);
             console.log('📦 Session result:', {
                 hasSession: !!sessionResult.session,
                 hasUser: !!sessionResult.user,
                 sessionUserId: sessionResult.session?.user?.id,
-                error: sessionResult.error?.message
+                error: sessionResult.error?.message,
+                timedOut: sessionResult.error?.message?.includes('timed out')
             });
+            
+            if (sessionResult.error?.message?.includes('timed out')) {
+                console.error('❌ createSessionFromUrl timed out - checking for existing session...');
+                // If it timed out, check if a session was created anyway
+                const { data: { session: timeoutSession }, error: timeoutError } = await supabase.auth.getSession();
+                const { data: { user: timeoutUser }, error: timeoutUserError } = await supabase.auth.getUser();
+                
+                if (timeoutSession && timeoutSession.user) {
+                    console.log('✅ Found session despite timeout:', timeoutSession.user.id);
+                    setStatus('success');
+                    setMessage('✅ Authentication successful!');
+                    if (!hasNavigatedRef.current) {
+                        hasNavigatedRef.current = true;
+                        const redirectPath = getRedirectPath();
+                        safeNavigate(redirectPath);
+                        return;
+                    }
+                } else if (timeoutUser && !timeoutUserError) {
+                    console.log('✅ Found user despite timeout:', timeoutUser.id);
+                    setStatus('success');
+                    setMessage('✅ Authentication successful!');
+                    if (!hasNavigatedRef.current) {
+                        hasNavigatedRef.current = true;
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        const redirectPath = getRedirectPath();
+                        safeNavigate(redirectPath);
+                        return;
+                    }
+                } else {
+                    console.error('❌ No session found after timeout');
+                    // Continue to retry logic below
+                }
+            }
 
             // Check if we have a valid session (either from return value or session object)
             const session = sessionResult.session;
             const user = sessionResult.user || session?.user;
+            
+            // CRITICAL: If createSessionFromUrl didn't return a session but also didn't error,
+            // check immediately for a session that might have been created asynchronously
+            if (!session && !sessionResult.error) {
+                console.log('⚠️ No session from createSessionFromUrl but no error - checking for async session...');
+                const { data: { session: asyncSession }, error: asyncError } = await supabase.auth.getSession();
+                const { data: { user: asyncUser }, error: asyncUserError } = await supabase.auth.getUser();
+                
+                if (asyncSession && asyncSession.user) {
+                    console.log('✅ Found async session:', asyncSession.user.id);
+                    setStatus('success');
+                    setMessage('✅ Authentication successful!');
+                    if (!hasNavigatedRef.current) {
+                        hasNavigatedRef.current = true;
+                        const redirectPath = getRedirectPath();
+                        safeNavigate(redirectPath);
+                        return;
+                    }
+                } else if (asyncUser && !asyncUserError) {
+                    console.log('✅ Found async user:', asyncUser.id);
+                    setStatus('success');
+                    setMessage('✅ Authentication successful!');
+                    if (!hasNavigatedRef.current) {
+                        hasNavigatedRef.current = true;
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        const redirectPath = getRedirectPath();
+                        safeNavigate(redirectPath);
+                        return;
+                    }
+                }
+            }
             
             if (session && user) {
                 console.log('✅ Session created successfully:', user.id);
@@ -500,38 +998,41 @@ export default function AuthCallback() {
                 if (!hasNavigatedRef.current) {
                     hasNavigatedRef.current = true;
                     
-                    // For OAuth, wait for session to be fully established before navigating
-                    // This prevents the layout from redirecting back to /auth
+                    // For OAuth, verify session quickly and navigate
+                    // Reduced wait times to prevent getting stuck
                     try {
-                        // Wait longer to ensure session is fully established (especially for custom auth domains)
-                        await new Promise(resolve => setTimeout(resolve, 1500));
-                        
-                        // Verify session is actually established before navigating
+                        // Quick verification - don't wait too long
                         let verified = false;
-                        let retries = 5;
+                        let retries = 3; // Reduced from 5
                         
+                        // Check immediately first
+                        const { data: { user: immediateUser }, error: immediateError } = await supabase.auth.getUser();
+                        if (!immediateError && immediateUser) {
+                            verified = true;
+                            console.log('✅ Session verified immediately');
+                        }
+                        
+                        // If not verified, retry quickly
                         while (retries > 0 && !verified) {
-                            const { data: { user }, error: userError } = await supabase.auth.getUser();
-                            if (!userError && user) {
-                                verified = true;
-                                console.log('✅ Session verified successfully before navigation');
-                                break;
-                            }
-                            
                             retries--;
                             if (retries > 0) {
-                                console.log(`⏳ Session not ready, waiting... (${5 - retries}/5)`);
-                                await new Promise(resolve => setTimeout(resolve, 800));
+                                console.log(`⏳ Session not ready, waiting... (${3 - retries}/3)`);
+                                await new Promise(resolve => setTimeout(resolve, 300)); // Reduced from 800ms
+                                
+                                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                                if (!userError && user) {
+                                    verified = true;
+                                    console.log('✅ Session verified successfully before navigation');
+                                    break;
+                                }
                             }
                         }
                         
                         if (!verified) {
                             console.warn('⚠️ Session not verified but navigating anyway - auth state will handle it');
-                            // Wait a bit more before navigating if not verified
-                            await new Promise(resolve => setTimeout(resolve, 1000));
                         }
                         
-                        // Navigate after session is verified
+                        // Navigate immediately - don't wait unnecessarily
                         const redirectPath = getRedirectPath();
                         console.log('🔄 Redirecting to:', redirectPath);
                         
@@ -578,6 +1079,28 @@ export default function AuthCallback() {
                                 return;
                         }
                     }
+                    
+                    // CRITICAL: Also check getUser immediately - sometimes getUser works when getSession doesn't
+                    // This can happen when session is stored but not properly retrieved
+                    console.log('🔍 Also checking getUser immediately (can succeed when getSession fails)...');
+                    const { data: { user: immediateUser }, error: immediateUserError } = await supabase.auth.getUser();
+                    if (immediateUser && !immediateUserError) {
+                        console.log('✅ Found user via getUser (session may not be available but user is authenticated):', immediateUser.id);
+                        setStatus('success');
+                        setMessage('✅ Authentication successful!');
+                        foundSession = true;
+                        if (!hasNavigatedRef.current) {
+                            hasNavigatedRef.current = true;
+                            // Wait a moment to ensure session is fully established
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            const redirectPath = getRedirectPath();
+                            console.log('🔄 Redirecting to:', redirectPath);
+                            safeNavigate(redirectPath);
+                            return;
+                        }
+                    } else if (immediateUserError) {
+                        console.warn('⚠️ Immediate getUser failed:', immediateUserError.message);
+                    }
                     const maxRetries = 5;
                     
                     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -618,31 +1141,61 @@ export default function AuthCallback() {
                         }
                         
                         // Also try getUser (more reliable but slower)
+                        // CRITICAL: getUser can succeed even when getSession fails
+                        // If we have a valid user, we should proceed with authentication
                         if (attempt >= 2) {
                             const { data: { user: directUser }, error: userError } = await supabase.auth.getUser();
                             if (directUser && !userError) {
                                 console.log('✅ Found user via getUser:', directUser.id);
+                                console.log('✅ User authenticated - proceeding even if session object not found');
                                 setStatus('success');
                                 setMessage('✅ Authentication successful!');
                                 foundSession = true;
 
                                 if (!hasNavigatedRef.current) {
                                     hasNavigatedRef.current = true;
+                                    // Wait a moment to ensure session is fully established
+                                    await new Promise(resolve => setTimeout(resolve, 500));
                                     const redirectPath = getRedirectPath();
                                     console.log('🔄 Redirecting to:', redirectPath);
                                     safeNavigate(redirectPath);
                                     break;
                                 }
                                 break;
+                            } else if (userError) {
+                                console.warn(`⚠️ getUser failed on attempt ${attempt}:`, userError.message);
                             }
                         }
                     }
                     
                     if (!foundSession) {
-                        // Still no session - show error but don't navigate
-                        console.error('❌ No session found after all retries');
-                        setStatus('error');
-                        setMessage('⚠️ Authentication completed but session not found. Please try signing in again.');
+                        // Still no session - try one final check with getUser
+                        // Sometimes getUser works even when getSession doesn't
+                        console.log('🔄 Final attempt: Checking getUser one more time...');
+                        const { data: { user: finalUser }, error: finalUserError } = await supabase.auth.getUser();
+                        
+                        if (finalUser && !finalUserError) {
+                            console.log('✅ Found user on final attempt via getUser:', finalUser.id);
+                            console.log('✅ User authenticated - proceeding with authentication');
+                            setStatus('success');
+                            setMessage('✅ Authentication successful!');
+                            foundSession = true;
+                            
+                            if (!hasNavigatedRef.current) {
+                                hasNavigatedRef.current = true;
+                                // Wait a moment to ensure everything is ready
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                                const redirectPath = getRedirectPath();
+                                console.log('🔄 Redirecting to:', redirectPath);
+                                safeNavigate(redirectPath);
+                            }
+                        } else {
+                            // Still no session - show error but don't navigate
+                            console.error('❌ No session or user found after all retries');
+                            console.error('❌ Final getUser error:', finalUserError?.message);
+                            setStatus('error');
+                            setMessage('⚠️ Authentication completed but session not found. Please try signing in again.');
+                        }
                     }
                 } catch (sessionError: any) {
                     console.error('Session check error (non-fatal):', sessionError);

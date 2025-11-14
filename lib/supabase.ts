@@ -206,7 +206,15 @@ const initializeSupabase = () => {
   if (!supabaseClient) {
     // Allow detectSessionInUrl to enable automatic session detection from URL
     // This can help with OAuth callbacks and deep linking
-    const shouldDetectSessionInUrl = true;
+    // However, we need to be careful - it can cause errors if navigation state isn't ready
+    // 
+    // CRITICAL: On web, we disable detectSessionInUrl because:
+    // 1. We handle OAuth callbacks manually in the callback handler
+    // 2. detectSessionInUrl can try to access navigation state (rootState.routeNames) before it's ready
+    // 3. This causes "rootState.routeNames is undefined" errors on web
+    // 
+    // On native, we can enable it for deep linking, but we'll catch errors and retry without it
+    let shouldDetectSessionInUrl = Platform.OS !== 'web';
     
     try {
       // Custom fetch function to ensure apikey header is always included
@@ -344,7 +352,9 @@ const initializeSupabase = () => {
           autoRefreshToken: true,
           persistSession: true,
           // Enable detectSessionInUrl to allow automatic session detection from URL
-          detectSessionInUrl: true,
+          // Only enable if we're confident navigation state is ready
+          // This prevents "rootState.routeNames is undefined" errors
+          detectSessionInUrl: shouldDetectSessionInUrl,
         },
         global: {
           headers: {
@@ -353,9 +363,17 @@ const initializeSupabase = () => {
           fetch: customFetch
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       // If initialization fails due to navigation state error, retry without detectSessionInUrl
-      console.warn('⚠️ Supabase init error, retrying without detectSessionInUrl:', error);
+      const isNavigationError = error?.message?.includes('routeNames') || 
+                                 error?.message?.includes('rootState') ||
+                                 error?.message?.includes('navigation');
+      
+      if (isNavigationError) {
+        console.warn('⚠️ Supabase init error (navigation state not ready), retrying without detectSessionInUrl:', error?.message);
+      } else {
+        console.warn('⚠️ Supabase init error, retrying without detectSessionInUrl:', error);
+      }
       try {
         // Custom fetch function for fallback initialization
         const customFetch: typeof fetch = (input: RequestInfo | URL, init?: RequestInit) => {

@@ -17,7 +17,6 @@ import {
   type EventInfo 
 } from '../../../lib/event-detector';
 import { t } from '@lingui/macro';
-import { useLingui } from '@lingui/react';
 import { CopilotStep, walkthroughable, useCopilot } from 'react-native-copilot';
 import { useTutorialPreferences } from '../../../hooks/useTutorialPreferences';
 
@@ -34,10 +33,32 @@ export default function ExploreScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const styles = getStyles(isDark, colors);
-  const { start: startTutorial, copilotEvents, handleNth, handleStop, getSteps } = useCopilot();
+  const { start: startTutorial, copilotEvents } = useCopilot();
   const { shouldShowTutorial, markTutorialCompleted, isReady, mainTutorialCompleted, updateTutorialStep, mainTutorialProgress } = useTutorialPreferences();
   const { isLoggedIn, isLoading: authLoading } = useAuth();
   const tutorialStartedRef = useRef(false);
+  
+  // Get current event from route - getCurrentEvent returns EventInfo | null
+  const currentEventFromRoute = getCurrentEvent(params.eventId as string);
+  const availableEvents = getAvailableEvents();
+  
+  // Convert EventConfig from context to EventInfo if needed, or use route event
+  const currentEventInfo: EventInfo | null = currentEventFromRoute 
+    ? currentEventFromRoute
+    : currentEventFromContext 
+      ? availableEvents.find(e => e.id === currentEventFromContext.id) || null
+      : availableEvents[0] || null;
+  
+  // Initialize all state hooks at the top
+  const [selectedEvent, setSelectedEvent] = useState<EventInfo>(currentEventInfo || availableEvents[0]);
+  const [showEventSelector, setShowEventSelector] = useState(shouldShowEventSelector());
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+  const [scrollX, setScrollX] = useState(0);
+  const [maxScrollX, setMaxScrollX] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
+  const quickAccessScrollRef = useRef<ScrollView>(null);
 
   // Reset ref when tutorial is reset (completion status changes or progress is cleared)
   useEffect(() => {
@@ -120,25 +141,9 @@ export default function ExploreScreen() {
               return;
             }
             
-            // Check if steps are registered
-            let steps: any[] = [];
-            try {
-              if (typeof getSteps === 'function') {
-                steps = getSteps();
-                console.log('Available tutorial steps:', steps.length, steps.map(s => ({ order: s.order, name: s.name })));
-              } else {
-                console.warn('getSteps is not available');
-              }
-            } catch (err) {
-              console.warn('Could not get steps:', err);
-            }
-            
-            // If no steps are registered, wait a bit more and retry
-            // Note: getSteps might not be available in all versions, so we'll try anyway
-            if (steps.length === 0 && typeof getSteps === 'function') {
-              console.warn('No tutorial steps detected via getSteps, but will try to start anyway...');
-              // Don't return - continue to try starting
-            }
+            // Check if steps are registered - getSteps is not available in current version
+            // Proceed with tutorial start without step verification
+            console.log('Starting tutorial without step verification');
             
             // Start tutorial first, then update database after it successfully starts
             const result = startTutorial();
@@ -191,23 +196,87 @@ export default function ExploreScreen() {
       copilotEvents.off('stepChange', handleStepChange);
     };
   }, [copilotEvents, markTutorialCompleted, updateTutorialStep]);
-  // Subscribe to locale changes to trigger re-renders when locale changes
-  const { i18n } = useLingui();
-  // Use i18n.locale to ensure component subscribes to locale changes
-  const currentLocale = i18n.locale;
-  
-  // Get current event from route - getCurrentEvent returns EventInfo | null
-  const currentEventFromRoute = getCurrentEvent(params.eventId as string);
-  const availableEvents = getAvailableEvents();
-  
-  // Convert EventConfig from context to EventInfo if needed, or use route event
-  const currentEventInfo: EventInfo | null = currentEventFromRoute 
-    ? currentEventFromRoute
-    : currentEventFromContext 
-      ? availableEvents.find(e => e.id === currentEventFromContext.id) || null
-      : availableEvents[0] || null;
-  
-  // Ensure we have a valid event before initializing state
+
+  const handleQuickAccessWheel = (e: any) => {
+    // Map wheel vertical/horizontal delta to horizontal scroll
+    const dx = e?.nativeEvent?.deltaX ?? e?.deltaX ?? 0;
+    const dy = e?.nativeEvent?.deltaY ?? e?.deltaY ?? 0;
+    const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+    const nextX = Math.max(0, Math.min(scrollX + delta, maxScrollX));
+    
+    if (typeof e?.preventDefault === 'function') {
+      e.preventDefault();
+    }
+    
+    if (quickAccessScrollRef.current) {
+      quickAccessScrollRef.current.scrollTo({ x: nextX, animated: false });
+    }
+  };
+
+  // Web-specific scroll detection using DOM events (fallback)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    let scrollElement: HTMLElement | null = null;
+    let cleanupFn: (() => void) | null = null;
+    let initTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    // Use a small delay to ensure the ScrollView is mounted
+    const timeoutId = setTimeout(() => {
+      try {
+        const scrollRef = quickAccessScrollRef.current as any;
+        if (!scrollRef) return;
+
+        // Try to get the underlying DOM element
+        const getScrollElement = () => {
+          // React Native Web ScrollView structure
+          if (scrollRef._component) {
+            const innerView = scrollRef._component.querySelector?.('div[style*="overflow"]') ||
+                             scrollRef._component.querySelector?.('div[class*="scroll"]') ||
+                             scrollRef;
+            return innerView;
+          }
+          return null;
+        };
+
+        scrollElement = getScrollElement();
+        if (!scrollElement) return;
+
+        const handleWebScroll = () => {
+          if (!scrollElement) return;
+          
+          const currentScrollX = scrollElement.scrollLeft;
+          const currentMaxScrollX = scrollElement.scrollWidth - scrollElement.clientWidth;
+          
+          setScrollX(currentScrollX);
+          setMaxScrollX(currentMaxScrollX);
+          setShowLeftArrow(currentScrollX > 0);
+          setShowRightArrow(currentScrollX < currentMaxScrollX - 10);
+        };
+        
+        scrollElement.addEventListener('scroll', handleWebScroll, { passive: true });
+        
+        // Initial check after a brief delay
+        initTimeout = setTimeout(handleWebScroll, 100);
+
+        cleanupFn = () => {
+          if (initTimeout) clearTimeout(initTimeout);
+          if (scrollElement) {
+            scrollElement.removeEventListener('scroll', handleWebScroll);
+          }
+        };
+      } catch (error) {
+        console.warn('Failed to set up web scroll listener:', error);
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (cleanupFn) cleanupFn();
+    };
+  }, []);
+
+  // Early return if no event info is available (after all hooks are declared)
   if (!currentEventInfo) {
     return (
       <View style={styles.container}>
@@ -215,25 +284,6 @@ export default function ExploreScreen() {
       </View>
     );
   }
-  
-  const [selectedEvent, setSelectedEvent] = useState<EventInfo>(currentEventInfo);
-  
-  // Handle case when no event is selected (shouldn't happen after above check, but keeping for safety)
-  if (!selectedEvent) {
-    return (
-      <View style={styles.container}>
-        <Text style={{ color: colors.text.primary }}>{t({ id: 'explore.noSelection', message: 'No event selected' })}</Text>
-      </View>
-    );
-  }
-  const [showEventSelector, setShowEventSelector] = useState(shouldShowEventSelector());
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(true);
-  const [scrollX, setScrollX] = useState(0);
-  const [maxScrollX, setMaxScrollX] = useState(0);
-  const [viewportWidth, setViewportWidth] = useState(0);
-  const [contentWidth, setContentWidth] = useState(0);
-  const quickAccessScrollRef = useRef<ScrollView>(null);
   
   // Quick Access card dimensions (matching styles)
   const cardWidth = 140;
@@ -280,86 +330,6 @@ export default function ExploreScreen() {
     setMaxScrollX(Math.max(0, w - viewportWidth));
   };
 
-  // Web-specific scroll detection using DOM events (fallback)
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-
-    let scrollElement: HTMLElement | null = null;
-    let cleanupFn: (() => void) | null = null;
-    let initTimeout: ReturnType<typeof setTimeout> | null = null;
-
-    // Use a small delay to ensure the ScrollView is mounted
-    const timeoutId = setTimeout(() => {
-      try {
-        const scrollRef = quickAccessScrollRef.current as any;
-        if (!scrollRef) return;
-
-        // Try to get the underlying DOM element
-        const getScrollElement = () => {
-          // React Native Web ScrollView structure
-          if (scrollRef._component) {
-            const innerView = scrollRef._component.querySelector?.('div[style*="overflow"]') ||
-                             scrollRef._component.querySelector?.('div[class*="scroll"]') ||
-                             scrollRef;
-            return innerView;
-          }
-          return null;
-        };
-
-        scrollElement = getScrollElement();
-        if (!scrollElement) return;
-
-        const handleWebScroll = () => {
-          if (!scrollElement) return;
-          const scrollLeft = scrollElement.scrollLeft || 0;
-          const scrollWidth = scrollElement.scrollWidth || 0;
-          const clientWidth = scrollElement.clientWidth || 0;
-          const maxScrollX = Math.max(0, scrollWidth - clientWidth);
-          
-          setScrollX(scrollLeft);
-          setMaxScrollX(maxScrollX);
-          setViewportWidth(clientWidth);
-          setShowLeftArrow(scrollLeft > 0);
-          setShowRightArrow(scrollLeft < maxScrollX - 10);
-        };
-
-        scrollElement.addEventListener('scroll', handleWebScroll, { passive: true });
-        
-        // Initial check after a brief delay
-        initTimeout = setTimeout(handleWebScroll, 100);
-
-        cleanupFn = () => {
-          if (initTimeout) clearTimeout(initTimeout);
-          if (scrollElement) {
-            scrollElement.removeEventListener('scroll', handleWebScroll);
-          }
-        };
-      } catch (error) {
-        console.warn('Failed to set up web scroll listener:', error);
-      }
-    }, 500);
-
-    return () => {
-      clearTimeout(timeoutId);
-      if (cleanupFn) cleanupFn();
-    };
-  }, [Platform.OS]);
-
-  const handleQuickAccessWheel = (e: any) => {
-    // Map wheel vertical/horizontal delta to horizontal scroll
-    const dx = e?.nativeEvent?.deltaX ?? e?.deltaX ?? 0;
-    const dy = e?.nativeEvent?.deltaY ?? e?.deltaY ?? 0;
-    const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
-    const nextX = Math.max(0, Math.min(scrollX + delta, maxScrollX));
-    
-    if (typeof e?.preventDefault === 'function') {
-      e.preventDefault();
-    }
-    
-    if (quickAccessScrollRef.current) {
-      quickAccessScrollRef.current.scrollTo({ x: nextX, animated: false });
-    }
-  };
 
   const scrollQuickAccess = (direction: 'left' | 'right') => {
     if (!quickAccessScrollRef.current) return;

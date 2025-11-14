@@ -212,3 +212,6 @@ export function getSpeakerTwitterUrl(name: string): string {
   const username = speakerNameToFilename(name);
   return `https://twitter.com/${username}`;
 }
+
+// Re-export Cloudinary functions for convenience
+export { getSpeakerCloudinaryAvatarUrl, getCloudinaryUrl, isCloudinaryUrl } from './cloudinary';

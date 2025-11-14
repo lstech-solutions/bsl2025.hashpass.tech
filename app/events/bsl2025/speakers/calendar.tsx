@@ -293,7 +293,7 @@ export default function SpeakersCalendar() {
         {searchQuery && filteredSpeakers.length === 0 && (
           <View style={styles.noResultsContainer}>
             <MaterialIcons name="search-off" size={48} color={colors.text.secondary} />
-            <Text style={styles.noResultsText}>No speakers found for "{searchQuery}"</Text>
+            <Text style={styles.noResultsText}>No speakers found for &quot;{searchQuery}&quot;</Text>
             <Text style={styles.noResultsSubtext}>Try a different search term</Text>
           </View>
         )}

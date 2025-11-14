@@ -238,7 +238,7 @@ export default function UnifiedSearchAndFilter<T extends BaseItem>({
   // Initialize with all data
   useEffect(() => {
     onFilteredData(data);
-  }, [data]);
+  }, [data, onFilteredData]);
 
   return (
     <View style={styles.container}>

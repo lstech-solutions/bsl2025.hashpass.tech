@@ -4,14 +4,13 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
-} from 'react-native';
+ TouchableOpacity } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useToastHelpers } from '../contexts/ToastContext';
 import RealtimeChat from './RealtimeChat';
-import { TouchableOpacity } from 'react-native';
 
 // Helper function to generate user avatar URL
 const generateUserAvatarUrl = (name: string): string => {

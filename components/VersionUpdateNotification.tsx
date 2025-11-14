@@ -19,10 +19,6 @@ export default function VersionUpdateNotification({
   const [isUpdating, setIsUpdating] = useState(false);
   const [countdown, setCountdown] = useState(2);
 
-  if (Platform.OS !== 'web') {
-    return null;
-  }
-
   // Auto-reload countdown
   useEffect(() => {
     if (isUpdating) return;
@@ -48,6 +44,10 @@ export default function VersionUpdateNotification({
 
     return () => clearInterval(timer);
   }, [isUpdating]);
+
+  if (Platform.OS !== 'web') {
+    return null;
+  }
 
   const handleUpdate = async () => {
     setIsUpdating(true);

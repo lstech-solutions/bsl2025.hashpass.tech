@@ -155,12 +155,10 @@ export default function WebQRScanner({
     try {
       // Check permissions first - but don't block initialization
       // Let html5-qrcode handle the actual permission request
-      let permissionState: 'granted' | 'prompt' | 'denied' | 'unknown' = 'unknown';
       
       if (navigator.permissions && navigator.permissions.query) {
         try {
           const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
-          permissionState = permissionStatus.state as 'granted' | 'prompt' | 'denied';
           setHasPermission(permissionStatus.state === 'granted');
           console.log('📷 Camera permission status (query):', permissionStatus.state);
           
@@ -170,16 +168,14 @@ export default function WebQRScanner({
             console.warn('⚠️ Camera permission denied, but will attempt to request via html5-qrcode');
             // Don't return - let html5-qrcode try to request permission
           }
-        } catch (permErr: any) {
+        } catch {
           // Permissions API not available or not supported (common in PWAs)
           console.log('⚠️ Permissions API not available, html5-qrcode will request permission');
-          permissionState = 'unknown';
           // Don't set hasPermission to false - let html5-qrcode try
         }
       } else {
         // Permissions API not available (common in PWAs), let html5-qrcode handle it
         console.log('⚠️ Permissions API not available, html5-qrcode will request permission');
-        permissionState = 'unknown';
       }
 
       // Always proceed with initialization - html5-qrcode will handle permission request
@@ -187,9 +183,6 @@ export default function WebQRScanner({
 
       // Load html5-qrcode library
       const { Html5Qrcode } = await import('html5-qrcode');
-      
-      // Store Html5Qrcode in a variable accessible in catch block
-      const Html5QrcodeClass = Html5Qrcode;
 
       // Wait for DOM element to be ready and verify it's actually in the DOM
       // Use a retry mechanism with exponential backoff
@@ -632,7 +625,7 @@ export default function WebQRScanner({
         isInitializing = true;
         try {
           await stopScanner();
-        } catch (e) {
+        } catch {
           // Ignore errors
         }
         setTimeout(async () => {
@@ -650,7 +643,7 @@ export default function WebQRScanner({
       // Stop immediately without delay to prevent conflicts
       stopScanner();
     };
-  }, [visible]); // Only depend on visible to prevent re-renders
+  }, [visible, initializeScanner, isLoading, isScanning, stopScanner]); // Include all dependencies
 
   // Animate scanning line when scanning
   useEffect(() => {

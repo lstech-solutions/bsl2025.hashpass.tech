@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator, FlatList, ImageBackground, Modal, Share, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, FlatList, ImageBackground, Modal, Share, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, interpolate } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
-import { passSystemService, PassInfo, PassRequestLimits, PassType } from '@/lib/pass-system';
+import { passSystemService, PassInfo, PassRequestLimits } from '@/lib/pass-system';
 import { supabase } from '@/lib/supabase';
 import DynamicQRDisplay from './DynamicQRDisplay';
 import * as Clipboard from 'expo-clipboard';

@@ -1,12 +1,11 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, Animated, Easing, Text, Modal, TouchableWithoutFeedback, Dimensions, Platform } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Animated, Easing, Text, TouchableWithoutFeedback, Dimensions, Platform } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../providers/LanguageProvider';
-import { getAvailableLocales } from '../i18n/i18n';
-import { useTranslation } from '../i18n/i18n';
+import { getAvailableLocales, useTranslation } from '../i18n/i18n';
 import { useRouter, usePathname } from 'expo-router';
 
 const ThemeAndLanguageSwitcher = () => {

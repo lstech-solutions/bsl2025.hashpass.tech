@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import { isPWAInstalled, getInstallationStatus, canInstallPWA } from '../lib/pwa-utils';
+import { getInstallationStatus } from '../lib/pwa-utils';
 
 const PWAPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -63,7 +63,7 @@ const PWAPrompt = () => {
           // Set installation flag in localStorage
           try {
             localStorage.setItem('pwa-installed', 'true');
-          } catch (e) {
+          } catch {
             // localStorage might not be available
           }
       }

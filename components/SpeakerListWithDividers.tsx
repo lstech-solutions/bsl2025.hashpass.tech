@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import SpeakerAvatar from './SpeakerAvatar';
@@ -26,7 +26,7 @@ export default function SpeakerListWithDividers({
   sortBy 
 }: SpeakerListWithDividersProps) {
   const { isDark, colors } = useTheme();
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<FlatList<{ type: 'header' | 'speaker'; letter?: string; speaker?: any; id: string }>>(null);
   const groupRefs = useRef<{ [key: string]: View | null }>({});
   const styles = getStyles(isDark, colors);
 
@@ -61,7 +61,7 @@ export default function SpeakerListWithDividers({
       groupRef.measureLayout(
         scrollViewRef.current as any,
         (x, y) => {
-          scrollViewRef.current?.scrollTo({ y: y - 20, animated: true });
+          scrollViewRef.current?.scrollToOffset({ offset: y - 20, animated: true });
         },
         () => {
           console.log('Failed to measure layout');
@@ -72,7 +72,7 @@ export default function SpeakerListWithDividers({
 
   // Flatten speakers for FlatList with section headers
   const flatListData = React.useMemo(() => {
-    const items: Array<{ type: 'header' | 'speaker'; letter?: string; speaker?: any; id: string }> = [];
+    const items: { type: 'header' | 'speaker'; letter?: string; speaker?: any; id: string }[] = [];
     sortedGroupKeys.forEach((letter) => {
       items.push({ type: 'header', letter, id: `header-${letter}` });
       groupedSpeakers[letter].forEach((speaker) => {

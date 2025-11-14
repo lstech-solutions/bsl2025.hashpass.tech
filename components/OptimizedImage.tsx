@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Image, ImageStyle, View, ActivityIndicator, Text } from 'react-native';
-import { getCloudinaryUrl, isCloudinaryUrl, getResponsiveUrls } from '../lib/cloudinary';
+import { getCloudinaryUrl, isCloudinaryUrl } from '../lib/cloudinary';
 
 interface OptimizedImageProps {
   source: { uri: string } | number;

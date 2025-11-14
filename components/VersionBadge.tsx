@@ -20,7 +20,6 @@ export default function VersionBadge({
   const { isDark, colors } = useTheme();
   const styles = getStyles(isDark, colors, size);
 
-  const versionInfo = versionTracker.getCurrentVersion();
   const badgeInfo = versionTracker.getVersionBadgeInfo();
 
   const BadgeContent = () => (

@@ -13,6 +13,79 @@ export default function AuthCallback() {
     const { t } = useTranslation('common');
     const [status, setStatus] = useState<'processing' | 'success' | 'warning' | 'error' | 'show_download'>('processing');
     const [message, setMessage] = useState('Processing authentication...');
+    const [shouldRedirect, setShouldRedirect] = useState(false);
+    
+    // CRITICAL: Check and redirect immediately if on wrong domain
+    // This runs synchronously during render to catch Supabase redirects ASAP
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && !shouldRedirect) {
+        const currentHost = window.location.host;
+        const currentPath = window.location.pathname;
+        const hashFragment = window.location.hash;
+        
+        // Detect if Supabase incorrectly redirected to auth.hashpass.co/{subdomain}.hashpass.tech
+        const isIncorrectRedirect = currentHost === 'auth.hashpass.co' && 
+                                   (currentPath.includes('hashpass.tech') || 
+                                    currentPath.match(/\/[a-z0-9-]+\.hashpass\.tech/i));
+        
+        if (isIncorrectRedirect && hashFragment && hashFragment.includes('access_token')) {
+            console.error('❌ [IMMEDIATE] Detected incorrect Supabase redirect!');
+            console.error('❌ Current URL:', window.location.href.substring(0, 200));
+            
+            // Extract subdomain from path
+            let correctOrigin = '';
+            const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
+            if (domainMatch) {
+                correctOrigin = `https://${domainMatch[1]}`;
+                console.log('📍 [IMMEDIATE] Extracted origin from path:', correctOrigin);
+            } else {
+                // Try localStorage
+                try {
+                    const stored = localStorage.getItem('oauth_redirect_origin');
+                    if (stored) {
+                        correctOrigin = stored;
+                        console.log('📍 [IMMEDIATE] Using stored origin:', correctOrigin);
+                    }
+                } catch (e) {
+                    console.warn('⚠️ [IMMEDIATE] Could not access localStorage');
+                }
+            }
+            
+            if (correctOrigin) {
+                let redirectUrl = `${correctOrigin}/auth/callback`;
+                
+                // Try to get apikey
+                const apikey = (window as any).__SUPABASE_ANON_KEY__ || 
+                              (window as any).__EXPO_PUBLIC_SUPABASE_KEY__ || '';
+                if (apikey) {
+                    redirectUrl += `?apikey=${encodeURIComponent(apikey)}`;
+                }
+                
+                // Preserve hash and query params
+                redirectUrl += hashFragment;
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.forEach((value, key) => {
+                    if (key !== 'apikey') {
+                        redirectUrl += (redirectUrl.includes('?') ? '&' : '?') + 
+                                      encodeURIComponent(key) + '=' + encodeURIComponent(value);
+                    }
+                });
+                
+                console.log('🚀 [IMMEDIATE] Redirecting to:', redirectUrl.substring(0, 300));
+                setShouldRedirect(true);
+                // Redirect IMMEDIATELY - don't wait for React
+                window.location.replace(redirectUrl);
+            }
+        }
+    }
+    
+    // If redirecting, show minimal UI
+    if (shouldRedirect) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }}>
+                <Text style={{ color: '#fff', fontSize: 16 }}>Redirecting...</Text>
+            </View>
+        );
+    }
     
     // Log when component mounts to verify it's being rendered
     useEffect(() => {
@@ -28,9 +101,14 @@ export default function AuthCallback() {
             const currentHost = window.location.host;
             const currentPath = window.location.pathname;
             
-            // Detect if Supabase incorrectly redirected to auth.hashpass.co/bsl2025.hashpass.tech
+            // Detect if Supabase incorrectly redirected to auth.hashpass.co/{subdomain}.hashpass.tech
             // This happens when Supabase uses site_url as a relative path instead of absolute URL
-            if (currentHost === 'auth.hashpass.co' && (currentPath.includes('hashpass.tech') || currentPath.startsWith('/bsl2025'))) {
+            // Works with any hashpass.tech subdomain (bsl2025, event2026, etc.)
+            const isIncorrectRedirect = currentHost === 'auth.hashpass.co' && 
+                                       (currentPath.includes('hashpass.tech') || 
+                                        currentPath.match(/\/[a-z0-9-]+\.hashpass\.tech/i));
+            
+            if (isIncorrectRedirect) {
                 console.error('❌ Detected incorrect Supabase redirect!');
                 console.error('❌ Current URL:', window.location.href.substring(0, 200));
                 console.error('❌ This is a Supabase bug with custom auth domains');
@@ -50,43 +128,67 @@ export default function AuthCallback() {
                     // Determine the correct origin - try multiple sources
                     let correctOrigin = '';
                     
-                    // Method 1: Try localStorage (stored during OAuth flow)
-                    try {
-                        const storedOrigin = localStorage.getItem('oauth_redirect_origin');
-                        if (storedOrigin) {
-                            correctOrigin = storedOrigin;
-                            console.log('📍 Using stored origin from OAuth flow:', correctOrigin);
-                        }
-                    } catch (e) {
-                        console.warn('⚠️ Could not access localStorage:', e);
-                    }
-                    
-                    // Method 2: Try environment variable (for production)
-                    if (!correctOrigin && typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_SITE_URL) {
-                        correctOrigin = process.env.EXPO_PUBLIC_SITE_URL;
-                        console.log('📍 Using EXPO_PUBLIC_SITE_URL:', correctOrigin);
-                    }
-                    
-                    // Method 3: Try to extract from the path (if path contains the domain)
-                    if (!correctOrigin && currentPath.includes('hashpass.tech')) {
-                        // Extract domain from path like /bsl2025.hashpass.tech
+                    // Method 1: Try to extract from the path FIRST (most reliable for production)
+                    if (currentPath.includes('hashpass.tech')) {
                         const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
                         if (domainMatch) {
-                            // Use https for production domains
                             correctOrigin = `https://${domainMatch[1]}`;
-                            console.log('📍 Extracted origin from path:', correctOrigin);
+                            console.log('📍 Extracted origin from path (Method 1):', correctOrigin);
                         }
                     }
                     
-                    // Method 4: Fallback to production URL
+                    // Method 2: Try localStorage (stored during OAuth flow)
                     if (!correctOrigin) {
-                        correctOrigin = 'https://bsl2025.hashpass.tech';
-                        console.log('📍 Using production fallback:', correctOrigin);
+                        try {
+                            const storedOrigin = localStorage.getItem('oauth_redirect_origin');
+                            if (storedOrigin) {
+                                correctOrigin = storedOrigin;
+                                console.log('📍 Using stored origin from OAuth flow (Method 2):', correctOrigin);
+                            }
+                        } catch (e) {
+                            console.warn('⚠️ Could not access localStorage:', e);
+                        }
+                    }
+                    
+                    // Method 3: Try environment variable (for production)
+                    if (!correctOrigin && typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_SITE_URL) {
+                        correctOrigin = process.env.EXPO_PUBLIC_SITE_URL;
+                        console.log('📍 Using EXPO_PUBLIC_SITE_URL (Method 3):', correctOrigin);
+                    }
+                    
+                    // Method 4: Fallback - extract from current host or use current origin
+                    if (!correctOrigin) {
+                        // Try to get from current window location if available
+                        if (typeof window !== 'undefined' && window.location) {
+                            // If we're on a hashpass.tech subdomain, use it
+                            if (window.location.hostname.includes('hashpass.tech')) {
+                                correctOrigin = window.location.protocol + '//' + window.location.hostname;
+                                console.log('📍 Using current hostname (Method 4):', correctOrigin);
+                            } else {
+                                // Fallback: try to extract from path or use a generic pattern
+                                const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
+                                if (domainMatch) {
+                                    correctOrigin = `https://${domainMatch[1]}`;
+                                    console.log('📍 Extracted from path fallback (Method 4):', correctOrigin);
+                                } else {
+                                    // Last resort: use current origin
+                                    correctOrigin = window.location.origin;
+                                    console.log('📍 Using current origin fallback (Method 4):', correctOrigin);
+                                }
+                            }
+                        } else {
+                            // SSR fallback - extract from path
+                            const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
+                            if (domainMatch) {
+                                correctOrigin = `https://${domainMatch[1]}`;
+                                console.log('📍 SSR fallback from path (Method 4):', correctOrigin);
+                            }
+                        }
                     }
                     
                     // For development, check if we're on localhost
+                    // Only override if we're actually in development
                     if (correctOrigin.includes('hashpass.tech') && window.location.href.includes('localhost')) {
-                        // If we're in development but got redirected to auth domain, try localhost
                         const localhostPort = window.location.href.match(/localhost:(\d+)/)?.[1] || '8081';
                         correctOrigin = `http://localhost:${localhostPort}`;
                         console.log('📍 Detected development environment, using:', correctOrigin);
@@ -98,7 +200,8 @@ export default function AuthCallback() {
                     
                     // Add apikey as query parameter
                     const supabaseAnonKey = process.env?.EXPO_PUBLIC_SUPABASE_KEY || 
-                                          (typeof window !== 'undefined' && (window as any).__SUPABASE_ANON_KEY__);
+                                          (typeof window !== 'undefined' && (window as any).__SUPABASE_ANON_KEY__) ||
+                                          (typeof window !== 'undefined' && (window as any).__EXPO_PUBLIC_SUPABASE_KEY__);
                     if (supabaseAnonKey) {
                         redirectUrl += `?apikey=${encodeURIComponent(supabaseAnonKey)}`;
                     }
@@ -120,7 +223,10 @@ export default function AuthCallback() {
                     console.log('🔧 Hash fragment preserved:', window.location.hash.substring(0, 100) + '...');
                     
                     // Use replace to avoid adding to history - do this IMMEDIATELY
-                    window.location.replace(redirectUrl);
+                    // Use setTimeout(0) to ensure this runs after any other redirect attempts
+                    setTimeout(() => {
+                        window.location.replace(redirectUrl);
+                    }, 0);
                     return;
                 } else {
                     console.warn('⚠️ No auth tokens found in URL, cannot redirect');

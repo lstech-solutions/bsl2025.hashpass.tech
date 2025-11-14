@@ -63,20 +63,68 @@ export default function Root({ children, metadata }: { children: ReactNode, meta
                 const hashFragment = window.location.hash;
                 
                 // Check if we're on the incorrect redirect path with auth tokens
-                if ((currentPath.includes('hashpass.tech') || currentPath.startsWith('/bsl2025')) && 
-                    hashFragment && hashFragment.includes('access_token')) {
+                // Works with any hashpass.tech subdomain (bsl2025, event2026, etc.)
+                const isIncorrectRedirect = currentPath.includes('hashpass.tech') || 
+                                           currentPath.match(/\/[a-z0-9-]+\.hashpass\.tech/i);
+                
+                if (isIncorrectRedirect && hashFragment && hashFragment.includes('access_token')) {
                   
                   console.log('🔧 [Auto-fix] Detected incorrect Supabase redirect with tokens');
                   
                   // Get stored origin or use default
-                  let correctOrigin = 'http://localhost:8081';
+                  // Try to extract from path first (e.g., /bsl2025.hashpass.tech -> https://bsl2025.hashpass.tech)
+                  // Dynamic: works with any hashpass.tech subdomain
+                  let correctOrigin = '';
+                  
+                  // First, try to get from current window location if we're on a hashpass.tech domain
+                  if (typeof window !== 'undefined' && window.location && window.location.hostname.includes('hashpass.tech')) {
+                    correctOrigin = window.location.protocol + '//' + window.location.hostname;
+                  }
+                  
+                  // Method 1: Try to extract from path
+                  if (currentPath.includes('hashpass.tech')) {
+                    const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
+                    if (domainMatch) {
+                      correctOrigin = 'https://' + domainMatch[1];
+                      console.log('📍 [Auto-fix] Extracted origin from path:', correctOrigin);
+                    }
+                  }
+                  
+                  // Method 2: Try localStorage (stored during OAuth flow)
                   try {
                     const storedOrigin = localStorage.getItem('oauth_redirect_origin');
                     if (storedOrigin) {
                       correctOrigin = storedOrigin;
+                      console.log('📍 [Auto-fix] Using stored origin:', correctOrigin);
                     }
                   } catch (e) {
-                    // Ignore localStorage errors
+                    console.warn('⚠️ [Auto-fix] Could not access localStorage:', e);
+                  }
+                  
+                  // Method 3: If still no origin, extract from path (works for any subdomain)
+                  if (!correctOrigin && currentPath.includes('hashpass.tech')) {
+                    const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
+                    if (domainMatch) {
+                      correctOrigin = 'https://' + domainMatch[1];
+                      console.log('📍 [Auto-fix] Extracted from path (Method 3):', correctOrigin);
+                    }
+                  }
+                  
+                  // Method 4: For development, check if we're on localhost
+                  // If the stored origin is localhost but we're on production, use production
+                  if (correctOrigin.includes('localhost') && currentPath.includes('hashpass.tech')) {
+                    // Extract production domain from path
+                    const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
+                    if (domainMatch) {
+                      correctOrigin = 'https://' + domainMatch[1];
+                      console.log('📍 [Auto-fix] Overriding localhost with production:', correctOrigin);
+                    }
+                  }
+                  
+                  // Final fallback: use current origin if available
+                  if (!correctOrigin && typeof window !== 'undefined' && window.location) {
+                    correctOrigin = window.location.origin;
+                    console.log('📍 [Auto-fix] Using current origin as final fallback:', correctOrigin);
                   }
                   
                   // Build redirect URL

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import SpeakerAvatar from './SpeakerAvatar';
@@ -26,7 +26,7 @@ export default function SpeakerListWithDividers({
   sortBy 
 }: SpeakerListWithDividersProps) {
   const { isDark, colors } = useTheme();
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<FlatList<{ type: 'header' | 'speaker'; letter?: string; speaker?: any; id: string }>>(null);
   const groupRefs = useRef<{ [key: string]: View | null }>({});
   const styles = getStyles(isDark, colors);
 

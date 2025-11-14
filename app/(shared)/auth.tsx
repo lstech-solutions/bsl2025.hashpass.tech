@@ -778,9 +778,24 @@ export default function AuthScreen() {
         setLoading(false);
         
         console.log('✅ Session fully established, navigating...');
+        console.log('📍 Redirect path:', getRedirectPath());
+        
+        // Small delay to ensure auth state change has time to process
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Navigate after session is confirmed
         router.replace(getRedirectPath() as any);
+        
+        // Also trigger a manual session check to ensure auth state change is processed
+        setTimeout(async () => {
+          try {
+            const { data: { session: checkSession } } = await supabase.auth.getSession();
+            console.log('🔍 Post-navigation session check:', checkSession?.user?.id || 'no session');
+          } catch (e) {
+            console.warn('⚠️ Post-navigation session check failed:', e);
+          }
+        }, 500);
+        
         return;
       } catch (sessionError: any) {
         console.error('❌ Session verification error:', sessionError);
@@ -797,7 +812,23 @@ export default function AuthScreen() {
             console.log('✅ Session recovered successfully');
             hasNavigatedRef.current = true;
             setLoading(false);
+            console.log('📍 Recovery redirect path:', getRedirectPath());
+            
+            // Small delay to ensure auth state change has time to process
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
             router.replace(getRedirectPath() as any);
+            
+            // Also trigger a manual session check to ensure auth state change is processed
+            setTimeout(async () => {
+              try {
+                const { data: { session: checkSession } } = await supabase.auth.getSession();
+                console.log('🔍 Post-recovery session check:', checkSession?.user?.id || 'no session');
+              } catch (e) {
+                console.warn('⚠️ Post-recovery session check failed:', e);
+              }
+            }, 500);
+            
             return;
           }
         } catch (recoveryError: any) {

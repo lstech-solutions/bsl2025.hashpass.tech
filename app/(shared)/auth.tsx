@@ -844,47 +844,20 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       // Build proper redirect URL for OAuth
-      // For web, use the actual origin + path (Expo Router removes (shared) group in URLs)
-      // For mobile, use the deep link scheme
       let redirectUrl = '';
       
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        // Use the actual origin for web
-        // In Expo Router, (shared) group is removed from URL, so path is /auth/callback
-        let origin = window.location.origin;
+        // Simplified: Use current origin directly, avoid complex detection
+        const origin = window.location.origin;
         
-        // CRITICAL: In development, ensure we use localhost even if origin is wrong
-        // Check if we're in development mode (localhost or 127.0.0.1)
-        const isDevelopment = origin.includes('localhost') || 
-                              origin.includes('127.0.0.1') || 
-                              origin.includes(':8081') ||
-                              (typeof process !== 'undefined' && process.env.NODE_ENV === 'development');
-        
-        // If we're in development but origin doesn't look like localhost, force localhost:8081
-        if (isDevelopment && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
-          console.warn('⚠️ Development mode detected but origin is not localhost, forcing localhost:8081');
-          origin = 'http://localhost:8081';
-        }
-        
-        // If origin contains production domain in development, force localhost
-        if (origin.includes('hashpass.tech') && (isDevelopment || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-          console.warn('⚠️ Production URL detected in development, forcing localhost:8081');
-          origin = 'http://localhost:8081';
-        }
-        
-        // Ensure we have a valid origin (not empty or malformed)
+        // Basic validation - ensure we have a valid origin
         if (!origin || origin === 'null' || origin === 'undefined') {
           throw new Error('Invalid origin detected. Cannot proceed with OAuth.');
         }
         
-        console.log('🔍 OAuth origin detection:', {
-          windowOrigin: window.location.origin,
-          finalOrigin: origin,
-          hostname: window.location.hostname,
-          isDevelopment
-        });
+        console.log('🔍 OAuth using origin:', origin);
         
-        // Build the redirect URL with proper protocol
+        // Simple redirect URL - no complex logic that could cause mismatches
         redirectUrl = `${origin}/auth/callback`;
         
         // Validate the URL is properly formed
@@ -950,15 +923,12 @@ export default function AuthScreen() {
         }
       }
       
-      // CRITICAL: Use skipBrowserRedirect: true to prevent Supabase from using site_url
-      // We'll handle the redirect manually to ensure we use the correct callback URL
+      // Use Supabase's built-in redirect handling to avoid URI mismatches
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: finalRedirectUrl,
-          skipBrowserRedirect: true, // CRITICAL: Handle redirect manually to avoid site_url issues
+          redirectTo: redirectUrl,
           queryParams: {
-            // Google OAuth specific params
             access_type: 'offline',
             prompt: 'consent',
           },
@@ -967,125 +937,20 @@ export default function AuthScreen() {
 
       if (error) {
         console.error(`❌ ${provider} OAuth error:`, error);
-        console.error('❌ Error details:', {
-          message: error.message,
-          status: (error as any).status,
-          name: error.name
-        });
         showError('Authentication Error', error.message);
         setLoading(false);
-      } else if (data.url) {
-        console.log(`✅ Got OAuth URL from Supabase (skipBrowserRedirect: true)`);
-        console.log('🔗 OAuth URL from Supabase:', data.url.substring(0, 200));
-        
-        // CRITICAL: Since we're using skipBrowserRedirect: true, we have full control
-        // Always replace redirect_to with our validated URL to ensure correct callback
-        let finalOAuthUrl = data.url;
-        try {
-          const oauthUrl = new URL(data.url);
-          console.log('🔍 OAuth URL parsed:', {
-            protocol: oauthUrl.protocol,
-            host: oauthUrl.host,
-            pathname: oauthUrl.pathname,
-            hasRedirectTo: oauthUrl.searchParams.has('redirect_to'),
-            redirectToValue: oauthUrl.searchParams.get('redirect_to')?.substring(0, 100)
-          });
-          
-          // CRITICAL: ALWAYS replace redirect_to with our validated URL
-          // Supabase may ignore this and use site_url, but we must try
-          console.log('🔧 Setting redirect_to to our validated URL:', finalRedirectUrl);
-          
-          // Set redirect_to in the URL search params
-          oauthUrl.searchParams.set('redirect_to', finalRedirectUrl);
-          
-          // Also try setting it as a query parameter directly (some OAuth providers need this)
-          // The redirect_to should be URL-encoded
-          const encodedRedirectTo = encodeURIComponent(finalRedirectUrl);
-          
-          // Log what we're setting
-          console.log('🔧 redirect_to (raw):', finalRedirectUrl);
-          console.log('🔧 redirect_to (encoded):', encodedRedirectTo.substring(0, 100) + '...');
-          
-          finalOAuthUrl = oauthUrl.toString();
-          console.log('✅ Final OAuth URL (first 200 chars):', finalOAuthUrl.substring(0, 200));
-          console.log('✅ Full OAuth URL length:', finalOAuthUrl.length);
-          
-          // Verify the redirect_to is now correct
-          const verifyUrl = new URL(finalOAuthUrl);
-          const verifyRedirectTo = verifyUrl.searchParams.get('redirect_to');
-          console.log('🔍 Verification - redirect_to in URL:', verifyRedirectTo?.substring(0, 100));
-          
-          // CRITICAL: Validate that redirect_to matches what we expect
-          // Supabase validation is EXACT - must match character-for-character
-          if (verifyRedirectTo === finalRedirectUrl) {
-            console.log('✅ Verified: redirect_to is correctly set to our callback URL');
-            console.log('📍 redirect_to value:', finalRedirectUrl);
-            console.log('🔍 redirect_to length:', finalRedirectUrl.length);
-            console.log('🔍 redirect_to protocol:', new URL(finalRedirectUrl).protocol);
-            console.log('🔍 redirect_to host:', new URL(finalRedirectUrl).host);
-            console.log('🔍 redirect_to pathname:', new URL(finalRedirectUrl).pathname);
-            
-            // Additional validation: Check if redirect_to is in allowed list
-            const isLocalhost = finalRedirectUrl.includes('localhost') || finalRedirectUrl.includes('127.0.0.1');
-            if (isLocalhost) {
-              console.log('🔍 Development mode detected - redirect_to is localhost');
-              console.log('✅ redirect_to value matches what should be in Supabase:');
-              console.log('   ' + finalRedirectUrl);
-              console.log('');
-              console.log('⚠️ KNOWN ISSUE: Even with correct redirect_to, Supabase may use Site URL as fallback');
-              console.log('⚠️ This happens with custom auth domains (auth.hashpass.co)');
-              console.log('⚠️ If you see redirects without code, try:');
-              console.log('   1. Remove wildcard patterns (http://localhost:*/auth/callback)');
-              console.log('   2. Keep only exact match: http://localhost:8081/auth/callback');
-              console.log('   3. Ensure Site URL is: https://bsl2025.hashpass.tech (with https://)');
-              console.log('   4. Wait 2-3 minutes after updating Supabase config');
-            } else {
-              console.log('🔍 Production mode detected - redirect_to is production URL');
-              console.log('✅ redirect_to value matches what should be in Supabase:');
-              console.log('   ' + finalRedirectUrl);
-            }
-          } else {
-            console.error('❌ WARNING: redirect_to verification failed!');
-            console.error('Expected:', finalRedirectUrl);
-            console.error('Expected length:', finalRedirectUrl.length);
-            console.error('Got:', verifyRedirectTo);
-            console.error('Got length:', verifyRedirectTo?.length);
-            console.error('⚠️ This mismatch will cause Supabase to reject redirect_to and use Site URL instead!');
-            console.error('⚠️ Result: Callback will have no tokens (server-side redirect)');
-            console.error('Got:', verifyRedirectTo);
-            console.error('⚠️ Supabase may still use site_url despite our redirect_to parameter');
-            console.error('💡 This is a known Supabase issue with custom auth domains');
-            console.error('💡 Check Supabase dashboard: Redirect URLs must include:', finalRedirectUrl);
-            // Don't throw - let it try anyway, we have the callback handler as fallback
-          }
-          
-          // CRITICAL: Also check if redirect_to is being passed to the OAuth provider
-          // Some OAuth providers need redirect_uri to match, and Supabase might override it
-          const redirectUri = verifyUrl.searchParams.get('redirect_uri');
-          if (redirectUri) {
-            console.log('🔍 OAuth provider redirect_uri:', redirectUri.substring(0, 100));
-            if (!redirectUri.includes('localhost') && finalRedirectUrl.includes('localhost')) {
-              console.warn('⚠️ WARNING: OAuth provider redirect_uri does not match our localhost redirect_to!');
-              console.warn('⚠️ This might cause Supabase to use Site URL instead');
-            }
-          }
-          
-          // Log the full URL for debugging (truncated)
-          console.log('🔍 Full OAuth URL (first 500 chars):', finalOAuthUrl.substring(0, 500));
-        } catch (e) {
-          console.error('❌ Could not parse or fix OAuth URL from Supabase:', e);
-          setLoading(false);
-          showError('OAuth Error', 'Failed to prepare OAuth URL. Please try again.');
-          return;
-        }
-        
-        // Open the OAuth URL manually - this gives us full control over the redirect
-        console.log('🚀 Opening OAuth URL manually...');
-        Linking.openURL(finalOAuthUrl);
+        return;
+      }
+      
+      if (data.url) {
+        console.log(`✅ Got OAuth URL from Supabase:`, data.url.substring(0, 200));
+        // Open the OAuth URL directly - trust Supabase's redirect handling
+        Linking.openURL(data.url);
         // Keep loading state - will be cleared by callback handler
       } else {
         console.warn(`⚠️ No URL returned from ${provider} OAuth`);
         setLoading(false);
+        showError('OAuth Error', 'Failed to start authentication. Please try again.');
       }
     } catch (error: any) {
       console.error(`❌ ${provider} OAuth exception:`, error);

@@ -44,7 +44,7 @@ export default function AuthCallback() {
         }
     };
     
-    // Simplified auth callback handler
+    // Simplified auth callback handler with reduced delays
     useEffect(() => {
         const handleAuthCallback = async () => {
             if (hasNavigatedRef.current) {
@@ -99,25 +99,14 @@ export default function AuthCallback() {
                 }
                 
                 console.log('🎯 Processing URL:', currentUrl.substring(0, 100) + '...');
-                console.log('🔍 Full URL details:', {
-                    fullUrl: currentUrl,
-                    hasHash: currentUrl.includes('#'),
-                    hasQuery: currentUrl.includes('?'),
-                    hashLength: currentUrl.split('#')[1]?.length || 0,
-                    queryLength: currentUrl.split('?')[1]?.length || 0,
-                    hasAccessToken: currentUrl.includes('access_token='),
-                    hasRefreshToken: currentUrl.includes('refresh_token='),
-                    hasCode: currentUrl.includes('code='),
-                    hasError: currentUrl.includes('error='),
-                });
                 
-                // Simplified approach: Let Supabase handle everything with detectSessionInUrl
+                // Simplified: Try Supabase auto-detection first with shorter delays
                 console.log('🔄 Letting Supabase auto-detect session from URL...');
                 
-                // Wait and check multiple times with increasing delays
-                for (let attempt = 1; attempt <= 5; attempt++) {
-                    const delay = attempt * 1000; // 1s, 2s, 3s, 4s, 5s
-                    console.log(`⏳ Auto-detection attempt ${attempt}/5 after ${delay}ms...`);
+                // Reduced attempts and delays for faster response
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                    const delay = attempt * 500; // 0.5s, 1s, 1.5s
+                    console.log(`⏳ Auto-detection attempt ${attempt}/3 after ${delay}ms...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                     
                     const { data: { session }, error } = await supabase.auth.getSession();
@@ -131,8 +120,8 @@ export default function AuthCallback() {
                     }
                 }
                 
-                // If all attempts fail, try manual processing as last resort
-                console.log('🔄 Auto-detection failed, trying manual URL processing as last resort...');
+                // If auto-detection fails, try manual processing
+                console.log('🔄 Auto-detection failed, trying manual URL processing...');
                 const { session, error } = await createSessionFromUrl(currentUrl);
                 
                 if (error) {
@@ -159,26 +148,21 @@ export default function AuthCallback() {
                     hasNavigatedRef.current = true;
                     safeNavigate(getRedirectPath());
                 } else {
-                    // Multiple final checks with increasing delays
-                    console.log('🔄 No session from URL, doing multiple final checks...');
+                    // One final check
+                    console.log('🔄 No session from URL, doing final check...');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     
-                    for (let attempt = 1; attempt <= 3; attempt++) {
-                        const delay = attempt * 1000; // 1s, 2s, 3s
-                        console.log(`⏳ Final check attempt ${attempt}/3 after ${delay}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        
-                        const { data: { session: finalSession } } = await supabase.auth.getSession();
-                        if (finalSession && finalSession.user) {
-                            console.log(`✅ Found session on final check ${attempt}:`, finalSession.user.id);
-                            setStatus('success');
-                            setMessage('✅ Authentication successful!');
-                            hasNavigatedRef.current = true;
-                            safeNavigate(getRedirectPath());
-                            return;
-                        }
+                    const { data: { session: finalSession } } = await supabase.auth.getSession();
+                    if (finalSession && finalSession.user) {
+                        console.log(`✅ Found session on final check:`, finalSession.user.id);
+                        setStatus('success');
+                        setMessage('✅ Authentication successful!');
+                        hasNavigatedRef.current = true;
+                        safeNavigate(getRedirectPath());
+                        return;
                     }
                     
-                    throw new Error('Authentication completed but session not found after multiple attempts. Please try signing in again.');
+                    throw new Error('Authentication completed but session not found. Please try signing in again.');
                 }
                 
             } catch (error: any) {
@@ -186,13 +170,13 @@ export default function AuthCallback() {
                 setStatus('error');
                 setMessage(error.message || 'Authentication failed. Please try again.');
                 
-                // After error, redirect back to auth page after a delay
+                // After error, redirect back to auth page after a shorter delay
                 setTimeout(() => {
                     if (!hasNavigatedRef.current) {
                         hasNavigatedRef.current = true;
                         router.replace('/(shared)/auth' as any);
                     }
-                }, 3000);
+                }, 2000); // Reduced from 3 seconds to 2
             }
         };
         

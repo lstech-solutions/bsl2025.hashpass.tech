@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, Animated, ActivityIndicator } from 'react-native';
 import { getOptimizedAvatarUrl, getLocalOptimizedAvatarUrl, getSpeakerAvatarUrl } from '../lib/string-utils';
-import { isCloudinaryUrl } from '../lib/cloudinary';
 
 interface SpeakerAvatarProps {
   name?: string;

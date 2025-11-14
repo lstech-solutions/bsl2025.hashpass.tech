@@ -6,8 +6,7 @@ import Constants from 'expo-constants';
 import { 
   getSpeakerCloudinaryAvatarUrl, 
   getCloudinaryUrl, 
-  isCloudinaryUrl,
-  speakerNameToCloudinaryId 
+  isCloudinaryUrl
 } from './cloudinary';
 
 /**
@@ -106,18 +105,23 @@ export function getOptimizedAvatarUrl(
 }
 
 /**
- * Generates avatar URL for a speaker from S3
- * Note: The database imageurl should contain the S3 URL if available.
- * This function is used as a fallback when imageurl is not set.
+ * Generates avatar URL for a speaker with Cloudinary priority
+ * Note: This function now prioritizes Cloudinary URLs over S3 for better performance.
  * @param name - The speaker's name
  * @param s3Url - S3 URL if already known (optional)
- * @returns Complete avatar URL (always S3)
+ * @returns Complete avatar URL (Cloudinary prioritized, S3 fallback)
  */
 export function getSpeakerAvatarUrl(
   name: string, 
   s3Url?: string
 ): string {
-  // If S3 URL is provided, use it as primary
+  // Priority 1: Try Cloudinary URL first
+  const cloudinaryUrl = getSpeakerCloudinaryAvatarUrl(name);
+  if (cloudinaryUrl) {
+    return cloudinaryUrl;
+  }
+
+  // Priority 2: If S3 URL is provided, use it
   if (s3Url) {
     return s3Url;
   }

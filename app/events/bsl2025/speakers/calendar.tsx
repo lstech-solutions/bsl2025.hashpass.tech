@@ -9,7 +9,7 @@ import EventBanner from '../../../../components/EventBanner';
 import SpeakerAvatar from '../../../../components/SpeakerAvatar';
 import SpeakerSearchAndSort from '../../../../components/SpeakerSearchAndSort';
 import { sortSpeakersByPriority } from '../../../../lib/speaker-priority';
-import { getSpeakerAvatarUrl } from '../../../../lib/string-utils';
+import { getSpeakerAvatarUrl, getSpeakerCloudinaryAvatarUrl } from '../../../../lib/string-utils';
 import LoadingScreen from '../../../../components/LoadingScreen';
 
 // Type definitions
@@ -90,7 +90,7 @@ export default function SpeakersCalendar() {
               title: s.title || null,
               company: s.company || null,
               bio: s.bio || (s.title ? `Experienced professional in ${s.title}.` : undefined),
-              image: s.imageurl || getSpeakerAvatarUrl(s.name), // Use same fallback as detail page
+              image: s.cloudinaryAvatarUrl || s.imageurl || getSpeakerAvatarUrl(s.name), // Prioritize Cloudinary URL
               user_id: s.user_id || undefined,
               isActive: !!s.user_id // Active if has user_id
             }));
@@ -120,7 +120,7 @@ export default function SpeakersCalendar() {
           title: s.title || null,
           company: s.company || null,
           bio: (s.title && s.company) ? `Experienced professional in ${s.title} at ${s.company}.` : undefined,
-          image: getSpeakerAvatarUrl(s.name)
+          image: getSpeakerCloudinaryAvatarUrl(s.name) || getSpeakerAvatarUrl(s.name) // Prioritize Cloudinary
         }));
         
         // Remove duplicates based on ID

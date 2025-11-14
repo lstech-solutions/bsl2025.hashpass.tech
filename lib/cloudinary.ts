@@ -1,6 +1,9 @@
 
 
 // Cloudinary configuration (browser-compatible)
+import Constants from 'expo-constants';
+import { apiClient } from './api-client';
+
 type CloudinaryExtraConfig = {
   cloudName?: string;
   uploadPreset?: string;
@@ -219,7 +222,7 @@ export function getThumbnailUrl(
 export function getResponsiveUrls(
   publicId: string,
   breakpoints: number[] = [320, 640, 768, 1024, 1280, 1536]
-): Array<{ width: number; url: string }> {
+): { width: number; url: string }[] {
   return breakpoints.map(width => ({
     width,
     url: getCloudinaryUrl(publicId, {
@@ -269,8 +272,8 @@ export function getSpeakerCloudinaryAvatarUrl(
   name: string,
   size: number = 100
 ): string {
-  const publicId = `speakers/avatars/${speakerNameToCloudinaryId(name)}`;
-  return getAvatarUrl(publicId, size);
+  const cloudinaryId = `speakers/avatars/speakers/avatars/foto-${speakerNameToCloudinaryId(name)}`;
+  return getAvatarUrl(cloudinaryId, size);
 }
 
 /**
@@ -330,16 +333,13 @@ export async function uploadImage(
   }
 
   try {
-    const response = await fetch(getUploadUrl(), {
-      method: 'POST',
-      body: formData,
+    const response = await apiClient.post(getUploadUrl(), formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
 
-    if (!response.ok) {
-      throw new Error(`Upload failed: ${response.statusText}`);
-    }
-
-    return await response.json();
+    return response.data;
   } catch (error) {
     console.error('Cloudinary upload error:', error);
     throw error;

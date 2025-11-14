@@ -489,6 +489,13 @@ export default function AuthCallback() {
             console.log('⏭️ Already processing auth callback, skipping');
             return;
         }
+        
+        // CRITICAL: Prevent infinite loops - if we've already navigated, don't process again
+        if (hasNavigatedRef.current) {
+            console.log('⏭️ Already navigated from callback, skipping processing to prevent loop');
+            return;
+        }
+        
         isProcessingRef.current = true;
         
         try {
@@ -891,6 +898,11 @@ export default function AuthCallback() {
                     // Set error status with more helpful message
                     setStatus('error');
                     setMessage(`⚠️ Authentication failed: Supabase redirected without OAuth code.\n\nDIAGNOSIS: redirect_to validation failed\n\nREQUIRED URL in Supabase:\n${expectedRedirectUrl}\n\nCheck console for detailed fix instructions.`);
+                    
+                    // CRITICAL: Mark as processed to prevent infinite loops
+                    // Don't navigate - let user see the error and try again
+                    isProcessingRef.current = false;
+                    hasNavigatedRef.current = true; // Prevent any further navigation attempts
                 }
             }
 
@@ -1195,6 +1207,11 @@ export default function AuthCallback() {
                             console.error('❌ Final getUser error:', finalUserError?.message);
                             setStatus('error');
                             setMessage('⚠️ Authentication completed but session not found. Please try signing in again.');
+                            
+                            // CRITICAL: Mark as processed to prevent infinite loops
+                            // Don't navigate - let user see the error and try again
+                            isProcessingRef.current = false;
+                            hasNavigatedRef.current = true; // Prevent any further navigation attempts
                         }
                     }
                 } catch (sessionError: any) {
@@ -1282,6 +1299,21 @@ export default function AuthCallback() {
         if (isProcessingRef.current || hasNavigatedRef.current) {
             console.log('⏭️ Auth callback already processing or navigated, skipping');
             return;
+        }
+        
+        // CRITICAL: If we're on callback route with no tokens and already showed error, don't process again
+        // This prevents infinite loops when Supabase redirects without code
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            const urlHasTokens = window.location.href.includes('access_token') || 
+                                window.location.href.includes('code=') || 
+                                window.location.href.includes('#access_token') ||
+                                window.location.href.includes('?code=') ||
+                                window.location.href.includes('&code=');
+            
+            if (!urlHasTokens && status === 'error') {
+                console.log('⏭️ Already showed error for missing tokens, skipping reprocessing to prevent loop');
+                return;
+            }
         }
         
         // Wait a moment for params to be fully loaded, then process

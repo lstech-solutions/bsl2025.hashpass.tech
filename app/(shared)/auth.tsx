@@ -48,7 +48,7 @@ export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
-  const [authMethod, setAuthMethod] = useState<AuthMethod>('magiclink');
+  const [authMethod, setAuthMethod] = useState<AuthMethod>('otp'); // Default to OTP since magic link is under maintenance
   const [emailError, setEmailError] = useState('');
   const [ethereumAvailable, setEthereumAvailable] = useState(false);
   const [solanaAvailable, setSolanaAvailable] = useState(false);
@@ -1279,10 +1279,10 @@ export default function AuthScreen() {
                   style={[
                     styles.methodToggle, 
                     authMethod === 'magiclink' && styles.methodToggleActive,
-                    loading && styles.methodToggleDisabled
+                    (loading || true) && styles.methodToggleDisabled // Disabled for maintenance
                   ]}
                   onPress={() => {
-                    if (!loading) {
+                    if (!loading && false) { // Disabled for maintenance
                       setAuthMethod('magiclink');
                       // Clear any email errors when switching
                       if (emailError) {
@@ -1290,14 +1290,14 @@ export default function AuthScreen() {
                       }
                     }
                   }}
-                  disabled={loading}
+                  disabled={loading || true} // Disabled for maintenance
                   activeOpacity={0.7}
                 >
                   <Ionicons 
                     name="link" 
                     size={16} 
                     color={
-                      loading 
+                      loading || true // Disabled for maintenance
                         ? (isDark ? '#666' : '#999')
                         : authMethod === 'magiclink' 
                           ? (isDark ? '#fff' : '#000') 
@@ -1307,9 +1307,9 @@ export default function AuthScreen() {
                   <Text style={[
                     styles.methodToggleText, 
                     authMethod === 'magiclink' && styles.methodToggleTextActive,
-                    loading && styles.methodToggleTextDisabled
+                    (loading || true) && styles.methodToggleTextDisabled // Disabled for maintenance
                   ]}>
-                    {t('magicLink')}
+                    {t('magicLink')} (Maintenance)
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -1439,31 +1439,21 @@ export default function AuthScreen() {
 
         {/* Optional Auth Methods - Circular Buttons */}
         <View style={styles.optionalAuthContainer}>
-          <TouchableOpacity
-            style={[styles.circularButton, styles.googleButton]}
-            onPress={() => signInWithOAuth('google')}
-            disabled={loading}
-            accessibilityLabel="Sign in with Google"
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Ionicons name="logo-google" size={24} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
+          {/* Google OAuth - Under Maintenance */}
+          <View style={styles.disabledButtonContainer}>
+            <View style={[styles.circularButton, styles.googleButton, styles.disabledButton]}>
+              <Ionicons name="logo-google" size={24} color="#666" />
+            </View>
+            <Text style={styles.maintenanceText}>Maintenance</Text>
+          </View>
 
-          <TouchableOpacity
-            style={[styles.circularButton, styles.discordButton]}
-            onPress={() => signInWithOAuth('discord')}
-            disabled={loading}
-            accessibilityLabel="Sign in with Discord"
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Ionicons name="logo-discord" size={24} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
+          {/* Discord OAuth - Under Maintenance */}
+          <View style={styles.disabledButtonContainer}>
+            <View style={[styles.circularButton, styles.discordButton, styles.disabledButton]}>
+              <Ionicons name="logo-discord" size={24} color="#666" />
+            </View>
+            <Text style={styles.maintenanceText}>Maintenance</Text>
+          </View>
 
           {Platform.OS === 'web' && ethereumAvailable && (
             <TouchableOpacity
@@ -1812,6 +1802,20 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   solanaButton: {
     backgroundColor: '#14F195',
+  },
+  disabledButton: {
+    opacity: 0.5,
+    backgroundColor: isDark ? '#444' : '#ccc',
+  },
+  disabledButtonContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  maintenanceText: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 2,
+    textAlign: 'center',
   },
   privacyContainer: {
     marginTop: 20,

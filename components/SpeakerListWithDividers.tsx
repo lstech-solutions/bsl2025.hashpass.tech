@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import SpeakerAvatar from './SpeakerAvatar';
@@ -72,7 +72,7 @@ export default function SpeakerListWithDividers({
 
   // Flatten speakers for FlatList with section headers
   const flatListData = React.useMemo(() => {
-    const items: Array<{ type: 'header' | 'speaker'; letter?: string; speaker?: any; id: string }> = [];
+    const items: { type: 'header' | 'speaker'; letter?: string; speaker?: any; id: string }[] = [];
     sortedGroupKeys.forEach((letter) => {
       items.push({ type: 'header', letter, id: `header-${letter}` });
       groupedSpeakers[letter].forEach((speaker) => {

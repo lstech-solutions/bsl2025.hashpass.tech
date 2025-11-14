@@ -22,21 +22,60 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511140404, // Updated to current timestamp
+  buildNumber: 202511140507, // Updated to current timestamp
   releaseDate: '2025-11-14',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [],
   bugfixes: [
-    'Updated welcome email logic to use email tracking flag (user_email_tracking table) instead of user creation date check',
-    'Fixed welcome email being sent to existing users by checking database flag instead of 24-hour creation window'
+    'Fixed infinite redirect loop in OAuth callback handler',
+    'Added safeNavigate helper to prevent redirecting to callback route',
+    'Enhanced getRedirectPath to reject callback route redirects',
+    'Fixed OAuth redirect detection to only trigger on wrong domain (auth.hashpass.co)',
+    'Added redirect loop prevention checks in all navigation paths'
   ],
   breakingChanges: [],
-  notes: 'Updated'
+  notes: 'Version 1.6.83 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.83': {
+    version: '1.6.83',
+    buildNumber: 202511140507,
+    releaseDate: '2025-11-14',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      // No new features
+    ],
+    bugfixes: [
+      'Fixed infinite redirect loop in OAuth callback handler',
+      'Added safeNavigate helper to prevent redirecting to callback route',
+      'Enhanced getRedirectPath to reject callback route redirects',
+      'Fixed OAuth redirect detection to only trigger on wrong domain (auth.hashpass.co)',
+      'Added redirect loop prevention checks in all navigation paths'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.83 release'
+  },
+  '1.6.82': {
+    version: '1.6.82',
+    buildNumber: 202511140006,
+    releaseDate: '2025-11-14',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [],
+    bugfixes: [
+      'Fixed infinite redirect loop in OAuth callback handler',
+      'Added safeNavigate helper to prevent redirecting to callback route',
+      'Enhanced getRedirectPath to reject callback route redirects',
+      'Fixed OAuth redirect detection to only trigger on wrong domain (auth.hashpass.co)',
+      'Added redirect loop prevention checks in all navigation paths'
+    ],
+    breakingChanges: [],
+    notes: 'Fixed OAuth infinite redirect loop on production'
+  },
   '1.6.81': {
     version: '1.6.81',
     buildNumber: 202511140404,

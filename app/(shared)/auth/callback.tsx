@@ -17,36 +17,44 @@ export default function AuthCallback() {
     
     // CRITICAL: Check and redirect immediately if on wrong domain
     // This runs synchronously during render to catch Supabase redirects ASAP
+    // ONLY runs if we're on auth.hashpass.co (wrong domain)
     if (Platform.OS === 'web' && typeof window !== 'undefined' && !shouldRedirect) {
         const currentHost = window.location.host;
         const currentPath = window.location.pathname;
         const hashFragment = window.location.hash;
         
-        // Detect if Supabase incorrectly redirected to auth.hashpass.co/{subdomain}.hashpass.tech
+        // ONLY redirect if we're on auth.hashpass.co (wrong domain)
+        // If we're already on the correct domain (bsl2025.hashpass.tech), don't redirect
         const isIncorrectRedirect = currentHost === 'auth.hashpass.co' && 
                                    (currentPath.includes('hashpass.tech') || 
                                     currentPath.match(/\/[a-z0-9-]+\.hashpass\.tech/i));
         
+        // Only proceed if we're on the wrong domain AND have auth tokens
         if (isIncorrectRedirect && hashFragment && hashFragment.includes('access_token')) {
             console.error('❌ [IMMEDIATE] Detected incorrect Supabase redirect!');
             console.error('❌ Current URL:', window.location.href.substring(0, 200));
             
-            // Extract subdomain from path
+            // Determine correct origin - prioritize localStorage (has the actual origin from OAuth flow)
             let correctOrigin = '';
-            const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
-            if (domainMatch) {
-                correctOrigin = `https://${domainMatch[1]}`;
-                console.log('📍 [IMMEDIATE] Extracted origin from path:', correctOrigin);
-            } else {
-                // Try localStorage
-                try {
-                    const stored = localStorage.getItem('oauth_redirect_origin');
-                    if (stored) {
-                        correctOrigin = stored;
-                        console.log('📍 [IMMEDIATE] Using stored origin:', correctOrigin);
-                    }
-                } catch (e) {
-                    console.warn('⚠️ [IMMEDIATE] Could not access localStorage');
+            
+            // Method 1: Try localStorage FIRST (most reliable - has the actual origin from OAuth)
+            // This will be http://localhost:8081 in development, https://bsl2025.hashpass.tech in production
+            try {
+                const stored = localStorage.getItem('oauth_redirect_origin');
+                if (stored) {
+                    correctOrigin = stored;
+                    console.log('📍 [IMMEDIATE] Using stored origin from OAuth flow:', correctOrigin);
+                }
+            } catch (e) {
+                console.warn('⚠️ [IMMEDIATE] Could not access localStorage');
+            }
+            
+            // Method 2: If no stored origin, extract from path (fallback for production)
+            if (!correctOrigin) {
+                const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
+                if (domainMatch) {
+                    correctOrigin = `https://${domainMatch[1]}`;
+                    console.log('📍 [IMMEDIATE] Extracted origin from path (fallback):', correctOrigin);
                 }
             }
             
@@ -70,10 +78,21 @@ export default function AuthCallback() {
                     }
                 });
                 
-                console.log('🚀 [IMMEDIATE] Redirecting to:', redirectUrl.substring(0, 300));
-                setShouldRedirect(true);
-                // Redirect IMMEDIATELY - don't wait for React
-                window.location.replace(redirectUrl);
+                // CRITICAL: Only redirect if we're actually on the wrong domain
+                // If we're already on the correct domain, don't redirect (prevents infinite loop)
+                const currentUrl = window.location.origin + window.location.pathname;
+                const targetUrl = new URL(redirectUrl);
+                const targetOrigin = targetUrl.origin + targetUrl.pathname;
+                
+                if (currentUrl === targetOrigin && currentHost !== 'auth.hashpass.co') {
+                    console.log('✅ [IMMEDIATE] Already on correct domain, skipping redirect');
+                    // Don't redirect - we're already where we need to be
+                } else {
+                    console.log('🚀 [IMMEDIATE] Redirecting to:', redirectUrl.substring(0, 300));
+                    setShouldRedirect(true);
+                    // Redirect IMMEDIATELY - don't wait for React
+                    window.location.replace(redirectUrl);
+                }
             }
         }
     }
@@ -125,28 +144,26 @@ export default function AuthCallback() {
                 if (hasAuthTokens) {
                     console.log('✅ Found auth tokens in URL, redirecting to correct callback...');
                     
-                    // Determine the correct origin - try multiple sources
+                    // Determine the correct origin - prioritize localStorage (has actual origin from OAuth)
                     let correctOrigin = '';
                     
-                    // Method 1: Try to extract from the path FIRST (most reliable for production)
-                    if (currentPath.includes('hashpass.tech')) {
+                    // Method 1: Try localStorage FIRST (most reliable - has the actual origin from OAuth flow)
+                    try {
+                        const storedOrigin = localStorage.getItem('oauth_redirect_origin');
+                        if (storedOrigin) {
+                            correctOrigin = storedOrigin;
+                            console.log('📍 Using stored origin from OAuth flow (Method 1):', correctOrigin);
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Could not access localStorage:', e);
+                    }
+                    
+                    // Method 2: If no stored origin, extract from path (fallback for production)
+                    if (!correctOrigin && currentPath.includes('hashpass.tech')) {
                         const domainMatch = currentPath.match(/([a-z0-9-]+\.hashpass\.tech)/i);
                         if (domainMatch) {
                             correctOrigin = `https://${domainMatch[1]}`;
-                            console.log('📍 Extracted origin from path (Method 1):', correctOrigin);
-                        }
-                    }
-                    
-                    // Method 2: Try localStorage (stored during OAuth flow)
-                    if (!correctOrigin) {
-                        try {
-                            const storedOrigin = localStorage.getItem('oauth_redirect_origin');
-                            if (storedOrigin) {
-                                correctOrigin = storedOrigin;
-                                console.log('📍 Using stored origin from OAuth flow (Method 2):', correctOrigin);
-                            }
-                        } catch (e) {
-                            console.warn('⚠️ Could not access localStorage:', e);
+                            console.log('📍 Extracted origin from path (Method 2):', correctOrigin);
                         }
                     }
                     
@@ -186,13 +203,6 @@ export default function AuthCallback() {
                         }
                     }
                     
-                    // For development, check if we're on localhost
-                    // Only override if we're actually in development
-                    if (correctOrigin.includes('hashpass.tech') && window.location.href.includes('localhost')) {
-                        const localhostPort = window.location.href.match(/localhost:(\d+)/)?.[1] || '8081';
-                        correctOrigin = `http://localhost:${localhostPort}`;
-                        console.log('📍 Detected development environment, using:', correctOrigin);
-                    }
                     
                     // Build redirect URL with hash fragment (tokens are in hash)
                     // The hash fragment should be preserved as-is since it contains all the auth tokens
@@ -219,15 +229,26 @@ export default function AuthCallback() {
                         }
                     });
                     
-                    console.log('🔧 Redirecting to correct callback URL:', redirectUrl.substring(0, 300));
-                    console.log('🔧 Hash fragment preserved:', window.location.hash.substring(0, 100) + '...');
+                    // CRITICAL: Only redirect if we're actually on the wrong domain
+                    // If we're already on the correct domain, don't redirect (prevents infinite loop)
+                    const currentUrl = window.location.origin + window.location.pathname;
+                    const targetUrlObj = new URL(redirectUrl);
+                    const targetOrigin = targetUrlObj.origin + targetUrlObj.pathname;
                     
-                    // Use replace to avoid adding to history - do this IMMEDIATELY
-                    // Use setTimeout(0) to ensure this runs after any other redirect attempts
-                    setTimeout(() => {
-                        window.location.replace(redirectUrl);
-                    }, 0);
-                    return;
+                    if (currentUrl === targetOrigin && currentHost !== 'auth.hashpass.co') {
+                        console.log('✅ Already on correct domain, skipping redirect to prevent loop');
+                        // Don't redirect - we're already where we need to be, just process the callback
+                    } else {
+                        console.log('🔧 Redirecting to correct callback URL:', redirectUrl.substring(0, 300));
+                        console.log('🔧 Hash fragment preserved:', window.location.hash.substring(0, 100) + '...');
+                        
+                        // Use replace to avoid adding to history - do this IMMEDIATELY
+                        // Use setTimeout(0) to ensure this runs after any other redirect attempts
+                        setTimeout(() => {
+                            window.location.replace(redirectUrl);
+                        }, 0);
+                        return;
+                    }
                 } else {
                     console.warn('⚠️ No auth tokens found in URL, cannot redirect');
                     console.warn('📍 Full hash:', window.location.hash.substring(0, 200));
@@ -242,7 +263,13 @@ export default function AuthCallback() {
         const returnTo = params.returnTo as string | undefined;
         if (returnTo) {
             try {
-                return decodeURIComponent(returnTo);
+                const decoded = decodeURIComponent(returnTo);
+                // CRITICAL: Prevent redirecting to callback route (infinite loop)
+                if (decoded.includes('/auth/callback')) {
+                    console.warn('⚠️ returnTo points to callback route, using dashboard instead');
+                    return '/(shared)/dashboard/explore';
+                }
+                return decoded;
             } catch (e) {
                 console.warn('Failed to decode returnTo parameter:', e);
             }
@@ -255,7 +282,13 @@ export default function AuthCallback() {
                 const hashParams = new URLSearchParams(window.location.hash.substring(1));
                 const returnToParam = urlParams.get('returnTo') || hashParams.get('returnTo');
                 if (returnToParam) {
-                    return decodeURIComponent(returnToParam);
+                    const decoded = decodeURIComponent(returnToParam);
+                    // CRITICAL: Prevent redirecting to callback route (infinite loop)
+                    if (decoded.includes('/auth/callback')) {
+                        console.warn('⚠️ returnTo in URL points to callback route, using dashboard instead');
+                        return '/(shared)/dashboard/explore';
+                    }
+                    return decoded;
                 }
             } catch (e) {
                 console.warn('Failed to parse returnTo from URL:', e);
@@ -263,6 +296,17 @@ export default function AuthCallback() {
         }
         
         return '/(shared)/dashboard/explore';
+    };
+    
+    // Helper to safely navigate - prevents redirect loops
+    const safeNavigate = (path: string) => {
+        // CRITICAL: Never redirect to callback route (infinite loop)
+        if (path.includes('/auth/callback')) {
+            console.warn('⚠️ Attempted to redirect to callback route, redirecting to dashboard instead');
+            router.replace('/(shared)/dashboard/explore' as any);
+        } else {
+            router.replace(path as any);
+        }
     };
     
     // Processing guard to prevent duplicate processing
@@ -279,7 +323,7 @@ export default function AuthCallback() {
                 console.log('✅ SIGNED_IN event detected in callback, navigating to dashboard');
                 hasNavigatedRef.current = true;
                 const redirectPath = getRedirectPath();
-                router.replace(redirectPath as any);
+                safeNavigate(redirectPath);
             }
         });
         
@@ -491,14 +535,16 @@ export default function AuthCallback() {
                         const redirectPath = getRedirectPath();
                         console.log('🔄 Redirecting to:', redirectPath);
                         
-                        // Use replace to ensure navigation happens
-                        router.replace(redirectPath as any);
+                        // Use safeNavigate to prevent redirect loops
+                        safeNavigate(redirectPath);
                     } catch (sessionError: any) {
                         console.error('Session error (non-fatal):', sessionError);
                         // Still navigate - session from createSessionFromUrl should be valid
                         const redirectPath = getRedirectPath();
                         console.log('🔄 Fallback redirect to:', redirectPath);
-                        router.replace(redirectPath as any);
+                        
+                        // Use safeNavigate to prevent redirect loops
+                        safeNavigate(redirectPath);
                     }
                 }
             } else {
@@ -526,10 +572,10 @@ export default function AuthCallback() {
                         foundSession = true;
                         if (!hasNavigatedRef.current) {
                             hasNavigatedRef.current = true;
-                            const redirectPath = getRedirectPath();
-                            console.log('🔄 Redirecting to:', redirectPath);
-                            router.replace(redirectPath as any);
-                            return;
+                                const redirectPath = getRedirectPath();
+                                console.log('🔄 Redirecting to:', redirectPath);
+                                safeNavigate(redirectPath);
+                                return;
                         }
                     }
                     const maxRetries = 5;
@@ -559,7 +605,7 @@ export default function AuthCallback() {
                                     console.log('✅ Session verified with getUser before navigation');
                                     const redirectPath = getRedirectPath();
                                     console.log('🔄 Redirecting to:', redirectPath);
-                                    router.replace(redirectPath as any);
+                                    safeNavigate(redirectPath);
                                     break;
                                 } else {
                                     console.warn('⚠️ Session exists but getUser failed, navigating anyway');
@@ -584,7 +630,7 @@ export default function AuthCallback() {
                                     hasNavigatedRef.current = true;
                                     const redirectPath = getRedirectPath();
                                     console.log('🔄 Redirecting to:', redirectPath);
-                                    router.replace(redirectPath as any);
+                                    safeNavigate(redirectPath);
                                     break;
                                 }
                                 break;
@@ -608,7 +654,7 @@ export default function AuthCallback() {
                         hasNavigatedRef.current = true;
                         const redirectPath = getRedirectPath();
                         console.log('🔄 Fallback navigation to:', redirectPath);
-                        router.replace(redirectPath as any);
+                        safeNavigate(redirectPath);
                     }
                 }
             }
@@ -626,7 +672,7 @@ export default function AuthCallback() {
                     // Navigate to the correct path (respects returnTo parameter)
                     const redirectPath = getRedirectPath();
                     console.log('🔄 Redirecting to:', redirectPath);
-                    router.replace(redirectPath as any);
+                    safeNavigate(redirectPath);
                 }
                 return;
             }
@@ -702,7 +748,7 @@ export default function AuthCallback() {
                     if (session && session.user) {
                         console.log('✅ Found session on timeout, navigating');
                         const redirectPath = getRedirectPath();
-                        router.replace(redirectPath as any);
+                        safeNavigate(redirectPath);
                     } else {
                         console.error('⏱️ Auth callback timeout - no session found');
                         isProcessingRef.current = false;
@@ -732,7 +778,7 @@ export default function AuthCallback() {
 
     const handleContinue = () => {
         const redirectPath = getRedirectPath();
-        router.replace(redirectPath as any);
+        safeNavigate(redirectPath);
     };
 
     if (status === 'show_download') {

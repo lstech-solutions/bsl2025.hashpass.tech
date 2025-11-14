@@ -15,20 +15,68 @@
                 const hashFragment = window.location.hash;
                 
                 // Check if we're on the incorrect redirect path with auth tokens
-                if ((currentPath.includes('hashpass.tech') || currentPath.startsWith('/bsl2025')) && 
-                    hashFragment && hashFragment.includes('access_token')) {
+                // Works with any hashpass.tech subdomain (bsl2025, event2026, etc.)
+                const isIncorrectRedirect = currentPath.includes('hashpass.tech') || 
+                                           currentPath.match(//[a-z0-9-]+.hashpass.tech/i);
+                
+                if (isIncorrectRedirect && hashFragment && hashFragment.includes('access_token')) {
                   
                   console.log('🔧 [Auto-fix] Detected incorrect Supabase redirect with tokens');
                   
                   // Get stored origin or use default
-                  let correctOrigin = 'http://localhost:8081';
+                  // Try to extract from path first (e.g., /bsl2025.hashpass.tech -> https://bsl2025.hashpass.tech)
+                  // Dynamic: works with any hashpass.tech subdomain
+                  let correctOrigin = '';
+                  
+                  // First, try to get from current window location if we're on a hashpass.tech domain
+                  if (typeof window !== 'undefined' && window.location && window.location.hostname.includes('hashpass.tech')) {
+                    correctOrigin = window.location.protocol + '//' + window.location.hostname;
+                  }
+                  
+                  // Method 1: Try to extract from path
+                  if (currentPath.includes('hashpass.tech')) {
+                    const domainMatch = currentPath.match(/([a-z0-9-]+.hashpass.tech)/i);
+                    if (domainMatch) {
+                      correctOrigin = 'https://' + domainMatch[1];
+                      console.log('📍 [Auto-fix] Extracted origin from path:', correctOrigin);
+                    }
+                  }
+                  
+                  // Method 2: Try localStorage (stored during OAuth flow)
                   try {
                     const storedOrigin = localStorage.getItem('oauth_redirect_origin');
                     if (storedOrigin) {
                       correctOrigin = storedOrigin;
+                      console.log('📍 [Auto-fix] Using stored origin:', correctOrigin);
                     }
                   } catch (e) {
-                    // Ignore localStorage errors
+                    console.warn('⚠️ [Auto-fix] Could not access localStorage:', e);
+                  }
+                  
+                  // Method 3: If still no origin, extract from path (works for any subdomain)
+                  if (!correctOrigin && currentPath.includes('hashpass.tech')) {
+                    const domainMatch = currentPath.match(/([a-z0-9-]+.hashpass.tech)/i);
+                    if (domainMatch) {
+                      correctOrigin = 'https://' + domainMatch[1];
+                      console.log('📍 [Auto-fix] Extracted from path (Method 3):', correctOrigin);
+                    }
+                  }
+                  
+                  // Method 4: For development, check if we're on localhost
+                  // If the stored origin is localhost but we're on production, use production
+                  if (correctOrigin.includes('localhost') && currentPath.includes('hashpass.tech')) {
+                    // Extract production domain from path
+                    const domainMatch = currentPath.match(/([a-z0-9-]+.hashpass.tech)/i);
+                    if (domainMatch) {
+                      correctOrigin = 'https://' + domainMatch[1];
+                      console.log('📍 [Auto-fix] Overriding localhost with production:', correctOrigin);
+                    }
+                  }
+                  
+                  // Final fallback: use current origin if available
+                  if (!correctOrigin && typeof window !== 'undefined' && window.location) {
+                    correctOrigin = window.location.origin;
+                    console.log('📍 [Auto-fix] Using current origin as final fallback:', correctOrigin);
                   }
                   
                   // Build redirect URL
@@ -556,5 +604,5 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 @keyframes r-1pzkwqh{0%{transform:translateY(100%);}100%{transform:translateY(0%);}}
 @keyframes r-imtty0{0%{opacity:0;}100%{opacity:1;}}
 @keyframes r-q67da2{0%{transform:translateX(-100%);}100%{transform:translateX(400%);}}
-@keyframes r-t2lo5v{0%{opacity:1;}100%{opacity:0;}}</style><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script><link rel="preload" href="/_expo/static/css/web-27d1ee099f2b04d408812f765ff3f9ab.css" as="style"><link rel="stylesheet" href="/_expo/static/css/web-27d1ee099f2b04d408812f765ff3f9ab.css"></head><body><div id="root"><div class="css-g5y9jx r-13awgt0"><!--$--><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx" style="flex:1"></div></div><!--/$--></div></div><script src="/_expo/static/js/web/entry-a0562d0163a3fcf2d9d7cb37a6a134ea.js" defer></script>
+@keyframes r-t2lo5v{0%{opacity:1;}100%{opacity:0;}}</style><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script><link rel="preload" href="/_expo/static/css/web-27d1ee099f2b04d408812f765ff3f9ab.css" as="style"><link rel="stylesheet" href="/_expo/static/css/web-27d1ee099f2b04d408812f765ff3f9ab.css"></head><body><div id="root"><div class="css-g5y9jx r-13awgt0"><!--$--><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx" style="flex:1"></div></div><!--/$--></div></div><script src="/_expo/static/js/web/entry-fa0a14458747bc3d1901b7b39c420125.js" defer></script>
 </body></html>

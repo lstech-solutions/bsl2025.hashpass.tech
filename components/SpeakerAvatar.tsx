@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, Animated, ActivityIndicator } from 'react-native';
-import { getSpeakerAvatarUrl, getLocalOptimizedAvatarUrl } from '../lib/string-utils';
+import { getOptimizedAvatarUrl, getLocalOptimizedAvatarUrl, getSpeakerAvatarUrl } from '../lib/string-utils';
 
 interface SpeakerAvatarProps {
   name?: string;
@@ -35,41 +35,51 @@ export default function SpeakerAvatar({
   // Animated value for smooth fade-in
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Track which URL we're currently trying (local optimized, S3, or null)
+  // Track which URL we're currently trying (Cloudinary, local optimized, S3, or null)
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
-  const [urlSource, setUrlSource] = useState<'local' | 's3' | null>(null);
+  const [urlSource, setUrlSource] = useState<'cloudinary' | 'local' | 's3' | null>(null);
   
   // Store URLs in refs to prevent dependency issues
+  const optimizedUrlRef = useRef<string | null>(null);
   const localOptimizedUrlRef = useRef<string | null>(null);
   const s3UrlRef = useRef<string | null>(null);
-  const previousUrlsRef = useRef<{ local: string | null; s3: string | null }>({ local: null, s3: null });
+  const previousUrlsRef = useRef<{ optimized: string | null; local: string | null; s3: string | null }>({ optimized: null, local: null, s3: null });
   
   // Memoize computed values to determine avatar URL priority
-  const { localOptimizedUrl, s3Url } = useMemo(() => {
+  const { optimizedUrl, localOptimizedUrl, s3Url } = useMemo(() => {
     // Normalize imageUrl: treat null, undefined, or empty string as null
     const normalizedImageUrl = (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') 
       ? imageUrl.trim() 
       : null;
     
-    // Priority 1: Check for local optimized avatar in public folder
+    // Priority 1: Cloudinary optimized URL (includes auto WebP/AVIF, DPR, quality)
+    const optimized = name ? getOptimizedAvatarUrl(name, normalizedImageUrl, size) : null;
+    
+    // Priority 2: Check for local optimized avatar in public folder (fallback)
     const localUrl = name ? getLocalOptimizedAvatarUrl(name) : null;
     
-    // Priority 2: Use provided imageUrl (if valid) or generate S3 URL from name
+    // Priority 3: Use provided imageUrl or generate S3 URL from name (final fallback)
     const s3 = normalizedImageUrl || (name ? getSpeakerAvatarUrl(name) : null);
     
-    return { localOptimizedUrl: localUrl, s3Url: s3 };
-  }, [imageUrl, name]);
+    return { 
+      optimizedUrl: optimized, 
+      localOptimizedUrl: localUrl, 
+      s3Url: s3 
+    };
+  }, [imageUrl, name, size]);
   
   // Update refs when URLs change
   useEffect(() => {
+    optimizedUrlRef.current = optimizedUrl;
     localOptimizedUrlRef.current = localOptimizedUrl;
     s3UrlRef.current = s3Url;
-  }, [localOptimizedUrl, s3Url]);
+  }, [optimizedUrl, localOptimizedUrl, s3Url]);
   
-  // Determine which URL to use (prioritize local optimized)
+  // Determine which URL to use (prioritize Cloudinary)
   // Only update if URLs actually changed
   useEffect(() => {
     const urlsChanged = 
+      previousUrlsRef.current.optimized !== optimizedUrl ||
       previousUrlsRef.current.local !== localOptimizedUrl ||
       previousUrlsRef.current.s3 !== s3Url;
     
@@ -78,7 +88,7 @@ export default function SpeakerAvatar({
     }
     
     // Update previous URLs
-    previousUrlsRef.current = { local: localOptimizedUrl, s3: s3Url };
+    previousUrlsRef.current = { optimized: optimizedUrl, local: localOptimizedUrl, s3: s3Url };
     
     // Clear any existing timeout
     if (timeoutIdRef.current) {
@@ -94,22 +104,29 @@ export default function SpeakerAvatar({
     setImageTimeout(false);
     setImageLoaded(false);
     
-    if (localOptimizedUrl) {
-      // Try local optimized first - set loading state and URL
-      isProcessingRef.current = false; // Reset processing flag before starting new load
+    if (optimizedUrl) {
+      // Try Cloudinary optimized first - set loading state and URL
+      isProcessingRef.current = false;
+      setImageLoading(true);
+      setCurrentAvatarUrl(optimizedUrl);
+      setUrlSource('cloudinary');
+      currentUrlRef.current = optimizedUrl;
+    } else if (localOptimizedUrl) {
+      // Fallback to local optimized
+      isProcessingRef.current = false;
       setImageLoading(true);
       setCurrentAvatarUrl(localOptimizedUrl);
       setUrlSource('local');
       currentUrlRef.current = localOptimizedUrl;
     } else if (s3Url) {
-      // Fallback to S3 - set loading state and URL
-      isProcessingRef.current = false; // Reset processing flag before starting new load
+      // Final fallback to S3
+      isProcessingRef.current = false;
       setImageLoading(true);
       setCurrentAvatarUrl(s3Url);
       setUrlSource('s3');
       currentUrlRef.current = s3Url;
     } else {
-      // No URLs available - show initials immediately (no loader needed)
+      // No URLs available - show initials immediately
       setCurrentAvatarUrl(null);
       setUrlSource(null);
       currentUrlRef.current = null;
@@ -118,7 +135,7 @@ export default function SpeakerAvatar({
       setImageTimeout(true);
       setImageLoaded(false);
     }
-  }, [localOptimizedUrl, s3Url, name, imageUrl]); // Added name and imageUrl for debugging
+  }, [optimizedUrl, localOptimizedUrl, s3Url, name, imageUrl, size]);
   
   const avatarUrl = currentAvatarUrl;
 
@@ -130,8 +147,22 @@ export default function SpeakerAvatar({
     
     // Check if this URL has already failed - if so, try fallback or show initials
     if (failedUrlsRef.current.has(avatarUrl)) {
+      // If Cloudinary failed, try local optimized
+      if (urlSource === 'cloudinary' && localOptimizedUrlRef.current && localOptimizedUrlRef.current !== avatarUrl) {
+        if (!isProcessingRef.current) {
+          isProcessingRef.current = true;
+          setCurrentAvatarUrl(localOptimizedUrlRef.current);
+          setUrlSource('local');
+          setImageError(false);
+          setImageLoading(true);
+          setImageTimeout(false);
+          currentUrlRef.current = localOptimizedUrlRef.current;
+          isProcessingRef.current = false;
+        }
+        return;
+      }
       // If local optimized failed, try S3
-      if (urlSource === 'local' && s3UrlRef.current && s3UrlRef.current !== avatarUrl) {
+      else if (urlSource === 'local' && s3UrlRef.current && s3UrlRef.current !== avatarUrl) {
         if (!isProcessingRef.current) {
           isProcessingRef.current = true;
           setCurrentAvatarUrl(s3UrlRef.current);
@@ -153,7 +184,8 @@ export default function SpeakerAvatar({
     }
     
     // Set up timeout for this URL
-    const timeoutDuration = urlSource === 'local' ? 2000 : 15000;
+    const timeoutDuration = urlSource === 'cloudinary' ? 5000 : 
+                           urlSource === 'local' ? 2000 : 15000;
     
     timeoutIdRef.current = setTimeout(() => {
       // Check if URL is still the same
@@ -164,8 +196,19 @@ export default function SpeakerAvatar({
       // Mark URL as failed
       failedUrlsRef.current.add(avatarUrl);
       
-      // If local optimized failed, try S3 fallback
-      if (urlSource === 'local' && s3UrlRef.current && s3UrlRef.current !== avatarUrl) {
+      // Try fallbacks in order
+      if (urlSource === 'cloudinary' && localOptimizedUrlRef.current && localOptimizedUrlRef.current !== avatarUrl) {
+        if (!isProcessingRef.current) {
+          isProcessingRef.current = true;
+          setCurrentAvatarUrl(localOptimizedUrlRef.current);
+          setUrlSource('local');
+          setImageError(false);
+          setImageLoading(true);
+          setImageTimeout(false);
+          currentUrlRef.current = localOptimizedUrlRef.current;
+          isProcessingRef.current = false;
+        }
+      } else if ((urlSource === 'cloudinary' || urlSource === 'local') && s3UrlRef.current && s3UrlRef.current !== avatarUrl) {
         if (!isProcessingRef.current) {
           isProcessingRef.current = true;
           setCurrentAvatarUrl(s3UrlRef.current);
@@ -190,7 +233,7 @@ export default function SpeakerAvatar({
         timeoutIdRef.current = null;
       }
     };
-  }, [avatarUrl, urlSource]); // Removed name and imageUrl from deps to prevent loops
+  }, [avatarUrl, urlSource]);
 
   // Memoized error handler to prevent recreating on every render
   const handleError = useCallback((error: any) => {
@@ -207,8 +250,23 @@ export default function SpeakerAvatar({
       failedUrlsRef.current.add(avatarUrl);
     }
     
-    // If local optimized failed, try S3 fallback
-    if (urlSource === 'local' && s3UrlRef.current && s3UrlRef.current !== avatarUrl) {
+    // Try fallbacks in order
+    if (urlSource === 'cloudinary' && localOptimizedUrlRef.current && localOptimizedUrlRef.current !== avatarUrl) {
+      if (!isProcessingRef.current) {
+        isProcessingRef.current = true;
+        setCurrentAvatarUrl(localOptimizedUrlRef.current);
+        setUrlSource('local');
+        setImageError(false);
+        setImageLoading(true);
+        setImageTimeout(false);
+        setImageLoaded(false);
+        fadeAnim.setValue(0);
+        currentUrlRef.current = localOptimizedUrlRef.current;
+        setTimeout(() => {
+          isProcessingRef.current = false;
+        }, 100);
+      }
+    } else if ((urlSource === 'cloudinary' || urlSource === 'local') && s3UrlRef.current && s3UrlRef.current !== avatarUrl) {
       if (!isProcessingRef.current) {
         isProcessingRef.current = true;
         setCurrentAvatarUrl(s3UrlRef.current);
@@ -216,10 +274,9 @@ export default function SpeakerAvatar({
         setImageError(false);
         setImageLoading(true);
         setImageTimeout(false);
-        setImageLoaded(false); // Reset loaded state for new URL
+        setImageLoaded(false);
         fadeAnim.setValue(0);
         currentUrlRef.current = s3UrlRef.current;
-        // Reset processing flag after a short delay
         setTimeout(() => {
           isProcessingRef.current = false;
         }, 100);
@@ -282,17 +339,17 @@ export default function SpeakerAvatar({
   const styles = getStyles(size, showBorder);
   
   // Determine what to show - simplified logic
-  const hasUrlsAvailable = !!(localOptimizedUrl || s3Url);
+  const hasUrlsAvailable = !!(optimizedUrl || localOptimizedUrl || s3Url);
   
   // Always show image if we have a URL (let Image component handle loading/errors)
   // Only hide if explicitly failed with no fallback
-  const showImage = avatarUrl && !(imageError && imageTimeout && !s3UrlRef.current);
+  const showImage = avatarUrl && !(imageError && imageTimeout && !localOptimizedUrlRef.current && !s3UrlRef.current);
   
   // Show loading indicator only when actively loading and image not loaded yet
   const showLoading = imageLoading && !imageLoaded && avatarUrl;
   
   // Show placeholder only when no URLs or all sources definitively failed
-  const showPlaceholder = !avatarUrl || (imageError && imageTimeout && !s3UrlRef.current);
+  const showPlaceholder = !avatarUrl || (imageError && imageTimeout && !localOptimizedUrlRef.current && !s3UrlRef.current);
 
   return (
     <View style={[styles.container, style]}>

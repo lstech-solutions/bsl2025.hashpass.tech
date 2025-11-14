@@ -851,12 +851,38 @@ export default function AuthScreen() {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         // Use the actual origin for web
         // In Expo Router, (shared) group is removed from URL, so path is /auth/callback
-        const origin = window.location.origin;
+        let origin = window.location.origin;
+        
+        // CRITICAL: In development, ensure we use localhost even if origin is wrong
+        // Check if we're in development mode (localhost or 127.0.0.1)
+        const isDevelopment = origin.includes('localhost') || 
+                              origin.includes('127.0.0.1') || 
+                              origin.includes(':8081') ||
+                              (typeof process !== 'undefined' && process.env.NODE_ENV === 'development');
+        
+        // If we're in development but origin doesn't look like localhost, force localhost:8081
+        if (isDevelopment && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+          console.warn('⚠️ Development mode detected but origin is not localhost, forcing localhost:8081');
+          origin = 'http://localhost:8081';
+        }
+        
+        // If origin contains production domain in development, force localhost
+        if (origin.includes('hashpass.tech') && (isDevelopment || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+          console.warn('⚠️ Production URL detected in development, forcing localhost:8081');
+          origin = 'http://localhost:8081';
+        }
         
         // Ensure we have a valid origin (not empty or malformed)
         if (!origin || origin === 'null' || origin === 'undefined') {
           throw new Error('Invalid origin detected. Cannot proceed with OAuth.');
         }
+        
+        console.log('🔍 OAuth origin detection:', {
+          windowOrigin: window.location.origin,
+          finalOrigin: origin,
+          hostname: window.location.hostname,
+          isDevelopment
+        });
         
         // Build the redirect URL with proper protocol
         redirectUrl = `${origin}/auth/callback`;
@@ -873,44 +899,46 @@ export default function AuthScreen() {
         redirectUrl = Linking.createURL('/(shared)/auth/callback');
       }
       
-      // Add apikey to redirect URL to ensure Supabase can process the callback
-      // This is critical for custom auth domains
+      // CRITICAL: Supabase validates redirect_to against allowed URLs WITHOUT query parameters
+      // So we must send ONLY the base URL (no query params) in redirect_to
+      // Query parameters (apikey, returnTo) will be added by Supabase or handled in callback
+      
+      // Store apikey separately for callback handler (if needed)
       const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_KEY;
-      if (supabaseAnonKey) {
-        const separator = redirectUrl.includes('?') ? '&' : '?';
-        redirectUrl = `${redirectUrl}${separator}apikey=${encodeURIComponent(supabaseAnonKey)}`;
+      if (supabaseAnonKey && Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+        try {
+          // Store apikey in localStorage so callback can use it if needed
+          window.localStorage.setItem('supabase_anon_key', supabaseAnonKey);
+        } catch (e) {
+          console.warn('⚠️ Could not store apikey in localStorage:', e);
+        }
       }
       
-      // Add returnTo parameter if present
-      if (returnTo) {
-        const separator = redirectUrl.includes('?') ? '&' : '?';
-        redirectUrl = `${redirectUrl}${separator}returnTo=${encodeURIComponent(returnTo)}`;
-      }
-      
-      // Final validation of the redirect URL
+      // Final validation of the redirect URL (base URL only, no query params)
       let redirectUrlObj: URL;
       try {
         redirectUrlObj = new URL(redirectUrl);
         console.log(`🔐 Starting ${provider} OAuth flow`);
-        console.log('📍 Redirect URL:', redirectUrl);
+        console.log('📍 Redirect URL (base, no query params):', redirectUrl);
         console.log('📍 Redirect URL parsed:', {
           protocol: redirectUrlObj.protocol,
           host: redirectUrlObj.host,
           pathname: redirectUrlObj.pathname,
-          search: redirectUrlObj.search.substring(0, 100)
+          origin: redirectUrlObj.origin
         });
         console.log('📍 Current origin:', Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : 'N/A');
-        console.log('📍 Has apikey in redirect URL:', redirectUrl.includes('apikey='));
+        console.log('📍 Apikey stored separately for callback');
       } catch (e) {
         console.error('❌ Failed to parse redirect URL:', redirectUrl, e);
         throw new Error(`Invalid redirect URL format: ${redirectUrl}`);
       }
       
-      // CRITICAL: Ensure redirectTo is an absolute URL with protocol
-      // Supabase may interpret relative URLs incorrectly with custom auth domains
-      // Reconstruct the URL to ensure it's properly formatted
-      const finalRedirectUrl = redirectUrlObj.toString();
-      console.log('✅ Final redirect URL (absolute):', finalRedirectUrl);
+      // CRITICAL: Use ONLY the base URL (no query params) for redirect_to
+      // This ensures Supabase validation passes against allowed Redirect URLs
+      // Query parameters can be added by Supabase or handled in the callback
+      const finalRedirectUrl = redirectUrlObj.origin + redirectUrlObj.pathname;
+      console.log('✅ Final redirect URL (base only for Supabase validation):', finalRedirectUrl);
+      console.log('💡 Query parameters (apikey, returnTo) will be handled separately');
       
       // Store the origin in localStorage so the callback handler can use it if Supabase redirects incorrectly
       if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
@@ -987,15 +1015,59 @@ export default function AuthScreen() {
           const verifyRedirectTo = verifyUrl.searchParams.get('redirect_to');
           console.log('🔍 Verification - redirect_to in URL:', verifyRedirectTo?.substring(0, 100));
           
+          // CRITICAL: Validate that redirect_to matches what we expect
+          // Supabase validation is EXACT - must match character-for-character
           if (verifyRedirectTo === finalRedirectUrl) {
             console.log('✅ Verified: redirect_to is correctly set to our callback URL');
+            console.log('📍 redirect_to value:', finalRedirectUrl);
+            console.log('🔍 redirect_to length:', finalRedirectUrl.length);
+            console.log('🔍 redirect_to protocol:', new URL(finalRedirectUrl).protocol);
+            console.log('🔍 redirect_to host:', new URL(finalRedirectUrl).host);
+            console.log('🔍 redirect_to pathname:', new URL(finalRedirectUrl).pathname);
+            
+            // Additional validation: Check if redirect_to is in allowed list
+            const isLocalhost = finalRedirectUrl.includes('localhost') || finalRedirectUrl.includes('127.0.0.1');
+            if (isLocalhost) {
+              console.log('🔍 Development mode detected - redirect_to is localhost');
+              console.log('✅ redirect_to value matches what should be in Supabase:');
+              console.log('   ' + finalRedirectUrl);
+              console.log('');
+              console.log('⚠️ KNOWN ISSUE: Even with correct redirect_to, Supabase may use Site URL as fallback');
+              console.log('⚠️ This happens with custom auth domains (auth.hashpass.co)');
+              console.log('⚠️ If you see redirects without code, try:');
+              console.log('   1. Remove wildcard patterns (http://localhost:*/auth/callback)');
+              console.log('   2. Keep only exact match: http://localhost:8081/auth/callback');
+              console.log('   3. Ensure Site URL is: https://bsl2025.hashpass.tech (with https://)');
+              console.log('   4. Wait 2-3 minutes after updating Supabase config');
+            } else {
+              console.log('🔍 Production mode detected - redirect_to is production URL');
+              console.log('✅ redirect_to value matches what should be in Supabase:');
+              console.log('   ' + finalRedirectUrl);
+            }
           } else {
             console.error('❌ WARNING: redirect_to verification failed!');
             console.error('Expected:', finalRedirectUrl);
+            console.error('Expected length:', finalRedirectUrl.length);
+            console.error('Got:', verifyRedirectTo);
+            console.error('Got length:', verifyRedirectTo?.length);
+            console.error('⚠️ This mismatch will cause Supabase to reject redirect_to and use Site URL instead!');
+            console.error('⚠️ Result: Callback will have no tokens (server-side redirect)');
             console.error('Got:', verifyRedirectTo);
             console.error('⚠️ Supabase may still use site_url despite our redirect_to parameter');
             console.error('💡 This is a known Supabase issue with custom auth domains');
+            console.error('💡 Check Supabase dashboard: Redirect URLs must include:', finalRedirectUrl);
             // Don't throw - let it try anyway, we have the callback handler as fallback
+          }
+          
+          // CRITICAL: Also check if redirect_to is being passed to the OAuth provider
+          // Some OAuth providers need redirect_uri to match, and Supabase might override it
+          const redirectUri = verifyUrl.searchParams.get('redirect_uri');
+          if (redirectUri) {
+            console.log('🔍 OAuth provider redirect_uri:', redirectUri.substring(0, 100));
+            if (!redirectUri.includes('localhost') && finalRedirectUrl.includes('localhost')) {
+              console.warn('⚠️ WARNING: OAuth provider redirect_uri does not match our localhost redirect_to!');
+              console.warn('⚠️ This might cause Supabase to use Site URL instead');
+            }
           }
           
           // Log the full URL for debugging (truncated)
@@ -1672,6 +1744,14 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   primaryAuthContainer: {
     width: '100%',
     marginBottom: 24,
+    backgroundColor: isDark ? 'rgba(18, 18, 18, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 16,
+    padding: 16,
+    zIndex: 10,
+    position: 'relative',
+    ...(Platform.OS === 'web' ? {
+      backdropFilter: 'blur(10px)',
+    } : {}),
   },
   emailInputContainer: {
     flexDirection: 'row',

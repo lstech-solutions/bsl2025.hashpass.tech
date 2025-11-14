@@ -1,7 +1,7 @@
 // Version-aware Service Worker for HashPass
 // Automatically clears cache when version changes
 
-const APP_VERSION = '1.6.81'; // This will be updated during build
+const APP_VERSION = '1.6.90'; // This will be updated during build
 const CACHE_NAME = `hashpass-v${APP_VERSION}`;
 const VERSION_CHECK_URL = '/api/config/versions';
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
@@ -53,6 +53,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+  
+  // For API requests, let them pass through without service worker interception
+  // This prevents service worker from interfering with API calls
+  if (url.pathname.startsWith('/api/')) {
+    // Let the browser handle API requests directly - don't intercept
+    // This ensures API requests work correctly even if service worker has issues
+    return;
+  }
 
   // CRITICAL: Detect incorrect Supabase redirect to auth.hashpass.co/{subdomain}.hashpass.tech
   // This happens when Supabase uses site_url as a relative path instead of absolute URL
@@ -177,11 +185,26 @@ self.addEventListener('fetch', (event) => {
           'Pragma': 'no-cache',
           'Expires': '0',
         }
-      }).catch(() => {
+      }).catch((error) => {
+        // Log the actual error for debugging
+        console.error('[SW] Auth fetch error:', error);
+        console.error('[SW] Request URL:', request.url);
+        console.error('[SW] Error name:', error?.name);
+        console.error('[SW] Error message:', error?.message);
+        
         // Even if network fails, don't use cache for auth
-        return new Response('Authentication requires network connection', {
+        // Return proper JSON error response
+        return new Response(JSON.stringify({
+          error: 'Network connection error',
+          code: 'network_error',
+          message: 'Authentication requires network connection. Please check your internet connection and try again.',
+          details: error?.message || 'Unknown error'
+        }), {
           status: 503,
-          statusText: 'Service Unavailable'
+          statusText: 'Service Unavailable',
+          headers: {
+            'Content-Type': 'application/json'
+          }
         });
       })
     );

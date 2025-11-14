@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../i18n/i18n';
@@ -52,14 +52,25 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const { user } = useAuth();
   const { t } = useTranslation();
 
+  // Track current user ID to prevent unnecessary re-fetches
+  const currentUserIdRef = useRef<string | null>(null);
+
   const unreadCount = notifications.filter(n => !n.is_read && !n.is_archived).length;
 
   const fetchNotifications = useCallback(async () => {
     if (!user) {
       setNotifications([]);
       setIsLoading(false);
+      currentUserIdRef.current = null;
       return;
     }
+
+    // Prevent fetching if user hasn't changed
+    if (currentUserIdRef.current === user.id) {
+      return;
+    }
+
+    currentUserIdRef.current = user.id;
 
     try {
       const { data, error } = await supabase
@@ -75,13 +86,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       }
 
       // Translate notifications
-      const translatedNotifications = (data || []).map(notification => {
+      const translatedNotifications = (data || []).map((notification: any) => {
         const translated = translateNotification(notification, t);
         return {
           ...notification,
           title: translated.title,
           message: translated.message
-        };
+        } as Notification;
       });
 
       setNotifications(translatedNotifications);
@@ -90,13 +101,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, t]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('notifications')
         .update({ 
           is_read: true, 
@@ -111,7 +122,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       }
 
       setNotifications(prev => 
-        prev.map(notification => 
+        prev.map((notification: Notification) => 
           notification.id === notificationId 
             ? { ...notification, is_read: true, read_at: new Date().toISOString() }
             : notification
@@ -126,7 +137,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     if (!user) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('notifications')
         .update({ 
           is_read: false, 
@@ -141,7 +152,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       }
 
       setNotifications(prev => 
-        prev.map(notification => 
+        prev.map((notification: Notification) => 
           notification.id === notificationId 
             ? { ...notification, is_read: false, read_at: undefined }
             : notification
@@ -158,7 +169,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     try {
       // Archive and mark as read in a single update
       const now = new Date().toISOString();
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('notifications')
         .update({ 
           is_read: true,
@@ -176,7 +187,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
       // Update local state
       setNotifications(prev => 
-        prev.map(notification => 
+        prev.map((notification: Notification) => 
           notification.id === notificationId 
             ? { 
                 ...notification, 
@@ -197,7 +208,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     if (!user) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('notifications')
         .update({ 
           is_read: true, 
@@ -212,7 +223,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       }
 
       setNotifications(prev => 
-        prev.map(notification => ({
+        prev.map((notification: Notification) => ({
           ...notification,
           is_read: true,
           read_at: new Date().toISOString()
@@ -239,7 +250,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       }
 
       setNotifications(prev => 
-        prev.filter(notification => notification.id !== notificationId)
+        prev.filter((notification: Notification) => notification.id !== notificationId)
       );
     } catch (error) {
       console.error('Error deleting notification:', error);
@@ -248,6 +259,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   const refreshNotifications = useCallback(async () => {
     setIsLoading(true);
+    // Force refresh by resetting the user ID ref
+    currentUserIdRef.current = null;
     await fetchNotifications();
   }, [fetchNotifications]);
 
@@ -285,7 +298,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
           setNotifications(prev => [translatedNotification, ...prev]);
           
           // Show browser notification if permission granted
-          if (Notification.permission === 'granted' && newNotification.is_urgent) {
+          if (typeof window !== 'undefined' && Notification.permission === 'granted' && newNotification.is_urgent) {
             const notificationOptions: NotificationOptions = {
               body: newNotification.message,
               icon: '/favicon.ico',
@@ -349,15 +362,16 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       )
       .subscribe();
 
-    // Request notification permission
-    if (Notification.permission === 'default') {
+    // Request notification permission (only in browser)
+    if (typeof window !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission();
     }
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchNotifications, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]); // Only depend on user.id to prevent re-subscription on other user changes
 
   // Auto-refresh notifications every 30 seconds as fallback
   useEffect(() => {
@@ -368,7 +382,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [user, fetchNotifications]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]); // Only depend on user.id to prevent interval recreation
 
   const value: NotificationContextType = {
     notifications,

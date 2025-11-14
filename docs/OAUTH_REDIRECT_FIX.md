@@ -80,3 +80,4 @@ The code now automatically extracts the subdomain from the path, so it works wit
 
 No code changes needed for new subdomains!
 
+

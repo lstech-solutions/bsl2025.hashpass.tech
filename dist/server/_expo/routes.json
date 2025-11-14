@@ -19,6 +19,12 @@
       "routeKeys": {}
     },
     {
+      "file": "_expo/functions/api/wazuh/log+api.js",
+      "page": "/api/wazuh/log",
+      "namedRegex": "^/api/wazuh/log(?:/)?$",
+      "routeKeys": {}
+    },
+    {
       "file": "_expo/functions/api/subscribe+api.js",
       "page": "/api/subscribe",
       "namedRegex": "^/api/subscribe(?:/)?$",

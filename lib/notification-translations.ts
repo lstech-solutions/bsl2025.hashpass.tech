@@ -30,19 +30,31 @@ export function translateNotification(
       case 'meeting_request':
         // Check if this is for requester or speaker
         if (title.includes('Request Sent')) {
-          const speakerMatch = message.match(/to (.+?) has been sent/);
+          // More robust regex to extract speaker name from "Your meeting request to [Speaker Name] has been sent successfully."
+          const speakerMatch = message.match(/Your meeting request to\s+(.+?)\s+has been sent successfully/);
           if (speakerMatch) {
+            const speakerName = speakerMatch[1].trim();
             translatedTitle = t('notifications.types.meeting_request.title');
             // Check if message includes expiration time
             const expiryMatch = message.match(/Expires in (\d+(?:\.\d+)?) hours?/);
             if (expiryMatch) {
               translatedMessage = t('notifications.types.meeting_request.messageWithExpiry', {
-                speakerName: speakerMatch[1],
+                speakerName: speakerName,
                 hours: expiryMatch[1]
               });
             } else {
               translatedMessage = t('notifications.types.meeting_request.message', {
-                speakerName: speakerMatch[1]
+                speakerName: speakerName
+              });
+            }
+          } else {
+            // Fallback: try alternative patterns
+            const fallbackMatch = message.match(/to\s+(.+?)\s+has been sent/);
+            if (fallbackMatch) {
+              const speakerName = fallbackMatch[1].trim();
+              translatedTitle = t('notifications.types.meeting_request.title');
+              translatedMessage = t('notifications.types.meeting_request.message', {
+                speakerName: speakerName
               });
             }
           }
@@ -96,11 +108,13 @@ export function translateNotification(
               });
             }
           } else {
-            const speakerMatch = message.match(/^(.+?) has accepted/);
+            // More robust regex to extract speaker name from acceptance messages
+            const speakerMatch = message.match(/^(.+?) has accepted your meeting request/);
             if (speakerMatch) {
+              const speakerName = speakerMatch[1].trim();
               translatedTitle = t('notifications.types.meeting_accepted.title');
               translatedMessage = t('notifications.types.meeting_accepted.message', {
-                speakerName: speakerMatch[1]
+                speakerName: speakerName
               });
             }
           }
@@ -137,15 +151,14 @@ export function translateNotification(
         break;
 
       case 'meeting_declined':
-        if (title === 'Meeting Request Declined') {
-          // For requester
-          const speakerMatch = message.match(/^(.+?) has declined/);
-          if (speakerMatch) {
-            translatedTitle = t('notifications.types.meeting_declined.title');
-            translatedMessage = t('notifications.types.meeting_declined.message', {
-              speakerName: speakerMatch[1]
-            });
-          }
+        // More robust regex to extract speaker name from decline messages
+        const declineSpeakerMatch = message.match(/(.+?) has declined your meeting request/);
+        if (declineSpeakerMatch) {
+          const speakerName = declineSpeakerMatch[1].trim();
+          translatedTitle = t('notifications.types.meeting_declined.title');
+          translatedMessage = t('notifications.types.meeting_declined.message', {
+            speakerName: speakerName
+          });
         } else if (title === 'Request Declined') {
           // For speaker
           const requesterMatch = message.match(/from (.+?)$/);
@@ -159,12 +172,24 @@ export function translateNotification(
         break;
 
       case 'meeting_expired':
-        const speakerMatch = message.match(/to (.+?) has expired/);
-        if (speakerMatch) {
+        // More robust regex to extract speaker name from expiration messages
+        const expireSpeakerMatch = message.match(/Your meeting request to\s+(.+?)\s+has expired/);
+        if (expireSpeakerMatch) {
+          const speakerName = expireSpeakerMatch[1].trim();
           translatedTitle = t('notifications.types.meeting_expired.title');
           translatedMessage = t('notifications.types.meeting_expired.message', {
-            speakerName: speakerMatch[1]
+            speakerName: speakerName
           });
+        } else {
+          // Fallback pattern
+          const fallbackExpireMatch = message.match(/request to\s+(.+?)\s+has expired/);
+          if (fallbackExpireMatch) {
+            const speakerName = fallbackExpireMatch[1].trim();
+            translatedTitle = t('notifications.types.meeting_expired.title');
+            translatedMessage = t('notifications.types.meeting_expired.message', {
+              speakerName: speakerName
+            });
+          }
         }
         break;
 

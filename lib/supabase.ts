@@ -214,7 +214,8 @@ const initializeSupabase = () => {
     // 3. This causes "rootState.routeNames is undefined" errors on web
     // 
     // On native, we can enable it for deep linking, but we'll catch errors and retry without it
-    let shouldDetectSessionInUrl = Platform.OS !== 'web';
+    // TEMPORARY: Enable for web to fix OAuth callback issues
+    let shouldDetectSessionInUrl = true; // Platform.OS !== 'web';
     
     try {
       // Custom fetch function to ensure apikey header is always included

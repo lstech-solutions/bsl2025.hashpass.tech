@@ -271,6 +271,12 @@
       "routeKeys": {}
     },
     {
+      "file": "./status.tsx",
+      "page": "/status",
+      "namedRegex": "^/status(?:/)?$",
+      "routeKeys": {}
+    },
+    {
       "file": "./(shared)/dashboard/qr-view.tsx",
       "page": "/(shared)/dashboard/qr-view",
       "namedRegex": "^(?:/\\(shared\\))?/dashboard/qr\\-view(?:/)?$",
@@ -353,6 +359,12 @@
       "file": "./events/bsl2025/networking/blocked.tsx",
       "page": "/events/bsl2025/networking/blocked",
       "namedRegex": "^/events/bsl2025/networking/blocked(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./auth/callback/index.tsx",
+      "page": "/auth/callback/index",
+      "namedRegex": "^/auth/callback(?:/)?$",
       "routeKeys": {}
     },
     {

@@ -7,10 +7,7 @@ import { SiweMessage } from 'siwe';
 import { ethers } from 'ethers';
 import { PublicKey } from '@solana/web3.js';
 import bs58 from 'bs58';
-
-const API_BASE = typeof window !== 'undefined' 
-  ? window.location.origin 
-  : process.env.EXPO_PUBLIC_API_BASE_URL || '';
+import { apiClient } from './api-client';
 
 /**
  * Connect to Ethereum wallet and get address
@@ -275,22 +272,17 @@ export const authenticateWithEthereum = async (): Promise<{ userId: string; emai
 
   // Step 2: Get challenge
   console.log('🔐 Step 2: Requesting challenge...');
-  const challengeResponse = await fetch(`${API_BASE}/api/auth/wallet/challenge`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      walletAddress,
-      walletType: 'ethereum',
-    }),
+  const challengeResult = await apiClient.post('/auth/wallet/challenge', {
+    walletAddress,
+    walletType: 'ethereum',
   });
 
-  if (!challengeResponse.ok) {
-    const error = await challengeResponse.json();
-    console.error('❌ Challenge request failed:', error);
-    throw new Error(error.error || 'Failed to get challenge');
+  if (!challengeResult.success || !challengeResult.data) {
+    console.error('❌ Challenge request failed:', challengeResult.error);
+    throw new Error(challengeResult.error || 'Failed to get challenge');
   }
 
-  const { nonce, message: challengeMessage } = await challengeResponse.json();
+  const { nonce, message: challengeMessage } = challengeResult.data;
   console.log('✅ Challenge received, nonce:', nonce);
 
   // Step 3: Create SIWE message
@@ -337,22 +329,17 @@ export const authenticateWithEthereum = async (): Promise<{ userId: string; emai
 
   // Step 5: Verify signature and authenticate
   // Send the prepared message string and checksummed address
-  const authResponse = await fetch(`${API_BASE}/api/auth/wallet/ethereum`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message: messageToSign, // Prepared SIWE message string
-      signature,
-      walletAddress: checksummedAddress, // Send checksummed address
-    }),
+  const authResult = await apiClient.post('/auth/wallet/ethereum', {
+    message: messageToSign, // Prepared SIWE message string
+    signature,
+    walletAddress: checksummedAddress, // Send checksummed address
   });
 
-  if (!authResponse.ok) {
-    const error = await authResponse.json();
-    throw new Error(error.error || 'Authentication failed');
+  if (!authResult.success || !authResult.data) {
+    throw new Error(authResult.error || 'Authentication failed');
   }
 
-  const authData = await authResponse.json();
+  const authData = authResult.data;
   return {
     userId: authData.userId,
     email: authData.email,
@@ -371,21 +358,16 @@ export const authenticateWithSolana = async (): Promise<{ userId: string; email:
   const walletAddress = await connectSolanaWallet();
 
   // Step 2: Get challenge
-  const challengeResponse = await fetch(`${API_BASE}/api/auth/wallet/challenge`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      walletAddress,
-      walletType: 'solana',
-    }),
+  const challengeResult = await apiClient.post('/auth/wallet/challenge', {
+    walletAddress,
+    walletType: 'solana',
   });
 
-  if (!challengeResponse.ok) {
-    const error = await challengeResponse.json();
-    throw new Error(error.error || 'Failed to get challenge');
+  if (!challengeResult.success || !challengeResult.data) {
+    throw new Error(challengeResult.error || 'Failed to get challenge');
   }
 
-  const { nonce, message: challengeMessage } = await challengeResponse.json();
+  const { nonce, message: challengeMessage } = challengeResult.data;
 
   // Step 3: Create SIWS message (EIP-4361 style)
   const domain = typeof window !== 'undefined' ? window.location.hostname : '';
@@ -407,22 +389,17 @@ Resources:
   const signature = await signSolanaMessage(messageToSign, walletAddress);
 
   // Step 5: Verify signature and authenticate
-  const authResponse = await fetch(`${API_BASE}/api/auth/wallet/solana`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message: messageToSign,
-      signature,
-      walletAddress,
-    }),
+  const authResult = await apiClient.post('/auth/wallet/solana', {
+    message: messageToSign,
+    signature,
+    walletAddress,
   });
 
-  if (!authResponse.ok) {
-    const error = await authResponse.json();
-    throw new Error(error.error || 'Authentication failed');
+  if (!authResult.success || !authResult.data) {
+    throw new Error(authResult.error || 'Authentication failed');
   }
 
-  const authData = await authResponse.json();
+  const authData = authResult.data;
   return {
     userId: authData.userId,
     email: authData.email,

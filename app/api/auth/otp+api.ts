@@ -7,6 +7,26 @@ import nodemailer from 'nodemailer';
  */
 export async function POST(request: Request) {
   try {
+    // Check Supabase configuration before proceeding
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      const missingVars = [];
+      if (!supabaseUrl) missingVars.push('EXPO_PUBLIC_SUPABASE_URL');
+      if (!supabaseServiceKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
+      
+      console.error('❌ OTP API: Missing environment variables:', missingVars.join(', '));
+      return new Response(
+        JSON.stringify({ 
+          error: 'Server configuration error',
+          code: 'server_config_error',
+          message: 'Authentication service is not properly configured. Please contact support.'
+        }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
     // Handle JSON parsing errors
     let body;
     try {
@@ -33,10 +53,47 @@ export async function POST(request: Request) {
     }
 
     // Use Supabase Admin API to generate OTP token
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: email.trim(),
-    });
+    let linkData, linkError;
+    try {
+      const result = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: email.trim(),
+      });
+      linkData = result.data;
+      linkError = result.error;
+    } catch (supabaseError: any) {
+      console.error('❌ Supabase connection error:', supabaseError);
+      
+      // Check if it's a configuration error
+      if (supabaseError?.message?.includes('Missing Supabase environment variables') ||
+          supabaseError?.message?.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Server configuration error',
+            code: 'server_config_error',
+            message: 'Authentication service is not properly configured. Please contact support.'
+          }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Check if it's a network error
+      if (supabaseError?.message?.includes('network') || 
+          supabaseError?.message?.includes('fetch') ||
+          supabaseError?.message?.includes('connection')) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Network connection error',
+            code: 'network_error',
+            message: 'Authentication requires network connection. Please check your internet connection and try again.'
+          }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Re-throw to be handled by the error handling below
+      linkError = supabaseError;
+    }
 
     if (linkError || !linkData) {
       console.error('Error generating OTP link:', JSON.stringify(linkError, null, 2));

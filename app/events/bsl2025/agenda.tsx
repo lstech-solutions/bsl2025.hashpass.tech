@@ -1280,7 +1280,7 @@ export default function BSL2025AgendaScreen() {
         {/* Event Header */}
         <EventBanner
           title={t('title')}
-          subtitle={agenda.length === 1 ? t('subtitle_one') : t('subtitle_other', { count: agenda.length })}
+          subtitle={agenda.length === 1 ? t('subtitle_one') : t('subtitle_other').replace('{count}', String(agenda.length))}
           date={t('date')}
           showCountdown={!isEventFinished}
           showLiveIndicator={isLive && !isEventFinished}

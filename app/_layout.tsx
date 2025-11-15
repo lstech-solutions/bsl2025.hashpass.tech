@@ -22,6 +22,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { I18nProvider } from '../providers/I18nProvider';
 import { CopilotProvider } from 'react-native-copilot';
 import { checkVersionOnStart, clearAuthCache } from '../lib/version-checker';
+import { showConsoleWelcome } from '../lib/console-welcome';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -72,9 +73,12 @@ function ThemedContent() {
   const [versionUpdate, setVersionUpdate] = useState<{ currentVersion: string; latestVersion: string } | null>(null);
   const [lastRedirectTime, setLastRedirectTime] = useState(0);
 
-  // Check version on first load (web only)
+  // Check version on first load (web only) and initialize console welcome
   useEffect(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Initialize console welcome message
+      showConsoleWelcome();
+      
       // Check version immediately
       checkVersionOnStart().catch((error) => {
         console.error('Version check failed:', error);
@@ -251,6 +255,7 @@ function ThemedContent() {
         <Stack.Screen name="(shared)/privacy" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/terms" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/docs" options={{ headerShown: false }} />
+        <Stack.Screen name="(shared)/support" options={{ headerShown: false }} />
         <Stack.Screen name="privacy" options={{ headerShown: false }} />
         <Stack.Screen name="terms" options={{ headerShown: false }} />
         <Stack.Screen 

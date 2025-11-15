@@ -120,51 +120,61 @@ export default function EventBanner({
 
   return (
     <View style={styles.headerSection}>
-      {/* Event Finished Gratitude Message */}
+      {/* Main Event Info */}
+      <View style={styles.mainInfo}>
+        {isBSL2025 ? (
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../assets/logos/bsl/BSL-Logo-fondo-oscuro-2024.svg')}
+              style={styles.eventLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.logoSubLabel}>2025 - 9th Edition</Text>
+          </View>
+        ) : (
+          <Text style={styles.eventTitle}>{title}</Text>
+        )}
+        <Text style={styles.eventSubtitle}>{subtitle}</Text>
+        <Text style={styles.eventDate}>{date}</Text>
+      </View>
+
+      {/* Finished Event Badge */}
+      {isEventFinished && (
+        <View style={styles.finishedBadge}>
+          <MaterialIcons name="celebration" size={20} color="#FFFFFF" />
+          <Text style={styles.finishedBadgeText}>
+            Evento Finalizado / Event Finished
+          </Text>
+        </View>
+      )}
+
+      {/* Gratitude Message - Replaces Agenda Tracker when event is finished */}
       {isEventFinished ? (
-        <View style={styles.finishedContainer}>
-          <MaterialIcons name="celebration" size={48} color="#FFFFFF" />
-          <Text style={styles.finishedTitle}>
+        <View style={styles.gratitudeContainer}>
+          <MaterialIcons name="celebration" size={36} color="#FFFFFF" />
+          <Text style={styles.gratitudeTitle}>
             ¡Gracias por ser parte de BSL 2025!
           </Text>
-          <Text style={styles.finishedTitleEn}>
+          <Text style={styles.gratitudeTitleEn}>
             Thank you for being part of BSL 2025!
           </Text>
-          <Text style={styles.finishedSubtitle}>
+          <Text style={styles.gratitudeSubtitle}>
             El evento ha finalizado. Agradecemos a todos los asistentes, speakers y colaboradores que hicieron posible este evento histórico sin precedentes en Latinoamérica.
           </Text>
-          <Text style={styles.finishedSubtitleEn}>
+          <Text style={styles.gratitudeSubtitleEn}>
             The event has ended. We thank all attendees, speakers and collaborators who made this unprecedented historic event in Latin America possible.
           </Text>
-          <View style={styles.finishedThanksContainer}>
-            <Text style={styles.finishedThanks}>
+          <View style={styles.gratitudeThanksContainer}>
+            <Text style={styles.gratitudeThanks}>
               Especial agradecimiento a Rodrigo, al equipo BSL (Juli, Julian, Laura), a la Universidad EAFIT y a todos los que contribuyeron.
             </Text>
-            <Text style={styles.finishedThanksEn}>
+            <Text style={styles.gratitudeThanksEn}>
               Special thanks to Rodrigo, the BSL team (Juli, Julian, Laura), EAFIT University and everyone who contributed.
             </Text>
           </View>
         </View>
       ) : (
         <>
-          {/* Main Event Info */}
-          <View style={styles.mainInfo}>
-            {isBSL2025 ? (
-              <View style={styles.logoContainer}>
-                <Image
-                  source={require('../assets/logos/bsl/BSL-Logo-fondo-oscuro-2024.svg')}
-                  style={styles.eventLogo}
-                  resizeMode="contain"
-                />
-                <Text style={styles.logoSubLabel}>2025 - 9th Edition</Text>
-              </View>
-            ) : (
-              <Text style={styles.eventTitle}>{title}</Text>
-            )}
-            <Text style={styles.eventSubtitle}>{subtitle}</Text>
-            <Text style={styles.eventDate}>{date}</Text>
-          </View>
-
           {/* Agenda Tracker - Show when event is live */}
           {(isLive || isEventLive) && (
             <AgendaTracker eventId={eventId} backgroundColor={backgroundColor} />
@@ -336,69 +346,88 @@ const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => Sty
     fontWeight: 'bold',
     marginHorizontal: 4,
   },
-  // Finished Event Styles
-  finishedContainer: {
+  // Finished Event Badge
+  finishedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  finishedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginLeft: 8,
+  },
+  // Gratitude Message Styles (replaces Agenda Tracker)
+  gratitudeContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
+    paddingVertical: 16,
     paddingHorizontal: 16,
+    marginTop: 8,
+    width: '100%',
   },
-  finishedTitle: {
-    fontSize: 28,
+  gratitudeTitle: {
+    fontSize: 22,
     fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 8,
-    lineHeight: 34,
+    marginTop: 12,
+    marginBottom: 6,
+    lineHeight: 28,
   },
-  finishedTitleEn: {
-    fontSize: 24,
+  gratitudeTitleEn: {
+    fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     opacity: 0.95,
     fontStyle: 'italic',
-    lineHeight: 30,
+    lineHeight: 24,
   },
-  finishedSubtitle: {
-    fontSize: 16,
+  gratitudeSubtitle: {
+    fontSize: 15,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 12,
-    lineHeight: 22,
+    marginBottom: 10,
+    lineHeight: 21,
     opacity: 0.95,
     paddingHorizontal: 8,
   },
-  finishedSubtitleEn: {
-    fontSize: 14,
+  gratitudeSubtitleEn: {
+    fontSize: 13,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 20,
+    marginBottom: 16,
+    lineHeight: 19,
     opacity: 0.85,
     fontStyle: 'italic',
     paddingHorizontal: 8,
   },
-  finishedThanksContainer: {
+  gratitudeThanksContainer: {
     marginTop: 8,
     paddingHorizontal: 8,
   },
-  finishedThanks: {
-    fontSize: 15,
+  gratitudeThanks: {
+    fontSize: 14,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 8,
-    lineHeight: 21,
+    marginBottom: 6,
+    lineHeight: 20,
     fontWeight: '600',
     opacity: 0.95,
   },
-  finishedThanksEn: {
-    fontSize: 13,
+  gratitudeThanksEn: {
+    fontSize: 12,
     color: '#FFFFFF',
     textAlign: 'center',
-    lineHeight: 19,
+    lineHeight: 18,
     opacity: 0.85,
     fontStyle: 'italic',
   },

@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.99] - 2025-11-15
+
+### Beta
+- Integrated
+
+### Technical Details
+- Version: 1.6.99
+- Release Type: beta
+- Build Number: 202511152006
+- Release Date: 2025-11-15T20:06:21.263Z
+
+
 ## [1.6.98] - 2025-11-15
 
 ### Beta

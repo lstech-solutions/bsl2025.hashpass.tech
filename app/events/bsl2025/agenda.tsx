@@ -1277,30 +1277,6 @@ export default function BSL2025AgendaScreen() {
         bounces={true}
         ref={scrollViewRef}
       >
-        {/* Event Finished Gratitude Message */}
-        {isEventFinished && (
-          <View style={styles.finishedBanner}>
-            <View style={styles.finishedBannerContent}>
-              <MaterialIcons name="celebration" size={32} color="#FFFFFF" />
-              <Text style={styles.finishedBannerTitle}>
-                ¡Gracias por ser parte de BSL 2025! / Thank you for being part of BSL 2025!
-              </Text>
-              <Text style={styles.finishedBannerSubtitle}>
-                El evento ha finalizado. Agradecemos a todos los asistentes, speakers y colaboradores que hicieron posible este evento histórico sin precedentes en Latinoamérica.
-              </Text>
-              <Text style={styles.finishedBannerSubtitleEn}>
-                The event has ended. We thank all attendees, speakers and collaborators who made this unprecedented historic event in Latin America possible.
-              </Text>
-              <Text style={styles.finishedBannerThanks}>
-                Especial agradecimiento a Rodrigo, al equipo BSL (Juli, Julian, Laura), a la Universidad EAFIT y a todos los que contribuyeron.
-              </Text>
-              <Text style={styles.finishedBannerThanksEn}>
-                Special thanks to Rodrigo, the BSL team (Juli, Julian, Laura), EAFIT University and everyone who contributed.
-              </Text>
-            </View>
-          </View>
-        )}
-
         {/* Event Header */}
         <EventBanner
           title={t('title')}
@@ -1822,60 +1798,5 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
     flex: 1,
     lineHeight: 18,
     fontWeight: '500',
-  },
-  finishedBanner: {
-    backgroundColor: '#4ECDC4',
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    marginBottom: 0,
-    borderBottomWidth: 0,
-  },
-  finishedBannerContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  finishedBannerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginTop: 12,
-    marginBottom: 16,
-    lineHeight: 28,
-  },
-  finishedBannerSubtitle: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 12,
-    lineHeight: 22,
-    opacity: 0.95,
-  },
-  finishedBannerSubtitleEn: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 20,
-    opacity: 0.85,
-    fontStyle: 'italic',
-  },
-  finishedBannerThanks: {
-    fontSize: 15,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 21,
-    fontWeight: '600',
-    opacity: 0.95,
-  },
-  finishedBannerThanksEn: {
-    fontSize: 13,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginTop: 6,
-    lineHeight: 19,
-    opacity: 0.85,
-    fontStyle: 'italic',
   },
 });

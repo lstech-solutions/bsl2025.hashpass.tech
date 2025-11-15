@@ -22,8 +22,8 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511141248, // Updated to current timestamp
-  releaseDate: '2025-11-14',
+  buildNumber: 202511151921, // Updated to current timestamp
+  releaseDate: '2025-11-15',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [],
@@ -35,11 +35,30 @@ export const CURRENT_VERSION: VersionInfo = {
     'Improved auth flow reliability with better error handling and debugging'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.97 release'
+  notes: 'Event'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.98': {
+    version: '1.6.98',
+    buildNumber: 202511151921,
+    releaseDate: '2025-11-15',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      // No new features
+    ],
+    bugfixes: [
+      'Fixed auth login redirect loop on production by disabling detectSessionInUrl on web',
+      'Optimized session verification timing - reduced from 7+ seconds to 2 seconds',
+      'Added redirect throttling to prevent rapid redirect loops (5-second minimum)',
+      'Fixed Supabase session detection conflicts with manual OAuth callback handling',
+      'Improved auth flow reliability with better error handling and debugging'
+    ],
+    breakingChanges: [],
+    notes: 'Event'
+  },
   '1.6.97': {
     version: '1.6.97',
     buildNumber: 202511141248,

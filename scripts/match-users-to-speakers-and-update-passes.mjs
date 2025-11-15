@@ -275,11 +275,6 @@ async function main() {
     
     console.log(`✅ Found ${users.length} users with names\n`);
     
-    // Match users to speakers
-    console.log('📋 Matching users to speakers...\n');
-    const matches = [];
-    const processedSpeakers = new Set();
-    
     // First, check speakers that already have user_id to ensure they have VIP and speaker role
     console.log('📋 Checking speakers with existing user_id...\n');
     const existingLinks = [];
@@ -307,7 +302,86 @@ async function main() {
       console.log('\n' + '='.repeat(60) + '\n');
     }
     
-    // Now find new matches for speakers without user_id
+    // Now check ALL existing users to see if they match any speaker name
+    console.log('📋 Checking all existing users for speaker name matches...\n');
+    const userMatches = [];
+    const processedUserIds = new Set();
+    
+    for (const user of users) {
+      const userName = user.user_metadata?.name || user.user_metadata?.full_name;
+      if (!userName) continue;
+      
+      // Check if this user matches any speaker name
+      for (const speaker of speakers) {
+        const speakerName = speaker.name;
+        
+        if (namesMatch(speakerName, userName)) {
+          // Check if this user is already linked to this speaker
+          if (speaker.user_id === user.id) {
+            // Already linked, but we'll still verify VIP/speaker status
+            userMatches.push({
+              speaker: speaker,
+              user: user,
+              alreadyLinked: true
+            });
+          } else if (!speaker.user_id) {
+            // Speaker has no user_id, this is a new match
+            userMatches.push({
+              speaker: speaker,
+              user: user,
+              alreadyLinked: false
+            });
+          } else {
+            // Speaker has a different user_id, but this user also matches
+            // We'll still update this user to VIP/speaker status
+            userMatches.push({
+              speaker: speaker,
+              user: user,
+              alreadyLinked: false,
+              note: `Speaker already linked to different user (${speaker.user_id})`
+            });
+          }
+          processedUserIds.add(user.id);
+          break; // Use first match per user
+        }
+      }
+    }
+    
+    console.log(`✅ Found ${userMatches.length} user-to-speaker matches\n`);
+    console.log('='.repeat(60));
+    
+    // Process user matches
+    let userSuccessCount = 0;
+    let userFailCount = 0;
+    
+    for (const match of userMatches) {
+      const { speaker, user, alreadyLinked, note } = match;
+      const userName = user.user_metadata?.name || user.user_metadata?.full_name || user.email;
+      
+      if (note) {
+        console.log(`\n⚠️  Match (${note}): "${speaker.name}" <-> "${userName}" (${user.email})`);
+      } else if (alreadyLinked) {
+        console.log(`\n🔍 Re-checking: "${speaker.name}" <-> "${userName}" (${user.email})`);
+      } else {
+        console.log(`\n🎯 New Match: "${speaker.name}" <-> "${userName}" (${user.email})`);
+      }
+      
+      const success = await updateUserToVIPAndSpeaker(user.id, speaker.id, speaker.name);
+      
+      if (success) {
+        userSuccessCount++;
+        console.log(`✅ Successfully updated ${userName}`);
+      } else {
+        userFailCount++;
+        console.error(`❌ Failed to update ${userName}`);
+      }
+    }
+    
+    // Also find new matches for speakers without user_id (backward compatibility)
+    console.log('\n' + '='.repeat(60));
+    console.log('📋 Checking for speakers without user_id that need matching...\n');
+    const matches = [];
+    
     for (const speaker of speakers) {
       if (speaker.user_id) {
         continue; // Skip already linked speakers
@@ -318,6 +392,9 @@ async function main() {
       let bestMatchUser = null;
       
       for (const user of users) {
+        // Skip if we already processed this user
+        if (processedUserIds.has(user.id)) continue;
+        
         const userName = user.user_metadata?.name || user.user_metadata?.full_name;
         if (!userName) continue;
         
@@ -333,30 +410,30 @@ async function main() {
           speaker: bestMatch,
           user: bestMatchUser
         });
-        processedSpeakers.add(bestMatch.id);
+        processedUserIds.add(bestMatchUser.id);
       }
     }
     
-    console.log(`\n✅ Found ${matches.length} matches\n`);
+    console.log(`✅ Found ${matches.length} additional matches\n`);
     console.log('='.repeat(60));
     
-    // Process matches
-    let successCount = 0;
-    let failCount = 0;
+    // Process additional matches
+    let additionalSuccessCount = 0;
+    let additionalFailCount = 0;
     
     for (const match of matches) {
       const { speaker, user } = match;
       const userName = user.user_metadata?.name || user.user_metadata?.full_name || user.email;
       
-      console.log(`\n🎯 Match: "${speaker.name}" <-> "${userName}" (${user.email})`);
+      console.log(`\n🎯 Additional Match: "${speaker.name}" <-> "${userName}" (${user.email})`);
       
       const success = await updateUserToVIPAndSpeaker(user.id, speaker.id, speaker.name);
       
       if (success) {
-        successCount++;
+        additionalSuccessCount++;
         console.log(`✅ Successfully updated ${userName}`);
       } else {
-        failCount++;
+        additionalFailCount++;
         console.error(`❌ Failed to update ${userName}`);
       }
     }
@@ -364,9 +441,13 @@ async function main() {
     console.log('\n' + '='.repeat(60));
     console.log('📊 SUMMARY');
     console.log('='.repeat(60));
-    console.log(`Total matches found: ${matches.length}`);
-    console.log(`✅ Successfully updated: ${successCount}`);
-    console.log(`❌ Failed: ${failCount}`);
+    console.log(`Total user-to-speaker matches: ${userMatches.length}`);
+    console.log(`✅ Successfully updated: ${userSuccessCount}`);
+    console.log(`❌ Failed: ${userFailCount}`);
+    console.log(`\nAdditional speaker matches: ${matches.length}`);
+    console.log(`✅ Successfully updated: ${additionalSuccessCount}`);
+    console.log(`❌ Failed: ${additionalFailCount}`);
+    console.log(`\n📊 TOTAL: ${userSuccessCount + additionalSuccessCount} successful, ${userFailCount + additionalFailCount} failed`);
     console.log('='.repeat(60));
     
   } catch (error) {

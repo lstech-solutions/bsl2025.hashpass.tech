@@ -16,7 +16,7 @@ export const EVENTS: Record<string, EventConfig> = {
     color: '#2196F3',
     // Event dates for countdown and display
     eventStartDate: '2025-11-12T09:00:00-05:00',
-    eventEndDate: '2025-11-14T23:59:59-05:00',
+    eventEndDate: '2025-11-14T23:59:59-05:00', // Event finished - marked as completed
     eventDateString: 'November 12-14, 2025 • Medellín, Colombia',
     features: ['matchmaking', 'speakers', 'bookings', 'admin'],
     eventType: 'whitelabel',

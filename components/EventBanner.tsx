@@ -16,6 +16,7 @@ interface EventBannerProps {
   lastUpdated?: string | null;
   usingJsonFallback?: boolean;
   eventId?: string; // Event ID to determine if logo should be shown
+  isEventFinished?: boolean; // Whether the event has finished
 }
 
 interface TimeLeft {
@@ -36,7 +37,8 @@ export default function EventBanner({
   isLive = false,
   lastUpdated = null,
   usingJsonFallback = false,
-  eventId
+  eventId,
+  isEventFinished = false
 }: EventBannerProps) {
   const { isDark, colors } = useTheme();
   
@@ -118,57 +120,85 @@ export default function EventBanner({
 
   return (
     <View style={styles.headerSection}>
-      {/* Main Event Info */}
-      <View style={styles.mainInfo}>
-        {isBSL2025 ? (
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('../assets/logos/bsl/BSL-Logo-fondo-oscuro-2024.svg')}
-              style={styles.eventLogo}
-              resizeMode="contain"
-            />
-            <Text style={styles.logoSubLabel}>2025 - 9th Edition</Text>
-          </View>
-        ) : (
-          <Text style={styles.eventTitle}>{title}</Text>
-        )}
-        <Text style={styles.eventSubtitle}>{subtitle}</Text>
-        <Text style={styles.eventDate}>{date}</Text>
-      </View>
-
-      {/* Agenda Tracker - Show when event is live */}
-      {(isLive || isEventLive) && (
-        <AgendaTracker eventId={eventId} backgroundColor={backgroundColor} />
-      )}
-
-      {/* Countdown Timer - Only show before event starts */}
-      {showCountdown && !isLive && !isEventLive && (
-        <View style={styles.countdownContainer}>
-          <Text style={styles.countdownLabel}>Event starts in:</Text>
-          <View style={styles.countdownTimer}>
-            <View style={styles.timeUnit}>
-              <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.days)}</Text>
-              <Text style={styles.timeLabel}>DAYS</Text>
-            </View>
-            <Text style={styles.timeSeparator}>:</Text>
-            <View style={styles.timeUnit}>
-              <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.hours)}</Text>
-              <Text style={styles.timeLabel}>HRS</Text>
-            </View>
-            <Text style={styles.timeSeparator}>:</Text>
-            <View style={styles.timeUnit}>
-              <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.minutes)}</Text>
-              <Text style={styles.timeLabel}>MIN</Text>
-            </View>
-            <Text style={styles.timeSeparator}>:</Text>
-            <View style={styles.timeUnit}>
-              <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.seconds)}</Text>
-              <Text style={styles.timeLabel}>SEC</Text>
-            </View>
+      {/* Event Finished Gratitude Message */}
+      {isEventFinished ? (
+        <View style={styles.finishedContainer}>
+          <MaterialIcons name="celebration" size={48} color="#FFFFFF" />
+          <Text style={styles.finishedTitle}>
+            ¡Gracias por ser parte de BSL 2025!
+          </Text>
+          <Text style={styles.finishedTitleEn}>
+            Thank you for being part of BSL 2025!
+          </Text>
+          <Text style={styles.finishedSubtitle}>
+            El evento ha finalizado. Agradecemos a todos los asistentes, speakers y colaboradores que hicieron posible este evento histórico sin precedentes en Latinoamérica.
+          </Text>
+          <Text style={styles.finishedSubtitleEn}>
+            The event has ended. We thank all attendees, speakers and collaborators who made this unprecedented historic event in Latin America possible.
+          </Text>
+          <View style={styles.finishedThanksContainer}>
+            <Text style={styles.finishedThanks}>
+              Especial agradecimiento a Rodrigo, al equipo BSL (Juli, Julian, Laura), a la Universidad EAFIT y a todos los que contribuyeron.
+            </Text>
+            <Text style={styles.finishedThanksEn}>
+              Special thanks to Rodrigo, the BSL team (Juli, Julian, Laura), EAFIT University and everyone who contributed.
+            </Text>
           </View>
         </View>
-      )}
+      ) : (
+        <>
+          {/* Main Event Info */}
+          <View style={styles.mainInfo}>
+            {isBSL2025 ? (
+              <View style={styles.logoContainer}>
+                <Image
+                  source={require('../assets/logos/bsl/BSL-Logo-fondo-oscuro-2024.svg')}
+                  style={styles.eventLogo}
+                  resizeMode="contain"
+                />
+                <Text style={styles.logoSubLabel}>2025 - 9th Edition</Text>
+              </View>
+            ) : (
+              <Text style={styles.eventTitle}>{title}</Text>
+            )}
+            <Text style={styles.eventSubtitle}>{subtitle}</Text>
+            <Text style={styles.eventDate}>{date}</Text>
+          </View>
 
+          {/* Agenda Tracker - Show when event is live */}
+          {(isLive || isEventLive) && (
+            <AgendaTracker eventId={eventId} backgroundColor={backgroundColor} />
+          )}
+
+          {/* Countdown Timer - Only show before event starts */}
+          {showCountdown && !isLive && !isEventLive && (
+            <View style={styles.countdownContainer}>
+              <Text style={styles.countdownLabel}>Event starts in:</Text>
+              <View style={styles.countdownTimer}>
+                <View style={styles.timeUnit}>
+                  <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.days)}</Text>
+                  <Text style={styles.timeLabel}>DAYS</Text>
+                </View>
+                <Text style={styles.timeSeparator}>:</Text>
+                <View style={styles.timeUnit}>
+                  <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.hours)}</Text>
+                  <Text style={styles.timeLabel}>HRS</Text>
+                </View>
+                <Text style={styles.timeSeparator}>:</Text>
+                <View style={styles.timeUnit}>
+                  <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.minutes)}</Text>
+                  <Text style={styles.timeLabel}>MIN</Text>
+                </View>
+                <Text style={styles.timeSeparator}>:</Text>
+                <View style={styles.timeUnit}>
+                  <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.seconds)}</Text>
+                  <Text style={styles.timeLabel}>SEC</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </>
+      )}
     </View>
   );
 }
@@ -305,5 +335,71 @@ const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => Sty
     fontSize: 16,
     fontWeight: 'bold',
     marginHorizontal: 4,
+  },
+  // Finished Event Styles
+  finishedContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+  },
+  finishedTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+    lineHeight: 34,
+  },
+  finishedTitleEn: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 20,
+    opacity: 0.95,
+    fontStyle: 'italic',
+    lineHeight: 30,
+  },
+  finishedSubtitle: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 22,
+    opacity: 0.95,
+    paddingHorizontal: 8,
+  },
+  finishedSubtitleEn: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+    opacity: 0.85,
+    fontStyle: 'italic',
+    paddingHorizontal: 8,
+  },
+  finishedThanksContainer: {
+    marginTop: 8,
+    paddingHorizontal: 8,
+  },
+  finishedThanks: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 21,
+    fontWeight: '600',
+    opacity: 0.95,
+  },
+  finishedThanksEn: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 19,
+    opacity: 0.85,
+    fontStyle: 'italic',
   },
 });

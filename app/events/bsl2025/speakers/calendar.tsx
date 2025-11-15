@@ -60,6 +60,19 @@ export default function SpeakersCalendar() {
   const [loading, setLoading] = useState(true);
   const agenda = event?.agenda || [];
   
+  // Check if event is finished
+  const [isEventFinished, setIsEventFinished] = useState(false);
+  useEffect(() => {
+    const checkEventFinished = () => {
+      const now = new Date();
+      const end = new Date('2025-11-14T23:59:59-05:00');
+      setIsEventFinished(now > end);
+    };
+    checkEventFinished();
+    const interval = setInterval(checkEventFinished, 60000);
+    return () => clearInterval(interval);
+  }, []);
+  
   // Calculate active speakers count
   const activeSpeakersCount = useMemo(() => {
     return speakers.filter(s => s.isActive).length;
@@ -253,8 +266,10 @@ export default function SpeakersCalendar() {
           title="All Speakers"
           subtitle={`Complete Directory • ${speakers.length} Speakers${activeSpeakersCount > 0 ? ` • ${activeSpeakersCount} Active` : ''}`}
           date="November 12-14, 2025 • Medellín, Colombia"
-          showCountdown={true}
-          showLiveIndicator={true}
+          showCountdown={!isEventFinished}
+          showLiveIndicator={!isEventFinished}
+          isEventFinished={isEventFinished}
+          eventId="bsl2025"
         />
 
         {/* Search and Sort */}

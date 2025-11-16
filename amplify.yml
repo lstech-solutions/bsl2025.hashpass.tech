@@ -145,6 +145,15 @@ frontend:
       - node_modules/**/*
       - $(npm root --global)/**/*
 redirects:
+  # API routes - these need to be handled by Amplify Functions (Lambda@Edge)
+  # For now, we'll use rewrites to serve the static files (they won't execute, but will be accessible)
+  # TODO: Configure Amplify Functions to execute these routes properly
+  - source: '/api/config/versions'
+    status: 200
+    target: '/_expo/functions/api/config/versions+api.js'
+  - source: '/api/config/versions/'
+    status: 200
+    target: '/_expo/functions/api/config/versions+api.js'
   - source: '/api/bslatam/agenda/'
     status: 200
     target: '/api/bslatam/agenda/index.js'

@@ -31,21 +31,33 @@ fi
 
 # Check for ACM certificate
 echo "🔍 Checking for ACM certificate..."
+# Try to find certificate, or use the one we just created
 CERT_ARN=$(aws acm list-certificates --region $REGION --query "CertificateSummaryList[?DomainName=='*.hashpass.tech' || DomainName=='hashpass.tech'].CertificateArn" --output text 2>/dev/null || echo "")
 
+# If not found, try the specific ARN we created
 if [ -z "$CERT_ARN" ]; then
-    echo "❌ No ACM certificate found for *.hashpass.tech or hashpass.tech"
+    CERT_ARN="arn:aws:acm:us-east-1:058264267235:certificate/6ab63538-aa75-4df0-9d4f-79d163878d76"
+    echo "   Using certificate: $CERT_ARN"
+fi
+
+# Verify certificate exists and is valid
+CERT_STATUS=$(aws acm describe-certificate --certificate-arn "$CERT_ARN" --region $REGION --query 'Certificate.Status' --output text 2>/dev/null || echo "NOT_FOUND")
+
+if [ "$CERT_STATUS" = "NOT_FOUND" ]; then
+    echo "❌ Certificate not found: $CERT_ARN"
     echo ""
-    echo "📝 Step 1: Request ACM Certificate"
-    echo "   Run: aws acm request-certificate \\"
-    echo "     --domain-name '*.hashpass.tech' \\"
-    echo "     --validation-method DNS \\"
-    echo "     --region $REGION"
+    echo "📝 Please create an ACM certificate first"
+    exit 1
+elif [ "$CERT_STATUS" != "ISSUED" ]; then
+    echo "⚠️  Certificate status: $CERT_STATUS"
+    echo "   Certificate ARN: $CERT_ARN"
     echo ""
-    echo "   Then:"
-    echo "   1. Wait for certificate validation"
-    echo "   2. Add DNS validation records as instructed"
-    echo "   3. Run this script again"
+    echo "📝 Certificate must be ISSUED before configuring custom domain"
+    echo ""
+    echo "   To check status, run:"
+    echo "   ./scripts/validate-acm-certificate.sh"
+    echo ""
+    echo "   Or check in AWS Console → Certificate Manager"
     exit 1
 fi
 

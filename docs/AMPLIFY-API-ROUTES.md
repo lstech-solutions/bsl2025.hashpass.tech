@@ -35,9 +35,9 @@ Configure Amplify Functions to handle API routes:
    });
    ```
 
-### Option 2: Use API Gateway + Lambda (Current Setup)
+### Option 2: Use API Gateway + Lambda (Current Setup) ✅
 
-If you're using API Gateway with Lambda (as mentioned in `amplify-hashpass-tech.yml`):
+**You're using `api.hashpass.tech` which suggests API Gateway is already configured.**
 
 1. **Verify Lambda function is deployed:**
    - Check AWS Lambda Console
@@ -47,10 +47,16 @@ If you're using API Gateway with Lambda (as mentioned in `amplify-hashpass-tech.
 2. **Configure API Gateway routes:**
    - Ensure `/api/config/versions` is mapped to your Lambda function
    - Check API Gateway stage configuration
+   - Verify the route pattern matches: `/api/*` or `/api/config/versions`
 
-3. **Update API endpoint:**
-   - If using `api.hashpass.tech`, ensure it's configured in API Gateway
-   - Verify custom domain mapping
+3. **Verify API Gateway custom domain:**
+   - Check that `api.hashpass.tech` is configured in API Gateway
+   - Verify custom domain mapping is active
+   - Check DNS records point to API Gateway
+
+4. **Important**: Do NOT add redirects for `/api/*` routes in `amplify.yml`
+   - These routes should be handled by API Gateway, not Amplify Hosting
+   - Redirects in `amplify.yml` will interfere with API Gateway routing
 
 ### Option 3: Use Netlify or Cloudflare Pages
 

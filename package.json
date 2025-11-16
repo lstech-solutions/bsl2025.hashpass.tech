@@ -16,6 +16,7 @@
     "prebuild": "rm -rf dist",
     "lint": "expo lint",
     "deploy": "npm run build:web && netlify deploy --prod",
+    "deploy:cloudflare": "npm run build:web && npx wrangler pages deploy ./dist/client --project-name=hashpass",
     "seed:bslatam": "node ./scripts/seed-bslatam.mjs ./speakers.json",
     "test:e2e:bslatam": "node ./tests/bslatam/e2e.mjs",
     "match:speakers": "node ./scripts/match-users-to-speakers-update-vip.mjs",

@@ -1,6 +1,11 @@
 /**
  * Cloudflare Worker for HashPass
  * Handles static file serving, API routes, SPA routing, and Cloudflare Access JWT validation
+ * 
+ * IMPORTANT: API routes in Metro format cannot be executed directly in Workers.
+ * For API routes, you have two options:
+ * 1. Use Cloudflare Pages Functions (FREE) - recommended
+ * 2. Proxy API requests to an external backend
  */
 
 import { jwtVerify, createRemoteJWKSet } from 'jose';
@@ -8,6 +13,8 @@ import { jwtVerify, createRemoteJWKSet } from 'jose';
 interface Env {
   POLICY_AUD?: string;
   TEAM_DOMAIN?: string;
+  ASSETS?: { fetch: (request: Request) => Promise<Response> };
+  API_BACKEND_URL?: string; // Optional: URL to proxy API requests
   [key: string]: any;
 }
 
@@ -31,14 +38,12 @@ export default {
 
     // Validate Cloudflare Access JWT if Access is configured
     if (env.POLICY_AUD && env.TEAM_DOMAIN) {
-      // Get the JWT from the request headers
       const token = request.headers.get('cf-access-jwt-assertion');
 
-      // Check if token exists
       if (!token) {
         return new Response('Missing required CF Access JWT', {
           status: 403,
-          headers: { 
+          headers: {
             'Content-Type': 'text/plain',
             'Access-Control-Allow-Origin': '*',
           },
@@ -46,23 +51,16 @@ export default {
       }
 
       try {
-        // Create JWKS from your team domain
         const JWKS = createRemoteJWKSet(new URL(`${env.TEAM_DOMAIN}/cdn-cgi/access/certs`));
-
-        // Verify the JWT
         const { payload } = await jwtVerify(token, JWKS, {
           issuer: env.TEAM_DOMAIN,
           audience: env.POLICY_AUD,
         });
-
-        // Token is valid, continue with request processing
-        // You can access user info from payload.email, payload.sub, etc.
         console.log('Authenticated user:', payload.email || payload.sub);
       } catch (error: any) {
-        // Token verification failed
         return new Response(`Invalid token: ${error.message}`, {
           status: 403,
-          headers: { 
+          headers: {
             'Content-Type': 'text/plain',
             'Access-Control-Allow-Origin': '*',
           },
@@ -70,19 +68,57 @@ export default {
       }
     }
 
-    // Try to serve static files first
-    // In Cloudflare Pages, static assets are automatically served
-    // For Workers, we need to handle this differently
-    
     // Handle API routes
     if (pathname.startsWith('/api/')) {
-      // For API routes, we'd need to import and call the Expo server handler
-      // Since Cloudflare Workers have limitations, we'll return a simple response
-      // In production, you might want to use Cloudflare Pages Functions instead
+      // Option 1: Proxy to external API backend (if configured)
+      if (env.API_BACKEND_URL) {
+        try {
+          const apiUrl = new URL(pathname + url.search, env.API_BACKEND_URL);
+          const apiRequest = new Request(apiUrl.toString(), {
+            method: request.method,
+            headers: request.headers,
+            body: request.body,
+          });
+          
+          const apiResponse = await fetch(apiRequest);
+          const responseBody = await apiResponse.text();
+          
+          return new Response(responseBody, {
+            status: apiResponse.status,
+            statusText: apiResponse.statusText,
+            headers: {
+              ...Object.fromEntries(apiResponse.headers),
+              'Access-Control-Allow-Origin': '*',
+            },
+          });
+        } catch (error: any) {
+          return new Response(
+            JSON.stringify({
+              error: 'Failed to proxy API request',
+              message: error.message,
+            }),
+            {
+              status: 502,
+              headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+              },
+            }
+          );
+        }
+      }
+
+      // Option 2: Return helpful error message
       return new Response(
-        JSON.stringify({ 
-          error: 'API routes should be handled by Cloudflare Pages Functions',
-          path: pathname 
+        JSON.stringify({
+          error: 'API routes not configured',
+          message: 'API routes need to be handled by Cloudflare Pages Functions or an API backend.',
+          path: pathname,
+          solutions: [
+            '1. Deploy to Cloudflare Pages (FREE) - automatically handles API routes in _expo/functions/api/',
+            '2. Set API_BACKEND_URL environment variable to proxy API requests to an external backend',
+            '3. Use Cloudflare Pages Functions (FREE) instead of Workers for API routes',
+          ],
         }),
         {
           status: 404,
@@ -94,16 +130,47 @@ export default {
       );
     }
 
-    // For SPA routing, all non-API routes should serve index.html
-    // In Cloudflare Pages, this is handled automatically
-    // For Workers, we need to fetch the index.html from assets
-    return new Response('HashPass - Cloudflare Worker', {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
+    // For all other routes, try to serve from assets (static files)
+    if (env.ASSETS) {
+      const assetResponse = await env.ASSETS.fetch(request);
+      if (assetResponse.status !== 404) {
+        return assetResponse;
+      }
+    }
+
+    // Fallback: return index.html for SPA routing
+    if (env.ASSETS) {
+      const indexRequest = new Request(new URL('/', url.origin).toString());
+      const indexResponse = await env.ASSETS.fetch(indexRequest);
+      if (indexResponse.ok) {
+        return indexResponse;
+      }
+    }
+
+    // Final fallback
+    return new Response(
+      `<!DOCTYPE html>
+<html>
+<head>
+  <title>HashPass</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+  <h1>HashPass</h1>
+  <p>Loading...</p>
+  <p>If assets are not loading, ensure ASSETS binding is configured in wrangler.toml</p>
+  <p>Path: ${pathname}</p>
+  <p><strong>Note:</strong> For API routes, use Cloudflare Pages Functions (free) or set API_BACKEND_URL.</p>
+</body>
+</html>`,
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
+    );
   },
 };
-

@@ -11,7 +11,14 @@ If you're getting a 404 error on your Workers URL, it's because:
 
 Cloudflare Pages is better suited for static sites with API routes. Here's how to fix it:
 
-### Option 1: Deploy to Cloudflare Pages (Recommended)
+### Quick Deploy to Cloudflare Pages
+
+**Option A: Using the deploy script (easiest)**
+```bash
+./cloudflare/deploy-pages.sh
+```
+
+**Option B: Manual deployment**
 
 1. **Build your project:**
    ```bash
@@ -23,11 +30,13 @@ Cloudflare Pages is better suited for static sites with API routes. Here's how t
    npx wrangler pages deploy ./dist/client --project-name=hashpass
    ```
 
-3. **Or use the Cloudflare Dashboard:**
-   - Go to Cloudflare Dashboard → Pages
-   - Create a new project or connect your Git repository
-   - Set build command: `npm run build:web`
-   - Set output directory: `dist/client`
+**Option C: Using Cloudflare Dashboard (for CI/CD)**
+
+1. Go to Cloudflare Dashboard → Pages
+2. Create a new project or connect your Git repository
+3. Set build command: `npm run build:web`
+4. Set output directory: `dist/client`
+5. Pages will automatically deploy on every push to your repository
 
 ### Option 2: Use Cloudflare Workers (If you must)
 
@@ -75,10 +84,46 @@ To serve static assets with Workers, you have two options:
 
 ## API Routes
 
-For API routes (`/api/*`), Cloudflare Pages Functions automatically handles routes in:
+**IMPORTANT:** API routes in Metro format cannot be executed directly in Cloudflare Workers.
+
+### Option 1: Use Cloudflare Pages Functions (FREE - Recommended)
+
+Cloudflare Pages Functions automatically handles API routes in:
 - `dist/client/_expo/functions/api/**/*`
 
 These are automatically deployed with Pages and don't need separate configuration.
+
+**Deploy to Pages:**
+```bash
+npm run build:web
+npx wrangler pages deploy ./dist/client --project-name=hashpass
+```
+
+### Option 2: Proxy to External API Backend
+
+If you must use Workers, you can proxy API requests to an external backend:
+
+1. **Set `API_BACKEND_URL` environment variable:**
+   ```bash
+   # In Cloudflare Dashboard → Workers & Pages → Your Worker → Settings → Variables
+   API_BACKEND_URL = "https://your-api-backend.com"
+   ```
+
+2. **Or in `wrangler.toml` (NOT recommended for production):**
+   ```toml
+   [vars]
+   API_BACKEND_URL = "https://your-api-backend.com"
+   ```
+
+The worker will automatically proxy all `/api/*` requests to the configured backend URL.
+
+### Option 3: Use Netlify or Amplify for API Routes
+
+If you need full API route support, consider using:
+- **Netlify Functions** (free tier available)
+- **AWS Amplify** (free tier available)
+
+Both support Expo Server API routes out of the box.
 
 ## Cloudflare Access JWT Validation
 

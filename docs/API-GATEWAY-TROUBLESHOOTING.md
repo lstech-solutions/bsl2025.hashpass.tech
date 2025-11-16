@@ -4,6 +4,20 @@
 
 If you're getting 404 errors on `https://api.hashpass.tech/api/*`, it means API Gateway is not configured correctly or the Lambda function is not deployed.
 
+## ⚠️ CRITICAL: DNS Configuration Issue
+
+**Current Status**: `api.hashpass.tech` is pointing to **Amplify Hosting (CloudFront/S3)**, NOT API Gateway.
+
+**Evidence**:
+- DNS resolves to AWS CloudFront IPs (18.155.252.x)
+- HTTP response shows `server: AmazonS3` and `via: CloudFront`
+- Returns 301 redirects instead of API responses
+
+**Solution**: You need to either:
+1. **Change DNS to point to API Gateway** (if API Gateway is configured)
+2. **Configure API Gateway and update DNS** (if not configured yet)
+3. **Use a different subdomain** for API Gateway (e.g., `api-gateway.hashpass.tech`)
+
 ## Quick Checklist
 
 ### 1. Verify API Gateway Exists

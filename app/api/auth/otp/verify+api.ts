@@ -1,5 +1,19 @@
 import { supabaseServer as supabase } from '@/lib/supabase-server';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle CORS preflight requests
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders
+  });
+}
+
 /**
  * API endpoint to verify OTP code
  * Maps the user-entered code to the token_hash and verifies it
@@ -12,7 +26,7 @@ export async function POST(request: Request) {
     if (!email || !code) {
       return new Response(
         JSON.stringify({ error: 'Email and code are required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
@@ -36,7 +50,7 @@ export async function POST(request: Request) {
           error: 'Database error while verifying code',
           details: lookupError.message 
         }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
@@ -56,20 +70,20 @@ export async function POST(request: Request) {
         if (expiredData.used) {
           return new Response(
             JSON.stringify({ error: 'This code has already been used' }),
-            { status: 400, headers: { 'Content-Type': 'application/json' } }
+            { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
           );
         }
         if (new Date(expiredData.expires_at) < new Date()) {
           return new Response(
             JSON.stringify({ error: 'This code has expired' }),
-            { status: 400, headers: { 'Content-Type': 'application/json' } }
+            { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
           );
         }
       }
       
       return new Response(
         JSON.stringify({ error: 'Invalid verification code' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
@@ -90,13 +104,13 @@ export async function POST(request: Request) {
         token_hash: otpData.token_hash,
         email: email.trim().toLowerCase(),
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   } catch (error: any) {
     console.error('OTP verification error:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Failed to verify OTP' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   }
 }

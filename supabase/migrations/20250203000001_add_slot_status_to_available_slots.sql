@@ -256,3 +256,5 @@ COMMENT ON FUNCTION get_speaker_available_slots IS 'Returns available time slots
 
 
 
+
+

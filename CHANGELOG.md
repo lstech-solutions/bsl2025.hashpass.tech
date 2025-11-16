@@ -1,5 +1,125 @@
 # Changelog
 
+## [1.6.102] - 2025-11-16
+
+### Beta
+- Fixed
+
+### Technical Details
+- Version: 1.6.102
+- Release Type: beta
+- Build Number: 202511161830
+- Release Date: 2025-11-16T18:30:16.259Z
+
+
+## [1.6.101] - 2025-11-15
+
+### Beta
+- Fixed
+
+### Technical Details
+- Version: 1.6.101
+- Release Type: beta
+- Build Number: 202511152100
+- Release Date: 2025-11-15T21:00:04.074Z
+
+
+## [1.6.100] - 2025-11-15
+
+### Beta
+- Fixed
+
+### Technical Details
+- Version: 1.6.100
+- Release Type: beta
+- Build Number: 202511152034
+- Release Date: 2025-11-15T20:34:45.700Z
+
+
+## [1.6.99] - 2025-11-15
+
+### Beta
+- Integrated
+
+### Technical Details
+- Version: 1.6.99
+- Release Type: beta
+- Build Number: 202511152006
+- Release Date: 2025-11-15T20:06:21.263Z
+
+
+## [1.6.98] - 2025-11-15
+
+### Beta
+- Event
+
+### Technical Details
+- Version: 1.6.98
+- Release Type: beta
+- Build Number: 202511151921
+- Release Date: 2025-11-15T19:21:46.027Z
+
+
+## [1.6.97] - 2025-11-14
+
+### Beta
+- Version 1.6.97 release
+
+### Technical Details
+- Version: 1.6.97
+- Release Type: beta
+- Build Number: 202511141248
+- Release Date: 2025-11-14T12:48:12.425Z
+
+
+## [1.6.96] - 2025-11-14
+
+### Beta
+- Version 1.6.96 release
+
+### Technical Details
+- Version: 1.6.96
+- Release Type: beta
+- Build Number: 202511141246
+- Release Date: 2025-11-14T12:46:00.659Z
+
+
+## [1.6.95] - 2025-11-14
+
+### Beta
+- Version 1.6.95 release
+
+### Technical Details
+- Version: 1.6.95
+- Release Type: beta
+- Build Number: 202511141225
+- Release Date: 2025-11-14T12:25:40.248Z
+
+
+## [1.6.94] - 2025-11-14
+
+### Beta
+- Version 1.6.94 release
+
+### Technical Details
+- Version: 1.6.94
+- Release Type: beta
+- Build Number: 202511141207
+- Release Date: 2025-11-14T12:07:45.052Z
+
+
+## [1.6.93] - 2025-11-14
+
+### Beta
+- Version 1.6.93 release
+
+### Technical Details
+- Version: 1.6.93
+- Release Type: beta
+- Build Number: 202511141147
+- Release Date: 2025-11-14T11:47:39.426Z
+
+
 ## [1.6.90] - 2025-11-14
 
 ### Beta

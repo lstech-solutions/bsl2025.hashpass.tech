@@ -18,11 +18,6 @@ import SpeakerAvatar from '../../../../components/SpeakerAvatar';
 import LoadingScreen from '../../../../components/LoadingScreen';
 import { MeetingRequest } from '@/types/networking';
 import * as Haptics from 'expo-haptics';
-
-// Extended type for internal use with direction tracking - now imported from hook
-type MeetingRequestWithDirection = RequestWithDirection & {
-  requester_id?: string;
-};
 import { CopilotStep, walkthroughable } from 'react-native-copilot';
 import UnifiedSearchAndFilter from '../../../../components/UnifiedSearchAndFilter';
 import { useNotifications } from '../../../../contexts/NotificationContext';
@@ -30,6 +25,11 @@ import { useRealtimeMeetingRequests, RequestWithDirection } from '../../../../ho
 import { lukasRewardService } from '../../../../lib/lukas-reward-service';
 import { useBalance } from '../../../../contexts/BalanceContext';
 import { useTranslation } from '../../../../i18n/i18n';
+
+// Extended type for internal use with direction tracking - now imported from hook
+type MeetingRequestWithDirection = RequestWithDirection & {
+  requester_id?: string;
+};
 
 const CopilotView = walkthroughable(View);
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);

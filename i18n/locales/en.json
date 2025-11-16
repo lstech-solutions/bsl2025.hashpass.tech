@@ -801,7 +801,8 @@
   },
   "agenda": {
     "title": "Event Agenda",
-    "subtitle": "Conference Schedule • {count} Sessions",
+    "subtitle_one": "Conference Schedule • 1 Session",
+    "subtitle_other": "Conference Schedule • {count} Sessions",
     "date": "November 12-14, 2025 • Medellín, Colombia",
     "loading": "Loading agenda...",
     "filter": {

@@ -9,6 +9,19 @@ export default function BSL2025EventInfoScreen() {
   const { event } = useEvent();
   const { isDark, colors } = useTheme();
   const styles = getStyles(isDark, colors);
+  
+  // Check if event is finished
+  const [isEventFinished, setIsEventFinished] = React.useState(false);
+  React.useEffect(() => {
+    const checkEventFinished = () => {
+      const now = new Date();
+      const end = new Date('2025-11-14T23:59:59-05:00');
+      setIsEventFinished(now > end);
+    };
+    checkEventFinished();
+    const interval = setInterval(checkEventFinished, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleOpenLink = (url: string) => {
     Linking.openURL(url).catch(err => console.error('Failed to open link:', err));
@@ -142,8 +155,10 @@ export default function BSL2025EventInfoScreen() {
         title="Event Information"
         subtitle="Conference Details & Logistics"
         date="November 12-14, 2025 • Medellín, Colombia"
-        showCountdown={true}
-        showLiveIndicator={true}
+        showCountdown={!isEventFinished}
+        showLiveIndicator={!isEventFinished}
+        isEventFinished={isEventFinished}
+        eventId="bsl2025"
       />
 
       {/* Event Information Sections */}

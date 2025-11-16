@@ -731,7 +731,8 @@
   },
   "agenda": {
     "title": "이벤트 일정",
-    "subtitle": "컨퍼런스 일정 • {count}개 세션",
+    "subtitle_one": "컨퍼런스 일정 • 1개 세션",
+    "subtitle_other": "컨퍼런스 일정 • {count}개 세션",
     "date": "2025년 11월 12-14일 • 메데인, 콜롬비아",
     "loading": "일정 불러오는 중...",
     "filter": {

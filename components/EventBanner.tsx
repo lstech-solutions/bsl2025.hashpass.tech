@@ -16,6 +16,7 @@ interface EventBannerProps {
   lastUpdated?: string | null;
   usingJsonFallback?: boolean;
   eventId?: string; // Event ID to determine if logo should be shown
+  isEventFinished?: boolean; // Whether the event has finished
 }
 
 interface TimeLeft {
@@ -36,7 +37,8 @@ export default function EventBanner({
   isLive = false,
   lastUpdated = null,
   usingJsonFallback = false,
-  eventId
+  eventId,
+  isEventFinished = false
 }: EventBannerProps) {
   const { isDark, colors } = useTheme();
   
@@ -136,39 +138,77 @@ export default function EventBanner({
         <Text style={styles.eventDate}>{date}</Text>
       </View>
 
-      {/* Agenda Tracker - Show when event is live */}
-      {(isLive || isEventLive) && (
-        <AgendaTracker eventId={eventId} backgroundColor={backgroundColor} />
-      )}
-
-      {/* Countdown Timer - Only show before event starts */}
-      {showCountdown && !isLive && !isEventLive && (
-        <View style={styles.countdownContainer}>
-          <Text style={styles.countdownLabel}>Event starts in:</Text>
-          <View style={styles.countdownTimer}>
-            <View style={styles.timeUnit}>
-              <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.days)}</Text>
-              <Text style={styles.timeLabel}>DAYS</Text>
-            </View>
-            <Text style={styles.timeSeparator}>:</Text>
-            <View style={styles.timeUnit}>
-              <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.hours)}</Text>
-              <Text style={styles.timeLabel}>HRS</Text>
-            </View>
-            <Text style={styles.timeSeparator}>:</Text>
-            <View style={styles.timeUnit}>
-              <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.minutes)}</Text>
-              <Text style={styles.timeLabel}>MIN</Text>
-            </View>
-            <Text style={styles.timeSeparator}>:</Text>
-            <View style={styles.timeUnit}>
-              <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.seconds)}</Text>
-              <Text style={styles.timeLabel}>SEC</Text>
-            </View>
-          </View>
+      {/* Finished Event Badge */}
+      {isEventFinished && (
+        <View style={styles.finishedBadge}>
+          <MaterialIcons name="celebration" size={20} color="#FFFFFF" />
+          <Text style={styles.finishedBadgeText}>
+            Evento Finalizado / Event Finished
+          </Text>
         </View>
       )}
 
+      {/* Gratitude Message - Replaces Agenda Tracker when event is finished */}
+      {isEventFinished ? (
+        <View style={styles.gratitudeContainer}>
+          <MaterialIcons name="celebration" size={36} color="#FFFFFF" />
+          <Text style={styles.gratitudeTitle}>
+            ¡Gracias por ser parte de BSL 2025!
+          </Text>
+          <Text style={styles.gratitudeTitleEn}>
+            Thank you for being part of BSL 2025!
+          </Text>
+          <Text style={styles.gratitudeSubtitle}>
+            El evento ha finalizado. Agradecemos a todos los asistentes, speakers y colaboradores que hicieron posible este evento histórico sin precedentes en Latinoamérica.
+          </Text>
+          <Text style={styles.gratitudeSubtitleEn}>
+            The event has ended. We thank all attendees, speakers and collaborators who made this unprecedented historic event in Latin America possible.
+          </Text>
+          <View style={styles.gratitudeThanksContainer}>
+            <Text style={styles.gratitudeThanks}>
+              Especial agradecimiento a Rodrigo, al equipo BSL (Juli, Julian, Laura), a la Universidad EAFIT y a todos los que contribuyeron.
+            </Text>
+            <Text style={styles.gratitudeThanksEn}>
+              Special thanks to Rodrigo, the BSL team (Juli, Julian, Laura), EAFIT University and everyone who contributed.
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <>
+          {/* Agenda Tracker - Show when event is live */}
+          {(isLive || isEventLive) && (
+            <AgendaTracker eventId={eventId} backgroundColor={backgroundColor} />
+          )}
+
+          {/* Countdown Timer - Only show before event starts */}
+          {showCountdown && !isLive && !isEventLive && (
+            <View style={styles.countdownContainer}>
+              <Text style={styles.countdownLabel}>Event starts in:</Text>
+              <View style={styles.countdownTimer}>
+                <View style={styles.timeUnit}>
+                  <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.days)}</Text>
+                  <Text style={styles.timeLabel}>DAYS</Text>
+                </View>
+                <Text style={styles.timeSeparator}>:</Text>
+                <View style={styles.timeUnit}>
+                  <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.hours)}</Text>
+                  <Text style={styles.timeLabel}>HRS</Text>
+                </View>
+                <Text style={styles.timeSeparator}>:</Text>
+                <View style={styles.timeUnit}>
+                  <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.minutes)}</Text>
+                  <Text style={styles.timeLabel}>MIN</Text>
+                </View>
+                <Text style={styles.timeSeparator}>:</Text>
+                <View style={styles.timeUnit}>
+                  <Text style={styles.timeValue}>{formatTimeUnit(timeLeft.seconds)}</Text>
+                  <Text style={styles.timeLabel}>SEC</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </>
+      )}
     </View>
   );
 }
@@ -305,5 +345,90 @@ const getStyles = (isDark: boolean, colors: any, backgroundColor: string) => Sty
     fontSize: 16,
     fontWeight: 'bold',
     marginHorizontal: 4,
+  },
+  // Finished Event Badge
+  finishedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  finishedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginLeft: 8,
+  },
+  // Gratitude Message Styles (replaces Agenda Tracker)
+  gratitudeContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    width: '100%',
+  },
+  gratitudeTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 6,
+    lineHeight: 28,
+  },
+  gratitudeTitleEn: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 16,
+    opacity: 0.95,
+    fontStyle: 'italic',
+    lineHeight: 24,
+  },
+  gratitudeSubtitle: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 10,
+    lineHeight: 21,
+    opacity: 0.95,
+    paddingHorizontal: 8,
+  },
+  gratitudeSubtitleEn: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 19,
+    opacity: 0.85,
+    fontStyle: 'italic',
+    paddingHorizontal: 8,
+  },
+  gratitudeThanksContainer: {
+    marginTop: 8,
+    paddingHorizontal: 8,
+  },
+  gratitudeThanks: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 6,
+    lineHeight: 20,
+    fontWeight: '600',
+    opacity: 0.95,
+  },
+  gratitudeThanksEn: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 18,
+    opacity: 0.85,
+    fontStyle: 'italic',
   },
 });

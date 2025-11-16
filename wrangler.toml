@@ -2,18 +2,25 @@
 # This file is used by Wrangler for Cloudflare deployments
 # It does not affect Netlify or Amplify builds (they use their own config files)
 
-name = "hashpass-tech"
+name = "hashpass"
 compatibility_date = "2025-11-16"
 
-# For Cloudflare Pages, specify the directory containing static assets
-# This matches the Netlify publish directory for consistency
+# IMPORTANT: Choose ONE of the following deployment methods:
+
+# Option 1: Cloudflare Pages (RECOMMENDED for static sites with API routes)
+# Use this for deploying static assets with Pages Functions for API routes
+# Deploy with: npx wrangler pages deploy ./dist/client
 [site]
 bucket = "./dist/client"
 
-# For Cloudflare Workers (if needed in the future)
-# main = "./dist/server/index.js"
+# Option 2: Cloudflare Workers (for custom worker logic)
+# Uncomment ONLY if you want to use Workers instead of Pages
+# Deploy with: npx wrangler deploy
+# main = "./cloudflare/worker.js"
+# compatibility_flags = ["nodejs_compat"]
 
 # Environment variables can be set via Cloudflare dashboard or wrangler.toml
 # [vars]
 # ENVIRONMENT = "production"
+# CORS_ALLOW_ORIGIN = "https://bsl2025.hashpass.tech"
 

@@ -2,7 +2,7 @@
 
 ## Problem: 404 Error on Workers URL
 
-If you're getting a 404 error on `https://hashpass.hidden-queen-ebdc.workers.dev/`, it's because:
+If you're getting a 404 error on your Workers URL, it's because:
 
 1. **You're deploying to Cloudflare Workers** (workers.dev domain)
 2. **But the configuration is set up for Cloudflare Pages** (which uses a different deployment method)
@@ -53,12 +53,25 @@ If you need to use Workers instead of Pages:
 
 ## Current Configuration
 
-The `wrangler.toml` is currently configured for **Cloudflare Pages** (using `[site]` section).
+The `wrangler.toml` is currently configured for **Cloudflare Workers**.
 
 To deploy:
 ```bash
-npx wrangler pages deploy ./dist/client
+npm run build:web
+npx wrangler deploy
 ```
+
+### Serving Static Assets with Workers
+
+To serve static assets with Workers, you have two options:
+
+1. **Use ASSETS binding (requires Workers Paid plan $5/month):**
+   - Uncomment the `[assets]` section in `wrangler.toml`
+   - This allows the worker to serve static files from `./dist/client`
+
+2. **Use Cloudflare Pages (free, recommended for static sites):**
+   - Switch back to Pages configuration
+   - Use `npx wrangler pages deploy ./dist/client`
 
 ## API Routes
 
@@ -66,4 +79,38 @@ For API routes (`/api/*`), Cloudflare Pages Functions automatically handles rout
 - `dist/client/_expo/functions/api/**/*`
 
 These are automatically deployed with Pages and don't need separate configuration.
+
+## Cloudflare Access JWT Validation
+
+The worker includes support for validating Cloudflare Access JWTs. This is useful when Cloudflare Access is configured in front of your Worker.
+
+### Configuration
+
+1. **Set environment variables in Cloudflare Dashboard (RECOMMENDED) or `wrangler.toml`:**
+   ```toml
+   [vars]
+   POLICY_AUD = "your-policy-audience-hash-here"
+   TEAM_DOMAIN = "https://your-team-domain.cloudflareaccess.com"
+   ```
+   
+   **⚠️ SECURITY WARNING:** Never commit real secrets to git! Use Cloudflare Dashboard or a local `.env` file that's in `.gitignore`.
+
+2. **Or set via Cloudflare Dashboard:**
+   - Go to Workers & Pages → Your Worker → Settings → Variables
+   - Add `POLICY_AUD` and `TEAM_DOMAIN` as environment variables
+
+### How It Works
+
+- When `POLICY_AUD` and `TEAM_DOMAIN` are set, the worker validates the JWT from the `Cf-Access-Jwt-Assertion` header
+- Valid tokens allow the request to proceed
+- Invalid or missing tokens return a 403 Forbidden response
+- User information (email, sub) is available in the JWT payload after validation
+
+### Dependencies
+
+The worker uses the `jose` package for JWT verification. It's already added to `package.json`.
+
+### Testing
+
+To test without Cloudflare Access, simply don't set the `POLICY_AUD` and `TEAM_DOMAIN` environment variables. The worker will skip JWT validation.
 

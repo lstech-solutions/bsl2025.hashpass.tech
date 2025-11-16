@@ -110,6 +110,7 @@
     "expo-web-browser": "~14.1.6",
     "html5-qrcode": "^2.3.8",
     "i18n-js": "^4.5.1",
+    "jose": "^5.9.6",
     "lightningcss": "^1.29.2",
     "lucide-react": "^0.548.0",
     "lucide-react-native": "^0.479.0",

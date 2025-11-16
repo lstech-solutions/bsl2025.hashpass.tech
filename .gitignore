@@ -6,6 +6,11 @@
 .env.development
 .env.test
 
+# Cloudflare secrets - NEVER commit these!
+wrangler.toml.local
+wrangler.secrets.toml
+*.secrets.toml
+
 # Amplify - use amplify-backend-config/ instead
 amplify/
 amplify-backend-config/

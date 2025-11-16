@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { sortSpeakersByPriority } from '../lib/speaker-priority';
@@ -38,7 +38,6 @@ export default function SpeakerSearchAndSort({
   const [sortBy, setSortBy] = useState<SortOption>('name');
   const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [showFiltersDropdown, setShowFiltersDropdown] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
   const styles = getStyles(isDark, colors);
   
   // Calculate active speakers count
@@ -100,9 +99,18 @@ export default function SpeakerSearchAndSort({
     });
   }, []);
 
-  // Group speakers by first letter for alphabetical dividers
-  const groupSpeakersByLetter = (speakers: Speaker[], sortBy: SortOption, searchQuery: string): { [key: string]: Speaker[] } => {
-    const sorted = sortSpeakers(speakers, sortBy, searchQuery);
+  // Memoize filtered and sorted speakers to prevent unnecessary recalculations
+  const filteredSpeakers = useMemo(() => {
+    return filterSpeakers(speakers, searchQuery, showActiveOnly);
+  }, [speakers, searchQuery, showActiveOnly, filterSpeakers]);
+
+  const sortedSpeakers = useMemo(() => {
+    return sortSpeakers(filteredSpeakers, sortBy, searchQuery);
+  }, [filteredSpeakers, sortBy, searchQuery, sortSpeakers]);
+
+  const groupedSpeakers = useMemo(() => {
+    // Group speakers by first letter for alphabetical dividers
+    const sorted = sortSpeakers(filteredSpeakers, sortBy, searchQuery);
     const grouped: { [key: string]: Speaker[] } = {};
     
     sorted.forEach(speaker => {
@@ -131,25 +139,7 @@ export default function SpeakerSearchAndSort({
     });
     
     return grouped;
-  };
-
-  const getSortLabel = (): string => {
-    const option = sortOptions.find(opt => opt.key === sortBy);
-    return option ? option.label : 'Sort by...';
-  };
-
-  // Memoize filtered and sorted speakers to prevent unnecessary recalculations
-  const filteredSpeakers = useMemo(() => {
-    return filterSpeakers(speakers, searchQuery, showActiveOnly);
-  }, [speakers, searchQuery, showActiveOnly, filterSpeakers]);
-
-  const sortedSpeakers = useMemo(() => {
-    return sortSpeakers(filteredSpeakers, sortBy, searchQuery);
   }, [filteredSpeakers, sortBy, searchQuery, sortSpeakers]);
-
-  const groupedSpeakers = useMemo(() => {
-    return groupSpeakersByLetter(filteredSpeakers, sortBy, searchQuery);
-  }, [filteredSpeakers, sortBy, searchQuery, groupSpeakersByLetter]);
 
   // Update parent components when values change
   useEffect(() => {

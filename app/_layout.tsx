@@ -2,10 +2,9 @@ import '../config/reanimated'; // CRITICAL: Ensure Reanimated is imported and co
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Stack, useRouter } from "expo-router";
-import { usePathname, useSegments } from 'expo-router';
+import { Stack, useRouter , usePathname, useSegments } from "expo-router";
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator , StatusBar , Platform } from 'react-native';
 import { ThemeProvider } from '../providers/ThemeProvider';
 import { LanguageProvider } from '../providers/LanguageProvider';
 import { EventProvider } from '../contexts/EventContext';
@@ -14,7 +13,6 @@ import { ScrollProvider } from '../contexts/ScrollContext';
 import { NotificationProvider } from '../contexts/NotificationContext';
 import { BalanceProvider } from '../contexts/BalanceContext';
 import { useTheme, useThemeProvider } from '../hooks/useTheme';
-import { StatusBar } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import "./global.css";
@@ -24,7 +22,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { I18nProvider } from '../providers/I18nProvider';
 import { CopilotProvider } from 'react-native-copilot';
 import { checkVersionOnStart, clearAuthCache } from '../lib/version-checker';
-import { Platform } from 'react-native';
+import { showConsoleWelcome } from '../lib/console-welcome';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -73,10 +71,14 @@ function ThemedContent() {
   const [isReady, setIsReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [versionUpdate, setVersionUpdate] = useState<{ currentVersion: string; latestVersion: string } | null>(null);
+  const [lastRedirectTime, setLastRedirectTime] = useState(0);
 
-  // Check version on first load (web only)
+  // Check version on first load (web only) and initialize console welcome
   useEffect(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Initialize console welcome message
+      showConsoleWelcome();
+      
       // Check version immediately
       checkVersionOnStart().catch((error) => {
         console.error('Version check failed:', error);
@@ -157,14 +159,14 @@ function ThemedContent() {
       
       if (isDashboardRoute) {
         // For dashboard routes, verify session is actually valid
-        // But give it a moment in case session is being established (especially after OAuth)
+        // But be more lenient to avoid redirect loops - reduce delays and retries
         const checkSession = async () => {
-          // Wait longer for OAuth/magic link sessions to be established
-          // OAuth callbacks can take 2-3 seconds to fully establish, especially with custom auth domains
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          // Reduced wait time for OAuth/magic link sessions to be established
+          // 1 second should be enough for most cases
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
-          // Check multiple times with retries for OAuth sessions
-          let retries = 5;
+          // Check with fewer retries to avoid long delays
+          let retries = 2; // Reduced from 5
           let hasSession = false;
           
           while (retries > 0 && !hasSession) {
@@ -177,13 +179,21 @@ function ThemedContent() {
             
             retries--;
             if (retries > 0) {
-              console.log(`⏳ Session not ready yet, retrying in 800ms... (${5 - retries}/5)`);
-              await new Promise(resolve => setTimeout(resolve, 800));
+              console.log(`⏳ Session not ready yet, retrying in 500ms... (${2 - retries}/2)`);
+              await new Promise(resolve => setTimeout(resolve, 500)); // Reduced from 800ms
             }
           }
           
           if (!hasSession) {
+            // Throttle redirects to prevent redirect loops
+            const now = Date.now();
+            if (now - lastRedirectTime < 5000) {
+              console.warn('⚠️ Redirect throttled - last redirect was less than 5 seconds ago');
+              return;
+            }
+            
             console.warn('⚠️ Invalid session on dashboard route after retries, redirecting to auth');
+            setLastRedirectTime(now);
             router.replace('/(shared)/auth' as any);
           }
         };
@@ -193,10 +203,19 @@ function ThemedContent() {
           // Don't redirect on error - might be temporary network issue
         });
       } else if (!isLoggedIn && !isAuthFlow && !isBSLPublic && !isHomePage && !isPublicPage) {
+        // Throttle redirects to prevent redirect loops
+        const now = Date.now();
+        if (now - lastRedirectTime < 5000) {
+          console.warn('⚠️ Redirect throttled - last redirect was less than 5 seconds ago');
+          return;
+        }
+        
+        console.log('🔄 Redirecting to auth - user not logged in');
+        setLastRedirectTime(now);
         router.replace('/(shared)/auth' as any);
       }
     }
-  }, [isLoggedIn, isAuthFlow, isBSLPublic, isHomePage, isPublicPage, isReady, isLoading, router, pathname]);
+  }, [isLoggedIn, isAuthFlow, isBSLPublic, isHomePage, isPublicPage, isReady, isLoading, router, pathname, lastRedirectTime]);
 
   // Show loading state
   if (isLoading || !isReady || showSplash) {
@@ -236,6 +255,7 @@ function ThemedContent() {
         <Stack.Screen name="(shared)/privacy" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/terms" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/docs" options={{ headerShown: false }} />
+        <Stack.Screen name="(shared)/support" options={{ headerShown: false }} />
         <Stack.Screen name="privacy" options={{ headerShown: false }} />
         <Stack.Screen name="terms" options={{ headerShown: false }} />
         <Stack.Screen 

@@ -28,7 +28,7 @@ export default function AuthScreen() {
   const { t } = useTranslation('auth');
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { showError, showSuccess, showWarning, showInfo } = useToastHelpers();
+  const { showError, showSuccess, showWarning } = useToastHelpers();
   
   // Get returnTo parameter from URL
   const returnTo = params.returnTo as string | undefined;
@@ -38,8 +38,8 @@ export default function AuthScreen() {
     if (returnTo) {
       try {
         return decodeURIComponent(returnTo);
-      } catch (e) {
-        console.warn('Failed to decode returnTo parameter:', e);
+      } catch {
+        console.warn('Failed to decode returnTo parameter');
       }
     }
     return '/(shared)/dashboard/explore';
@@ -48,7 +48,7 @@ export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
-  const [authMethod, setAuthMethod] = useState<AuthMethod>('magiclink');
+  const [authMethod, setAuthMethod] = useState<AuthMethod>('otp'); // Default to OTP since magic link is under maintenance
   const [emailError, setEmailError] = useState('');
   const [ethereumAvailable, setEthereumAvailable] = useState(false);
   const [solanaAvailable, setSolanaAvailable] = useState(false);
@@ -778,9 +778,24 @@ export default function AuthScreen() {
         setLoading(false);
         
         console.log('✅ Session fully established, navigating...');
+        console.log('📍 Redirect path:', getRedirectPath());
+        
+        // Small delay to ensure auth state change has time to process
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Navigate after session is confirmed
         router.replace(getRedirectPath() as any);
+        
+        // Also trigger a manual session check to ensure auth state change is processed
+        setTimeout(async () => {
+          try {
+            const { data: { session: checkSession } } = await supabase.auth.getSession();
+            console.log('🔍 Post-navigation session check:', checkSession?.user?.id || 'no session');
+          } catch (e) {
+            console.warn('⚠️ Post-navigation session check failed:', e);
+          }
+        }, 500);
+        
         return;
       } catch (sessionError: any) {
         console.error('❌ Session verification error:', sessionError);
@@ -797,7 +812,23 @@ export default function AuthScreen() {
             console.log('✅ Session recovered successfully');
             hasNavigatedRef.current = true;
             setLoading(false);
+            console.log('📍 Recovery redirect path:', getRedirectPath());
+            
+            // Small delay to ensure auth state change has time to process
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
             router.replace(getRedirectPath() as any);
+            
+            // Also trigger a manual session check to ensure auth state change is processed
+            setTimeout(async () => {
+              try {
+                const { data: { session: checkSession } } = await supabase.auth.getSession();
+                console.log('🔍 Post-recovery session check:', checkSession?.user?.id || 'no session');
+              } catch (e) {
+                console.warn('⚠️ Post-recovery session check failed:', e);
+              }
+            }, 500);
+            
             return;
           }
         } catch (recoveryError: any) {
@@ -844,47 +875,20 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       // Build proper redirect URL for OAuth
-      // For web, use the actual origin + path (Expo Router removes (shared) group in URLs)
-      // For mobile, use the deep link scheme
       let redirectUrl = '';
       
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        // Use the actual origin for web
-        // In Expo Router, (shared) group is removed from URL, so path is /auth/callback
-        let origin = window.location.origin;
+        // Simplified: Use current origin directly, avoid complex detection
+        const origin = window.location.origin;
         
-        // CRITICAL: In development, ensure we use localhost even if origin is wrong
-        // Check if we're in development mode (localhost or 127.0.0.1)
-        const isDevelopment = origin.includes('localhost') || 
-                              origin.includes('127.0.0.1') || 
-                              origin.includes(':8081') ||
-                              (typeof process !== 'undefined' && process.env.NODE_ENV === 'development');
-        
-        // If we're in development but origin doesn't look like localhost, force localhost:8081
-        if (isDevelopment && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
-          console.warn('⚠️ Development mode detected but origin is not localhost, forcing localhost:8081');
-          origin = 'http://localhost:8081';
-        }
-        
-        // If origin contains production domain in development, force localhost
-        if (origin.includes('hashpass.tech') && (isDevelopment || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-          console.warn('⚠️ Production URL detected in development, forcing localhost:8081');
-          origin = 'http://localhost:8081';
-        }
-        
-        // Ensure we have a valid origin (not empty or malformed)
+        // Basic validation - ensure we have a valid origin
         if (!origin || origin === 'null' || origin === 'undefined') {
           throw new Error('Invalid origin detected. Cannot proceed with OAuth.');
         }
         
-        console.log('🔍 OAuth origin detection:', {
-          windowOrigin: window.location.origin,
-          finalOrigin: origin,
-          hostname: window.location.hostname,
-          isDevelopment
-        });
+        console.log('🔍 OAuth using origin:', origin);
         
-        // Build the redirect URL with proper protocol
+        // Simple redirect URL - no complex logic that could cause mismatches
         redirectUrl = `${origin}/auth/callback`;
         
         // Validate the URL is properly formed
@@ -950,15 +954,12 @@ export default function AuthScreen() {
         }
       }
       
-      // CRITICAL: Use skipBrowserRedirect: true to prevent Supabase from using site_url
-      // We'll handle the redirect manually to ensure we use the correct callback URL
+      // Use Supabase's built-in redirect handling to avoid URI mismatches
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: finalRedirectUrl,
-          skipBrowserRedirect: true, // CRITICAL: Handle redirect manually to avoid site_url issues
+          redirectTo: redirectUrl,
           queryParams: {
-            // Google OAuth specific params
             access_type: 'offline',
             prompt: 'consent',
           },
@@ -967,125 +968,20 @@ export default function AuthScreen() {
 
       if (error) {
         console.error(`❌ ${provider} OAuth error:`, error);
-        console.error('❌ Error details:', {
-          message: error.message,
-          status: (error as any).status,
-          name: error.name
-        });
         showError('Authentication Error', error.message);
         setLoading(false);
-      } else if (data.url) {
-        console.log(`✅ Got OAuth URL from Supabase (skipBrowserRedirect: true)`);
-        console.log('🔗 OAuth URL from Supabase:', data.url.substring(0, 200));
-        
-        // CRITICAL: Since we're using skipBrowserRedirect: true, we have full control
-        // Always replace redirect_to with our validated URL to ensure correct callback
-        let finalOAuthUrl = data.url;
-        try {
-          const oauthUrl = new URL(data.url);
-          console.log('🔍 OAuth URL parsed:', {
-            protocol: oauthUrl.protocol,
-            host: oauthUrl.host,
-            pathname: oauthUrl.pathname,
-            hasRedirectTo: oauthUrl.searchParams.has('redirect_to'),
-            redirectToValue: oauthUrl.searchParams.get('redirect_to')?.substring(0, 100)
-          });
-          
-          // CRITICAL: ALWAYS replace redirect_to with our validated URL
-          // Supabase may ignore this and use site_url, but we must try
-          console.log('🔧 Setting redirect_to to our validated URL:', finalRedirectUrl);
-          
-          // Set redirect_to in the URL search params
-          oauthUrl.searchParams.set('redirect_to', finalRedirectUrl);
-          
-          // Also try setting it as a query parameter directly (some OAuth providers need this)
-          // The redirect_to should be URL-encoded
-          const encodedRedirectTo = encodeURIComponent(finalRedirectUrl);
-          
-          // Log what we're setting
-          console.log('🔧 redirect_to (raw):', finalRedirectUrl);
-          console.log('🔧 redirect_to (encoded):', encodedRedirectTo.substring(0, 100) + '...');
-          
-          finalOAuthUrl = oauthUrl.toString();
-          console.log('✅ Final OAuth URL (first 200 chars):', finalOAuthUrl.substring(0, 200));
-          console.log('✅ Full OAuth URL length:', finalOAuthUrl.length);
-          
-          // Verify the redirect_to is now correct
-          const verifyUrl = new URL(finalOAuthUrl);
-          const verifyRedirectTo = verifyUrl.searchParams.get('redirect_to');
-          console.log('🔍 Verification - redirect_to in URL:', verifyRedirectTo?.substring(0, 100));
-          
-          // CRITICAL: Validate that redirect_to matches what we expect
-          // Supabase validation is EXACT - must match character-for-character
-          if (verifyRedirectTo === finalRedirectUrl) {
-            console.log('✅ Verified: redirect_to is correctly set to our callback URL');
-            console.log('📍 redirect_to value:', finalRedirectUrl);
-            console.log('🔍 redirect_to length:', finalRedirectUrl.length);
-            console.log('🔍 redirect_to protocol:', new URL(finalRedirectUrl).protocol);
-            console.log('🔍 redirect_to host:', new URL(finalRedirectUrl).host);
-            console.log('🔍 redirect_to pathname:', new URL(finalRedirectUrl).pathname);
-            
-            // Additional validation: Check if redirect_to is in allowed list
-            const isLocalhost = finalRedirectUrl.includes('localhost') || finalRedirectUrl.includes('127.0.0.1');
-            if (isLocalhost) {
-              console.log('🔍 Development mode detected - redirect_to is localhost');
-              console.log('✅ redirect_to value matches what should be in Supabase:');
-              console.log('   ' + finalRedirectUrl);
-              console.log('');
-              console.log('⚠️ KNOWN ISSUE: Even with correct redirect_to, Supabase may use Site URL as fallback');
-              console.log('⚠️ This happens with custom auth domains (auth.hashpass.co)');
-              console.log('⚠️ If you see redirects without code, try:');
-              console.log('   1. Remove wildcard patterns (http://localhost:*/auth/callback)');
-              console.log('   2. Keep only exact match: http://localhost:8081/auth/callback');
-              console.log('   3. Ensure Site URL is: https://bsl2025.hashpass.tech (with https://)');
-              console.log('   4. Wait 2-3 minutes after updating Supabase config');
-            } else {
-              console.log('🔍 Production mode detected - redirect_to is production URL');
-              console.log('✅ redirect_to value matches what should be in Supabase:');
-              console.log('   ' + finalRedirectUrl);
-            }
-          } else {
-            console.error('❌ WARNING: redirect_to verification failed!');
-            console.error('Expected:', finalRedirectUrl);
-            console.error('Expected length:', finalRedirectUrl.length);
-            console.error('Got:', verifyRedirectTo);
-            console.error('Got length:', verifyRedirectTo?.length);
-            console.error('⚠️ This mismatch will cause Supabase to reject redirect_to and use Site URL instead!');
-            console.error('⚠️ Result: Callback will have no tokens (server-side redirect)');
-            console.error('Got:', verifyRedirectTo);
-            console.error('⚠️ Supabase may still use site_url despite our redirect_to parameter');
-            console.error('💡 This is a known Supabase issue with custom auth domains');
-            console.error('💡 Check Supabase dashboard: Redirect URLs must include:', finalRedirectUrl);
-            // Don't throw - let it try anyway, we have the callback handler as fallback
-          }
-          
-          // CRITICAL: Also check if redirect_to is being passed to the OAuth provider
-          // Some OAuth providers need redirect_uri to match, and Supabase might override it
-          const redirectUri = verifyUrl.searchParams.get('redirect_uri');
-          if (redirectUri) {
-            console.log('🔍 OAuth provider redirect_uri:', redirectUri.substring(0, 100));
-            if (!redirectUri.includes('localhost') && finalRedirectUrl.includes('localhost')) {
-              console.warn('⚠️ WARNING: OAuth provider redirect_uri does not match our localhost redirect_to!');
-              console.warn('⚠️ This might cause Supabase to use Site URL instead');
-            }
-          }
-          
-          // Log the full URL for debugging (truncated)
-          console.log('🔍 Full OAuth URL (first 500 chars):', finalOAuthUrl.substring(0, 500));
-        } catch (e) {
-          console.error('❌ Could not parse or fix OAuth URL from Supabase:', e);
-          setLoading(false);
-          showError('OAuth Error', 'Failed to prepare OAuth URL. Please try again.');
-          return;
-        }
-        
-        // Open the OAuth URL manually - this gives us full control over the redirect
-        console.log('🚀 Opening OAuth URL manually...');
-        Linking.openURL(finalOAuthUrl);
+        return;
+      }
+      
+      if (data.url) {
+        console.log(`✅ Got OAuth URL from Supabase:`, data.url.substring(0, 200));
+        // Open the OAuth URL directly - trust Supabase's redirect handling
+        Linking.openURL(data.url);
         // Keep loading state - will be cleared by callback handler
       } else {
         console.warn(`⚠️ No URL returned from ${provider} OAuth`);
         setLoading(false);
+        showError('OAuth Error', 'Failed to start authentication. Please try again.');
       }
     } catch (error: any) {
       console.error(`❌ ${provider} OAuth exception:`, error);
@@ -1414,10 +1310,10 @@ export default function AuthScreen() {
                   style={[
                     styles.methodToggle, 
                     authMethod === 'magiclink' && styles.methodToggleActive,
-                    loading && styles.methodToggleDisabled
+                    (loading || true) && styles.methodToggleDisabled // Disabled for maintenance
                   ]}
                   onPress={() => {
-                    if (!loading) {
+                    if (!loading && false) { // Disabled for maintenance
                       setAuthMethod('magiclink');
                       // Clear any email errors when switching
                       if (emailError) {
@@ -1425,14 +1321,14 @@ export default function AuthScreen() {
                       }
                     }
                   }}
-                  disabled={loading}
+                  disabled={loading || true} // Disabled for maintenance
                   activeOpacity={0.7}
                 >
                   <Ionicons 
                     name="link" 
                     size={16} 
                     color={
-                      loading 
+                      loading || true // Disabled for maintenance
                         ? (isDark ? '#666' : '#999')
                         : authMethod === 'magiclink' 
                           ? (isDark ? '#fff' : '#000') 
@@ -1442,9 +1338,9 @@ export default function AuthScreen() {
                   <Text style={[
                     styles.methodToggleText, 
                     authMethod === 'magiclink' && styles.methodToggleTextActive,
-                    loading && styles.methodToggleTextDisabled
+                    (loading || true) && styles.methodToggleTextDisabled // Disabled for maintenance
                   ]}>
-                    {t('magicLink')}
+                    {t('magicLink')} (Maintenance)
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -1574,31 +1470,21 @@ export default function AuthScreen() {
 
         {/* Optional Auth Methods - Circular Buttons */}
         <View style={styles.optionalAuthContainer}>
-          <TouchableOpacity
-            style={[styles.circularButton, styles.googleButton]}
-            onPress={() => signInWithOAuth('google')}
-            disabled={loading}
-            accessibilityLabel="Sign in with Google"
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Ionicons name="logo-google" size={24} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
+          {/* Google OAuth - Under Maintenance */}
+          <View style={styles.disabledButtonContainer}>
+            <View style={[styles.circularButton, styles.googleButton, styles.disabledButton]}>
+              <Ionicons name="logo-google" size={24} color="#666" />
+            </View>
+            <Text style={styles.maintenanceText}>Maintenance</Text>
+          </View>
 
-          <TouchableOpacity
-            style={[styles.circularButton, styles.discordButton]}
-            onPress={() => signInWithOAuth('discord')}
-            disabled={loading}
-            accessibilityLabel="Sign in with Discord"
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Ionicons name="logo-discord" size={24} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
+          {/* Discord OAuth - Under Maintenance */}
+          <View style={styles.disabledButtonContainer}>
+            <View style={[styles.circularButton, styles.discordButton, styles.disabledButton]}>
+              <Ionicons name="logo-discord" size={24} color="#666" />
+            </View>
+            <Text style={styles.maintenanceText}>Maintenance</Text>
+          </View>
 
           {Platform.OS === 'web' && ethereumAvailable && (
             <TouchableOpacity
@@ -1947,6 +1833,20 @@ const getStyles = (isDark: boolean, colors: any) => StyleSheet.create({
   },
   solanaButton: {
     backgroundColor: '#14F195',
+  },
+  disabledButton: {
+    opacity: 0.5,
+    backgroundColor: isDark ? '#444' : '#ccc',
+  },
+  disabledButtonContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  maintenanceText: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 2,
+    textAlign: 'center',
   },
   privacyContainer: {
     marginTop: 20,

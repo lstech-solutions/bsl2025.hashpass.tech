@@ -208,14 +208,15 @@ const initializeSupabase = () => {
     // This can help with OAuth callbacks and deep linking
     // However, we need to be careful - it can cause errors if navigation state isn't ready
     // 
-    // CRITICAL: On web, we disable detectSessionInUrl because:
+    // CRITICAL: On web, we normally disable detectSessionInUrl because:
     // 1. We handle OAuth callbacks manually in the callback handler
     // 2. detectSessionInUrl can try to access navigation state (rootState.routeNames) before it's ready
     // 3. This causes "rootState.routeNames is undefined" errors on web
     // 
-    // On native, we can enable it for deep linking, but we'll catch errors and retry without it
-    // TEMPORARY: Enable for web to fix OAuth callback issues
-    let shouldDetectSessionInUrl = true; // Platform.OS !== 'web';
+    // HOWEVER: For OTP to work properly on production, we need detectSessionInUrl enabled
+    // because OTP verification creates session tokens that need to be detected from URL
+    // We'll handle any navigation errors gracefully in the catch block
+    let shouldDetectSessionInUrl = true; // Enable for OTP to work on production
     
     try {
       // Custom fetch function to ensure apikey header is always included

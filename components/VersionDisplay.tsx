@@ -5,8 +5,6 @@ import { useTheme } from '../hooks/useTheme';
 import { versionService } from '../lib/services/version-service';
 import { t } from '@lingui/macro';
 
-type VersionInfo = ReturnType<typeof versionService.getCurrentVersion>;
-
 interface VersionDisplayProps {
   showInSidebar?: boolean;
   compact?: boolean;

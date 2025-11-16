@@ -155,16 +155,16 @@ async function createMeetingRequest(requesterId, requesterName, requesterEmail, 
   }
 }
 
-// Bilingual email translations for 3 matches recommendation
+// Bilingual email translations for 3 matches recommendation (Spanish first)
 const matchTranslations = {
-  title: '🎯 Speaker Recommendations / Recomendaciones de Speakers - BSL 2025',
-  greeting: (name) => `Hello ${name} / ¡Hola ${name}!`,
-  subtitle: 'We found 3 great matches for you! / ¡Encontramos 3 matches perfectos para ti!',
-  intro1: 'Based on our matching algorithm, we\'ve identified <strong>3 exceptional speakers</strong> who align perfectly with your profile and interests. / Basado en nuestro algoritmo de matching, hemos identificado <strong>3 speakers excepcionales</strong> que se alinean perfectamente con tu perfil e intereses.',
-  intro2: 'We\'ve sent meeting requests to these speakers on your behalf. These are special recommendations we believe will lead to valuable connections! / Hemos enviado solicitudes de reunión a estos speakers en tu nombre. ¡Estas son recomendaciones especiales que creemos conducirán a conexiones valiosas!',
-  viewProfile: 'View Profile / Ver Perfil',
-  viewAllRequests: 'View My Requests / Ver Mis Solicitudes',
-  footer: 'This is an automated email from the BSL 2025 matchmaking system. / Este es un email automático del sistema de matchmaking de BSL 2025.'
+  title: '🎯 Recomendaciones de Speakers / Speaker Recommendations - BSL 2025',
+  greeting: (name) => `¡Hola ${name} / Hello ${name}!`,
+  subtitle: '¡Encontramos 3 matches perfectos para ti! / We found 3 great matches for you!',
+  intro1: 'Basado en nuestro algoritmo de matching, hemos identificado <strong>3 speakers excepcionales</strong> que se alinean perfectamente con tu perfil e intereses. / Based on our matching algorithm, we\'ve identified <strong>3 exceptional speakers</strong> who align perfectly with your profile and interests.',
+  intro2: 'Hemos enviado solicitudes de reunión a estos speakers en tu nombre. ¡Estas son recomendaciones especiales que creemos conducirán a conexiones valiosas! / We\'ve sent meeting requests to these speakers on your behalf. These are special recommendations we believe will lead to valuable connections!',
+  viewProfile: 'Ver Perfil / View Profile',
+  viewAllRequests: 'Ver Mis Solicitudes / View My Requests',
+  footer: 'Este es un email automático del sistema de matchmaking de BSL 2025. / This is an automated email from the BSL 2025 matchmaking system.'
 };
 
 // Generate bilingual email HTML for 3 matches recommendation
@@ -177,7 +177,7 @@ function generateMatchesEmail(userName, speakers) {
       <tr>
         <td style="padding: 20px;">
           <div style="text-align: center; margin-bottom: 15px;">
-            <span style="background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%); color: #ffffff; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Match ${index + 1} / Match ${index + 1}</span>
+            <span style="background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%); color: #ffffff; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Match ${index + 1}</span>
           </div>
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
@@ -285,7 +285,7 @@ async function sendMatchesEmail(email, userName, speakers, isTest = false) {
       `${s.name}${s.title ? ` - ${s.title}` : ''}${s.company ? ` at ${s.company}` : ''}`
     ).join('\n');
     
-    const textContent = `${isTest ? '[TEST] ' : ''}${matchTranslations.greeting(userName)}\n\n${matchTranslations.subtitle}\n\n${speakerList}\n\nVisit your profile to see more details / Visita tu perfil para ver más detalles:\nhttps://bsl2025.hashpass.tech/events/bsl2025/networking`;
+    const textContent = `${isTest ? '[TEST] ' : ''}${matchTranslations.greeting(userName)}\n\n${matchTranslations.subtitle}\n\n${speakerList}\n\nVisita tu perfil para ver más detalles / Visit your profile to see more details:\nhttps://bsl2025.hashpass.tech/events/bsl2025/networking`;
     
     const mailOptions = {
       from: `HashPass <${process.env.NODEMAILER_FROM}>`,
@@ -618,6 +618,7 @@ async function main() {
 }
 
 main();
+
 
 
 

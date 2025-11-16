@@ -800,7 +800,8 @@
   },
   "agenda": {
     "title": "Agenda del Evento",
-    "subtitle": "Programa de la Conferencia • {count} Sesiones",
+    "subtitle_one": "Programa de la Conferencia • 1 Sesión",
+    "subtitle_other": "Programa de la Conferencia • {count} Sesiones",
     "date": "12-14 de Noviembre, 2025 • Medellín, Colombia",
     "loading": "Cargando agenda...",
     "filter": {

@@ -1,6 +1,20 @@
 import { supabaseServer as supabase } from '@/lib/supabase-server';
 import nodemailer from 'nodemailer';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle CORS preflight requests
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders
+  });
+}
+
 /**
  * API endpoint to send OTP code via custom email
  * Generates OTP token using Supabase Admin API and sends custom email with a 6-digit code
@@ -23,7 +37,7 @@ export async function POST(request: Request) {
           code: 'server_config_error',
           message: 'Authentication service is not properly configured. Please contact support.'
         }),
-        { status: 503, headers: { 'Content-Type': 'application/json' } }
+        { status: 503, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
     
@@ -39,7 +53,7 @@ export async function POST(request: Request) {
           code: 'invalid_json',
           message: 'Please ensure the request body contains valid JSON with an email field.'
         }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
     
@@ -48,7 +62,7 @@ export async function POST(request: Request) {
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return new Response(
         JSON.stringify({ error: 'Valid email is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
@@ -73,7 +87,7 @@ export async function POST(request: Request) {
             code: 'server_config_error',
             message: 'Authentication service is not properly configured. Please contact support.'
           }),
-          { status: 503, headers: { 'Content-Type': 'application/json' } }
+          { status: 503, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }
       
@@ -87,7 +101,7 @@ export async function POST(request: Request) {
             code: 'network_error',
             message: 'Authentication requires network connection. Please check your internet connection and try again.'
           }),
-          { status: 503, headers: { 'Content-Type': 'application/json' } }
+          { status: 503, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }
       
@@ -116,7 +130,7 @@ export async function POST(request: Request) {
             code: 'over_email_send_rate_limit',
             message: 'Too many emails sent. Please wait a few minutes before requesting another code.'
           }),
-          { status: 429, headers: { 'Content-Type': 'application/json' } }
+          { status: 429, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }
       
@@ -129,11 +143,19 @@ export async function POST(request: Request) {
           code: errorCode || 'unknown_error',
           details: process.env.NODE_ENV === 'development' ? linkError : undefined
         }),
-        { status: statusCode, headers: { 'Content-Type': 'application/json' } }
+        { status: statusCode, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
     // Extract token_hash from the generated link
+    if (!linkData.properties?.action_link) {
+      console.error('Could not extract action_link from generated link');
+      return new Response(
+        JSON.stringify({ error: 'Failed to extract OTP token' }),
+        { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+    
     const linkUrl = new URL(linkData.properties.action_link);
     const tokenHash = linkUrl.searchParams.get('token_hash') || linkUrl.searchParams.get('token');
     
@@ -141,7 +163,7 @@ export async function POST(request: Request) {
       console.error('Could not extract token from link');
       return new Response(
         JSON.stringify({ error: 'Failed to extract OTP token' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
@@ -160,7 +182,7 @@ export async function POST(request: Request) {
         code: otpCode,
         token_hash: tokenHash,
         expires_at: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
-      });
+      } as any);
 
     if (storeError) {
       console.error('Error storing OTP code:', storeError);
@@ -235,7 +257,7 @@ export async function POST(request: Request) {
               code: 'over_email_send_rate_limit',
               message: 'Too many emails sent. Please wait a few minutes before requesting another code.'
             }),
-            { status: 429, headers: { 'Content-Type': 'application/json' } }
+            { status: 429, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
           );
         }
         
@@ -245,7 +267,7 @@ export async function POST(request: Request) {
             code: 'email_send_failed',
             message: emailError?.message || 'Could not send email. Please try again later.'
           }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
+          { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }
     } else {
@@ -253,7 +275,7 @@ export async function POST(request: Request) {
       // But this will send a magic link, not an OTP code
       return new Response(
         JSON.stringify({ error: 'Email service not configured. Please configure NODEMAILER settings.' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
@@ -266,6 +288,7 @@ export async function POST(request: Request) {
         status: 200, 
         headers: { 
           'Content-Type': 'application/json',
+          ...corsHeaders
         } 
       }
     );
@@ -283,7 +306,7 @@ export async function POST(request: Request) {
           code: 'over_email_send_rate_limit',
           message: 'Too many emails sent. Please wait a few minutes before requesting another code.'
         }),
-        { status: 429, headers: { 'Content-Type': 'application/json' } }
+        { status: 429, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
     
@@ -292,7 +315,7 @@ export async function POST(request: Request) {
         error: error.message || 'Failed to send OTP',
         code: error.code || 'unknown_error'
       }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   }
 }

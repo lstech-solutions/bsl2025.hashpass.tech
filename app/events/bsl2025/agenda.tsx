@@ -107,6 +107,7 @@ export default function BSL2025AgendaScreen() {
   const [usingJsonFallback, setUsingJsonFallback] = useState(false);
   const [serviceStatus, setServiceStatus] = useState<'running' | 'stopped' | 'unknown'>('unknown');
   const [isEventPeriod, setIsEventPeriod] = useState(false);
+  const [isEventFinished, setIsEventFinished] = useState(false);
   const [filteredAgenda, setFilteredAgenda] = useState<AgendaItem[]>([]);
   const [showNotLiveDetails, setShowNotLiveDetails] = useState(false);
   const [userAgendaStatus, setUserAgendaStatus] = useState<Record<string, 'tentative' | 'confirmed'>>({});
@@ -125,6 +126,7 @@ export default function BSL2025AgendaScreen() {
     const start = new Date('2025-11-12T00:00:00-05:00');
     const end = new Date('2025-11-14T23:59:59-05:00');
     setIsEventPeriod(now >= start && now <= end);
+    setIsEventFinished(now > end);
   };
 
   const getTabLabel = (dayKey: string) => {
@@ -305,9 +307,15 @@ export default function BSL2025AgendaScreen() {
     }
   }, [agenda]);
 
-  // Check if we're in the event period
+  // Check if we're in the event period and if event is finished
   useEffect(() => {
     checkEventPeriod();
+    // Check periodically (every minute) to update finished status
+    const interval = setInterval(() => {
+      checkEventPeriod();
+    }, 60000); // Check every minute
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Auto-refresh agenda every 5 minutes during event period (silent, no UI)
@@ -1267,14 +1275,17 @@ export default function BSL2025AgendaScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={true}
         bounces={true}
+        ref={scrollViewRef}
       >
         {/* Event Header */}
         <EventBanner
           title={t('title')}
-          subtitle={t('subtitle', { count: agenda.length })}
+          subtitle={agenda.length === 1 ? t('subtitle_one') : t('subtitle_other').replace('{count}', String(agenda.length))}
           date={t('date')}
-          showCountdown={true}
-          showLiveIndicator={isLive}
+          showCountdown={!isEventFinished}
+          showLiveIndicator={isLive && !isEventFinished}
+          isEventFinished={isEventFinished}
+          eventId="bsl2025"
         />
 
         {/* Tab Navigation - Centered with consistent sizing */}

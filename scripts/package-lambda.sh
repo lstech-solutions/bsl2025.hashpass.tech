@@ -29,6 +29,16 @@ cp lambda/package.json $PACKAGE_DIR/
 echo "3. Copying server build..."
 cp -r dist/server $PACKAGE_DIR/server
 
+# Copy config files needed by API routes
+echo "3a. Copying config files..."
+mkdir -p $PACKAGE_DIR/config
+if [ -f "config/versions.json" ]; then
+  cp config/versions.json $PACKAGE_DIR/config/
+fi
+if [ -f "package.json" ]; then
+  cp package.json $PACKAGE_DIR/
+fi
+
 # Install dependencies
 echo "4. Installing dependencies..."
 cd $PACKAGE_DIR
@@ -37,7 +47,10 @@ npm install --production --silent
 # Create deployment package
 echo "5. Creating deployment zip..."
 cd ..
-zip -r lambda-deployment.zip $PACKAGE_DIR -x "*.git*" "*.DS_Store*" "*.map" > /dev/null
+# Zip contents of package directory, not the directory itself
+cd $PACKAGE_DIR
+zip -r ../lambda-deployment.zip . -x "*.git*" "*.DS_Store*" "*.map" > /dev/null
+cd ..
 
 # Cleanup
 echo "6. Cleaning up..."

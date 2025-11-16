@@ -1,0 +1,19 @@
+# Cloudflare Pages/Workers configuration
+# This file is used by Wrangler for Cloudflare deployments
+# It does not affect Netlify or Amplify builds (they use their own config files)
+
+name = "hashpass-tech"
+compatibility_date = "2025-11-16"
+
+# For Cloudflare Pages, specify the directory containing static assets
+# This matches the Netlify publish directory for consistency
+[site]
+bucket = "./dist/client"
+
+# For Cloudflare Workers (if needed in the future)
+# main = "./dist/server/index.js"
+
+# Environment variables can be set via Cloudflare dashboard or wrangler.toml
+# [vars]
+# ENVIRONMENT = "production"
+

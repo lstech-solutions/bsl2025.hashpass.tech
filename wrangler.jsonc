@@ -1,0 +1,11 @@
+{
+  // Cloudflare Pages/Workers configuration
+  // This file is used by Wrangler for Cloudflare deployments
+  // It does not affect Netlify or Amplify builds (they use their own config files)
+  "name": "hashpass-tech",
+  "compatibility_date": "2025-11-16",
+  "assets": {
+    "directory": "./dist/client"
+  }
+}
+

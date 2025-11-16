@@ -5,15 +5,24 @@
 name = "hashpass"
 compatibility_date = "2025-11-16"
 
-# Cloudflare Workers configuration
-# Deploy with: npx wrangler deploy
+# ============================================
+# CLOUDFLARE PAGES CONFIGURATION (RECOMMENDED)
+# ============================================
+# For API routes and static files, use Cloudflare Pages (FREE)
+# Deploy with: npx wrangler pages deploy ./dist/client --project-name=hashpass
+#
+# Cloudflare Pages automatically handles:
+# - Static file serving
+# - API routes in _expo/functions/api/**/*
+# - SPA routing (serves index.html for all routes)
 
-main = "./cloudflare/worker.js"
-compatibility_flags = ["nodejs_compat"]
-
-# For serving static assets with Workers, use the ASSETS binding
-# This requires Cloudflare Workers Paid plan ($5/month) or use Cloudflare Pages
-# Uncomment the following to enable static asset serving:
+# ============================================
+# CLOUDFLARE WORKERS CONFIGURATION (ALTERNATIVE)
+# ============================================
+# If you need to use Workers instead, uncomment the following:
+# main = "./cloudflare/worker.js"
+# compatibility_flags = ["nodejs_compat"]
+#
 # [assets]
 # directory = "./dist/client"
 # binding = "ASSETS"
@@ -27,4 +36,3 @@ compatibility_flags = ["nodejs_compat"]
 # Set these via Cloudflare Dashboard or wrangler.toml (NOT in git!)
 # POLICY_AUD = "your-policy-audience-hash-here"
 # TEAM_DOMAIN = "https://your-team-domain.cloudflareaccess.com"
-

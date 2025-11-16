@@ -30,8 +30,8 @@ mkdir -p lambda-package
 cd lambda-package
 
 # 3. Copy Lambda handler
-cp ../amplify/lambda/index.js .
-cp ../amplify/lambda/package.json .
+cp ../lambda/index.js .
+cp ../lambda/package.json .
 
 # 4. Copy server build (needed by Expo Server)
 cp -r ../dist/server ./server

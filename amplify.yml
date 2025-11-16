@@ -145,21 +145,10 @@ frontend:
       - node_modules/**/*
       - $(npm root --global)/**/*
 redirects:
-  # API routes - these need to be handled by Amplify Functions (Lambda@Edge)
-  # For now, we'll use rewrites to serve the static files (they won't execute, but will be accessible)
-  # TODO: Configure Amplify Functions to execute these routes properly
-  - source: '/api/config/versions'
-    status: 200
-    target: '/_expo/functions/api/config/versions+api.js'
-  - source: '/api/config/versions/'
-    status: 200
-    target: '/_expo/functions/api/config/versions+api.js'
-  - source: '/api/bslatam/agenda/'
-    status: 200
-    target: '/api/bslatam/agenda/index.js'
-  - source: '/api/status/'
-    status: 200
-    target: '/api/status/index.js'
+  # API routes are handled by API Gateway (api.hashpass.tech)
+  # Do NOT add redirects for /api/* routes here - they should go to API Gateway
+  # If you need to serve API routes from Amplify Hosting, use Amplify Functions (Lambda@Edge)
+  # See docs/AMPLIFY-API-ROUTES.md for configuration options
   - source: '/sw.js'
     status: 200
     target: '/sw.js'
@@ -203,7 +192,9 @@ redirects:
     status: 200
     target: '/storybook/index.html'
 customErrorResponses:
+  # Exclude API routes from custom error responses (they should go to API Gateway)
   - errorCode: 404
     responsePagePath: '/index.html'
     responseCode: 200
     errorCachingMinTTL: 0
+    # Note: API routes (/api/*) should not trigger this - they should be handled by API Gateway

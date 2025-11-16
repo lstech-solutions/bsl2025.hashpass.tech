@@ -332,17 +332,38 @@ config.resolver = {
 // Conditionally apply NativeWind and Reanimated based on environment
 // During production export, these can cause issues with Metro bundler
 const isProductionExport = process.env.NODE_ENV === 'production' || process.env.EXPO_PUBLIC_ENABLE_STATIC_EXPORT === 'true';
+// Always use polyfill for react-native-reanimated when Metro is running in Node.js (SSR/export)
+// This prevents errors during expo-router SSR rendering
+const isNodeEnvironment = typeof window === 'undefined';
 
 let finalConfig = config;
 
+// Add resolver alias for react-native-reanimated during SSR/Node.js bundling
+// This ensures Animated.createAnimatedComponent is available during expo-router SSR
+if (isNodeEnvironment) {
+  const polyfillPath = require.resolve('./config/reanimated-polyfill.js');
+  config.resolver = {
+    ...config.resolver,
+    extraNodeModules: {
+      ...config.resolver?.extraNodeModules,
+      'react-native-reanimated': polyfillPath,
+    },
+  };
+}
+
 // Only wrap with Reanimated and NativeWind if not doing static export
-if (!isProductionExport) {
-  finalConfig = wrapWithReanimatedMetroConfig(finalConfig);
+// Skip Reanimated wrapping in Node.js environment (SSR/export) to use polyfill instead
+if (!isProductionExport && !isNodeEnvironment) {
+  try {
+    finalConfig = wrapWithReanimatedMetroConfig(finalConfig);
+  } catch (e) {
+    console.warn('Failed to wrap with Reanimated config, continuing without it:', e.message);
+  }
   finalConfig = withNativeWind(finalConfig, {
     input: './app/global.css',
   });
 } else {
-  // For production export, apply NativeWind but skip Reanimated to avoid issues
+  // For production export or Node.js environment, apply NativeWind but skip Reanimated to use polyfill
   finalConfig = withNativeWind(finalConfig, {
     input: './app/global.css',
   });

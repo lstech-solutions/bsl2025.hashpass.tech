@@ -21,24 +21,47 @@ export default function AuthCallback() {
                 const decoded = decodeURIComponent(returnTo);
                 // Prevent redirecting to callback route
                 if (decoded.includes('/auth/callback')) {
+                    console.log('⚠️ returnTo contains callback route, using dashboard instead');
                     return '/(shared)/dashboard/explore';
                 }
+                console.log('📍 Using returnTo path:', decoded);
                 return decoded;
             } catch (e) {
                 console.warn('Failed to decode returnTo parameter:', e);
             }
         }
-        return '/(shared)/dashboard/explore';
+        // Default to dashboard explore
+        const defaultPath = '/(shared)/dashboard/explore';
+        console.log('📍 Using default redirect path:', defaultPath);
+        return defaultPath;
     };
     
-    // Safe navigation function
+    // Safe navigation function with force navigation
     const safeNavigate = (path: string) => {
         if (path.includes('/auth/callback')) {
             console.warn('⚠️ Attempted to redirect to callback route, redirecting to dashboard instead');
-            router.replace('/(shared)/dashboard/explore' as any);
-        } else {
-            router.replace(path as any);
+            path = '/(shared)/dashboard/explore';
         }
+        
+        console.log('🚀 Navigating to:', path);
+        
+        // Use window.location for web to force a full navigation and prevent loops
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            // Convert Expo Router path to actual URL
+            let actualPath = path;
+            if (actualPath.startsWith('/(shared)/')) {
+                actualPath = actualPath.replace('/(shared)/', '/');
+            }
+            if (actualPath.startsWith('/')) {
+                const fullUrl = window.location.origin + actualPath;
+                console.log('🌐 Using window.location.replace for web:', fullUrl);
+                window.location.replace(fullUrl);
+                return;
+            }
+        }
+        
+        // For mobile or if path conversion fails, use router
+        router.replace(path as any);
     };
     
     // Track processing state to prevent multiple simultaneous executions
@@ -53,13 +76,17 @@ export default function AuthCallback() {
             return;
         }
         
+        // CRITICAL: Store a flag to prevent re-execution even if params change
+        let executed = false;
+        
         const handleAuthCallback = async () => {
-            // Double-check guard (in case of race condition)
-            if (hasNavigatedRef.current || isProcessingRef.current) {
+            // Triple-check guard (in case of race condition or re-render)
+            if (hasNavigatedRef.current || isProcessingRef.current || executed) {
                 console.log('⏭️ Already processing or navigated, skipping handler');
                 return;
             }
             
+            executed = true;
             isProcessingRef.current = true;
             
             try {
@@ -138,16 +165,20 @@ export default function AuthCallback() {
                 // This prevents the infinite loop where Supabase processes the URL, then our handler processes it,
                 // then Supabase processes it again because the URL still has tokens
                 if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                    // Save the full URL with tokens before cleaning
+                    const fullUrlWithTokens = window.location.href;
                     const cleanUrl = window.location.origin + window.location.pathname;
                     window.history.replaceState({}, '', cleanUrl);
                     console.log('🧹 Cleaned URL IMMEDIATELY to prevent re-processing');
+                    // Use the saved URL for processing instead of currentUrl
+                    currentUrl = fullUrlWithTokens;
                 }
                 
                 // Try Supabase auto-detection first (Supabase may have already processed before we cleaned)
                 console.log('🔄 Checking if Supabase already processed session from URL...');
                 
-                // Small delay to allow any in-flight Supabase processing to complete
-                await new Promise(resolve => setTimeout(resolve, 300));
+                // NO delay - we cleaned the URL immediately, so Supabase won't process it again
+                // If Supabase already processed it, the session will be available immediately
                 
                 // Check session immediately
                 let { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -272,7 +303,10 @@ export default function AuthCallback() {
                 isProcessingRef.current = false;
             }
         };
-    }, [params, router]); // Only depend on params and router, not on state
+        // CRITICAL: Only depend on router, not params
+        // This prevents the effect from re-running when params change (which happens after URL cleanup)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [router]);
     
     // Listen for auth state changes as backup (only if not already processing)
     useEffect(() => {

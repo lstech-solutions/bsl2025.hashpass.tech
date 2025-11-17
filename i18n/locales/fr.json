@@ -664,6 +664,46 @@
         "messageMeeting": "Nouveau message dans {meetingTitle}"
       }
     }
+  },
+  "status": {
+    "title": "État du Système",
+    "lastUpdated": "Dernière mise à jour",
+    "database": "Base de Données",
+    "emailService": "Service de Courriel",
+    "apiEndpoints": "Points de Terminaison API",
+    "systemChecks": "Vérifications du Système",
+    "configured": "Configuré",
+    "yes": "Oui",
+    "no": "Non",
+    "agenda": "Agenda",
+    "speakers": "Conférenciers",
+    "bookings": "Réservations",
+    "passes": "Laissez-passer",
+    "hasData": "A des Données",
+    "noData": "Pas de Données",
+    "accessible": "Accessible",
+    "notAccessible": "Non Accessible",
+    "items": "Éléments",
+    "count": "Nombre",
+    "updated": "Mis à jour",
+    "autoRefresh": "La page d'état se met à jour automatiquement toutes les 30 secondes",
+    "pullToRefresh": "Tirez vers le bas pour actualiser manuellement"
+  },
+  "version": {
+    "title": "Informations sur la Version",
+    "current": "Version Actuelle",
+    "released": "Publié:",
+    "buildInfo": "Informations de Build:",
+    "buildId": "ID de Build:",
+    "buildTime": "Heure de Build:",
+    "gitCommit": "Commit Git:",
+    "branch": "Branche:",
+    "features": "Nouvelles Fonctionnalités",
+    "bugfixes": "Corrections de Bugs",
+    "breakingChanges": "Changements Importants",
+    "history": "Historique des Versions",
+    "status": "État du Système",
+    "statusSummary": "Cliquez pour voir l'état détaillé du système et les informations de santé des services."
   }
 }
 

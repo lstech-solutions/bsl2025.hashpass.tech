@@ -995,6 +995,8 @@
     "features": "New Features",
     "bugfixes": "Bug Fixes",
     "breakingChanges": "Breaking Changes",
-    "history": "Version History"
+    "history": "Version History",
+    "status": "System Status",
+    "statusSummary": "Click to view detailed system status and service health information."
   }
 }

@@ -886,5 +886,45 @@
         "messageMeeting": "{meetingTitle}에 새 메시지가 있습니다"
       }
     }
+  },
+  "status": {
+    "title": "시스템 상태",
+    "lastUpdated": "마지막 업데이트",
+    "database": "데이터베이스",
+    "emailService": "이메일 서비스",
+    "apiEndpoints": "API 엔드포인트",
+    "systemChecks": "시스템 확인",
+    "configured": "구성됨",
+    "yes": "예",
+    "no": "아니오",
+    "agenda": "일정",
+    "speakers": "연사",
+    "bookings": "예약",
+    "passes": "패스",
+    "hasData": "데이터 있음",
+    "noData": "데이터 없음",
+    "accessible": "액세스 가능",
+    "notAccessible": "액세스 불가능",
+    "items": "항목",
+    "count": "개수",
+    "updated": "업데이트됨",
+    "autoRefresh": "상태 페이지가 30초마다 자동으로 새로고침됩니다",
+    "pullToRefresh": "아래로 당겨서 수동으로 새로고침"
+  },
+  "version": {
+    "title": "버전 정보",
+    "current": "현재 버전",
+    "released": "출시일:",
+    "buildInfo": "빌드 정보:",
+    "buildId": "빌드 ID:",
+    "buildTime": "빌드 시간:",
+    "gitCommit": "Git 커밋:",
+    "branch": "브랜치:",
+    "features": "새로운 기능",
+    "bugfixes": "버그 수정",
+    "breakingChanges": "주요 변경 사항",
+    "history": "버전 기록",
+    "status": "시스템 상태",
+    "statusSummary": "자세한 시스템 상태 및 서비스 상태 정보를 보려면 클릭하세요."
   }
 }

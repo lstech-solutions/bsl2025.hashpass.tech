@@ -994,6 +994,8 @@
     "features": "Nuevas Funcionalidades",
     "bugfixes": "Correcciones de Errores",
     "breakingChanges": "Cambios Importantes",
-    "history": "Historial de Versiones"
+    "history": "Historial de Versiones",
+    "status": "Estado del Sistema",
+    "statusSummary": "Haz clic para ver el estado detallado del sistema e información de salud de los servicios."
   }
 }

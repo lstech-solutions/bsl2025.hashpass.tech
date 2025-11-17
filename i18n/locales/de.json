@@ -664,6 +664,46 @@
         "messageMeeting": "Neue Nachricht in {meetingTitle}"
       }
     }
+  },
+  "status": {
+    "title": "Systemstatus",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "database": "Datenbank",
+    "emailService": "E-Mail-Service",
+    "apiEndpoints": "API-Endpunkte",
+    "systemChecks": "Systemprüfungen",
+    "configured": "Konfiguriert",
+    "yes": "Ja",
+    "no": "Nein",
+    "agenda": "Agenda",
+    "speakers": "Redner",
+    "bookings": "Buchungen",
+    "passes": "Pässe",
+    "hasData": "Hat Daten",
+    "noData": "Keine Daten",
+    "accessible": "Zugänglich",
+    "notAccessible": "Nicht Zugänglich",
+    "items": "Elemente",
+    "count": "Anzahl",
+    "updated": "Aktualisiert",
+    "autoRefresh": "Die Statusseite wird alle 30 Sekunden automatisch aktualisiert",
+    "pullToRefresh": "Ziehen Sie nach unten, um manuell zu aktualisieren"
+  },
+  "version": {
+    "title": "Versionsinformationen",
+    "current": "Aktuelle Version",
+    "released": "Veröffentlicht:",
+    "buildInfo": "Build-Informationen:",
+    "buildId": "Build-ID:",
+    "buildTime": "Build-Zeit:",
+    "gitCommit": "Git-Commit:",
+    "branch": "Branch:",
+    "features": "Neue Funktionen",
+    "bugfixes": "Fehlerbehebungen",
+    "breakingChanges": "Wichtige Änderungen",
+    "history": "Versionsverlauf",
+    "status": "Systemstatus",
+    "statusSummary": "Klicken Sie, um detaillierte Systemstatus- und Service-Health-Informationen anzuzeigen."
   }
 }
 

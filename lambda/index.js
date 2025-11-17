@@ -81,7 +81,7 @@ exports.handler = async (event) => {
       headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, PATCH, OPTIONS';
     }
     if (!headers['access-control-allow-headers']) {
-      headers['access-control-allow-headers'] = 'Content-Type, Authorization';
+      headers['access-control-allow-headers'] = 'Content-Type, Authorization, Cache-Control, Pragma, Expires, X-Client-Version';
     }
 
     // Ensure body is a string (not an object)

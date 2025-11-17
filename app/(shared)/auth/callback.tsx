@@ -11,7 +11,25 @@ export default function AuthCallback() {
     const [message, setMessage] = useState('Processing authentication...');
     
     // Track if we've already navigated to prevent duplicate navigation
-    const hasNavigatedRef = useRef(false);
+    // Use sessionStorage to persist across page reloads
+    const getHasNavigated = () => {
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.sessionStorage) {
+            return window.sessionStorage.getItem('auth_callback_processed') === 'true';
+        }
+        return false;
+    };
+    
+    const setHasNavigated = (value: boolean) => {
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.sessionStorage) {
+            if (value) {
+                window.sessionStorage.setItem('auth_callback_processed', 'true');
+            } else {
+                window.sessionStorage.removeItem('auth_callback_processed');
+            }
+        }
+    };
+    
+    const hasNavigatedRef = useRef(getHasNavigated());
     
     // Get redirect path from URL params
     const getRedirectPath = () => {
@@ -36,7 +54,7 @@ export default function AuthCallback() {
         return defaultPath;
     };
     
-    // Safe navigation function with force navigation
+    // Safe navigation function - use router instead of window.location to prevent full page reload
     const safeNavigate = (path: string) => {
         if (path.includes('/auth/callback')) {
             console.warn('⚠️ Attempted to redirect to callback route, redirecting to dashboard instead');
@@ -45,22 +63,12 @@ export default function AuthCallback() {
         
         console.log('🚀 Navigating to:', path);
         
-        // Use window.location for web to force a full navigation and prevent loops
-        if (Platform.OS === 'web' && typeof window !== 'undefined') {
-            // Convert Expo Router path to actual URL
-            let actualPath = path;
-            if (actualPath.startsWith('/(shared)/')) {
-                actualPath = actualPath.replace('/(shared)/', '/');
-            }
-            if (actualPath.startsWith('/')) {
-                const fullUrl = window.location.origin + actualPath;
-                console.log('🌐 Using window.location.replace for web:', fullUrl);
-                window.location.replace(fullUrl);
-                return;
-            }
-        }
+        // Mark as navigated BEFORE navigation to prevent re-processing
+        hasNavigatedRef.current = true;
+        setHasNavigated(true);
         
-        // For mobile or if path conversion fails, use router
+        // Use router.replace instead of window.location to avoid full page reload
+        // This prevents the component from remounting and losing state
         router.replace(path as any);
     };
     
@@ -69,6 +77,25 @@ export default function AuthCallback() {
     
     // Simplified auth callback handler with reduced delays
     useEffect(() => {
+        // CRITICAL: Check sessionStorage first to prevent re-processing after navigation
+        if (getHasNavigated()) {
+            console.log('⏭️ Callback already processed (sessionStorage), checking session and redirecting...');
+            // If we already processed, just check session and redirect
+            (async () => {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    console.log('✅ Session exists, redirecting to dashboard');
+                    hasNavigatedRef.current = true;
+                    router.replace(getRedirectPath() as any);
+                } else {
+                    // Clear the flag if no session
+                    setHasNavigated(false);
+                    hasNavigatedRef.current = false;
+                }
+            })();
+            return;
+        }
+        
         // CRITICAL: Prevent useEffect from running multiple times
         // This can happen if the component re-renders or if params change
         if (hasNavigatedRef.current || isProcessingRef.current) {
@@ -81,7 +108,7 @@ export default function AuthCallback() {
         
         const handleAuthCallback = async () => {
             // Triple-check guard (in case of race condition or re-render)
-            if (hasNavigatedRef.current || isProcessingRef.current || executed) {
+            if (hasNavigatedRef.current || isProcessingRef.current || executed || getHasNavigated()) {
                 console.log('⏭️ Already processing or navigated, skipping handler');
                 return;
             }
@@ -95,6 +122,20 @@ export default function AuthCallback() {
                 
                 console.log('🔄 Auth callback started');
                 console.log('📋 Callback params:', params);
+                
+                // CRITICAL: First check if we already have a valid session
+                // This prevents processing if Supabase already handled it
+                const { data: { existingSession } } = await supabase.auth.getSession();
+                if (existingSession?.user) {
+                    console.log('✅ Session already exists, skipping URL processing');
+                    setStatus('success');
+                    setMessage('✅ Authentication successful!');
+                    hasNavigatedRef.current = true;
+                    setHasNavigated(true);
+                    isProcessingRef.current = false;
+                    safeNavigate(getRedirectPath());
+                    return;
+                }
                 
                 // Check if URL has auth tokens/code before processing
                 let hasAuthData = false;
@@ -197,6 +238,7 @@ export default function AuthCallback() {
                     setStatus('success');
                     setMessage('✅ Authentication successful!');
                     hasNavigatedRef.current = true;
+                    setHasNavigated(true);
                     isProcessingRef.current = false;
                     safeNavigate(getRedirectPath());
                     return;
@@ -224,6 +266,7 @@ export default function AuthCallback() {
                         setStatus('success');
                         setMessage('✅ Authentication successful!');
                         hasNavigatedRef.current = true;
+                        setHasNavigated(true);
                         isProcessingRef.current = false;
                         safeNavigate(getRedirectPath());
                         return;
@@ -246,6 +289,7 @@ export default function AuthCallback() {
                     setStatus('success');
                     setMessage('✅ Authentication successful!');
                     hasNavigatedRef.current = true;
+                    setHasNavigated(true);
                     isProcessingRef.current = false;
                     safeNavigate(getRedirectPath());
                 } else {
@@ -267,6 +311,7 @@ export default function AuthCallback() {
                         setStatus('success');
                         setMessage('✅ Authentication successful!');
                         hasNavigatedRef.current = true;
+                        setHasNavigated(true);
                         isProcessingRef.current = false;
                         safeNavigate(getRedirectPath());
                         return;
@@ -282,8 +327,9 @@ export default function AuthCallback() {
                 
                 // After error, redirect back to auth page after a delay
                 setTimeout(() => {
-                    if (!hasNavigatedRef.current) {
+                    if (!hasNavigatedRef.current && !getHasNavigated()) {
                         hasNavigatedRef.current = true;
+                        setHasNavigated(false); // Clear flag on error
                         isProcessingRef.current = false;
                         router.replace('/(shared)/auth' as any);
                     }
@@ -314,7 +360,7 @@ export default function AuthCallback() {
             console.log(`🔐 Callback auth event: ${event}, user: ${session?.user?.id || 'none'}`);
             
             // Only handle SIGNED_IN if we haven't navigated and we're not currently processing
-            if (event === 'SIGNED_IN' && session?.user && !hasNavigatedRef.current && !isProcessingRef.current) {
+            if (event === 'SIGNED_IN' && session?.user && !hasNavigatedRef.current && !isProcessingRef.current && !getHasNavigated()) {
                 console.log('✅ SIGNED_IN event detected, navigating');
                 
                 // Clean URL to prevent re-processing (only on web)
@@ -325,6 +371,7 @@ export default function AuthCallback() {
                 }
                 
                 hasNavigatedRef.current = true;
+                setHasNavigated(true);
                 setStatus('success');
                 setMessage('✅ Authentication successful!');
                 safeNavigate(getRedirectPath());

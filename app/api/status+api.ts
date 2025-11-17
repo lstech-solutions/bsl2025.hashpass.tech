@@ -373,6 +373,19 @@ export async function getSystemHealthCheck(eventId: string = 'bsl2025'): Promise
   }
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const eventId = searchParams.get('eventId') || 'bsl2025';
@@ -389,6 +402,7 @@ export async function GET(request: Request) {
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
+        ...corsHeaders,
       },
     });
   } catch (e: any) {
@@ -428,6 +442,7 @@ export async function GET(request: Request) {
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
+        ...corsHeaders,
       },
     });
   }

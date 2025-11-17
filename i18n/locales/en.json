@@ -958,5 +958,29 @@
         "messageMeeting": "New message in {meetingTitle}"
       }
     }
+  },
+  "status": {
+    "title": "System Status",
+    "lastUpdated": "Last updated",
+    "database": "Database",
+    "emailService": "Email Service",
+    "apiEndpoints": "API Endpoints",
+    "systemChecks": "System Checks",
+    "configured": "Configured",
+    "yes": "Yes",
+    "no": "No",
+    "agenda": "Agenda",
+    "speakers": "Speakers",
+    "bookings": "Bookings",
+    "passes": "Passes",
+    "hasData": "Has Data",
+    "noData": "No Data",
+    "accessible": "Accessible",
+    "notAccessible": "Not Accessible",
+    "items": "Items",
+    "count": "Count",
+    "updated": "Updated",
+    "autoRefresh": "Status page auto-refreshes every 30 seconds",
+    "pullToRefresh": "Pull down to refresh manually"
   }
 }

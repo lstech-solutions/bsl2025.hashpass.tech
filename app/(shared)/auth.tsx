@@ -20,6 +20,7 @@ import { throttle } from '../../lib/performance-utils';
 import { clearAuthCache } from '../../lib/version-checker';
 import { apiClient } from '../../lib/api-client';
 import { CURRENT_VERSION } from '../../config/version';
+import VersionStatusIndicator from '../../components/VersionStatusIndicator';
 
 type AuthMethod = 'magiclink' | 'otp';
 
@@ -1558,7 +1559,7 @@ export default function AuthScreen() {
         </View>
         
         <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>v{CURRENT_VERSION.version}</Text>
+          <VersionStatusIndicator compact={false} showVersion={true} size="small" />
         </View>
       </View>
       </ScrollView>

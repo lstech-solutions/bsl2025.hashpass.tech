@@ -256,6 +256,7 @@ function ThemedContent() {
         <Stack.Screen name="(shared)/terms" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/docs" options={{ headerShown: false }} />
         <Stack.Screen name="(shared)/support" options={{ headerShown: false }} />
+        <Stack.Screen name="status" options={{ headerShown: false }} />
         <Stack.Screen name="privacy" options={{ headerShown: false }} />
         <Stack.Screen name="terms" options={{ headerShown: false }} />
         <Stack.Screen 
@@ -276,8 +277,6 @@ function ThemedContent() {
             headerShown: false
           }}
         />
-        {/* Global Events Explorer (main branch only) */}
-        <Stack.Screen name="events/explore" options={{ headerShown: false }} />
         {/* Public BSL routes */}
         <Stack.Screen name="events/bsl2025/home" options={{ headerShown: false }} />
         <Stack.Screen name="events/bsl2025/speakers/[id]" options={{ headerShown: false }} />

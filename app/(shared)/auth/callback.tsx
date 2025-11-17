@@ -41,13 +41,19 @@ export default function AuthCallback() {
         }
     };
     
+    // Track processing state to prevent multiple simultaneous executions
+    const isProcessingRef = useRef(false);
+    
     // Simplified auth callback handler with reduced delays
     useEffect(() => {
         const handleAuthCallback = async () => {
-            if (hasNavigatedRef.current) {
-                console.log('⏭️ Already navigated from callback, skipping');
+            // Prevent multiple simultaneous executions
+            if (hasNavigatedRef.current || isProcessingRef.current) {
+                console.log('⏭️ Already processing or navigated, skipping');
                 return;
             }
+            
+            isProcessingRef.current = true;
             
             try {
                 setStatus('processing');
@@ -56,6 +62,41 @@ export default function AuthCallback() {
                 console.log('🔄 Auth callback started');
                 console.log('📋 Callback params:', params);
                 
+                // Check if URL has auth tokens/code before processing
+                let hasAuthData = false;
+                if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                    const url = window.location.href;
+                    hasAuthData = url.includes('#access_token=') || 
+                                  url.includes('#code=') || 
+                                  url.includes('?code=') ||
+                                  url.includes('&code=') ||
+                                  url.includes('access_token=');
+                } else {
+                    // For mobile, check params
+                    hasAuthData = !!(params.code || params.access_token);
+                }
+                
+                if (!hasAuthData) {
+                    console.log('⚠️ No auth data in URL, checking for existing session...');
+                    // Check if user is already authenticated
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session && session.user) {
+                        console.log('✅ Found existing session, navigating');
+                        setStatus('success');
+                        setMessage('✅ Authentication successful!');
+                        hasNavigatedRef.current = true;
+                        isProcessingRef.current = false;
+                        safeNavigate(getRedirectPath());
+                        return;
+                    }
+                    // If no auth data and no session, this might be a direct navigation to callback
+                    console.warn('⚠️ No auth data and no session, redirecting to auth');
+                    hasNavigatedRef.current = true;
+                    isProcessingRef.current = false;
+                    router.replace('/(shared)/auth' as any);
+                    return;
+                }
+                
                 // Get the current URL for processing
                 let currentUrl = '';
                 
@@ -63,26 +104,15 @@ export default function AuthCallback() {
                     currentUrl = window.location.href;
                     console.log('🌐 Using browser URL:', currentUrl.substring(0, 150));
                     
-                    // Ensure apikey is in the URL for Supabase processing
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-                    
-                    if (!urlParams.has('apikey') && !hashParams.has('apikey')) {
-                        const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_KEY;
-                        if (supabaseAnonKey) {
-                            const urlObj = new URL(currentUrl);
-                            urlObj.searchParams.set('apikey', supabaseAnonKey);
-                            currentUrl = urlObj.toString();
-                            console.log('✅ Added apikey to callback URL');
-                        }
-                    }
+                    // Don't modify URL - Supabase should handle it automatically
+                    // The URL from OAuth provider already has the necessary tokens
                 } else {
                     // For mobile, construct URL from params
                     const baseUrl = 'hashpass://auth/callback';
                     const searchParams = new URLSearchParams();
                     
                     Object.entries(params).forEach(([key, value]) => {
-                        if (value) {
+                        if (value && key !== 'returnTo') {
                             searchParams.append(key, Array.isArray(value) ? value[0] : value);
                         }
                     });
@@ -97,32 +127,31 @@ export default function AuthCallback() {
                 
                 console.log('🎯 Processing URL:', currentUrl.substring(0, 100) + '...');
                 
-                // Simplified: Try Supabase auto-detection first with shorter delays
+                // Try Supabase auto-detection first (Supabase should handle URL automatically)
                 console.log('🔄 Letting Supabase auto-detect session from URL...');
                 
-                // Reduced attempts and delays for faster response
-                for (let attempt = 1; attempt <= 3; attempt++) {
-                    const delay = attempt * 500; // 0.5s, 1s, 1.5s
-                    console.log(`⏳ Auto-detection attempt ${attempt}/3 after ${delay}ms...`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    
-                    const { data: { session }, error } = await supabase.auth.getSession();
-                    if (session && session.user && !error) {
-                        console.log(`✅ Supabase auto-detected session on attempt ${attempt}:`, session.user.id);
-                        setStatus('success');
-                        setMessage('✅ Authentication successful!');
-                        hasNavigatedRef.current = true;
-                        safeNavigate(getRedirectPath());
-                        return;
-                    }
+                // Wait a bit for Supabase to process the URL automatically
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Check session immediately
+                let { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (session && session.user && !sessionError) {
+                    console.log('✅ Supabase auto-detected session:', session.user.id);
+                    setStatus('success');
+                    setMessage('✅ Authentication successful!');
+                    hasNavigatedRef.current = true;
+                    isProcessingRef.current = false;
+                    safeNavigate(getRedirectPath());
+                    return;
                 }
                 
                 // If auto-detection fails, try manual processing
                 console.log('🔄 Auto-detection failed, trying manual URL processing...');
-                const { session, error } = await createSessionFromUrl(currentUrl);
+                const result = await createSessionFromUrl(currentUrl);
                 
-                if (error) {
-                    console.error('❌ Error creating session from URL:', error);
+                if (result.error) {
+                    console.error('❌ Error creating session from URL:', result.error);
                     
                     // Check if session was created despite error
                     const { data: { session: fallbackSession } } = await supabase.auth.getSession();
@@ -131,21 +160,23 @@ export default function AuthCallback() {
                         setStatus('success');
                         setMessage('✅ Authentication successful!');
                         hasNavigatedRef.current = true;
+                        isProcessingRef.current = false;
                         safeNavigate(getRedirectPath());
                         return;
                     }
                     
-                    throw error;
+                    throw result.error;
                 }
                 
-                if (session && session.user) {
-                    console.log('✅ Session created successfully:', session.user.id);
+                if (result.session && result.session.user) {
+                    console.log('✅ Session created successfully:', result.session.user.id);
                     setStatus('success');
                     setMessage('✅ Authentication successful!');
                     hasNavigatedRef.current = true;
+                    isProcessingRef.current = false;
                     safeNavigate(getRedirectPath());
                 } else {
-                    // One final check
+                    // One final check with a short delay
                     console.log('🔄 No session from URL, doing final check...');
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     
@@ -155,6 +186,7 @@ export default function AuthCallback() {
                         setStatus('success');
                         setMessage('✅ Authentication successful!');
                         hasNavigatedRef.current = true;
+                        isProcessingRef.current = false;
                         safeNavigate(getRedirectPath());
                         return;
                     }
@@ -167,25 +199,29 @@ export default function AuthCallback() {
                 setStatus('error');
                 setMessage(error.message || 'Authentication failed. Please try again.');
                 
-                // After error, redirect back to auth page after a shorter delay
+                // After error, redirect back to auth page after a delay
                 setTimeout(() => {
                     if (!hasNavigatedRef.current) {
                         hasNavigatedRef.current = true;
+                        isProcessingRef.current = false;
                         router.replace('/(shared)/auth' as any);
                     }
-                }, 2000); // Reduced from 3 seconds to 2
+                }, 2000);
+            } finally {
+                isProcessingRef.current = false;
             }
         };
         
         handleAuthCallback();
     }, [params, router]);
     
-    // Listen for auth state changes as backup
+    // Listen for auth state changes as backup (only if not already processing)
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             console.log(`🔐 Callback auth event: ${event}, user: ${session?.user?.id || 'none'}`);
             
-            if (event === 'SIGNED_IN' && session?.user && !hasNavigatedRef.current) {
+            // Only handle SIGNED_IN if we haven't navigated and we're not currently processing
+            if (event === 'SIGNED_IN' && session?.user && !hasNavigatedRef.current && !isProcessingRef.current) {
                 console.log('✅ SIGNED_IN event detected, navigating');
                 hasNavigatedRef.current = true;
                 setStatus('success');

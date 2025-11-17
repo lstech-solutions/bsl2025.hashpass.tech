@@ -958,6 +958,31 @@ export default function AuthScreen() {
       console.log('✅ Final redirect URL (base only for Supabase validation):', finalRedirectUrl);
       console.log('💡 Query parameters (apikey, returnTo) will be handled separately');
       
+      // Verify the redirect URL matches allowed patterns
+      const allowedPatterns = [
+        'https://bsl2025.hashpass.tech/auth/callback',
+        'http://localhost:8081/auth/callback',
+        'https://bsl2025.hashpass.tech/**',
+        'http://localhost:8081/**',
+      ];
+      const matchesAllowed = allowedPatterns.some(pattern => {
+        if (pattern.endsWith('/**')) {
+          const base = pattern.replace('/**', '');
+          return finalRedirectUrl.startsWith(base);
+        }
+        return finalRedirectUrl === pattern;
+      });
+      console.log('🔍 Redirect URL validation:', {
+        url: finalRedirectUrl,
+        matchesAllowed,
+        allowedPatterns,
+      });
+      
+      if (!matchesAllowed) {
+        console.warn('⚠️ Redirect URL may not match Supabase allowed URLs:', finalRedirectUrl);
+        console.warn('⚠️ Please verify this URL is in Supabase Dashboard → Authentication → Redirect URLs');
+      }
+      
       // Store the origin in localStorage so the callback handler can use it if Supabase redirects incorrectly
       if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
         try {
@@ -969,16 +994,42 @@ export default function AuthScreen() {
       }
       
       // Use Supabase's built-in redirect handling to avoid URI mismatches
+      // CRITICAL: Use finalRedirectUrl (base only) instead of redirectUrl to ensure validation passes
+      console.log('🚀 Calling Supabase signInWithOAuth with redirectTo:', finalRedirectUrl);
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: redirectUrl,
+          redirectTo: finalRedirectUrl, // Use finalRedirectUrl (base only) for validation
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
           },
         },
       });
+      
+      if (data?.url) {
+        // Log the OAuth URL to verify redirect_to is included
+        const oauthUrl = new URL(data.url);
+        const redirectToParam = oauthUrl.searchParams.get('redirect_to');
+        console.log('📋 OAuth URL from Supabase:', {
+          base: oauthUrl.origin + oauthUrl.pathname,
+          hasRedirectTo: !!redirectToParam,
+          redirectTo: redirectToParam ? redirectToParam.substring(0, 100) : 'NOT FOUND',
+          fullUrl: data.url.substring(0, 200),
+        });
+        
+        if (!redirectToParam) {
+          console.error('❌ CRITICAL: redirect_to parameter is missing from OAuth URL!');
+          console.error('❌ Supabase will use site_url as fallback, which may cause incorrect redirects');
+        } else if (redirectToParam !== finalRedirectUrl) {
+          console.warn('⚠️ redirect_to in OAuth URL does not match what we sent:', {
+            sent: finalRedirectUrl,
+            received: redirectToParam,
+          });
+        } else {
+          console.log('✅ redirect_to parameter correctly included in OAuth URL');
+        }
+      }
 
       if (error) {
         console.error(`❌ ${provider} OAuth error:`, error);

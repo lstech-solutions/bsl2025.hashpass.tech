@@ -138,6 +138,15 @@ export default function AuthCallback() {
                 
                 if (session && session.user && !sessionError) {
                     console.log('✅ Supabase auto-detected session:', session.user.id);
+                    
+                    // Clean URL to prevent re-processing (only on web)
+                    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                        // Remove hash and OAuth params from URL to prevent re-processing
+                        const cleanUrl = window.location.origin + window.location.pathname;
+                        window.history.replaceState({}, '', cleanUrl);
+                        console.log('🧹 Cleaned URL to prevent re-processing');
+                    }
+                    
                     setStatus('success');
                     setMessage('✅ Authentication successful!');
                     hasNavigatedRef.current = true;
@@ -157,6 +166,14 @@ export default function AuthCallback() {
                     const { data: { session: fallbackSession } } = await supabase.auth.getSession();
                     if (fallbackSession && fallbackSession.user) {
                         console.log('✅ Found session despite error:', fallbackSession.user.id);
+                        
+                        // Clean URL to prevent re-processing (only on web)
+                        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                            const cleanUrl = window.location.origin + window.location.pathname;
+                            window.history.replaceState({}, '', cleanUrl);
+                            console.log('🧹 Cleaned URL to prevent re-processing');
+                        }
+                        
                         setStatus('success');
                         setMessage('✅ Authentication successful!');
                         hasNavigatedRef.current = true;
@@ -170,6 +187,15 @@ export default function AuthCallback() {
                 
                 if (result.session && result.session.user) {
                     console.log('✅ Session created successfully:', result.session.user.id);
+                    
+                    // Clean URL to prevent re-processing (only on web)
+                    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                        // Remove hash and OAuth params from URL to prevent re-processing
+                        const cleanUrl = window.location.origin + window.location.pathname;
+                        window.history.replaceState({}, '', cleanUrl);
+                        console.log('🧹 Cleaned URL to prevent re-processing');
+                    }
+                    
                     setStatus('success');
                     setMessage('✅ Authentication successful!');
                     hasNavigatedRef.current = true;
@@ -183,6 +209,14 @@ export default function AuthCallback() {
                     const { data: { session: finalSession } } = await supabase.auth.getSession();
                     if (finalSession && finalSession.user) {
                         console.log(`✅ Found session on final check:`, finalSession.user.id);
+                        
+                        // Clean URL to prevent re-processing (only on web)
+                        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                            const cleanUrl = window.location.origin + window.location.pathname;
+                            window.history.replaceState({}, '', cleanUrl);
+                            console.log('🧹 Cleaned URL to prevent re-processing');
+                        }
+                        
                         setStatus('success');
                         setMessage('✅ Authentication successful!');
                         hasNavigatedRef.current = true;
@@ -223,6 +257,14 @@ export default function AuthCallback() {
             // Only handle SIGNED_IN if we haven't navigated and we're not currently processing
             if (event === 'SIGNED_IN' && session?.user && !hasNavigatedRef.current && !isProcessingRef.current) {
                 console.log('✅ SIGNED_IN event detected, navigating');
+                
+                // Clean URL to prevent re-processing (only on web)
+                if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                    const cleanUrl = window.location.origin + window.location.pathname;
+                    window.history.replaceState({}, '', cleanUrl);
+                    console.log('🧹 Cleaned URL to prevent re-processing');
+                }
+                
                 hasNavigatedRef.current = true;
                 setStatus('success');
                 setMessage('✅ Authentication successful!');

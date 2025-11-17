@@ -981,5 +981,19 @@
     "updated": "Actualizado",
     "autoRefresh": "La página de estado se actualiza automáticamente cada 30 segundos",
     "pullToRefresh": "Desliza hacia abajo para actualizar manualmente"
+  },
+  "version": {
+    "title": "Información de Versión",
+    "current": "Versión Actual",
+    "released": "Publicado:",
+    "buildInfo": "Información de Compilación:",
+    "buildId": "ID de Compilación:",
+    "buildTime": "Tiempo de Compilación:",
+    "gitCommit": "Commit de Git:",
+    "branch": "Rama:",
+    "features": "Nuevas Funcionalidades",
+    "bugfixes": "Correcciones de Errores",
+    "breakingChanges": "Cambios Importantes",
+    "history": "Historial de Versiones"
   }
 }

@@ -982,5 +982,19 @@
     "updated": "Updated",
     "autoRefresh": "Status page auto-refreshes every 30 seconds",
     "pullToRefresh": "Pull down to refresh manually"
+  },
+  "version": {
+    "title": "Version Information",
+    "current": "Current Version",
+    "released": "Released:",
+    "buildInfo": "Build Information:",
+    "buildId": "Build ID:",
+    "buildTime": "Build Time:",
+    "gitCommit": "Git Commit:",
+    "branch": "Branch:",
+    "features": "New Features",
+    "bugfixes": "Bug Fixes",
+    "breakingChanges": "Breaking Changes",
+    "history": "Version History"
   }
 }

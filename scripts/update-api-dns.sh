@@ -23,10 +23,19 @@ if [ -z "$DOMAIN_INFO" ]; then
 fi
 
 # Get target domain from API Gateway
-TARGET_DOMAIN=$(echo "$DOMAIN_INFO" | jq -r '.DomainNameConfigurations[0].TargetDomainName' 2>/dev/null || echo "")
+# For REGIONAL endpoints, use ApiGatewayDomainName
+# For EDGE endpoints, use TargetDomainName (CloudFront)
+TARGET_DOMAIN=$(echo "$DOMAIN_INFO" | jq -r '.DomainNameConfigurations[0].TargetDomainName // .DomainNameConfigurations[0].ApiGatewayDomainName' 2>/dev/null || echo "")
+
+if [ -z "$TARGET_DOMAIN" ] || [ "$TARGET_DOMAIN" = "null" ]; then
+    # Fallback: try ApiGatewayDomainName directly
+    TARGET_DOMAIN=$(echo "$DOMAIN_INFO" | jq -r '.DomainNameConfigurations[0].ApiGatewayDomainName' 2>/dev/null || echo "")
+fi
 
 if [ -z "$TARGET_DOMAIN" ] || [ "$TARGET_DOMAIN" = "null" ]; then
     echo "❌ Could not get target domain from API Gateway"
+    echo "   Domain info:"
+    echo "$DOMAIN_INFO" | jq '.'
     exit 1
 fi
 

@@ -59,7 +59,8 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-          role-session-name: GitHubActions-LambdaDeploy
+          role-session-name: GitHubActions-LambdaDeploy-${{ github.run_id }}
+          role-duration-seconds: 900
       
       - name: Deploy to Lambda
         run: |

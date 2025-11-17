@@ -67,6 +67,19 @@ export default function AuthCallback() {
         hasNavigatedRef.current = true;
         setHasNavigated(true);
         
+        // Clear sessionStorage after a short delay to allow navigation to complete
+        // This prevents the flag from persisting if user manually navigates back
+        setTimeout(() => {
+            if (Platform.OS === 'web' && typeof window !== 'undefined' && window.sessionStorage) {
+                // Only clear if we're not on a callback route
+                const currentPath = window.location.pathname;
+                if (!currentPath.includes('/auth/callback')) {
+                    window.sessionStorage.removeItem('auth_callback_processed');
+                    console.log('🧹 Cleared sessionStorage flag after successful navigation');
+                }
+            }
+        }, 2000);
+        
         // Use router.replace instead of window.location to avoid full page reload
         // This prevents the component from remounting and losing state
         router.replace(path as any);

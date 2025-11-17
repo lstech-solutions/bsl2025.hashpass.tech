@@ -3,15 +3,40 @@ import { motion } from "motion/react";
 import testimonials from "../i18n/locales/testimonials.json";
 import { useTranslation } from "../i18n/i18n";
 import { useTheme } from "../hooks/useTheme";
+import { useMemo } from "react";
 
+// Fisher-Yates shuffle algorithm for randomizing array
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
 
 const Testimonials: React.FC<{ locale: string }> = ({ locale }) => {
   const { t } = useTranslation('index.testimonials');
-  const currentTestimonials = testimonials[locale as keyof typeof testimonials] || testimonials.en;
-  const firstColumn = currentTestimonials.slice(0, 2);
-  const secondColumn = currentTestimonials.slice(2, 4);
-  const thirdColumn = currentTestimonials.slice(4, 9);
   const { colors } = useTheme();
+  
+  // Mix testimonials from all languages randomly
+  const mixedTestimonials = useMemo(() => {
+    // Collect all testimonials from all languages
+    const allTestimonials: any[] = [];
+    Object.keys(testimonials).forEach((lang) => {
+      const langTestimonials = testimonials[lang as keyof typeof testimonials];
+      if (Array.isArray(langTestimonials)) {
+        allTestimonials.push(...langTestimonials);
+      }
+    });
+    
+    // Shuffle them randomly
+    return shuffleArray(allTestimonials);
+  }, []); // Empty dependency array - shuffle once on mount
+  
+  const firstColumn = mixedTestimonials.slice(0, 2);
+  const secondColumn = mixedTestimonials.slice(2, 4);
+  const thirdColumn = mixedTestimonials.slice(4, 9);
   return (
     <section className="bg-background relative">
 

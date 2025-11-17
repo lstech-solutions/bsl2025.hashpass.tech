@@ -94,8 +94,15 @@ export default function AuthScreen() {
   }, [rateLimitCooldown]);
 
   // Check for existing session on mount (handles page reload)
+  // Skip this check if we're on the callback route to prevent loops
   useEffect(() => {
     const checkExistingSession = async () => {
+      // Don't check session if we're on callback route - let callback handle it
+      if (typeof window !== 'undefined' && window.location.pathname.includes('/auth/callback')) {
+        console.log('⏭️ Skipping session check on callback route');
+        return;
+      }
+      
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && !hasNavigatedRef.current) {
@@ -124,6 +131,12 @@ export default function AuthScreen() {
   useEffect(() => {
     // Throttled auth change handler (reduced throttle for faster response)
     const throttledHandleAuthChange = throttle(async (event: AuthChangeEvent, session: Session | null) => {
+      // Don't handle auth changes if we're on callback route - let callback handle it
+      if (typeof window !== 'undefined' && window.location.pathname.includes('/auth/callback')) {
+        console.log('⏭️ Skipping auth change handler on callback route');
+        return;
+      }
+      
       // Prevent duplicate processing
       if (isProcessingRef.current || hasNavigatedRef.current) {
         console.log('⏭️ Auth change already processing or navigated, skipping');

@@ -216,13 +216,23 @@ export default function NotificationsScreen() {
       return t('center.justNow');
     } else if (diffInSeconds < 3600) {
       const minutes = Math.floor(diffInSeconds / 60);
-      return t('center.minutesAgo', { minutes });
+      const translated = t('center.minutesAgo', { minutes });
+      // Fallback if translation returns the key itself
+      return translated && translated !== 'center.minutesAgo' ? translated : `${minutes}m ago`;
     } else if (diffInSeconds < 86400) {
       const hours = Math.floor(diffInSeconds / 3600);
-      return t('center.hoursAgo', { hours });
+      const translated = t('center.hoursAgo', { hours });
+      // Fallback if translation returns the key itself
+      return translated && translated !== 'center.hoursAgo' ? translated : `${hours}h ago`;
     } else {
       const days = Math.floor(diffInSeconds / 86400);
-      return t('center.daysAgo', { days });
+      const translated = t('center.daysAgo', { days });
+      // Fallback if translation returns the key itself or doesn't interpolate correctly
+      if (translated && translated !== 'center.daysAgo' && translated.includes(String(days))) {
+        return translated;
+      }
+      // Fallback to ensure days is always shown
+      return `${days}d ago`;
     }
   };
 

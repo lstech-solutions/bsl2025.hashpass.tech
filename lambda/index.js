@@ -15,6 +15,23 @@ const handleRequest = createRequestHandler(
 // AWS Lambda handler for API Gateway
 exports.handler = async (event) => {
   try {
+    const method = event.httpMethod || event.requestContext?.httpMethod || 'GET';
+    
+    // Handle OPTIONS preflight requests immediately with CORS headers
+    if (method === 'OPTIONS') {
+      console.log('OPTIONS preflight request detected');
+      return {
+        statusCode: 204,
+        headers: {
+          'access-control-allow-origin': '*',
+          'access-control-allow-methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+          'access-control-allow-headers': 'Content-Type, Authorization, Cache-Control, Pragma, Expires, X-Client-Version',
+          'access-control-max-age': '86400',
+        },
+        body: '',
+      };
+    }
+    
     // Extract path and query string from API Gateway event
     // API Gateway proxy integration includes stage in path, remove it
     let requestPath = event.path || event.requestContext?.path || '/';
@@ -26,7 +43,6 @@ exports.handler = async (event) => {
     const queryString = event.rawQueryString || (event.queryStringParameters 
       ? new URLSearchParams(event.queryStringParameters || {}).toString()
       : '');
-    const method = event.httpMethod || event.requestContext?.httpMethod || 'GET';
     
     // Build full URL
     const domainName = event.requestContext?.domainName || 

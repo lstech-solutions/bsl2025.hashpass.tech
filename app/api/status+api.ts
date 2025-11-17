@@ -376,7 +376,8 @@ export async function getSystemHealthCheck(eventId: string = 'bsl2025'): Promise
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Pragma, Expires, X-Client-Version',
+  'Access-Control-Max-Age': '86400',
 };
 
 export async function OPTIONS() {

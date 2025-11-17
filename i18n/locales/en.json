@@ -396,7 +396,9 @@
     "banner": {
       "title": "Blockchain Summit Latam 2025",
       "subtitle": "November 12-14, 2025 • Universidad EAFIT, Medellín",
-      "date": "November 12-14, 2025"
+      "date": "November 12-14, 2025",
+      "exploreAllEvents": "Explore All Events",
+      "exploreMoreEvents": "Explore More Events"
     },
     "selectEvent": "Select Event",
     "yourPasses": "Your Passes",

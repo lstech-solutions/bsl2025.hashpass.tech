@@ -2,18 +2,25 @@
 
 ## Current Situation
 
-- **Amplify App ID**: `d31bu1ot0gd14y`
-- **Frontend**: Hosted on Amplify (static files)
+- **API Amplify App ID**: `d31bu1ot0gd14y` (api.hashpass.tech, region: us-east-2) - **DELETE THIS**
+- **Frontend Amplify App**: Different app for hashpass.tech - **KEEP THAT ONE**
+- **Frontend**: Hosted on Amplify (static files only)
 - **API Routes**: Now using API Gateway + Lambda (separate from Amplify)
 
 ## What to Do with api.hashpass.tech
 
-### ❌ DON'T Delete api.hashpass.tech
+### ✅ DELETE Amplify App for api.hashpass.tech
 
-**You should NOT delete `api.hashpass.tech`**. Instead:
+**You should DELETE the Amplify app `d31bu1ot0gd14y`** because:
 
-1. **Update DNS** to point to API Gateway (not Amplify)
-2. **Keep the domain** - it's needed for your API
+1. **No frontend needed** - API Gateway + Lambda handles everything
+2. **Redundant** - We're not using Amplify for API anymore
+3. **Cost savings** - One less app to maintain
+
+**Steps:**
+1. **Delete Amplify app**: Run `./scripts/delete-amplify-api-app.sh`
+2. **Update DNS** to point to API Gateway (not Amplify)
+3. **Keep the domain** - it's needed for your API
 
 ### ✅ DO Update DNS
 
@@ -149,14 +156,16 @@ jobs:
 - 🔄 Frontend: Set `EXPO_PUBLIC_API_BASE_URL=https://api.hashpass.tech/api`
 
 ### What to Remove
+- ❌ **Amplify App `d31bu1ot0gd14y`** (api.hashpass.tech, us-east-2) - DELETE THIS
 - ❌ Amplify Functions (if any) - no longer needed
 - ❌ API routes in `amplify.yml` - handled by API Gateway now
 
 ## Next Steps
 
-1. **Wait for certificate validation**: `./scripts/validate-acm-certificate.sh`
-2. **Setup custom domain**: `./scripts/setup-custom-domain.sh`
-3. **Update DNS**: `./scripts/update-api-dns.sh`
-4. **Test**: `curl https://api.hashpass.tech/api/config/versions`
-5. **Update frontend**: Set `EXPO_PUBLIC_API_BASE_URL` in Amplify environment variables
+1. **Delete Amplify app for API**: `./scripts/delete-amplify-api-app.sh`
+2. **Wait for certificate validation**: `./scripts/validate-acm-certificate.sh`
+3. **Setup custom domain**: `./scripts/setup-custom-domain.sh`
+4. **Update DNS**: `./scripts/update-api-dns.sh`
+5. **Test**: `curl https://api.hashpass.tech/api/config/versions`
+6. **Update frontend**: Set `EXPO_PUBLIC_API_BASE_URL` in Amplify environment variables (app `d31bu1ot0gd14y`)
 

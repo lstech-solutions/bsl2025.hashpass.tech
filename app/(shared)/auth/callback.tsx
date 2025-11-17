@@ -46,10 +46,17 @@ export default function AuthCallback() {
     
     // Simplified auth callback handler with reduced delays
     useEffect(() => {
+        // CRITICAL: Prevent useEffect from running multiple times
+        // This can happen if the component re-renders or if params change
+        if (hasNavigatedRef.current || isProcessingRef.current) {
+            console.log('⏭️ Already processing or navigated, skipping useEffect');
+            return;
+        }
+        
         const handleAuthCallback = async () => {
-            // Prevent multiple simultaneous executions
+            // Double-check guard (in case of race condition)
             if (hasNavigatedRef.current || isProcessingRef.current) {
-                console.log('⏭️ Already processing or navigated, skipping');
+                console.log('⏭️ Already processing or navigated, skipping handler');
                 return;
             }
             
@@ -127,11 +134,20 @@ export default function AuthCallback() {
                 
                 console.log('🎯 Processing URL:', currentUrl.substring(0, 100) + '...');
                 
-                // Try Supabase auto-detection first (Supabase should handle URL automatically)
-                console.log('🔄 Letting Supabase auto-detect session from URL...');
+                // CRITICAL: Clean URL IMMEDIATELY to prevent Supabase detectSessionInUrl from processing it again
+                // This prevents the infinite loop where Supabase processes the URL, then our handler processes it,
+                // then Supabase processes it again because the URL still has tokens
+                if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                    const cleanUrl = window.location.origin + window.location.pathname;
+                    window.history.replaceState({}, '', cleanUrl);
+                    console.log('🧹 Cleaned URL IMMEDIATELY to prevent re-processing');
+                }
                 
-                // Wait a bit for Supabase to process the URL automatically
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // Try Supabase auto-detection first (Supabase may have already processed before we cleaned)
+                console.log('🔄 Checking if Supabase already processed session from URL...');
+                
+                // Small delay to allow any in-flight Supabase processing to complete
+                await new Promise(resolve => setTimeout(resolve, 300));
                 
                 // Check session immediately
                 let { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -247,7 +263,16 @@ export default function AuthCallback() {
         };
         
         handleAuthCallback();
-    }, [params, router]);
+        
+        // Cleanup function to reset processing state if component unmounts
+        return () => {
+            // Don't reset hasNavigatedRef - we want to keep that across re-renders
+            // Only reset isProcessingRef if we haven't navigated
+            if (!hasNavigatedRef.current) {
+                isProcessingRef.current = false;
+            }
+        };
+    }, [params, router]); // Only depend on params and router, not on state
     
     // Listen for auth state changes as backup (only if not already processing)
     useEffect(() => {

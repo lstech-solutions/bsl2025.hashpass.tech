@@ -9,6 +9,7 @@ import { useScroll } from '../../../contexts/ScrollContext';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { useTranslation } from '../../../i18n/i18n';
+import { translateNotification } from '../../../lib/notification-translations';
 
 type TabType = 'all' | 'archive';
 
@@ -302,6 +303,8 @@ export default function NotificationsScreen() {
     const iconName = getNotificationIcon(notification.type);
     const iconColor = getNotificationColor(notification.type, notification.is_urgent);
     const isUnread = !notification.is_read;
+    // Translate notification to interpolate {speakerName} and {requestName}
+    const translatedNotification = translateNotification(notification, t);
 
     return (
       <View
@@ -352,7 +355,7 @@ export default function NotificationsScreen() {
                 isUnread && styles.unreadText,
                 !isUnread && styles.readText
               ]}>
-                {notification.title}
+                {translatedNotification.title}
               </Text>
               <View style={styles.headerActions}>
                 {notification.is_urgent && (
@@ -389,7 +392,7 @@ export default function NotificationsScreen() {
               isUnread && styles.unreadMessage,
               !isUnread && styles.readMessage
             ]}>
-              {notification.message}
+              {translatedNotification.message}
             </Text>
             
             <Text style={styles.notificationTime}>

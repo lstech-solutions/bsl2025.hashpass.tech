@@ -582,14 +582,8 @@ function CustomDrawerContent() {
         </View>
       </View>
 
-      {/* Version Information */}
-      <View style={styles.versionInfoSection}>
-        <Text style={styles.versionInfoTitle}>Version Information</Text>
-        <View style={styles.versionInfoContent}>
-          <VersionStatusIndicator compact={false} showVersion={true} size="small" />
-          <VersionDisplay showInSidebar={true} />
-        </View>
-      </View>
+      {/* Version Display */}
+      <VersionDisplay showInSidebar={true} />
     </View>
   );
 }

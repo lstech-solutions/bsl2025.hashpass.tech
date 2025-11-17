@@ -897,7 +897,6 @@ export default function DashboardLayout() {
           </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <VersionStatusIndicator compact={true} showVersion={false} size="small" />
             <CopilotStep text="Tap the notifications icon to view your recent notifications. The red badge shows the number of unread notifications. You can also access the full notifications screen from the sidebar." order={10} name="notificationsButton">
               <CopilotView>
                 <MiniNotificationDropdown />

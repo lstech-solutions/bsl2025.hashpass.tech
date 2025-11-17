@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, StatusBar } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { useNotifications } from '../../../contexts/NotificationContext';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import UnifiedSearchAndFilter from '../../../components/UnifiedSearchAndFilter';
 import { useScroll } from '../../../contexts/ScrollContext';
 import { supabase } from '../../../lib/supabase';
@@ -19,10 +19,13 @@ export default function NotificationsScreen() {
   const { notifications, unreadCount, isLoading, markAsRead, markAsUnread, markAllAsRead, archiveNotification, deleteNotification, refreshNotifications } = useNotifications();
   const { user } = useAuth();
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { t } = useTranslation('notifications');
   // Calculate nav bar height (StatusBar + header content)
   const navBarHeight = (StatusBar.currentHeight || 0) + 80;
   const styles = getStyles(isDark, colors, navBarHeight, headerHeight);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const notificationRefs = useRef<{ [key: string]: View | null }>({});
 
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
@@ -44,8 +47,42 @@ export default function NotificationsScreen() {
     setRefreshing(false);
   };
 
+  // Handle navigation from dropdown - highlight notification and mark as read
+  useEffect(() => {
+    const notificationId = params.notificationId as string | undefined;
+    const shouldHighlight = params.highlightNotification === 'true';
+    
+    if (notificationId && shouldHighlight) {
+      // Find the notification
+      const notification = notifications.find(n => n.id === notificationId);
+      if (notification && !notification.is_read) {
+        // Mark as read when navigating from dropdown
+        markAsRead(notificationId).catch(console.error);
+      }
+      
+      // Scroll to notification after a short delay to ensure it's rendered
+      setTimeout(() => {
+        const notificationView = notificationRefs.current[notificationId];
+        if (notificationView && scrollViewRef.current) {
+          notificationView.measureLayout(
+            scrollViewRef.current as any,
+            (x, y) => {
+              scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 100), animated: true });
+            },
+            () => {}
+          );
+        }
+      }, 300);
+    }
+  }, [params.notificationId, params.highlightNotification, notifications, markAsRead]);
+
   const handleNotificationPress = async (notification: any) => {
-    // Navigate based on notification type (without marking as read)
+    // Mark as read when clicked in notification center
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
+    
+    // Navigate based on notification type
     if (notification.type === 'chat_message' && notification.meeting_id) {
       // Navigate to meeting chat
       router.push({
@@ -568,6 +605,7 @@ export default function NotificationsScreen() {
         </View>
       ) : (
         <ScrollView
+          ref={scrollViewRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
@@ -580,7 +618,14 @@ export default function NotificationsScreen() {
           showsVerticalScrollIndicator={false}
         >
           {displayNotifications.map((notification) => (
-            <NotificationCard key={notification.id} notification={notification} />
+            <View
+              key={notification.id}
+              ref={(ref) => {
+                notificationRefs.current[notification.id] = ref;
+              }}
+            >
+              <NotificationCard notification={notification} />
+            </View>
           ))}
         </ScrollView>
       )}

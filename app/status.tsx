@@ -175,6 +175,13 @@ export default function StatusPage() {
         </View>
       )}
 
+      {!healthCheck && !error && !loading && (
+        <View style={styles.errorContainer}>
+          <MaterialIcons name="info-outline" size={24} color={colors.text.secondary} />
+          <Text style={styles.errorText}>{t('noData') || 'No status data available'}</Text>
+        </View>
+      )}
+
       {healthCheck && (
         <>
           {/* Overall Status */}

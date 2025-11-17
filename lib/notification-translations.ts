@@ -34,18 +34,20 @@ export function translateNotification(
           const speakerMatch = message.match(/Your meeting request to\s+(.+?)\s+has been sent successfully/);
           if (speakerMatch) {
             const speakerName = speakerMatch[1].trim();
-            translatedTitle = t('types.meeting_request.title');
+            translatedTitle = t('types.meeting_request.title') || title;
             // Check if message includes expiration time
             const expiryMatch = message.match(/Expires in (\d+(?:\.\d+)?) hours?/);
             if (expiryMatch) {
-              translatedMessage = t('types.meeting_request.messageWithExpiry', {
+              const translated = t('types.meeting_request.messageWithExpiry', {
                 speakerName: speakerName,
                 hours: expiryMatch[1]
               });
+              translatedMessage = translated && translated !== 'types.meeting_request.messageWithExpiry' ? translated : message;
             } else {
-              translatedMessage = t('types.meeting_request.message', {
+              const translated = t('types.meeting_request.message', {
                 speakerName: speakerName
               });
+              translatedMessage = translated && translated !== 'types.meeting_request.message' ? translated : message;
             }
           } else {
             // Fallback: try alternative patterns
@@ -278,10 +280,10 @@ export function translateNotification(
     console.warn('Failed to translate notification:', error);
   }
 
-  // Return original if translation didn't change anything
+  // Return translated values, but fallback to original if translation key was returned (meaning translation not found)
   return {
-    title: translatedTitle !== title ? translatedTitle : title,
-    message: translatedMessage !== message ? translatedMessage : message
+    title: translatedTitle && translatedTitle !== title && !translatedTitle.startsWith('types.') && !translatedTitle.startsWith('notifications.types.') ? translatedTitle : title,
+    message: translatedMessage && translatedMessage !== message && !translatedMessage.startsWith('types.') && !translatedMessage.startsWith('notifications.types.') ? translatedMessage : message
   };
 }
 

@@ -276,6 +276,8 @@ function ThemedContent() {
             headerShown: false
           }}
         />
+        {/* Global Events Explorer (main branch only) */}
+        <Stack.Screen name="events/explore" options={{ headerShown: false }} />
         {/* Public BSL routes */}
         <Stack.Screen name="events/bsl2025/home" options={{ headerShown: false }} />
         <Stack.Screen name="events/bsl2025/speakers/[id]" options={{ headerShown: false }} />

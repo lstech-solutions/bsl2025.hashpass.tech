@@ -34,16 +34,16 @@ export function translateNotification(
           const speakerMatch = message.match(/Your meeting request to\s+(.+?)\s+has been sent successfully/);
           if (speakerMatch) {
             const speakerName = speakerMatch[1].trim();
-            translatedTitle = t('notifications.types.meeting_request.title');
+            translatedTitle = t('types.meeting_request.title');
             // Check if message includes expiration time
             const expiryMatch = message.match(/Expires in (\d+(?:\.\d+)?) hours?/);
             if (expiryMatch) {
-              translatedMessage = t('notifications.types.meeting_request.messageWithExpiry', {
+              translatedMessage = t('types.meeting_request.messageWithExpiry', {
                 speakerName: speakerName,
                 hours: expiryMatch[1]
               });
             } else {
-              translatedMessage = t('notifications.types.meeting_request.message', {
+              translatedMessage = t('types.meeting_request.message', {
                 speakerName: speakerName
               });
             }
@@ -52,8 +52,8 @@ export function translateNotification(
             const fallbackMatch = message.match(/to\s+(.+?)\s+has been sent/);
             if (fallbackMatch) {
               const speakerName = fallbackMatch[1].trim();
-              translatedTitle = t('notifications.types.meeting_request.title');
-              translatedMessage = t('notifications.types.meeting_request.message', {
+              translatedTitle = t('types.meeting_request.title');
+              translatedMessage = t('types.meeting_request.message', {
                 speakerName: speakerName
               });
             }
@@ -61,16 +61,16 @@ export function translateNotification(
         } else if (title.includes('VIP')) {
           const requesterMatch = message.match(/^(.+?) \(VIP\)/);
           if (requesterMatch) {
-            translatedTitle = t('notifications.types.meeting_request.speakerVipTitle');
-            translatedMessage = t('notifications.types.meeting_request.speakerVipMessage', {
+            translatedTitle = t('types.meeting_request.speakerVipTitle');
+            translatedMessage = t('types.meeting_request.speakerVipMessage', {
               requesterName: requesterMatch[1]
             });
           }
         } else if (title.includes('Business')) {
           const requesterMatch = message.match(/^(.+?) \(Business\)/);
           if (requesterMatch) {
-            translatedTitle = t('notifications.types.meeting_request.speakerBusinessTitle');
-            translatedMessage = t('notifications.types.meeting_request.speakerBusinessMessage', {
+            translatedTitle = t('types.meeting_request.speakerBusinessTitle');
+            translatedMessage = t('types.meeting_request.speakerBusinessMessage', {
               requesterName: requesterMatch[1]
             });
           }
@@ -78,8 +78,8 @@ export function translateNotification(
           // Regular meeting request for speaker
           const requesterMatch = message.match(/^(.+?) wants to meet/);
           if (requesterMatch) {
-            translatedTitle = t('notifications.types.meeting_request.speakerTitle');
-            translatedMessage = t('notifications.types.meeting_request.speakerMessage', {
+            translatedTitle = t('types.meeting_request.speakerTitle');
+            translatedMessage = t('types.meeting_request.speakerMessage', {
               requesterName: requesterMatch[1]
             });
           }
@@ -88,7 +88,7 @@ export function translateNotification(
         if (message.includes('Boosted with')) {
           const boostMatch = message.match(/\$(\d+(?:\.\d+)?)/);
           if (boostMatch) {
-            translatedMessage += t('notifications.types.meeting_request.boostedMessage', {
+            translatedMessage += t('types.meeting_request.boostedMessage', {
               boostAmount: boostMatch[1]
             });
           }
@@ -102,8 +102,8 @@ export function translateNotification(
           if (message.includes('Meeting scheduled for') && message.includes('LUKAS')) {
             const scheduleMatch = message.match(/Meeting scheduled for (.+?)\. You earned/);
             if (scheduleMatch) {
-              translatedTitle = t('notifications.types.meeting_accepted.title');
-              translatedMessage = t('notifications.types.meeting_accepted.messageWithSchedule', {
+              translatedTitle = t('types.meeting_accepted.title');
+              translatedMessage = t('types.meeting_accepted.messageWithSchedule', {
                 scheduleTime: scheduleMatch[1]
               });
             }
@@ -112,8 +112,8 @@ export function translateNotification(
             const speakerMatch = message.match(/^(.+?) has accepted your meeting request/);
             if (speakerMatch) {
               const speakerName = speakerMatch[1].trim();
-              translatedTitle = t('notifications.types.meeting_accepted.title');
-              translatedMessage = t('notifications.types.meeting_accepted.message', {
+              translatedTitle = t('types.meeting_accepted.title');
+              translatedMessage = t('types.meeting_accepted.message', {
                 speakerName: speakerName
               });
             }
@@ -122,8 +122,8 @@ export function translateNotification(
           // For speaker
           const requesterMatch = message.match(/from (.+?)$/);
           if (requesterMatch) {
-            translatedTitle = t('notifications.types.meeting_accepted.speakerTitle');
-            translatedMessage = t('notifications.types.meeting_accepted.speakerMessage', {
+            translatedTitle = t('types.meeting_accepted.speakerTitle');
+            translatedMessage = t('types.meeting_accepted.speakerMessage', {
               requesterName: requesterMatch[1]
             });
           }
@@ -133,16 +133,16 @@ export function translateNotification(
           if (message.includes('Meeting scheduled for') && message.includes('LUKAS')) {
             const scheduleMatch = message.match(/Meeting scheduled for (.+?)\. You earned/);
             if (scheduleMatch) {
-              translatedTitle = t('notifications.types.meeting_accepted.speakerScheduledTitle');
-              translatedMessage = t('notifications.types.meeting_accepted.speakerScheduledWithReward', {
+              translatedTitle = t('types.meeting_accepted.speakerScheduledTitle');
+              translatedMessage = t('types.meeting_accepted.speakerScheduledWithReward', {
                 scheduleTime: scheduleMatch[1]
               });
             }
           } else {
             const requesterMatch = message.match(/with (.+?) has been scheduled/);
             if (requesterMatch) {
-              translatedTitle = t('notifications.types.meeting_accepted.speakerScheduledTitle');
-              translatedMessage = t('notifications.types.meeting_accepted.speakerScheduledMessage', {
+              translatedTitle = t('types.meeting_accepted.speakerScheduledTitle');
+              translatedMessage = t('types.meeting_accepted.speakerScheduledMessage', {
                 requesterName: requesterMatch[1]
               });
             }
@@ -155,16 +155,16 @@ export function translateNotification(
         const declineSpeakerMatch = message.match(/(.+?) has declined your meeting request/);
         if (declineSpeakerMatch) {
           const speakerName = declineSpeakerMatch[1].trim();
-          translatedTitle = t('notifications.types.meeting_declined.title');
-          translatedMessage = t('notifications.types.meeting_declined.message', {
+          translatedTitle = t('types.meeting_declined.title');
+          translatedMessage = t('types.meeting_declined.message', {
             speakerName: speakerName
           });
         } else if (title === 'Request Declined') {
           // For speaker
           const requesterMatch = message.match(/from (.+?)$/);
           if (requesterMatch) {
-            translatedTitle = t('notifications.types.meeting_declined.speakerTitle');
-            translatedMessage = t('notifications.types.meeting_declined.speakerMessage', {
+            translatedTitle = t('types.meeting_declined.speakerTitle');
+            translatedMessage = t('types.meeting_declined.speakerMessage', {
               requesterName: requesterMatch[1]
             });
           }
@@ -176,8 +176,8 @@ export function translateNotification(
         const expireSpeakerMatch = message.match(/Your meeting request to\s+(.+?)\s+has expired/);
         if (expireSpeakerMatch) {
           const speakerName = expireSpeakerMatch[1].trim();
-          translatedTitle = t('notifications.types.meeting_expired.title');
-          translatedMessage = t('notifications.types.meeting_expired.message', {
+          translatedTitle = t('types.meeting_expired.title');
+          translatedMessage = t('types.meeting_expired.message', {
             speakerName: speakerName
           });
         } else {
@@ -185,8 +185,8 @@ export function translateNotification(
           const fallbackExpireMatch = message.match(/request to\s+(.+?)\s+has expired/);
           if (fallbackExpireMatch) {
             const speakerName = fallbackExpireMatch[1].trim();
-            translatedTitle = t('notifications.types.meeting_expired.title');
-            translatedMessage = t('notifications.types.meeting_expired.message', {
+            translatedTitle = t('types.meeting_expired.title');
+            translatedMessage = t('types.meeting_expired.message', {
               speakerName: speakerName
             });
           }
@@ -198,14 +198,14 @@ export function translateNotification(
           // Check if it's for requester or speaker
           if (message.includes('has been cancelled') && !message.includes('from')) {
             // For requester
-            translatedTitle = t('notifications.types.meeting_cancelled.title');
-            translatedMessage = t('notifications.types.meeting_cancelled.message');
+            translatedTitle = t('types.meeting_cancelled.title');
+            translatedMessage = t('types.meeting_cancelled.message');
           } else {
             // For speaker
             const requesterMatch = message.match(/from (.+?) has been cancelled/);
             if (requesterMatch) {
-              translatedTitle = t('notifications.types.meeting_cancelled.speakerTitle');
-              translatedMessage = t('notifications.types.meeting_cancelled.speakerMessage', {
+              translatedTitle = t('types.meeting_cancelled.speakerTitle');
+              translatedMessage = t('types.meeting_cancelled.speakerMessage', {
                 requesterName: requesterMatch[1]
               });
             }
@@ -216,8 +216,8 @@ export function translateNotification(
       case 'meeting_reminder':
         const nameMatch = message.match(/with (.+?) scheduled/);
         if (nameMatch) {
-          translatedTitle = t('notifications.types.meeting_reminder.title');
-          translatedMessage = t('notifications.types.meeting_reminder.message', {
+          translatedTitle = t('types.meeting_reminder.title');
+          translatedMessage = t('types.meeting_reminder.message', {
             name: nameMatch[1]
           });
         }
@@ -226,16 +226,16 @@ export function translateNotification(
       case 'boost_received':
         const amountMatch = message.match(/\$(\d+(?:\.\d+)?)/);
         if (amountMatch) {
-          translatedTitle = t('notifications.types.boost_received.title');
-          translatedMessage = t('notifications.types.boost_received.message', {
+          translatedTitle = t('types.boost_received.title');
+          translatedMessage = t('types.boost_received.message', {
             amount: amountMatch[1]
           });
         }
         break;
 
       case 'system_alert':
-        translatedTitle = t('notifications.types.system_alert.title');
-        translatedMessage = t('notifications.types.system_alert.message', {
+        translatedTitle = t('types.system_alert.title');
+        translatedMessage = t('types.system_alert.message', {
           message: message
         });
         break;
@@ -246,27 +246,27 @@ export function translateNotification(
           // Format: "New message from {name}"
           const senderMatch = title.match(/from (.+?)$/);
           if (senderMatch) {
-            translatedTitle = t('notifications.types.chat_message.titleFrom', {
+            translatedTitle = t('types.chat_message.titleFrom', {
               senderName: senderMatch[1]
             });
-            translatedMessage = t('notifications.types.chat_message.messageFrom', {
+            translatedMessage = t('types.chat_message.messageFrom', {
               senderName: senderMatch[1]
             });
           }
         } else if (message && !message.includes('sent you')) {
           // Format: Meeting title as title, message as message
-          translatedTitle = t('notifications.types.chat_message.titleMeeting', {
+          translatedTitle = t('types.chat_message.titleMeeting', {
             meetingTitle: title
           });
-          translatedMessage = t('notifications.types.chat_message.messageMeeting', {
+          translatedMessage = t('types.chat_message.messageMeeting', {
             meetingTitle: title
           });
         } else {
           // Default format: "{name} sent you a message"
           const senderMatch = message.match(/^(.+?) sent you/);
           if (senderMatch) {
-            translatedTitle = t('notifications.types.chat_message.title');
-            translatedMessage = t('notifications.types.chat_message.message', {
+            translatedTitle = t('types.chat_message.title');
+            translatedMessage = t('types.chat_message.message', {
               senderName: senderMatch[1]
             });
           }

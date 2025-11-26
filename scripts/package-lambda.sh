@@ -42,7 +42,7 @@ fi
 # Install dependencies
 echo "4. Installing dependencies..."
 cd $PACKAGE_DIR
-npm install --production --silent
+npm install --production --verbose
 
 # Create deployment package
 echo "5. Creating deployment zip..."

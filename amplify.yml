@@ -112,12 +112,7 @@ frontend:
             aws lambda update-function-code \
               --function-name hashpass-api-handler \
               --region us-east-1 \
-              --zip-file fileb://lambda-deployment.zip || {
-                echo "⚠️  Lambda deployment failed - this may be due to missing permissions"
-                echo "   Frontend deployment will continue..."
-                echo "   To fix: Configure Amplify service role with Lambda permissions"
-                echo "   See: docs/AMPLIFY-LAMBDA-INTEGRATION.md"
-              }
+              --zip-file fileb://lambda-deployment.zip
             
             echo "✅ Lambda function deployment completed"
             # Cleanup

@@ -22,8 +22,8 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511171850, // Updated to current timestamp
-  releaseDate: '2025-11-17',
+  buildNumber: 202511260947, // Updated to current timestamp
+  releaseDate: '2025-11-26',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [],
@@ -34,11 +34,47 @@ export const CURRENT_VERSION: VersionInfo = {
     'Fixed missing translations for status page (Estado del Sistema, Sin Datos)'
   ],
   breakingChanges: [],
-  notes: 'Version 1.6.107 release'
+  notes: 'Version 1.6.109 release'
 };
 
 // Version History
 export const VERSION_HISTORY: VersionHistory = {
+  '1.6.109': {
+    version: '1.6.109',
+    buildNumber: 202511260947,
+    releaseDate: '2025-11-26',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      // No new features
+    ],
+    bugfixes: [
+      'Added missing translations for version.status and version.statusSummary to all locales',
+      'Added status section translations to ko, fr, pt, de locales',
+      'Compiled i18n catalogs to fix uncompiled message warnings for notification types',
+      'Fixed missing translations for status page (Estado del Sistema, Sin Datos)'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.109 release'
+  },
+  '1.6.108': {
+    version: '1.6.108',
+    buildNumber: 202511260943,
+    releaseDate: '2025-11-26',
+    releaseType: 'beta',
+    environment: 'development',
+    features: [
+      // No new features
+    ],
+    bugfixes: [
+      'Added missing translations for version.status and version.statusSummary to all locales',
+      'Added status section translations to ko, fr, pt, de locales',
+      'Compiled i18n catalogs to fix uncompiled message warnings for notification types',
+      'Fixed missing translations for status page (Estado del Sistema, Sin Datos)'
+    ],
+    breakingChanges: [],
+    notes: 'Version 1.6.108 release'
+  },
   '1.6.107': {
     version: '1.6.107',
     buildNumber: 202511171850,

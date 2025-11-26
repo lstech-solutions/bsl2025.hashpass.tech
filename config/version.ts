@@ -22,8 +22,8 @@ export interface VersionHistory {
 // Current Version Configuration - Auto-synced with package.json
 export const CURRENT_VERSION: VersionInfo = {
   version: packageJson.version, // Single source of truth: package.json
-  buildNumber: 202511171850, // Updated to current timestamp
-  releaseDate: '2025-11-17',
+  buildNumber: 202511260928, // Updated to current timestamp
+  releaseDate: '2025-11-26',
   releaseType: 'beta',
   environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   features: [],
